@@ -17,20 +17,24 @@ section. Read the file directly when full history is actually needed. -->
   router hook added; registries made fully generated.
 - 2026-07-30 — All 46 capability skills migrated to `.claude/skills/` with `<domain>-`
   prefixes. 61 skills now discoverable.
+- 2026-07-31 — Initial commit `4069f4b`. `.gitignore`'s blanket `.claude` rule fixed.
+- 2026-07-31 — `.claude/capabilities/` removed; routing collapsed into
+  `.claude/routing/capabilities.md`. 86 skills, each with a phase-based `model:`.
 
 <!-- session-context:start -->
 ## Current Work
 
-None active. Last unit of work (hook wiring) is in `TASK.md` under Completed.
+None active.
 
 ## Pending
 
-- Repo has **no commits yet**. Until an initial commit exists,
-  `post-run/03-checkpoint.py` logs `unborn HEAD` and skips — the safety net is not
-  active. Note the repo is now ~61 skills and 22 hook scripts of uncommitted work.
-- Discoverable skill descriptions now cost roughly **6k tokens per turn** (46 capability
-  + 15 process). That was a deliberate trade for reliable triggering; revisit with
-  `context-economy-audit` if context pressure shows up.
+- **The skill listing is truncated against a token budget.** 86 descriptions total
+  ~13k tokens; measured on 2026-07-31, ~36 rendered (~5.7k) and 47 arrived as bare
+  names with no trigger surface. Which half renders varies between turns, so a skill
+  can be untriggerable on the turn that needed it. This is why the keyword router is
+  load-bearing rather than redundant. Run `context-economy-audit` to cut description
+  length — note it now says adding trigger phrasings and staying in budget are in
+  direct conflict past this point.
 - `claude.ai Slack` connector still needs OAuth (the 1 of 19 not connected).
 - `linear`, `notion`, `sentry` are wired in `.mcp.json` but have no `.claude/mcps/` doc —
   surfaced by `mcps.json`'s `wired_but_undocumented` field.
@@ -39,16 +43,23 @@ None active. Last unit of work (hook wiring) is in `TASK.md` under Completed.
 
 ## Next Steps
 
-- Make the initial commit to activate checkpointing (branch guard exempts it).
+- Run `context-economy-audit` on the skill descriptions — the truncation above is now
+  the highest-cost problem in the repo.
+- Frontend still has no runtime-performance skill; `frontend-bundling-helper` covers
+  bundle bytes only, not LCP/CLS/INP or re-render cost.
 - Decide whether `on-human-approval-request` should move from `Notification` to the more
   precise `PermissionRequest` event.
 
 ## Open Questions
 
-- Two hooks remain unverified against the live harness, passing only in suites:
-  `pre-commit` (needs a real `git commit` to intercept) and the `permission_prompt`
-  matcher on `Notification` (no permission prompt has occurred while it was registered).
-- The 46 migrated skills have never been invoked. Their descriptions are inherited from
-  the capability files and are untested as trigger surfaces — expect to tune wording
-  once real prompts start routing to them.
+- One hook remains unverified against the live harness: the `permission_prompt` matcher
+  on `Notification` (no permission prompt has occurred while it was registered).
+  `pre-commit` is now verified — it blocked the initial commit twice, on AI attribution
+  and on a planted-secret fixture, and both were real.
+- Deleting `.claude/capabilities/backend/spec.md` dropped ~52 lines of backend
+  conventions that nothing referenced and that partly described infrastructure which
+  does not exist (a "repo telemetry integration" on topic `backend.*`). If any of it was
+  wanted, it is in `4069f4b`.
+- Most of the 86 skills have still never been invoked; their descriptions remain
+  untested as trigger surfaces, and half are truncated away on any given turn.
 <!-- session-context:end -->

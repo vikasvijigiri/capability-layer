@@ -3,6 +3,53 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-07-31 04:40
+Removed `.claude/capabilities/` (36 files). The nine `index.md` files collapsed into
+`.claude/routing/capabilities.md`; the 25 superseded artefact copies and two unreferenced
+strays (`backend/spec.md`, `backend/memory/notes.md`) were deleted. Rewired the three
+consumers - the router hook, `generate_registry.py` and `resolve_capability.py` - which all
+now derive the capability list from that file's `## <domain>` headings rather than from a
+directory's existence. `capabilities.json` is unchanged before and after, so the swap is
+behaviour-preserving. Skill-level routing (mandatory validator, blueprint precedence) was
+already duplicated in each skill's `## Routing` section and now lives only there.
+
+Review caught that the two parsers disagreed about what counts as a heading: the generator
+required a single whitespace-free token, the router accepted anything, so a prose section
+carrying a `Keywords:` line would have become a capability in one and not the other - the
+exact divergence consolidating nine files was meant to prevent. Added `tools/test_router.py`
+(29 assertions) which pins the agreement; confirmed it fails on the unfixed router.
+
+Also fixed `resolve_capability.py`, which called `json.dumps` without importing `json`
+inside a bare `except Exception` - its pre-run hook emission had never once run - and which
+ranked matches alphabetically rather than by hit count.
+
+## 2026-07-31 04:00
+Initial commit `4069f4b`; the repo had none, so `post-run/03-checkpoint.py` had no HEAD and
+every change to date was unrecoverable. `.gitignore` line 1 was a blanket `.claude`, which
+would have committed the docs and tooling while silently dropping all 86 skills, 22 hooks,
+the agents and the registries. Two pre-commit hooks blocked the attempt and both were right:
+the delivery guard on an AI-attribution trailer, and the secret scanner on
+`tools/test_hooks.py`, which planted a literal AWS-shaped key that made the repo
+permanently uncommittable. The fixture now assembles the key at runtime - the bytes written
+to the scanned file are unchanged, so the test still asserts the scanner rejects it.
+
+## 2026-07-31 03:30
+Assigned `model:` to all 86 skills by pipeline phase - opus up to and including planning
+(37), sonnet for implementation (35), haiku for testing and deployment (14). Descriptions
+and bodies verified byte-identical to a pre-change backup; only the frontmatter line moved.
+
+Added three frontend skills - `frontend-ux-flow`, `frontend-state-architecture`,
+`frontend-form-builder`. The capability had one generator and four audits, so a UI could be
+verified thoroughly and barely built. Fixed `frontend/index.md`'s empty `Layout` section and
+its claim of "5 skills", and documented `design-system` as the gate it already was - it owns
+`DESIGN.md` but is unprefixed, so a `frontend-` scan never found it. Gave the Figma MCP a
+trigger surface in `design-system`; it was wired in `.mcp.json` and reachable by nothing.
+
+Finding worth carrying: the skill listing is truncated against a token budget. 86
+descriptions total ~13k tokens, ~36 render, 47 arrive as bare names, and which half varies
+between turns. `execution-planner` appeared to be "not triggering" for this reason while
+being perfectly valid and invocable.
+
 ## 2026-07-31 02:20
 Added `brainstormer` (83 skills). Runs on `model: opus` and enters plan mode from its body,
 since frontmatter has no plan-mode field - `disallowed-tools: Edit, Write, NotebookEdit` is

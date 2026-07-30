@@ -10,10 +10,13 @@ An earlier version generated only capabilities.json, so `agents.json` and
 `.claude/mcps/` documented 27 and `.mcp.json` wired 14. A registry that is wrong
 is worse than one that is missing, because it gets read as authoritative.
 
-Superseded copies under `capabilities/<domain>/{blueprints,workflows,validators,
-playbooks,templates}/` are deliberately never indexed. They are retained for
-history only; indexing them would give every artefact two routable paths, and
-the stale one would eventually win.
+The capability list comes from the `## <domain>` headings in
+`.claude/routing/capabilities.md`, which is also what the router hook parses.
+It came from the existence of `.claude/capabilities/<domain>/` until 2026-07-31;
+that directory held nine index files plus superseded artefact copies, and was
+removed once the copies were deleted and the routing consolidated. Deriving the
+list from a file rather than a directory means one edit adds a capability and
+the two consumers cannot disagree about which ones exist.
 
 `session-start/01-env-check.py` only checks these files are non-empty, which is
 exactly why that drift went unnoticed -- non-empty is not accurate. Regenerate
@@ -25,6 +28,7 @@ and diffable across machines.
 
 from __future__ import annotations
 
+import functools
 import json
 import re
 import subprocess
@@ -64,15 +68,52 @@ def listing(directory: Path) -> list[str]:
     return sorted(p.stem for p in directory.glob("*.md")) if directory.is_dir() else []
 
 
-# A skill is a capability skill only if its `<prefix>-` names a real directory under
-# .claude/capabilities/. Deriving this beats a hardcoded list, which silently rotted
-# the moment process skills were added: `impact-analysis` was filed under a
-# non-existent "impact" capability, and 15 others likewise.
+# A skill is a capability skill only if its `<prefix>-` names a real capability.
+# Deriving this beats a hardcoded list, which silently rotted the moment process
+# skills were added: `impact-analysis` was filed under a non-existent "impact"
+# capability, and 15 others likewise.
 #
+# The capability list came from the existence of `.claude/capabilities/<domain>/`
+# until 2026-07-31. It now comes from the `## <domain>` headings in
+# `.claude/routing/capabilities.md` -- the same file the router hook parses, so
+# adding a capability is one edit in one place and cannot leave the two
+# consumers disagreeing about which capabilities exist.
+ROUTING = CLAUDE / "routing" / "capabilities.md"
+
 # PROCESS_OVERRIDES is only for process skills whose prefix collides with a real
 # capability name. `deployment-pilot` is the case that exists; it is a cross-cutting
 # process skill, not one of the deployment capability's skills.
 PROCESS_OVERRIDES = {"deployment-pilot"}
+
+
+@functools.lru_cache(maxsize=1)
+def capability_names() -> tuple[str, ...]:
+    """Capability names, in file order, from the routing file's `## ` headings.
+
+    Raises if the file is missing or yields nothing. A registry generator that
+    quietly emits zero capabilities looks like it succeeded while reclassifying
+    every capability skill as a process skill -- exactly the silent corruption
+    this function exists to make impossible.
+    """
+    if not ROUTING.is_file():
+        raise SystemExit(f"missing routing file: {rel(ROUTING)}")
+    text = ROUTING.read_text(encoding="utf-8", errors="ignore")
+    names = tuple(m.group(1).strip().lower()
+                  for m in re.finditer(r"^## +(\S+)\s*$", text, re.M))
+    if not names:
+        raise SystemExit(f"no `## <domain>` headings found in {rel(ROUTING)}")
+    return names
+
+
+def keywords_of(domain: str) -> list[str]:
+    """The `Keywords:` line for one domain's section of the routing file."""
+    text = ROUTING.read_text(encoding="utf-8", errors="ignore")
+    for block in re.split(r"^## +", text, flags=re.M)[1:]:
+        lines = block.splitlines()
+        if lines and lines[0].strip().lower() == domain:
+            m = re.search(r"^Keywords:\s*(.+)$", block, re.M | re.I)
+            return [k.strip() for k in m.group(1).split(",") if k.strip()] if m else []
+    return []
 
 
 def capability_of(skill_name: str) -> str | None:
@@ -80,7 +121,7 @@ def capability_of(skill_name: str) -> str | None:
     if skill_name in PROCESS_OVERRIDES or "-" not in skill_name:
         return None
     prefix = skill_name.split("-", 1)[0]
-    return prefix if (CLAUDE / "capabilities" / prefix).is_dir() else None
+    return prefix if prefix in capability_names() else None
 
 
 def skill_dirs() -> list[Path]:
@@ -90,29 +131,18 @@ def skill_dirs() -> list[Path]:
 
 def build_capabilities() -> dict:
     caps = []
-    cap_dir = CLAUDE / "capabilities"
-    dirs = sorted(p for p in cap_dir.iterdir() if p.is_dir()) if cap_dir.is_dir() else []
     all_skills = [p.name for p in skill_dirs()]
-    for cap in dirs:
-        index = cap / "index.md"
-        keywords = []
-        if index.exists():
-            m = re.search(r"^Keywords:\s*(.+)$",
-                          index.read_text(encoding="utf-8", errors="ignore"), re.M | re.I)
-            if m:
-                keywords = [k.strip() for k in m.group(1).split(",") if k.strip()]
+    for name in capability_names():
         entry = {
-            "name": cap.name,
-            "path": rel(index),
-            "keywords": keywords,
-            # Every artefact type now lives in a top-level .claude/ directory and
-            # is grouped back to its capability by the `<domain>-` name prefix.
-            # The copies still under capabilities/<domain>/ are superseded; they
-            # are deliberately NOT indexed, so nothing can route to them.
-            "skills": [s for s in all_skills if capability_of(s) == cap.name],
+            "name": name,
+            "path": rel(ROUTING),
+            "keywords": keywords_of(name),
+            # Every artefact type lives in a top-level .claude/ directory and is
+            # grouped back to its capability by the `<domain>-` name prefix.
+            "skills": [s for s in all_skills if capability_of(s) == name],
         }
         for kind in ARTEFACT_DIRS:
-            entry[kind] = owned_artefacts(cap.name, kind)
+            entry[kind] = owned_artefacts(name, kind)
         caps.append(entry)
     return {"capabilities": caps}
 
@@ -140,7 +170,7 @@ def build_artefacts() -> dict:
             if not p.is_file():
                 continue
             domain = p.stem.split("-", 1)[0]
-            known = (CLAUDE / "capabilities" / domain).is_dir()
+            known = domain in capability_names()
             out.append({
                 "name": p.stem,
                 "kind": kind.rstrip("s"),

@@ -13,9 +13,11 @@ from _hooklib import load_payload, write_log  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 CLAUDE_DIR = ROOT / ".claude"
-KNOWN_DIRS = {"agents", "blueprints", "capabilities", "commands", "hooks",
-              "mcps", "playbooks", "registry", "skills", "templates",
-              "validators", "workflows"}
+# `capabilities` was removed on 2026-07-31; its nine index files collapsed into
+# `routing/capabilities.md` and its superseded artefact copies were deleted.
+KNOWN_DIRS = {"agents", "blueprints", "commands", "hooks", "mcps", "playbooks",
+              "registry", "routing", "skills", "templates", "validators",
+              "workflows"}
 KNOWN_FILES = {"README.md", "settings.json", "settings.local.json",
                "PREREQUISITES.md"}
 

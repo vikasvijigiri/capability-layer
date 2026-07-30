@@ -2,7 +2,7 @@
   "capabilities": [
     {
       "name": "ai",
-      "path": ".claude/capabilities/ai/index.md",
+      "path": ".claude/routing/capabilities.md",
       "keywords": [
         "ai",
         "rag",
@@ -60,7 +60,7 @@
     },
     {
       "name": "backend",
-      "path": ".claude/capabilities/backend/index.md",
+      "path": ".claude/routing/capabilities.md",
       "keywords": [
         "backend",
         "api",
@@ -123,7 +123,7 @@
     },
     {
       "name": "debugging",
-      "path": ".claude/capabilities/debugging/index.md",
+      "path": ".claude/routing/capabilities.md",
       "keywords": [
         "debugging",
         "rca",
@@ -179,7 +179,7 @@
     },
     {
       "name": "deployment",
-      "path": ".claude/capabilities/deployment/index.md",
+      "path": ".claude/routing/capabilities.md",
       "keywords": [
         "deployment",
         "infra",
@@ -227,7 +227,7 @@
     },
     {
       "name": "documentation",
-      "path": ".claude/capabilities/documentation/index.md",
+      "path": ".claude/routing/capabilities.md",
       "keywords": [
         "documentation",
         "docs",
@@ -267,7 +267,7 @@
     },
     {
       "name": "frontend",
-      "path": ".claude/capabilities/frontend/index.md",
+      "path": ".claude/routing/capabilities.md",
       "keywords": [
         "frontend",
         "ui",
@@ -336,7 +336,7 @@
     },
     {
       "name": "research",
-      "path": ".claude/capabilities/research/index.md",
+      "path": ".claude/routing/capabilities.md",
       "keywords": [
         "research",
         "papers",
@@ -372,7 +372,7 @@
     },
     {
       "name": "security",
-      "path": ".claude/capabilities/security/index.md",
+      "path": ".claude/routing/capabilities.md",
       "keywords": [
         "security",
         "vulnerability",
@@ -408,7 +408,7 @@
     },
     {
       "name": "testing",
-      "path": ".claude/capabilities/testing/index.md",
+      "path": ".claude/routing/capabilities.md",
       "keywords": [
         "testing",
         "test",

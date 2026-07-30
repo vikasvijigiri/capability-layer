@@ -60,12 +60,13 @@ is short, informal, or badly worded.
 Mandatory for every incoming request, before drafting any response:
 
 1. Scan the request against ALL `Keywords:` lines in
-   `.claude/capabilities/*/index.md` (fuzzy match — synonyms, typos, partial
+   `.claude/routing/capabilities.md` (fuzzy match — synonyms, typos, partial
    phrases, and multi-domain prompts all count; a request may match 2+
    capabilities at once, e.g. "fix the slow db and make it look nicer" →
    `backend` + `frontend`).
-2. For each matched capability, load only that `index.md` and the workflow/
-   skill/blueprint files it references — never the whole capability folder.
+2. For each matched capability, invoke the `<domain>-` skills by name. Each
+   skill's own `## Routing` section names its mandatory validator and the
+   blueprint or workflow that takes precedence — read those, not a folder.
 3. If nothing matches with reasonable confidence, do not stay silent: state
    which capability you considered closest and why, or ask one clarifying
    question — never proceed with zero capability/skill consideration.
@@ -80,9 +81,9 @@ Resolution order: Capability → Blueprint → Workflow → Agent → Skills →
 Repository Map (top-level)
 
 - `docs/` — architecture and guides (`docs/architecture/00`–`17` + diagrams)
-- `.claude/capabilities/` — self-contained capability packages (`ai`, `backend`,
+- `.claude/routing/capabilities.md` — the nine capabilities (`ai`, `backend`,
   `debugging`, `deployment`, `documentation`, `frontend`, `research`,
-  `security`, `testing`)
+  `security`, `testing`): keyword lists and per-domain artefact pointers
 - `.claude/agents/` — repo-local subagent definitions
 - `.claude/hooks/` — lifecycle hooks (`pre-run`, `post-run`, `on-validate-fail`,
   `on-artifact-create`, `on-deploy-failure`, etc.), run via `tools/run_hook.py`
@@ -98,16 +99,26 @@ workflows. Everything this repo can do lives in this repo.
 
 Skills
 
-All 61 skills live in `.claude/skills/<name>/SKILL.md` and are invoked by name
+All 86 skills live in `.claude/skills/<name>/SKILL.md` and are invoked by name
 through the Skill tool. Two kinds, distinguished by name:
 
-- **Process skills** (15, unprefixed) — cross-cutting: `code-review`,
+- **Process skills** (32, unprefixed) — cross-cutting: `code-review`,
   `task-intake`, `error-recovery`, `knowledge-manager`, `workflow-orchestrator`
   and so on. They apply regardless of domain.
-- **Capability skills** (46, prefixed `<domain>-`) — `backend-caching-strategy`,
+- **Capability skills** (54, prefixed `<domain>-`) — `backend-caching-strategy`,
   `ai-rag`, `testing-unit-test-generator`. The prefix is what keeps
   same-named responsibilities in different domains apart, and it groups each
   skill back to its capability.
+
+Each skill declares a `model:` matching its pipeline phase — `opus` up to and
+including planning, `sonnet` for implementation, `haiku` for testing and
+deployment.
+
+**The skill listing is truncated against a token budget.** At 86 skills roughly
+half the descriptions arrive as bare names with no trigger surface, and which
+half varies between turns. Never conclude a skill does not exist because it has
+no description in the listing; check `.claude/registry/skills.json`. This is why
+the keyword router below is load-bearing rather than redundant.
 
 Artefacts
 
@@ -119,21 +130,26 @@ using the same `<domain>-` prefix:
 - `.claude/validators/` (11) — must run before side effects are committed
 - `.claude/playbooks/` (1), `.claude/templates/` (1)
 
-`.claude/capabilities/<domain>/` therefore holds no routable artefacts. It keeps
-`index.md` — the `Keywords:` line the router scans, and the routing a flat list
-cannot express: which blueprint or workflow takes precedence over composing
-skills, and which validator gates the result.
+Which validator is mandatory, which blueprint takes precedence and which
+workflow orchestrates the multi-step case is stated in each skill's own
+`## Routing` section. There is no second copy of that routing anywhere.
 
-Copies of the migrated artefacts remain under `capabilities/<domain>/` carrying
-a **Superseded** banner. They are history, not source: never edit them, never
-link to them, and note that the registries deliberately do not index them —
-two routable paths for one artefact means the stale one eventually wins.
+`.claude/capabilities/` was removed on 2026-07-31. Its nine `index.md` files
+collapsed into `.claude/routing/capabilities.md`, and the superseded artefact
+copies it also held were deleted — they were history, and two routable paths for
+one artefact means the stale one eventually wins. Recover any of it from commit
+`4069f4b` if needed.
 
 Capability matching is not left to recall: `.claude/hooks/pre-run/02-capability-router.py`
-scans each prompt against every `index.md` `Keywords:` line and injects the
-matches. It tells you which domain matched — the skills themselves are already
-in the tool list. Read the matched `index.md` when the work needs its routing.
-It matches words; it does not understand intent.
+scans each prompt against every `Keywords:` line in
+`.claude/routing/capabilities.md` and injects the matches. It tells you which
+domain matched — then invoke that domain's skills by name. It matches words; it
+does not understand intent.
+
+Adding a capability is one edit: a new `## <domain>` section in
+`.claude/routing/capabilities.md`. The router hook, `tools/generate_registry.py`
+and `tools/resolve_capability.py` all derive the capability list from those
+headings, so they cannot disagree about which capabilities exist.
 
 ---
 
@@ -154,17 +170,17 @@ References
 Load only the referenced location for deep context. Examples:
 
 - Architecture: `docs/architecture/`
-- Skills registry: `.claude/capabilities/<capability>/skills/`
-- Blueprints: `.claude/capabilities/<capability>/blueprints/`
+- Capability routing: `.claude/routing/capabilities.md`
+- Skills: `.claude/skills/<name>/SKILL.md`; index at `.claude/registry/skills.json`
+- Blueprints: `.claude/blueprints/<domain>-<name>.md`
 
 ---
 
 Startup Checklist (every conversation)
 
 - Read `CLAUDE.md`
-- Identify capability
-- Load capability `index.md` only
-- Load required skills/workflows
+- Identify capability (the router hook injects the keyword match for you)
+- Invoke the matched skills by name; read their `## Routing` sections
 - Execute
 - Validate
 - Reflect
@@ -175,8 +191,8 @@ Hooks
 
 - Hooks live under `.claude/hooks/` and are lightweight scripts invoked on lifecycle events (e.g., `pre-run`, `post-run`, `on-validate-fail`, `on-blueprint-promote`).
 - Use `tools/run_hook.py <event> '<json-payload>'` to trigger hooks safely. Hooks receive the payload in the `HOOK_PAYLOAD` environment variable.
-- Every capability validator must call `on-validate-fail` on failure and
-  `on-artifact-create` on pass (see each capability's `validators/*.md`) — a
-  validator that never calls a hook is not wired, not just undocumented.
+- Every validator must call `on-validate-fail` on failure and
+  `on-artifact-create` on pass (see `.claude/validators/*.md`) — a validator
+  that never calls a hook is not wired, not just undocumented.
 
 End of CLAUDE.md
