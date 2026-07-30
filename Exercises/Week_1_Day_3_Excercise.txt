@@ -1,0 +1,3 @@
+- Pick your project from the practice labs
+- Create a plan.md and start building your project
+- Create skills and hooks

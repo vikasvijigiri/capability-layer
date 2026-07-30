@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || true
+      - name: Install mermaid-cli
+        run: |
+          npm install -g @mermaid-js/mermaid-cli
+
+      - name: Render diagrams
+        run: |
+          for f in docs/diagrams/*.mmd; do
+            mmdc -i "$f" -o "${f%.mmd}.png"
+            mmdc -i "$f" -o "${f%.mmd}.svg"
+          done
+
+      - name: Upload diagrams
+        uses: actions/upload-artifact@v3
+        with:
+          name: diagrams
+          path: |
+            docs/diagrams/*.png
+            docs/diagrams/*.svg
+      - name: Run resolver tests
+        run: |
+          python tools/test_resolver.py
+      - name: Run hooks tests
+        run: |
+          python tools/test_hooks.py

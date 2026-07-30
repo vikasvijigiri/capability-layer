@@ -1,0 +1,23 @@
+Sample repos for today's exercise:
+Single login page: https://github.com/pradeepreddyjilkapally/demo-login-app
+Failing tests fix: https://github.com/pradeepreddyjilkapally/demo-failing-tests
+
+Exercise 1: 
+For your project - list down the modules. Which model you will use to built these modules and why?
+
+Exercise 2:
+Write down 3 small things that you can build
+	- Small Page:
+		a. What it does: 
+		b. How do you know it will work: 
+	- Internal tool:
+		a. What it does: 
+		b. How do you know it will work: 
+	- Script or a single command that you execute on terminal:
+		a. What it does: 
+		b. How do you know it will work: 
+		
+Exercise 3:
+Use any of the existing repos shared in today's class. Ask the agent to do the following:
+	- What does the project do?
+	- Where can I add a new module or feature to make this project better?

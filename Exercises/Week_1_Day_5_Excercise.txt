@@ -1,0 +1,31 @@
+Repo - https://github.com/pradeepreddyjilkapally/week3_demo
+
+- Clone repo to your local. Ask claude to IDentify the bugs, risk before cloning
+- Ask claude what the repo is about
+- Implement the file structure:
+	- agents.md or claude.md
+	- log.md
+	- decisions/ --> directory
+	- handoff.md
+- Add new features 
+- Fix bugs
+- Fix test cases
+- Setup skills, hooks in order to make changes to the repo and capture the context in the respective .md files for future reference
+
+
+=================================================
+Setup these files and directories along with the hooks. This should be aligned with existing repo architecture and should be implemented at every repo that are in claude_repo. Capture this in global claude settings and append to our existing plan of file structure for every repo
+- directory:
+- decisions:
+What it should store: to store architectural related changes. Create separate file(filename should have date appended) for each change.
+When to add info to it: Create a hook, when there is a addition or removal of any tools connected to the app, a file should be generated with details info on what changes were done and why
+- files:
+- log.md:
+- What it should store: Capture all the commits with the list files changed and PRs, date changed. Should be precise and no crap
+- When to add info to it: Create a hook to add this the PR, commit, date and files changed to the file when git commit is triggered.
+- sessions_handoff.md:
+- What it should store: Capture all the session information in this file
+- When to add info to it: Create a hook, this file should be read before starting the session and appending before closing the session
+- memory.md:
+- What it should store: Anything that I ask agent to store in memory or anything that agent identifies and stores, should be captured here, no questions asked.
+- When to add info to it: Create a hook, when anything is being written to agent’s memory, invoke and write it down to this md file

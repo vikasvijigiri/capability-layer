@@ -1,0 +1,30 @@
+Exercise 1:
+Pick a product you use every day. ChatGPT, Cursor, Notion AI, GitHub Copilot, something you built. Write one sentence at each of the four layers, naming the choice that product made at that layer.
+- Application:
+- Harness:
+- Agent:
+- Model:
+
+
+Exercise 2:
+Write the agent loop for it in 5 lines of pseudocode and it's respective failure mode, one line per step.
+*Pseudocode:*
+1. Perceive:
+2. Plan:
+3. Act: 
+4. Observe: 
+5. Condtion(Stop or Continue): 
+
+*Failure modes:*
+1. Perceive:
+2. Plan:
+3. Act: 
+4. Observe: 
+5. Condtion(Stop or Continue): 
+
+Exercise 3:[Do this after you get your claude access]
+Pick any prompt. Summarize an article, write a function, draft an email. Run it through the same model at temperature 0, then at 0.8. Read both outputs side by side.
+
+Exercise 4: 
+Take sample project from lab exercised. Find one place where text is the wrong modality and another modality would unlock something the project can’t do today.
+If you can’t find one, that’s a valid answer too. Write down why text is right for every step.

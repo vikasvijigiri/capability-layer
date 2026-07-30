@@ -1,0 +1,14 @@
+flowchart TB
+  subgraph CONTROL_PLANE["CONTROL PLANE<br/>(Decides WHAT should happen)"]
+    GM[Goal Manager]
+    DE[Decision Engine]
+    PL[Planner Engine]
+    TS[Task Scheduler]
+    PM[Policy Manager]
+    EC[Execution Coordinator]
+    GM --> DE
+    DE --> PL
+    DE --> TS
+    DE --> PM
+    PL --> EC
+  end

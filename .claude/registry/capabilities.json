@@ -1,0 +1,454 @@
+{
+  "capabilities": [
+    {
+      "name": "ai",
+      "path": ".claude/capabilities/ai/index.md",
+      "keywords": [
+        "ai",
+        "rag",
+        "embeddings",
+        "hallucination",
+        "evaluation",
+        "model-routing",
+        "llm",
+        "prompt",
+        "chatbot",
+        "genai",
+        "vector search",
+        "semantic search",
+        "retrieval",
+        "fine-tune",
+        "agent",
+        "gpt",
+        "token limit",
+        "context window",
+        "classification",
+        "sentiment",
+        "summarize",
+        "tldr",
+        "json mode",
+        "structured output",
+        "moderation",
+        "content policy",
+        "sub-agents",
+        "multi-agent",
+        "orchestration"
+      ],
+      "skills": [
+        "ai-agent-orchestrator",
+        "ai-embeddings",
+        "ai-hallucination-evaluator",
+        "ai-model-router",
+        "ai-moderation-filter",
+        "ai-rag",
+        "ai-structured-output",
+        "ai-summarization",
+        "ai-text-classification"
+      ],
+      "blueprints": [
+        "ai-rag"
+      ],
+      "workflows": [
+        "ai-rag"
+      ],
+      "validators": [
+        "ai-hallucination-check",
+        "ai-output"
+      ],
+      "playbooks": [],
+      "templates": []
+    },
+    {
+      "name": "backend",
+      "path": ".claude/capabilities/backend/index.md",
+      "keywords": [
+        "backend",
+        "api",
+        "database",
+        "infra",
+        "oauth",
+        "observability",
+        "server",
+        "endpoint",
+        "db",
+        "sql",
+        "migration",
+        "auth",
+        "login",
+        "service",
+        "queue",
+        "job",
+        "cron",
+        "slow query",
+        "schema",
+        "rest",
+        "graphql",
+        "microservice",
+        "rate limit",
+        "throttle",
+        "429",
+        "background job",
+        "async job",
+        "cache",
+        "caching",
+        "invalidate cache",
+        "idempotency"
+      ],
+      "skills": [
+        "backend-background-job",
+        "backend-caching-strategy",
+        "backend-data-model",
+        "backend-db-migration",
+        "backend-oauth",
+        "backend-query-optimizer",
+        "backend-rate-limiter",
+        "backend-rest-api-designer"
+      ],
+      "blueprints": [
+        "backend-oauth"
+      ],
+      "workflows": [
+        "backend-oauth"
+      ],
+      "validators": [
+        "backend-change",
+        "backend-oauth"
+      ],
+      "playbooks": [
+        "backend-oauth"
+      ],
+      "templates": [
+        "backend-api"
+      ]
+    },
+    {
+      "name": "debugging",
+      "path": ".claude/capabilities/debugging/index.md",
+      "keywords": [
+        "debugging",
+        "rca",
+        "logs",
+        "repro",
+        "profiler",
+        "bug",
+        "error",
+        "crash",
+        "broken",
+        "not working",
+        "exception",
+        "stack trace",
+        "why is this failing",
+        "weird behavior",
+        "root cause",
+        "memory leak",
+        "heap growing",
+        "oom",
+        "flaky test",
+        "intermittent failure",
+        "fails in ci",
+        "traceback",
+        "stacktrace",
+        "failing",
+        "failure",
+        "hangs",
+        "deadlock",
+        "segfault",
+        "panic",
+        "regression",
+        "silently",
+        "no output"
+      ],
+      "skills": [
+        "debugging-flaky-test-diagnoser",
+        "debugging-log-parser",
+        "debugging-memory-leak-detector",
+        "debugging-profiler-orchestrator",
+        "debugging-repro-script"
+      ],
+      "blueprints": [
+        "debugging-rca"
+      ],
+      "workflows": [
+        "debugging-repro"
+      ],
+      "validators": [
+        "debugging-hotfix"
+      ],
+      "playbooks": [],
+      "templates": []
+    },
+    {
+      "name": "deployment",
+      "path": ".claude/capabilities/deployment/index.md",
+      "keywords": [
+        "deployment",
+        "infra",
+        "ci",
+        "cd",
+        "canary",
+        "provisioning",
+        "deploy",
+        "host",
+        "publish",
+        "ship it",
+        "put online",
+        "release",
+        "rollout",
+        "pipeline",
+        "github actions",
+        "docker",
+        "live url",
+        "secrets",
+        "env vars",
+        "api keys",
+        "health check",
+        "readiness probe",
+        "liveness probe"
+      ],
+      "skills": [
+        "deployment-canary-promotion",
+        "deployment-cost-optimizer",
+        "deployment-health-check-endpoint",
+        "deployment-infra-provision",
+        "deployment-rollback",
+        "deployment-secrets-provisioning"
+      ],
+      "blueprints": [
+        "deployment-canary"
+      ],
+      "workflows": [
+        "deployment-pipeline"
+      ],
+      "validators": [
+        "deployment-smoke-test"
+      ],
+      "playbooks": [],
+      "templates": []
+    },
+    {
+      "name": "documentation",
+      "path": ".claude/capabilities/documentation/index.md",
+      "keywords": [
+        "documentation",
+        "docs",
+        "api",
+        "style",
+        "link-checks",
+        "readme",
+        "explain this repo",
+        "write docs",
+        "comment this",
+        "onboarding doc",
+        "changelog",
+        "doc this",
+        "release notes",
+        "adr",
+        "decision record",
+        "why did we choose"
+      ],
+      "skills": [
+        "documentation-adr-writer",
+        "documentation-api-extractor",
+        "documentation-changelog-generator",
+        "documentation-doc-generator",
+        "documentation-link-checker"
+      ],
+      "blueprints": [
+        "documentation-structure"
+      ],
+      "workflows": [
+        "documentation-release"
+      ],
+      "validators": [
+        "documentation-link-check"
+      ],
+      "playbooks": [],
+      "templates": []
+    },
+    {
+      "name": "frontend",
+      "path": ".claude/capabilities/frontend/index.md",
+      "keywords": [
+        "frontend",
+        "ui",
+        "ux",
+        "accessibility",
+        "components",
+        "visual-testing",
+        "page",
+        "layout",
+        "css",
+        "styling",
+        "button",
+        "responsive",
+        "looks broken",
+        "design",
+        "screen",
+        "component",
+        "react",
+        "a11y",
+        "visual regression",
+        "screenshot diff",
+        "mobile",
+        "breakpoint",
+        "viewport",
+        "form",
+        "input",
+        "validation",
+        "user flow",
+        "journey",
+        "navigation",
+        "nav",
+        "wireframe",
+        "state management",
+        "client state",
+        "prop drilling",
+        "loading state",
+        "empty state",
+        "error state",
+        "re-render",
+        "figma",
+        "design token",
+        "modal",
+        "dropdown"
+      ],
+      "skills": [
+        "frontend-accessibility-check",
+        "frontend-bundling-helper",
+        "frontend-component-generator",
+        "frontend-form-builder",
+        "frontend-responsive-audit",
+        "frontend-state-architecture",
+        "frontend-ux-flow",
+        "frontend-visual-regression"
+      ],
+      "blueprints": [
+        "frontend-component"
+      ],
+      "workflows": [
+        "frontend-release"
+      ],
+      "validators": [
+        "frontend-visual-diff"
+      ],
+      "playbooks": [],
+      "templates": []
+    },
+    {
+      "name": "research",
+      "path": ".claude/capabilities/research/index.md",
+      "keywords": [
+        "research",
+        "papers",
+        "literature-review",
+        "citation",
+        "evidence",
+        "look into",
+        "investigate",
+        "compare options",
+        "what's the best way",
+        "find out",
+        "survey",
+        "benchmark",
+        "competitive analysis",
+        "versus",
+        "which is faster",
+        "which is cheaper"
+      ],
+      "skills": [
+        "research-benchmark-comparison",
+        "research-citation-scoring",
+        "research-competitive-analysis",
+        "research-papers-extraction",
+        "research-web-search"
+      ],
+      "blueprints": [],
+      "workflows": [],
+      "validators": [
+        "research-citation-check"
+      ],
+      "playbooks": [],
+      "templates": []
+    },
+    {
+      "name": "security",
+      "path": ".claude/capabilities/security/index.md",
+      "keywords": [
+        "security",
+        "vulnerability",
+        "injection",
+        "sql injection",
+        "xss",
+        "secrets",
+        "exposed credentials",
+        "authz",
+        "authorization",
+        "auth bypass",
+        "dependency vuln",
+        "cve",
+        "exploit",
+        "is this safe",
+        "security review",
+        "penetration",
+        "owasp"
+      ],
+      "skills": [
+        "security-authz-check",
+        "security-dependency-audit",
+        "security-injection-scanner",
+        "security-threat-model"
+      ],
+      "blueprints": [],
+      "workflows": [],
+      "validators": [
+        "security-secrets-scan"
+      ],
+      "playbooks": [],
+      "templates": []
+    },
+    {
+      "name": "testing",
+      "path": ".claude/capabilities/testing/index.md",
+      "keywords": [
+        "testing",
+        "test",
+        "unit test",
+        "integration test",
+        "e2e",
+        "end-to-end",
+        "playwright",
+        "mutation testing",
+        "test coverage",
+        "write tests",
+        "add tests",
+        "run the tests",
+        "test this",
+        "coverage is thin",
+        "browser test",
+        "regression suite",
+        "pytest",
+        "jest",
+        "vitest",
+        "assertion",
+        "fixture",
+        "mock",
+        "test suite",
+        "failing test",
+        "coverage"
+      ],
+      "skills": [
+        "testing-e2e-test-generator",
+        "testing-load-test",
+        "testing-mutation-testing",
+        "testing-unit-test-generator"
+      ],
+      "blueprints": [],
+      "workflows": [],
+      "validators": [
+        "testing-coverage-gate"
+      ],
+      "playbooks": [],
+      "templates": []
+    }
+  ]
+}

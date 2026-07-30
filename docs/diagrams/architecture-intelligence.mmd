@@ -1,0 +1,16 @@
+flowchart TB
+  subgraph INTELLIGENCE_PLANE["INTELLIGENCE PLANE<br/>(Thinks • Reasons • Plans)"]
+    UE[Understanding Engine]
+    RE[Research Engine]
+    AE[Analysis Engine]
+    DE2[Design Engine]
+    PE[Planning Engine]
+    XE[Execution Engine]
+    VE[Validation Engine]
+    OE[Optimization Engine]
+    LE[Learning Engine]
+    UE --> RE --> AE --> DE2 --> PE --> XE
+    XE --> VE
+    OE --> PE
+    LE --> OE
+  end

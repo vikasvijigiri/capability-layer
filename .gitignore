@@ -1,0 +1,15 @@
+# The `.claude/` capability layer IS this repo — skills, hooks, agents,
+# registries and capability routing are all tracked. A blanket `.claude` rule
+# lived here until 2026-07-31 and silently excluded every one of them; do not
+# reintroduce it. Ignore individual machine-local paths below instead.
+
+# Hook run logs: append-only local side effects, and they capture prompt text
+# and transcript paths, so they must never be committed.
+.claude/hooks/*.log
+
+# Machine-local: which project MCP servers this machine has approved.
+# Belongs to the checkout, not the repo.
+.claude/settings.local.json
+
+__pycache__/
+*.pyc

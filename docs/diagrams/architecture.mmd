@@ -1,0 +1,90 @@
+flowchart TB
+  subgraph CONTROL_PLANE["CONTROL PLANE<br/>(Decides WHAT should happen)"]
+    GM[Goal Manager]
+    DE[Decision Engine]
+    PL[Planner Engine]
+    TS[Task Scheduler]
+    PM[Policy Manager]
+    EC[Execution Coordinator]
+    GM --> DE
+    DE --> PL
+    DE --> TS
+    DE --> PM
+    PL --> EC
+  end
+
+  subgraph INTELLIGENCE_PLANE["INTELLIGENCE PLANE<br/>(Thinks • Reasons • Plans)"]
+    UE[Understanding Engine]
+    RE[Research Engine]
+    AE[Analysis Engine]
+    DE2[Design Engine]
+    PE[Planning Engine]
+    XE[Execution Engine]
+    VE[Validation Engine]
+    OE[Optimization Engine]
+    LE[Learning Engine]
+    UE --> RE --> AE --> DE2 --> PE --> XE
+    XE --> VE
+    OE --> PE
+    LE --> OE
+  end
+
+  subgraph EXECUTION_PLANE["EXECUTION PLANE<br/>(Actually performs work)"]
+    AG[Agent]
+    COORD[Coordinator Agent]
+    AG --> COORD
+  end
+
+  subgraph KNOWLEDGE_PLANE["KNOWLEDGE PLANE<br/>(The Second Brain)"]
+    KG[Knowledge Graph]
+    LTM[Long-Term Memory]
+    SM[Session Memory]
+    WM[Working Memory]
+    UM[User Memory]
+    BP[Blueprints]
+    KG --> LTM
+    KG --> SM
+    SM --> WM
+    BP --> KG
+  end
+
+  subgraph OPTIMIZATION_PLANE[OPTIMIZATION PLANE]
+    TI[Token Intelligence]
+    TmI[Time Intelligence]
+    CI[Cost Intelligence]
+  end
+
+  subgraph GOVERNANCE_PLANE[GOVERNANCE PLANE]
+    SEC[Security]
+    PRIV[Privacy]
+    COMPL[Compliance]
+    AUDIT[Audit]
+  end
+
+  subgraph OBSERVABILITY_PLANE[OBSERVABILITY PLANE]
+    LOGS[Logging]
+    METR[Metrics]
+    TRC[Tracing]
+    DASH[Dashboards]
+  end
+
+  subgraph INFRASTRUCTURE_PLANE[INFRASTRUCTURE PLANE]
+    LLM[LLMs]
+    EMB[Embedding Models]
+    VDB[Vector DB]
+    SQL[SQL]
+    CACHE[Caches]
+    QUEUE[Queues]
+    BLOB[Blob Storage]
+    SECRETS[Secrets]
+    DOCK[Docker / K8s]
+  end
+
+  %% High-level connections
+  CONTROL_PLANE --> INTELLIGENCE_PLANE
+  INTELLIGENCE_PLANE --> EXECUTION_PLANE
+  EXECUTION_PLANE --> KNOWLEDGE_PLANE
+  OPTIMIZATION_PLANE --> INTELLIGENCE_PLANE
+  GOVERNANCE_PLANE --> EXECUTION_PLANE
+  OBSERVABILITY_PLANE --> CONTROL_PLANE
+  INFRASTRUCTURE_PLANE --> EXECUTION_PLANE

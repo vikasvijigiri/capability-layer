@@ -1,0 +1,76 @@
+{
+  "agents": [
+    {
+      "name": "ai-engineer",
+      "path": ".claude/agents/ai-engineer.md",
+      "discoverable": true,
+      "description": "Implements AI/LLM-integration modules \u2014 RAG pipelines, embeddings, model routing, structured output, moderation, sub-agent orchestration \u2014 against a frozen contract, verifying with real prompts and real outputs. Use for \"add RAG\", \"wire up embeddings\", \"call the LLM API\", \"add a classifier\", \"build the chatbot\", \"structured JSON output\", and whenever AI-integration work can be split off with its own files. Prefer delegating a self-contained AI slice here over writing it inline \u2014 it verifies with actual model calls, not inspection. Do NOT use for generic backend/data-access work with no model call involved \u2014 that's backend-engineer."
+    },
+    {
+      "name": "backend-engineer",
+      "path": ".claude/agents/backend-engineer.md",
+      "discoverable": true,
+      "description": "Implements server-side modules \u2014 APIs, services, data access, ingestion, background jobs, migrations \u2014 against a frozen contract, verifying by running real code. Use for \"add an endpoint\", \"build the backend\", \"the API is slow\", \"wire up the database\", \"write the service layer\", and whenever backend work can be split off with its own files. Prefer delegating a self-contained slice here over writing it inline \u2014 it verifies by executing, not inspecting. Do NOT use for cross-module wiring or anything touching a shared file; the main agent keeps those."
+    },
+    {
+      "name": "design-engineer",
+      "path": ".claude/agents/design-engineer.md",
+      "discoverable": true,
+      "description": "Owns a project's DESIGN.md \u2014 forks in the global design system, defines token scales (colour, typography, spacing, motion, elevation) for light and dark, and computes WCAG contrast ratios rather than estimating them. Use when delegating the design phase as a parallel slice, or when a project needs DESIGN.md established before components are built - including vague asks like \"set up our design system\", \"we need a consistent look\", \"define the colours and spacing\", \"make dark mode work\", \"is this contrast accessible\". Prefer delegating here over inventing tokens inline; for quick UI guidance invoke the design-system skill directly. Do NOT use for building components \u2014 frontend-engineer does that."
+    },
+    {
+      "name": "devops-engineer",
+      "path": ".claude/agents/devops-engineer.md",
+      "discoverable": true,
+      "description": "Provisions and executes deployments \u2014 free-tier cloud targets, secrets, health endpoints, CI/CD pipelines, rollback and canary promotion \u2014 verifying against a live URL. Use for \"deploy this\", \"set up CI/CD\", \"put this online\", \"add a health check\", \"roll this back\", \"canary release\", and whenever infra/release work can be split off with its own files. Prefer delegating here over hand-rolling deploy steps inline \u2014 it invokes `deployment-pilot` and never deploys without explicit approval already granted by the spawning prompt. Do NOT use to grant deploy approval itself \u2014 that stays with the user."
+    },
+    {
+      "name": "explore",
+      "path": ".claude/agents/explore.md",
+      "discoverable": true,
+      "description": "Read-only codebase search agent for broad fan-out questions \u2014 when answering means sweeping many files, directories or naming conventions and only the conclusion is needed, not the file dumps. Use for \"where is X handled\", \"which files touch Y\", \"find every caller of Z\", \"how is this wired up\", and whenever locating code would otherwise cost many sequential reads. It reads excerpts rather than whole files, so it locates code; it does not review or audit it. Safe to run several in parallel. Prefer delegating a broad sweep here over many sequential reads - it returns the conclusion instead of filling context with file dumps. Do NOT use for editing, or for judging code quality \u2014 that is code-review."
+    },
+    {
+      "name": "frontend-engineer",
+      "path": ".claude/agents/frontend-engineer.md",
+      "discoverable": true,
+      "description": "Builds user-facing interfaces \u2014 components, state, streaming, responsive layout, accessibility \u2014 against a frozen API contract and the project's DESIGN.md. Use for \"build the UI\", \"add a component\", \"the page looks broken\", \"make it responsive\", \"fix the layout\", and whenever UI work can be split off with its own files. Prefer delegating a self-contained UI slice here over writing components inline \u2014 it runs the production build and typecheck before reporting done. Do NOT use for backend, API or non-visual changes."
+    },
+    {
+      "name": "knowledge-scribe",
+      "path": ".claude/agents/knowledge-scribe.md",
+      "discoverable": true,
+      "description": "Maintains a repository's persistent engineering docs \u2014 TASK, PLAN, HANDOFF, LOG, ISSUES, MEMORY and decision records \u2014 in their canonical formats. Use when delegating doc upkeep as a parallel slice, or when those files no longer match reality - including \"write down where we got to\", \"update the handoff\", \"log what we did\", \"the docs are out of date\", \"I will forget this by Monday\", \"record this for next time\". Prefer delegating here over editing them freehand \u2014 it verifies state before describing it, so it cannot record work that did not happen. Do NOT use for CLAUDE.md \u2014 repo-onboarding owns that."
+    },
+    {
+      "name": "product-manager",
+      "path": ".claude/agents/product-manager.md",
+      "discoverable": true,
+      "description": "Turns a goal/objectives/deliverables statement into a PRD, an MVP-cut feature list, non-functional requirements and per-feature acceptance criteria. Use when delegating the requirements phase as a parallel slice, or when a PRD must exist before implementation starts - including vague product asks like \"what should we build first\", \"write the spec\", \"we need to scope this\", \"what does done look like\", \"which features make the cut\", \"I have an idea for an app\". Prefer delegating here over drafting requirements inline; for a quick spec invoke the requirements-analyst skill directly. Do NOT use for implementation, or for architecture and stack choices \u2014 solution-architect owns those."
+    },
+    {
+      "name": "qa-engineer",
+      "path": ".claude/agents/qa-engineer.md",
+      "discoverable": true,
+      "description": "Authors deterministic tests, executes test suites, performs automated browser checks (Playwright), and sweeps for dead or stale code. Use when the user says \"write some tests\", \"add tests\", \"run the tests\", \"test this\", when coverage is thin, and for a quality sweep before shipping or handing over. Prefer delegating here over writing tests inline \u2014 it treats production code as read-only, so it cannot \"fix\" a failure by weakening the assertion. Do NOT use to change production code."
+    },
+    {
+      "name": "security-reviewer",
+      "path": ".claude/agents/security-reviewer.md",
+      "discoverable": true,
+      "description": "Independent adversarial review of a change \u2014 injection, secrets, authz, input validation, dependency and data-exposure risk. Use when the user says \"is this safe\", \"any vulnerabilities\", \"check for injection\", \"security review\", \"can this be exploited\", before any commit, push, PR or release, and whenever a change touches untrusted input, credentials, auth or a public endpoint. Prefer delegating here over reviewing your own diff \u2014 a second, independent pass is the entire value. Read-only by design - it reports findings and never fixes them. Do NOT use it to apply the fixes it recommends \u2014 that would destroy the independence."
+    },
+    {
+      "name": "solution-architect",
+      "path": ".claude/agents/solution-architect.md",
+      "discoverable": true,
+      "description": "Chooses an architecture pattern and a concrete free-tier stack, walks a fixed tie-break order, and records the outcome as an ADR naming the risks implementers must mitigate. Use when delegating the architecture phase as a parallel slice, or when a stack, framework or database decision needs recording - including \"what should we build this with\", \"which database\", \"postgres or mongo\", \"how should this be structured\", \"monolith or services\", \"what framework should we use\". Prefer delegating here over picking a stack inline; for a quick answer invoke the stack-selector skill directly. Do NOT use for implementation \u2014 it never touches source files."
+    },
+    {
+      "name": "technical-writer",
+      "path": ".claude/agents/technical-writer.md",
+      "discoverable": true,
+      "description": "Writes and maintains user-facing documentation \u2014 README, API reference, onboarding guides, changelogs \u2014 distinct from a repo's internal engineering docs. Use for \"write the README\", \"document this API for users\", \"write onboarding docs\", \"generate the changelog\", \"explain how to use this\" aimed at an external/consumer audience, plus vaguer asks like \"nobody knows how to use this\", \"we need docs for this\", \"explain this for users\", \"write something people can follow\". Do NOT use for internal engineering docs, code review, or the repo's own CLAUDE.md. Prefer delegating here over drafting user docs inline; for the repo's own CLAUDE.md use `repo-onboarding` directly, and for internal TASK/PLAN/HANDOFF/LOG/ISSUES/MEMORY use `knowledge-scribe` instead \u2014 this agent never touches those."
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+Exercise 1: Six-line brief/contract implementation:
+	Goal:         the one outcome, in a sentence.
+	Constraints:  what it must (and must not) do. Stack, perf, style, security.
+	Inputs:       what the agent starts with. Files, data, an API, an example.
+	Outputs:      what exists when it's finished. Files, endpoints, behavior.
+	Done-check:   the concrete test that proves it works.
+	Out-of-scope: what NOT to touch, so it doesn't wander.
+
+a. Write a brief for one feature that you want to implement
+b. First, execute the done-check for a feature that doesn't exist.
+c. Next, execute the brief without a done-check and see how the task is executed
+d. Execute the whole brief with eval(Done-check)
+
+Exercise 2: Create hooks, if not already done, to streamline the flow of context to respective .md files.
+
+Exercise 3: New hook or CLI to streamline the flow of a task[Will be improvised in later sections]
+	Brief --> Plan --> Review and approve(human) --> Build --> Local test --> Ship 
+
+
+
+======================================
+Sample Brief:
+Goal:         UI Redesign - Menu appears only when i click on the user. Only My Profile and Logout options should be available under the User name, rest should be under top left beside cartIQ.
+Constraints:  Talk to Google Stitch MCP and make the UI design changes as mentioned.
+Inputs:       Initiate Stitch MCP before making any UI changes I suggested.
+Outputs:      Drop down list should be changed under user name and new drop down should be present on top-left beside cartIQ
+Done-check:   Use one dummy user for each of the user type(create one if not available) and click on username drop down on top-right → then click on deals option(for registered user) or admin console(For admin user) or customer support consoler(for customer support user) → it should throw an error saying option not found in the drop down menu. DO the same on top-left drop down beside cartiq log and it should throw a successful message
+Out-of-scope: no functional or other UI changes. Just share suggestions

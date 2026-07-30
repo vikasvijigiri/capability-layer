@@ -1,0 +1,13 @@
+flowchart TB
+  subgraph KNOWLEDGE_PLANE["KNOWLEDGE PLANE<br/>(The Second Brain)"]
+    KG[Knowledge Graph]
+    LTM[Long-Term Memory]
+    SM[Session Memory]
+    WM[Working Memory]
+    UM[User Memory]
+    BP[Blueprints]
+    KG --> LTM
+    KG --> SM
+    SM --> WM
+    BP --> KG
+  end

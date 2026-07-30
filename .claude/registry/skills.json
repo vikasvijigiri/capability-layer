@@ -1,0 +1,606 @@
+{
+  "skills": [
+    {
+      "name": "acceptance-verifier",
+      "path": ".claude/skills/acceptance-verifier/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "ai-agent-orchestrator",
+      "path": ".claude/skills/ai-agent-orchestrator/SKILL.md",
+      "kind": "capability",
+      "capability": "ai",
+      "discoverable": true
+    },
+    {
+      "name": "ai-embeddings",
+      "path": ".claude/skills/ai-embeddings/SKILL.md",
+      "kind": "capability",
+      "capability": "ai",
+      "discoverable": true
+    },
+    {
+      "name": "ai-hallucination-evaluator",
+      "path": ".claude/skills/ai-hallucination-evaluator/SKILL.md",
+      "kind": "capability",
+      "capability": "ai",
+      "discoverable": true
+    },
+    {
+      "name": "ai-model-router",
+      "path": ".claude/skills/ai-model-router/SKILL.md",
+      "kind": "capability",
+      "capability": "ai",
+      "discoverable": true
+    },
+    {
+      "name": "ai-moderation-filter",
+      "path": ".claude/skills/ai-moderation-filter/SKILL.md",
+      "kind": "capability",
+      "capability": "ai",
+      "discoverable": true
+    },
+    {
+      "name": "ai-rag",
+      "path": ".claude/skills/ai-rag/SKILL.md",
+      "kind": "capability",
+      "capability": "ai",
+      "discoverable": true
+    },
+    {
+      "name": "ai-structured-output",
+      "path": ".claude/skills/ai-structured-output/SKILL.md",
+      "kind": "capability",
+      "capability": "ai",
+      "discoverable": true
+    },
+    {
+      "name": "ai-summarization",
+      "path": ".claude/skills/ai-summarization/SKILL.md",
+      "kind": "capability",
+      "capability": "ai",
+      "discoverable": true
+    },
+    {
+      "name": "ai-text-classification",
+      "path": ".claude/skills/ai-text-classification/SKILL.md",
+      "kind": "capability",
+      "capability": "ai",
+      "discoverable": true
+    },
+    {
+      "name": "approval-brief",
+      "path": ".claude/skills/approval-brief/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "backend-background-job",
+      "path": ".claude/skills/backend-background-job/SKILL.md",
+      "kind": "capability",
+      "capability": "backend",
+      "discoverable": true
+    },
+    {
+      "name": "backend-caching-strategy",
+      "path": ".claude/skills/backend-caching-strategy/SKILL.md",
+      "kind": "capability",
+      "capability": "backend",
+      "discoverable": true
+    },
+    {
+      "name": "backend-data-model",
+      "path": ".claude/skills/backend-data-model/SKILL.md",
+      "kind": "capability",
+      "capability": "backend",
+      "discoverable": true
+    },
+    {
+      "name": "backend-db-migration",
+      "path": ".claude/skills/backend-db-migration/SKILL.md",
+      "kind": "capability",
+      "capability": "backend",
+      "discoverable": true
+    },
+    {
+      "name": "backend-oauth",
+      "path": ".claude/skills/backend-oauth/SKILL.md",
+      "kind": "capability",
+      "capability": "backend",
+      "discoverable": true
+    },
+    {
+      "name": "backend-query-optimizer",
+      "path": ".claude/skills/backend-query-optimizer/SKILL.md",
+      "kind": "capability",
+      "capability": "backend",
+      "discoverable": true
+    },
+    {
+      "name": "backend-rate-limiter",
+      "path": ".claude/skills/backend-rate-limiter/SKILL.md",
+      "kind": "capability",
+      "capability": "backend",
+      "discoverable": true
+    },
+    {
+      "name": "backend-rest-api-designer",
+      "path": ".claude/skills/backend-rest-api-designer/SKILL.md",
+      "kind": "capability",
+      "capability": "backend",
+      "discoverable": true
+    },
+    {
+      "name": "blueprint-promoter",
+      "path": ".claude/skills/blueprint-promoter/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "brainstormer",
+      "path": ".claude/skills/brainstormer/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "business-outcome-review",
+      "path": ".claude/skills/business-outcome-review/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "change-summary",
+      "path": ".claude/skills/change-summary/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "code-review",
+      "path": ".claude/skills/code-review/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "context-economy-audit",
+      "path": ".claude/skills/context-economy-audit/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "debugging-flaky-test-diagnoser",
+      "path": ".claude/skills/debugging-flaky-test-diagnoser/SKILL.md",
+      "kind": "capability",
+      "capability": "debugging",
+      "discoverable": true
+    },
+    {
+      "name": "debugging-log-parser",
+      "path": ".claude/skills/debugging-log-parser/SKILL.md",
+      "kind": "capability",
+      "capability": "debugging",
+      "discoverable": true
+    },
+    {
+      "name": "debugging-memory-leak-detector",
+      "path": ".claude/skills/debugging-memory-leak-detector/SKILL.md",
+      "kind": "capability",
+      "capability": "debugging",
+      "discoverable": true
+    },
+    {
+      "name": "debugging-profiler-orchestrator",
+      "path": ".claude/skills/debugging-profiler-orchestrator/SKILL.md",
+      "kind": "capability",
+      "capability": "debugging",
+      "discoverable": true
+    },
+    {
+      "name": "debugging-repro-script",
+      "path": ".claude/skills/debugging-repro-script/SKILL.md",
+      "kind": "capability",
+      "capability": "debugging",
+      "discoverable": true
+    },
+    {
+      "name": "dependency-upgrade",
+      "path": ".claude/skills/dependency-upgrade/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "deployment-canary-promotion",
+      "path": ".claude/skills/deployment-canary-promotion/SKILL.md",
+      "kind": "capability",
+      "capability": "deployment",
+      "discoverable": true
+    },
+    {
+      "name": "deployment-cost-optimizer",
+      "path": ".claude/skills/deployment-cost-optimizer/SKILL.md",
+      "kind": "capability",
+      "capability": "deployment",
+      "discoverable": true
+    },
+    {
+      "name": "deployment-health-check-endpoint",
+      "path": ".claude/skills/deployment-health-check-endpoint/SKILL.md",
+      "kind": "capability",
+      "capability": "deployment",
+      "discoverable": true
+    },
+    {
+      "name": "deployment-infra-provision",
+      "path": ".claude/skills/deployment-infra-provision/SKILL.md",
+      "kind": "capability",
+      "capability": "deployment",
+      "discoverable": true
+    },
+    {
+      "name": "deployment-pilot",
+      "path": ".claude/skills/deployment-pilot/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "deployment-rollback",
+      "path": ".claude/skills/deployment-rollback/SKILL.md",
+      "kind": "capability",
+      "capability": "deployment",
+      "discoverable": true
+    },
+    {
+      "name": "deployment-secrets-provisioning",
+      "path": ".claude/skills/deployment-secrets-provisioning/SKILL.md",
+      "kind": "capability",
+      "capability": "deployment",
+      "discoverable": true
+    },
+    {
+      "name": "design-system",
+      "path": ".claude/skills/design-system/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "documentation-adr-writer",
+      "path": ".claude/skills/documentation-adr-writer/SKILL.md",
+      "kind": "capability",
+      "capability": "documentation",
+      "discoverable": true
+    },
+    {
+      "name": "documentation-api-extractor",
+      "path": ".claude/skills/documentation-api-extractor/SKILL.md",
+      "kind": "capability",
+      "capability": "documentation",
+      "discoverable": true
+    },
+    {
+      "name": "documentation-changelog-generator",
+      "path": ".claude/skills/documentation-changelog-generator/SKILL.md",
+      "kind": "capability",
+      "capability": "documentation",
+      "discoverable": true
+    },
+    {
+      "name": "documentation-doc-generator",
+      "path": ".claude/skills/documentation-doc-generator/SKILL.md",
+      "kind": "capability",
+      "capability": "documentation",
+      "discoverable": true
+    },
+    {
+      "name": "documentation-link-checker",
+      "path": ".claude/skills/documentation-link-checker/SKILL.md",
+      "kind": "capability",
+      "capability": "documentation",
+      "discoverable": true
+    },
+    {
+      "name": "engineering-policy",
+      "path": ".claude/skills/engineering-policy/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "error-recovery",
+      "path": ".claude/skills/error-recovery/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "execution-planner",
+      "path": ".claude/skills/execution-planner/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "feasibility-check",
+      "path": ".claude/skills/feasibility-check/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "frontend-accessibility-check",
+      "path": ".claude/skills/frontend-accessibility-check/SKILL.md",
+      "kind": "capability",
+      "capability": "frontend",
+      "discoverable": true
+    },
+    {
+      "name": "frontend-bundling-helper",
+      "path": ".claude/skills/frontend-bundling-helper/SKILL.md",
+      "kind": "capability",
+      "capability": "frontend",
+      "discoverable": true
+    },
+    {
+      "name": "frontend-component-generator",
+      "path": ".claude/skills/frontend-component-generator/SKILL.md",
+      "kind": "capability",
+      "capability": "frontend",
+      "discoverable": true
+    },
+    {
+      "name": "frontend-form-builder",
+      "path": ".claude/skills/frontend-form-builder/SKILL.md",
+      "kind": "capability",
+      "capability": "frontend",
+      "discoverable": true
+    },
+    {
+      "name": "frontend-responsive-audit",
+      "path": ".claude/skills/frontend-responsive-audit/SKILL.md",
+      "kind": "capability",
+      "capability": "frontend",
+      "discoverable": true
+    },
+    {
+      "name": "frontend-state-architecture",
+      "path": ".claude/skills/frontend-state-architecture/SKILL.md",
+      "kind": "capability",
+      "capability": "frontend",
+      "discoverable": true
+    },
+    {
+      "name": "frontend-ux-flow",
+      "path": ".claude/skills/frontend-ux-flow/SKILL.md",
+      "kind": "capability",
+      "capability": "frontend",
+      "discoverable": true
+    },
+    {
+      "name": "frontend-visual-regression",
+      "path": ".claude/skills/frontend-visual-regression/SKILL.md",
+      "kind": "capability",
+      "capability": "frontend",
+      "discoverable": true
+    },
+    {
+      "name": "impact-analysis",
+      "path": ".claude/skills/impact-analysis/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "knowledge-manager",
+      "path": ".claude/skills/knowledge-manager/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "mvp-builder",
+      "path": ".claude/skills/mvp-builder/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "no-slop-check",
+      "path": ".claude/skills/no-slop-check/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "release-packager",
+      "path": ".claude/skills/release-packager/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "repo-onboarding",
+      "path": ".claude/skills/repo-onboarding/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "requirements-analyst",
+      "path": ".claude/skills/requirements-analyst/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "requirements-traceability",
+      "path": ".claude/skills/requirements-traceability/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "research-benchmark-comparison",
+      "path": ".claude/skills/research-benchmark-comparison/SKILL.md",
+      "kind": "capability",
+      "capability": "research",
+      "discoverable": true
+    },
+    {
+      "name": "research-citation-scoring",
+      "path": ".claude/skills/research-citation-scoring/SKILL.md",
+      "kind": "capability",
+      "capability": "research",
+      "discoverable": true
+    },
+    {
+      "name": "research-competitive-analysis",
+      "path": ".claude/skills/research-competitive-analysis/SKILL.md",
+      "kind": "capability",
+      "capability": "research",
+      "discoverable": true
+    },
+    {
+      "name": "research-papers-extraction",
+      "path": ".claude/skills/research-papers-extraction/SKILL.md",
+      "kind": "capability",
+      "capability": "research",
+      "discoverable": true
+    },
+    {
+      "name": "research-web-search",
+      "path": ".claude/skills/research-web-search/SKILL.md",
+      "kind": "capability",
+      "capability": "research",
+      "discoverable": true
+    },
+    {
+      "name": "retrospective",
+      "path": ".claude/skills/retrospective/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "root-cause-analysis",
+      "path": ".claude/skills/root-cause-analysis/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "runbook-writer",
+      "path": ".claude/skills/runbook-writer/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "safe-refactor",
+      "path": ".claude/skills/safe-refactor/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "security-authz-check",
+      "path": ".claude/skills/security-authz-check/SKILL.md",
+      "kind": "capability",
+      "capability": "security",
+      "discoverable": true
+    },
+    {
+      "name": "security-dependency-audit",
+      "path": ".claude/skills/security-dependency-audit/SKILL.md",
+      "kind": "capability",
+      "capability": "security",
+      "discoverable": true
+    },
+    {
+      "name": "security-injection-scanner",
+      "path": ".claude/skills/security-injection-scanner/SKILL.md",
+      "kind": "capability",
+      "capability": "security",
+      "discoverable": true
+    },
+    {
+      "name": "security-threat-model",
+      "path": ".claude/skills/security-threat-model/SKILL.md",
+      "kind": "capability",
+      "capability": "security",
+      "discoverable": true
+    },
+    {
+      "name": "simplify",
+      "path": ".claude/skills/simplify/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "stack-selector",
+      "path": ".claude/skills/stack-selector/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "task-intake",
+      "path": ".claude/skills/task-intake/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "testing-e2e-test-generator",
+      "path": ".claude/skills/testing-e2e-test-generator/SKILL.md",
+      "kind": "capability",
+      "capability": "testing",
+      "discoverable": true
+    },
+    {
+      "name": "testing-load-test",
+      "path": ".claude/skills/testing-load-test/SKILL.md",
+      "kind": "capability",
+      "capability": "testing",
+      "discoverable": true
+    },
+    {
+      "name": "testing-mutation-testing",
+      "path": ".claude/skills/testing-mutation-testing/SKILL.md",
+      "kind": "capability",
+      "capability": "testing",
+      "discoverable": true
+    },
+    {
+      "name": "testing-unit-test-generator",
+      "path": ".claude/skills/testing-unit-test-generator/SKILL.md",
+      "kind": "capability",
+      "capability": "testing",
+      "discoverable": true
+    },
+    {
+      "name": "work-decomposition",
+      "path": ".claude/skills/work-decomposition/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    },
+    {
+      "name": "workflow-orchestrator",
+      "path": ".claude/skills/workflow-orchestrator/SKILL.md",
+      "kind": "process",
+      "capability": null,
+      "discoverable": true
+    }
+  ]
+}

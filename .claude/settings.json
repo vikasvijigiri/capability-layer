@@ -1,0 +1,164 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start/01-env-check.py\"",
+            "statusMessage": "Checking .claude/ structure against convention..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start/02-bootstrap-docs.py\"",
+            "statusMessage": "Bootstrapping repo docs and loading minimal context..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-run/01-log.py\"",
+            "statusMessage": "Logging run start..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-run/02-capability-router.py\"",
+            "statusMessage": "Matching request against capability keywords..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-run/03-task-brief-nudge.py\"",
+            "statusMessage": "Reminding about the task-brief format..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-run/01-audit.py\"",
+            "statusMessage": "Writing run audit entry..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-run/02-slack.py\"",
+            "statusMessage": "Sending run notification..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-run/03-checkpoint.py\"",
+            "statusMessage": "Writing recovery checkpoint..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-run/04-docs-sync.py\"",
+            "statusMessage": "Checking whether project docs are stale..."
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/on-human-approval-request/01-email-sim.py\"",
+            "statusMessage": "Recording approval request..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit/01-secret-scan.py\"",
+            "statusMessage": "Scanning staged files for secrets..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit/02-branch-guard.py\"",
+            "statusMessage": "Checking commit destination branch..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit/03-review-gate.py\"",
+            "statusMessage": "Checking whether this change has been reviewed..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit/04-delivery-guard.py\"",
+            "statusMessage": "Running git delivery guard checks..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-deploy/01-spend-guard.py\"",
+            "statusMessage": "Running deploy spend guard checks..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-edit/01-forbidden-change-guard.py\"",
+            "statusMessage": "Checking the target is not generated or vendored..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/on-artifact-create/01-register.py\"",
+            "statusMessage": "Registering new artifact..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/on-artifact-create/02-hook-self-test-nudge.py\"",
+            "statusMessage": "Checking whether a hook script needs testing..."
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/on-error/01-log.py\"",
+            "statusMessage": "Recording tool failure..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/on-validate-fail/01-notify.py\"",
+            "statusMessage": "Checking whether a validator failed..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/on-deploy-failure/01-rollback-notify.py\"",
+            "statusMessage": "Checking whether a deploy failed..."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,160 @@
+{
+  "artefacts": [
+    {
+      "name": "ai-rag",
+      "kind": "blueprint",
+      "path": ".claude/blueprints/ai-rag.md",
+      "capability": "ai"
+    },
+    {
+      "name": "backend-oauth",
+      "kind": "blueprint",
+      "path": ".claude/blueprints/backend-oauth.md",
+      "capability": "backend"
+    },
+    {
+      "name": "debugging-rca",
+      "kind": "blueprint",
+      "path": ".claude/blueprints/debugging-rca.md",
+      "capability": "debugging"
+    },
+    {
+      "name": "deployment-canary",
+      "kind": "blueprint",
+      "path": ".claude/blueprints/deployment-canary.md",
+      "capability": "deployment"
+    },
+    {
+      "name": "documentation-structure",
+      "kind": "blueprint",
+      "path": ".claude/blueprints/documentation-structure.md",
+      "capability": "documentation"
+    },
+    {
+      "name": "frontend-component",
+      "kind": "blueprint",
+      "path": ".claude/blueprints/frontend-component.md",
+      "capability": "frontend"
+    },
+    {
+      "name": "ai-rag",
+      "kind": "workflow",
+      "path": ".claude/workflows/ai-rag.md",
+      "capability": "ai"
+    },
+    {
+      "name": "backend-oauth",
+      "kind": "workflow",
+      "path": ".claude/workflows/backend-oauth.md",
+      "capability": "backend"
+    },
+    {
+      "name": "build-mvp",
+      "kind": "workflow",
+      "path": ".claude/workflows/build-mvp.js",
+      "capability": null
+    },
+    {
+      "name": "debugging-repro",
+      "kind": "workflow",
+      "path": ".claude/workflows/debugging-repro.md",
+      "capability": "debugging"
+    },
+    {
+      "name": "deployment-pipeline",
+      "kind": "workflow",
+      "path": ".claude/workflows/deployment-pipeline.md",
+      "capability": "deployment"
+    },
+    {
+      "name": "documentation-release",
+      "kind": "workflow",
+      "path": ".claude/workflows/documentation-release.md",
+      "capability": "documentation"
+    },
+    {
+      "name": "frontend-release",
+      "kind": "workflow",
+      "path": ".claude/workflows/frontend-release.md",
+      "capability": "frontend"
+    },
+    {
+      "name": "ai-hallucination-check",
+      "kind": "validator",
+      "path": ".claude/validators/ai-hallucination-check.md",
+      "capability": "ai"
+    },
+    {
+      "name": "ai-output",
+      "kind": "validator",
+      "path": ".claude/validators/ai-output.md",
+      "capability": "ai"
+    },
+    {
+      "name": "backend-change",
+      "kind": "validator",
+      "path": ".claude/validators/backend-change.md",
+      "capability": "backend"
+    },
+    {
+      "name": "backend-oauth",
+      "kind": "validator",
+      "path": ".claude/validators/backend-oauth.md",
+      "capability": "backend"
+    },
+    {
+      "name": "debugging-hotfix",
+      "kind": "validator",
+      "path": ".claude/validators/debugging-hotfix.md",
+      "capability": "debugging"
+    },
+    {
+      "name": "deployment-smoke-test",
+      "kind": "validator",
+      "path": ".claude/validators/deployment-smoke-test.md",
+      "capability": "deployment"
+    },
+    {
+      "name": "documentation-link-check",
+      "kind": "validator",
+      "path": ".claude/validators/documentation-link-check.md",
+      "capability": "documentation"
+    },
+    {
+      "name": "frontend-visual-diff",
+      "kind": "validator",
+      "path": ".claude/validators/frontend-visual-diff.md",
+      "capability": "frontend"
+    },
+    {
+      "name": "research-citation-check",
+      "kind": "validator",
+      "path": ".claude/validators/research-citation-check.md",
+      "capability": "research"
+    },
+    {
+      "name": "security-secrets-scan",
+      "kind": "validator",
+      "path": ".claude/validators/security-secrets-scan.md",
+      "capability": "security"
+    },
+    {
+      "name": "testing-coverage-gate",
+      "kind": "validator",
+      "path": ".claude/validators/testing-coverage-gate.md",
+      "capability": "testing"
+    },
+    {
+      "name": "backend-oauth",
+      "kind": "playbook",
+      "path": ".claude/playbooks/backend-oauth.md",
+      "capability": "backend"
+    },
+    {
+      "name": "backend-api",
+      "kind": "template",
+      "path": ".claude/templates/backend-api.md",
+      "capability": "backend"
+    }
+  ]
+}
