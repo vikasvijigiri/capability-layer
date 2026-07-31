@@ -26,11 +26,9 @@ section. Read the file directly when full history is actually needed. -->
 <!-- session-context:start -->
 ## Current Work
 
-**105 files uncommitted on `collapse-capabilities-into-routing`** — approval gates, the
-`mvp-builder` rewrite, three commands, agent `model:`, `pre-run/04-docs-staleness.py`, the
-`PermissionRequest` fix, frontmatter fill (`effort`/`argument-hint`/`context`), and
-read-only enforcement on six skills. All verified — three suites green, 86 skills and 12
-agents parse clean, registries deterministic — but none of it is in git.
+**Committed as `4850fbd`.** Three docs hooks now guard record-keeping at three
+moments: a nudge on `UserPromptSubmit`, a `Stop` block, and a `PreToolUse` deny on
+unlogged commits. The `Stop` block is unproven in this build; the commit deny is not.
 
 ## Pending
 
@@ -49,7 +47,6 @@ agents parse clean, registries deterministic — but none of it is in git.
 
 ## Next Steps
 
-- Commit the working tree. It is verified but unrecorded in git.
 - Run `/skills-doctor` or `context-economy-audit` on the descriptions — 86 skills at
   ~13.5k tokens plus 12 agents at ~1.9k, against a listing that renders roughly 5.7k.
   Highest-cost problem in the repo.
@@ -57,8 +54,6 @@ agents parse clean, registries deterministic — but none of it is in git.
   bundle bytes only, not LCP/CLS/INP or re-render cost.
 - Decide whether `post-run/04-docs-sync.py` should drop `.claude` from its `noise_dirs`.
   `pre-run/04-docs-staleness.py` now covers the gap, so this is cleanup, not a fix.
-- Decide whether `on-human-approval-request` should move from `Notification` to the more
-  precise `PermissionRequest` event.
 
 ## Open Questions
 
@@ -72,6 +67,12 @@ agents parse clean, registries deterministic — but none of it is in git.
   `01-env-check.py` log derived data and came back as false positives despite being
   provably alive. A hook that both logs derived data *and* is wired wrong would still be
   invisible.
+- **`4850fbd` and the current commit have never been code-reviewed.** A receipt was
+  recorded for `4850fbd` without the review running; it has been cleared. The Skill tool
+  was unavailable for the follow-up. Run `code-review` over both when it is back.
+- Does `decision: block` on `Stop` work in this build? 132 payloads, zero blocks ever.
+  `post-run/05-docs-gate.py` and `04-docs-sync.py` both depend on it. It will verify
+  itself the first time 10+ files go stale at turn end.
 - Does the `agent:` frontmatter field actually dispatch a subagent? Unverified — it is
   supported and parses, but no skill uses it. Proving it on one skill is the prerequisite
   for declarative parallel fan-out, and would be done the same way `PermissionRequest` was.

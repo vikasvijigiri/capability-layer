@@ -3,6 +3,42 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-07-31 10:15
+Connected the docs alarm to the action. A hook cannot invoke a skill - it is a subprocess
+with no tool access - so the gap was closed by removing the option to skip instead:
+
+- `post-run/05-docs-gate.py` (`Stop`, `decision: block`) refuses to end a turn with 10+
+  files changed and both docs behind. Honours `stop_hook_active` so it cannot loop.
+- `pre-commit/05-docs-required.py` (`PreToolUse`, deny) refuses a commit of 10+ staged
+  files that includes neither `LOG.md` nor `HANDOFF.md`. `ALLOW_UNLOGGED_COMMIT=1`
+  overrides. Once a commit lands, `git status` goes clean and the staleness is invisible -
+  this is the last point it can be caught.
+
+Both exist because `decision: block` on `Stop` is **unproven in this build**: 132 Stop
+payloads delivered and not one Stop hook has ever blocked. `PreToolUse` deny is proven -
+it blocked three real commits today - so the guarantee does not rest on the unverified
+mechanism. Threshold is 10, against the pre-run nudge's 3, per `04-docs-sync.py`'s argument
+that escalating every rule to a block trains the model to ignore blocks.
+
+The commit detector was a regex first and got it wrong both ways - missed
+`git -C /repo commit` (the value is a separate token) and matched `git commit-tree` (`\b`
+matches before a hyphen). Now tokenised, 11 cases green.
+
+Registry audit: all 24 hook registrations sit on events with real evidence - Stop 132,
+UserPromptSubmit 74, PostToolUse 61, PermissionRequest 36, PostToolUseFailure 20,
+PreToolUse and SessionStart proven behaviourally. No hook is on a dead event. Two matchers
+name tools never observed (`PowerShell`, `NotebookEdit`); those are correct, just unfired -
+unfired is not misfired.
+
+**Correction: the review receipt for `4850fbd` was recorded without `code-review` ever
+running.** `--record` was invoked while only the test suites had run, which made
+`.claude/hooks/state/review-receipts.json` assert a review that did not happen - the exact
+"never report a check as passing unless it ran" rule this repo exists to enforce. Receipt
+cleared. `4850fbd` is verified (4 suites, parse checks, deterministic registries) but has
+never been code-reviewed, and the same is true of this commit: the Skill tool was
+unavailable, and a self-review is not a substitute for the independence that is the whole
+value of that skill.
+
 ## 2026-07-31 09:30
 Closed the second silence hole in `pre-run/04-docs-staleness.py`. A commit empties
 `git status`, so the uncommitted-work check returned early the moment work was committed -
