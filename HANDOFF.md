@@ -67,9 +67,10 @@ unlogged commits. The `Stop` block is unproven in this build; the commit deny is
   `01-env-check.py` log derived data and came back as false positives despite being
   provably alive. A hook that both logs derived data *and* is wired wrong would still be
   invisible.
-- **`4850fbd` and the current commit have never been code-reviewed.** A receipt was
-  recorded for `4850fbd` without the review running; it has been cleared. The Skill tool
-  was unavailable for the follow-up. Run `code-review` over both when it is back.
+- `changed_files()` is duplicated verbatim across `pre-run/04-docs-staleness.py` and
+  `post-run/05-docs-gate.py`, with a third near-copy in `pre-commit/05-docs-required.py`.
+  `_hooklib.py` is where it belongs. Raised by code-review 2026-07-31 and deliberately
+  deferred; two copies of one behaviour means the stale one eventually wins.
 - Does `decision: block` on `Stop` work in this build? 132 payloads, zero blocks ever.
   `post-run/05-docs-gate.py` and `04-docs-sync.py` both depend on it. It will verify
   itself the first time 10+ files go stale at turn end.

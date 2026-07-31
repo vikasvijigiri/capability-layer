@@ -3,6 +3,29 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-07-31 10:45
+Ran `code-review` over `4850fbd..dfdd726`, the two commits that had never been reviewed.
+**Verdict: pass, two findings.**
+
+1. *Fixed.* Neither new gate had a committed test - both were verified by ad-hoc inline
+   runs that left nothing behind. Given the sibling hook in this family shipped two bugs,
+   both presenting as silence, an untested gate is the higher risk of the two findings.
+   Added `tools/test_docs_gates.py`, 23 assertions covering both: block/silent, the
+   `stop_hook_active` loop guard, a payload missing that key entirely, the MIN_FILES
+   threshold, all 10 `git commit` detection variants, the `ALLOW_UNLOGGED_COMMIT`
+   override, and fail-open on both.
+
+2. *Recorded, not fixed.* `changed_files()` is duplicated verbatim between
+   `pre-run/04-docs-staleness.py` and `post-run/05-docs-gate.py` - including the rename
+   (`old -> new`) handling - and `pre-commit/05-docs-required.py` carries a third near-copy
+   as `staged_files()`. `_hooklib.py` already exists for shared helpers and is where this
+   belongs. Left alone deliberately: refactoring three working hooks during a review adds
+   risk the review cannot then cover. It is the same "two copies, the stale one wins"
+   hazard this repo already applies elsewhere, so it should not sit for long.
+
+The review receipt is now recorded against a review that actually happened. The previous
+one, cleared at 10:15, was not.
+
 ## 2026-07-31 10:15
 Connected the docs alarm to the action. A hook cannot invoke a skill - it is a subprocess
 with no tool access - so the gap was closed by removing the option to skip instead:
