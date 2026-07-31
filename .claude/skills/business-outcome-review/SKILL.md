@@ -1,7 +1,9 @@
 ---
-name: business-outcome-review
+name: business-outcome-review
 model: opus
 description: Checks whether a shipped build actually addresses the original business goal, not just whether its acceptance criteria technically passed. Cross-references the goal statement against the PRD's criteria for fidelity, and against real usage signals once they exist. Use whenever a build claims to be finished or done, after deployment, and when asked "did this solve the problem", "does this meet the goal", "are we actually done", "did this actually help", "was it worth building", "are people using it", "did it move the needle". Prefer this over declaring completion yourself - passing tests and solving the business problem are different claims. Do NOT use mid-build.
+effort: high
+argument-hint: "[the original goal to check against]"
 user-invocable: true
 allowed-tools:
   - Read

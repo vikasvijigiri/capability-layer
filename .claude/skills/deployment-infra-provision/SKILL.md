@@ -1,7 +1,8 @@
 ---
-name: deployment-infra-provision
+name: deployment-infra-provision
 model: haiku
 description: Generates infrastructure-as-code templates and a provisioning plan for a target environment. Use for "provision this infra", "generate terraform/cloudformation", "set up a new environment", "IaC template for this stack", "we need staging", "spin up the infrastructure", "write the terraform". Prefer this over clicking through a cloud console - unreproducible infrastructure cannot be rebuilt or reviewed. Do NOT use to actually apply/deploy — that requires a human-approved workflow. One step of a release; for an end-to-end deploy with secrets, health checks and live-URL verification, use `deployment-pilot`.
+effort: low
 ---
 
 # Infra Provision Skill
@@ -27,3 +28,9 @@ Applying changes requires human approval plus the cost-estimate and policy valid
 Before composing from scratch, check `.claude/blueprints/deployment-canary.md` - a matching blueprint takes precedence over a hand-built solution.
 
 For the multi-step case, `.claude/workflows/deployment-pipeline.md` orchestrates this end to end. It is a document to follow, not an executable - there is no workflow runtime in Claude Code.
+
+## Human gate
+
+Gate before provisioning anything that costs money, consumes a free-tier quota, or claims a globally unique name. Quota consumption and name claims persist after teardown, so the undo line must say so instead of claiming a clean revert.
+
+Invoke `approval-brief` and let it run the `AskUserQuestion` dialogue. Do not write your own prose "shall I proceed?" -- the dialogue shape, the option wording and the no-bundling rule live in that one skill so they cannot drift apart here.

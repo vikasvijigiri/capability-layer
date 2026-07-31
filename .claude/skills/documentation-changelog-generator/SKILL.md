@@ -1,7 +1,8 @@
 ---
-name: documentation-changelog-generator
+name: documentation-changelog-generator
 model: sonnet
 description: Generates a CHANGELOG entry from a set of commits/PRs, grouped by change type (feat/fix/breaking). Use for "write the changelog", "generate release notes", "what changed in this release", "write the release notes", "summarise the last few PRs", "tell users what's new". Prefer this over pasting a commit log - grouping by change type is what makes it readable to a user. Do NOT use for full API documentation — that's doc-generator/api-extractor. Release notes only; for broader user-facing documentation use the `technical-writer` agent.
+effort: medium
 ---
 
 # Changelog Generator Skill

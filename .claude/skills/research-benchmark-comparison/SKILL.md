@@ -1,7 +1,8 @@
 ---
-name: research-benchmark-comparison
+name: research-benchmark-comparison
 model: opus
 description: Runs or aggregates quantitative benchmarks across candidate solutions and reports statistically sound comparisons. Use for "benchmark these", "which is faster/cheaper", "performance comparison", "benchmark this against alternatives", "which one is faster", "which is cheaper", "measure them against each other", "is it actually better". Prefer this over quoting vendor claims - a measured comparison is the only one that survives a follow-up question. Do NOT use for a qualitative/feature comparison with no numeric measurement — that's competitive-analysis. Gathers evidence only; it does not decide — a decision reached this way still needs recording via `knowledge-manager`.
+effort: high
 ---
 
 # Benchmark Comparison Skill

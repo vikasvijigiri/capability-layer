@@ -1,5 +1,6 @@
 ---
 name: frontend-engineer
+model: sonnet
 description: Builds user-facing interfaces — components, state, streaming, responsive layout, accessibility — against a frozen API contract and the project's DESIGN.md. Use for "build the UI", "add a component", "the page looks broken", "make it responsive", "fix the layout", and whenever UI work can be split off with its own files. Prefer delegating a self-contained UI slice here over writing components inline — it runs the production build and typecheck before reporting done. Do NOT use for backend, API or non-visual changes.
 tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Skill, TodoWrite
 ---

@@ -1,7 +1,9 @@
 ---
-name: error-recovery
+name: error-recovery
 model: opus
 description: Bounded diagnose-fix-reverify loop for a failing check (build, test, deploy or API error) - never repeats an already-falsified hypothesis, hands a finished record to knowledge-manager's ISSUES.md. Use on the second consecutive failure of the same thing, whenever a test or build goes red, and for "still failing", "why is this broken", "it doesn't work", "it broke again", "same error as before", "I have tried everything", "nothing I do fixes it", "we are going in circles". Prefer this over another ad-hoc retry - unstructured retrying is how the same wrong hypothesis gets tried three times. Do NOT use for a first failure with an obvious one-line cause.
+effort: high
+argument-hint: "[the failing check or error text]"
 user-invocable: true
 allowed-tools:
   - Read
@@ -9,6 +11,7 @@ allowed-tools:
   - Grep
   - Glob
   - Agent
+  - Skill
 provides: [diagnosis, fix, issue-record]
 requires: [failure-signal]
 produces_artifact: false

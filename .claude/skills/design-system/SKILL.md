@@ -2,6 +2,10 @@
 name: design-system
 model: opus
 description: Owns a project's DESIGN.md — design tokens, type and spacing scales, status colour semantics, accessibility rules — forking the global template into the repo the first time UI work appears, and otherwise checking generated output against its token table, layout scale and anti-pattern list. Use whenever the work touches UI, UX, styling, layout, theming, components, CSS or a design system, and always before writing the first component in a project with no DESIGN.md. Also triggered by vague visual asks - "make it look better", "it looks off", "pick a colour for this", "what font should we use", "make it feel more polished", "the spacing looks wrong", "match our brand". Prefer this over inventing colours, spacing or breakpoints inline. Do NOT use for backend or non-visual work.
+context:
+  - DESIGN.template.md
+effort: high
+argument-hint: "[component or token area, default: whole DESIGN.md]"
 user-invocable: true
 allowed-tools:
   - Read

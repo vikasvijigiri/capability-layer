@@ -1,7 +1,8 @@
 ---
-name: ai-model-router
+name: ai-model-router
 model: opus
 description: Picks the cheapest/most-capable model for a task from a declared candidate list based on task complexity, latency and cost constraints. Use for "which model should handle this", "route this to a cheaper model", "model selection", "cost vs quality tradeoff for LLM calls", "this is costing too much", "can we use a cheaper model", "which model should we use here", "the bill is going up". Prefer this over hardcoding one model everywhere - an unexamined model choice becomes a fixed cost. Do NOT use for a single fixed-model project with no routing decision. Implementation-level; for choosing models, providers or the overall AI architecture, use `stack-selector`.
+effort: high
 ---
 
 # Model Router Skill

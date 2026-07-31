@@ -1,5 +1,6 @@
 ---
 name: product-manager
+model: opus
 description: Turns a goal/objectives/deliverables statement into a PRD, an MVP-cut feature list, non-functional requirements and per-feature acceptance criteria. Use when delegating the requirements phase as a parallel slice, or when a PRD must exist before implementation starts - including vague product asks like "what should we build first", "write the spec", "we need to scope this", "what does done look like", "which features make the cut", "I have an idea for an app". Prefer delegating here over drafting requirements inline; for a quick spec invoke the requirements-analyst skill directly. Do NOT use for implementation, or for architecture and stack choices — solution-architect owns those.
 tools: Read, Write, Edit, Glob, Grep, Skill
 ---

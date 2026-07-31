@@ -1,5 +1,6 @@
 ---
 name: solution-architect
+model: opus
 description: Chooses an architecture pattern and a concrete free-tier stack, walks a fixed tie-break order, and records the outcome as an ADR naming the risks implementers must mitigate. Use when delegating the architecture phase as a parallel slice, or when a stack, framework or database decision needs recording - including "what should we build this with", "which database", "postgres or mongo", "how should this be structured", "monolith or services", "what framework should we use". Prefer delegating here over picking a stack inline; for a quick answer invoke the stack-selector skill directly. Do NOT use for implementation — it never touches source files.
 tools: Read, Write, Edit, Glob, Grep, WebSearch, WebFetch, Skill
 ---

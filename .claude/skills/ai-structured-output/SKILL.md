@@ -1,7 +1,8 @@
 ---
-name: ai-structured-output
+name: ai-structured-output
 model: sonnet
 description: Forces a model response into a strict JSON schema (or other structured format) and validates it before returning. Use for "make this return JSON", "enforce a schema on the output", "structured output", "parse this into a typed object", "it keeps replying in prose", "I need the same fields every time", "parse the reply into an object", "make the output predictable". Prefer this over regex-parsing a model reply - schema validation fails loudly instead of silently. Do NOT use for free-form prose responses with no schema to enforce. Implementation-level; for choosing models, providers or the overall AI architecture, use `stack-selector`.
+effort: medium
 ---
 
 # Structured Output Skill

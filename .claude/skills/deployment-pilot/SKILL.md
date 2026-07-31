@@ -1,7 +1,9 @@
 ---
-name: deployment-pilot
+name: deployment-pilot
 model: haiku
 description: Deploys to the free-cloud target matching stack-selector's choice, provisions secrets and a health endpoint, and verifies the live URL against the PRD's acceptance criteria. Owns the repo-visibility default and the generatable-vs-must-supply secrets split. Use for any deploy, host, publish or hosting-setup task, and for "put this online", "ship it", "get this online", "deploy it", "can people use it yet", "give me a link to share", "host this somewhere", "make it live". Prefer this over hand-rolling deploy steps - it enforces the zero-cost ceiling and never deploys without explicit approval. Do NOT use for local-only runs.
+effort: low
+argument-hint: "[target, or leave blank to infer from the ADR]"
 user-invocable: true
 allowed-tools:
   - Read
@@ -13,6 +15,8 @@ allowed-tools:
   - Bash(gh:*)
   - Bash(curl:*)
   - Grep
+  - AskUserQuestion
+  - Skill
 provides: [deployment, health-endpoint, secrets-triage, prerequisites-checklist]
 requires: [stack, implementation]
 produces_artifact: true
@@ -108,3 +112,11 @@ A repo can have its own `.claude/skills/deployment-pilot/` with a repo-tailored 
 deploys targeted there instead of the free-tier default). Where both exist, the
 project-local one takes precedence for that repo — this global version is the default
 otherwise.
+
+## Human gate
+
+**Never deploy without passing the gate first**, even when the target is a free tier and the change looks small -- a live URL is outward-facing the moment it exists, and cost ceilings are not the only thing at stake.
+
+Gate each of these separately, because each fails differently: provisioning infrastructure, writing secrets to the provider, and promoting to a public URL. State repo visibility in the brief -- a public repo is not undoable in the way people assume once it has been indexed.
+
+Invoke `approval-brief` and let it run the `AskUserQuestion` dialogue. Do not write your own prose "shall I proceed?" -- the dialogue shape, the option wording and the no-bundling rule live in that one skill so they cannot drift apart here.

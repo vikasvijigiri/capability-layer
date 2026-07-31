@@ -1,5 +1,6 @@
 ---
 name: qa-engineer
+model: haiku
 description: Authors deterministic tests, executes test suites, performs automated browser checks (Playwright), and sweeps for dead or stale code. Use when the user says "write some tests", "add tests", "run the tests", "test this", when coverage is thin, and for a quality sweep before shipping or handing over. Prefer delegating here over writing tests inline — it treats production code as read-only, so it cannot "fix" a failure by weakening the assertion. Do NOT use to change production code.
 tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Skill, TodoWrite
 ---

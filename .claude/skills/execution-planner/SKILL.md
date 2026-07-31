@@ -1,7 +1,8 @@
 ---
-name: execution-planner
+name: execution-planner
 model: opus
 description: Turns an approved brief into PLAN.md - ordered steps, dependencies, risks and acceptance criteria - so the order of work is decided once rather than improvised per step. Use for "plan this out", "what order should we do this in", "break this down", "write the plan", "where do we start", "what needs to happen first", "how should we approach this", "give me the steps". Prefer this over starting at step one and discovering the ordering later - rework from a missed dependency costs more than the planning did. Do NOT use for single-step work, or before requirements exist - that is requirements-analyst.
+effort: high
 ---
 
 # Execution Planner

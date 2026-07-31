@@ -1,7 +1,8 @@
 ---
-name: deployment-health-check-endpoint
+name: deployment-health-check-endpoint
 model: haiku
 description: Designs and scaffolds a /health (or /readyz, /livez) endpoint that verifies real downstream dependencies before deploy/promotion checks trust it. Use for "add a health check", "readiness probe", "liveness probe", "is the service actually up", "how do we know it's up", "add a health endpoint", "the load balancer needs something to hit", "it says healthy but it's broken". Prefer this over a bare 200 response - a health check that doesn't touch its dependencies lies exactly when it matters. Do NOT use for a health check that just returns 200 with no real dependency check — that's the anti-pattern this skill exists to prevent. One step of a release; for an end-to-end deploy with secrets, health checks and live-URL verification, use `deployment-pilot`.
+effort: low
 ---
 
 # Health Check Endpoint Skill

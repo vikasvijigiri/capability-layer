@@ -2,6 +2,7 @@
 name: frontend-ux-flow
 model: opus
 description: Designs what screens a feature needs, how a user moves between them, and where the flow can dead-end - before any component is built. Use for "what screens do we need", "design the user flow", "how does the user get from A to B", "map the journey", "where does this button go", "how should this be laid out across pages", "the navigation is confusing", "users get lost", "too many clicks to do anything". Prefer this over scaffolding components and discovering the flow afterwards - screens assembled bottom-up produce navigation nobody designed and dead-ends nobody noticed. Do NOT use for how a screen looks - that is `design-system` for tokens and `frontend-component-generator` for markup.
+effort: high
 ---
 
 # UX Flow Skill

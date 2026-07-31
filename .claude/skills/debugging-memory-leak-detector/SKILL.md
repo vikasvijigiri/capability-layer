@@ -1,7 +1,8 @@
 ---
-name: debugging-memory-leak-detector
+name: debugging-memory-leak-detector
 model: sonnet
 description: Analyzes a memory profile/heap snapshot over time to find growing allocations and their retention paths. Use for "memory leak", "heap keeps growing", "OOM after running for a while", "find what's retaining memory", "it slows down over time", "crashes after running a while", "memory keeps climbing", "needs restarting every few days". Prefer this over raising the memory limit - that postpones the crash rather than finding what retains the memory. Do NOT use for a one-off high-memory spike with no growth trend. Scoped to a single diagnostic technique; for the overall bounded diagnose-fix-reverify loop on a repeatedly failing check, use `error-recovery`.
+effort: medium
 ---
 
 # Memory Leak Detector Skill

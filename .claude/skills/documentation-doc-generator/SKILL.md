@@ -1,7 +1,8 @@
 ---
-name: documentation-doc-generator
+name: documentation-doc-generator
 model: sonnet
 description: Extracts a public API surface from source code and generates documentation skeletons. Use for "generate docs for this", "document this API", "create a README skeleton", "onboarding doc for this module", "nobody knows how to use this", "write some docs for it", "we need a readme for this module", "how do people get started with it". Prefer this over ad-hoc prose - an extracted surface keeps the docs honest about what actually exists. Do NOT use for prose/tutorial writing with no API surface to extract. For user-facing API/module docs; this repo's own CLAUDE.md is owned by `repo-onboarding`, and TASK/PLAN/HANDOFF/LOG/ISSUES by `knowledge-manager`.
+effort: medium
 ---
 
 # Doc Generator Skill

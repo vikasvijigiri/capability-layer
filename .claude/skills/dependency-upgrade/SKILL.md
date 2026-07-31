@@ -1,7 +1,8 @@
 ---
-name: dependency-upgrade
+name: dependency-upgrade
 model: sonnet
 description: Plans and executes a dependency or framework version upgrade, reading the breaking changes and staging the work rather than bumping and hoping. Use for "upgrade this", "bump the version", "we are on an old version", "migrate to v3", "update our dependencies", "this package is out of date", "move to the new major", "security patch needs a newer version". Prefer this over changing the version number and running the tests - a passing suite proves the paths you cover still work, not that the upgrade is safe. Do NOT use for adding a new dependency; that is a stack-selector decision.
+effort: medium
 ---
 
 # Dependency Upgrade

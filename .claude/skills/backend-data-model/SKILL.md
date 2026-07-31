@@ -1,7 +1,8 @@
 ---
-name: backend-data-model
+name: backend-data-model
 model: opus
 description: Designs the data model behind a feature - entities, relationships, keys, constraints and how it will change over time - before any migration is written. Use for "how should we store this", "design the schema", "what tables do we need", "how do we model this", "one table or two", "where should this field live", "normalise this", "what should the relationships be". Prefer this over adding columns as they occur to you - a data model assembled incrementally becomes the constraint everything else works around. Do NOT use to execute a schema change; that is backend-db-migration.
+effort: high
 ---
 
 # Backend Data Model

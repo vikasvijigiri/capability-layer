@@ -1,7 +1,8 @@
 ---
-name: safe-refactor
+name: safe-refactor
 model: sonnet
 description: Restructures code without changing its behaviour, establishing the behavioural baseline first so any drift is caught rather than assumed absent. Use for "clean this up", "this is a mess", "refactor this", "extract this into a function", "this file is too big", "tidy this code", "rename this everywhere", "restructure this", "it works but it is horrible". Prefer this over editing structure freehand - a refactor with no baseline is indistinguishable from a rewrite that quietly changed behaviour. Do NOT use when the behaviour is meant to change; that is a feature change, not a refactor.
+effort: medium
 ---
 
 # Safe Refactor

@@ -1,7 +1,8 @@
 ---
-name: frontend-bundling-helper
+name: frontend-bundling-helper
 model: sonnet
 description: Diagnoses and reduces client-side bundle size (code-splitting, tree-shaking, duplicate dependency detection). Use for "bundle is too big", "reduce bundle size", "why is this chunk so large", "code splitting", "tree shaking", "the app loads slowly", "the js file is huge", "why is the build so big", "first load takes ages". Prefer this over trimming code at random - duplicate dependencies usually dominate the measurement. Do NOT use for runtime performance issues unrelated to bundle size. Checks or generates against an existing design system; to define tokens, scales or DESIGN.md itself, use `design-system`.
+effort: medium
 ---
 
 # Bundling Helper Skill

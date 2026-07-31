@@ -1,7 +1,8 @@
 ---
-name: research-web-search
+name: research-web-search
 model: opus
 description: Runs a scoped web search and returns ranked, deduplicated results with source metadata. Use for "look this up", "search the web for", "find sources on", "what's out there about X", "find out about this", "what's out there on this", "is there anything written about this". Prefer this over answering from memory when the answer may have changed recently. Do NOT use for an already-open, well-defined internal codebase question — use Explore instead. Gathers evidence only; it does not decide — a decision reached this way still needs recording via `knowledge-manager`.
+effort: high
 ---
 
 # Web Search Skill

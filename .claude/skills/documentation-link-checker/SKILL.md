@@ -1,7 +1,9 @@
 ---
-name: documentation-link-checker
+name: documentation-link-checker
 model: sonnet
+disallowed-tools: Edit, Write, NotebookEdit
 description: Crawls documentation files for broken internal/external links and reports them. Use for "check for broken links", "validate doc links", "link checker", "do these docs still point to the right files", "are these links still good", "the docs point at files that moved", "404s in the docs". Prefer this over clicking links manually - a moved file breaks silently and stays broken. Do NOT use for content/style review — that's a separate concern. Link validation only; it does not rewrite prose.
+effort: medium
 ---
 
 # Link Checker Skill

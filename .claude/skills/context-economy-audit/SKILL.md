@@ -2,6 +2,10 @@
 name: context-economy-audit
 model: opus
 description: Audits this repo's .claude layer (skills, hooks, agents, capabilities, CLAUDE.md) and its knowledge docs for token bloat, duplicated capabilities and stale cross-references, reporting file:line findings. Use for "too many tokens", "context is filling up", "this is expensive", "sessions feel slower", "we have too many skills", "is any of this still accurate", "trim the config", to reduce token usage or context cost, to find duplicate or overlapping skills/hooks/agents, or to verify the second brain is still accurate - here "tokens" means LLM context tokens, never design tokens. Prefer this over spot-checking by hand; drift between CLAUDE.md and what is actually on disk is exactly what it detects. Do NOT use for application source code - that is no-slop-check.
+context:
+  - checklist.md
+effort: high
+argument-hint: "[scope: config | docs | both]"
 user-invocable: true
 allowed-tools:
   - Read

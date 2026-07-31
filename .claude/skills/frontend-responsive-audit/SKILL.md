@@ -1,7 +1,9 @@
 ---
-name: frontend-responsive-audit
+name: frontend-responsive-audit
 model: haiku
+disallowed-tools: Edit, Write, NotebookEdit
 description: Audits a page/component across breakpoints for layout breakage, overflow, and touch-target sizing. Use for "check responsiveness", "does this work on mobile", "responsive audit", "breakpoint testing", "it looks broken on my phone", "check it on mobile", "the layout breaks on small screens", "does this work on a tablet". Prefer this over resizing the browser once - overflow and touch-target problems appear at specific breakpoints. Do NOT use for accessibility-specific checks — that's accessibility-check. Checks or generates against an existing design system; to define tokens, scales or DESIGN.md itself, use `design-system`.
+effort: low
 ---
 
 # Responsive Audit Skill

@@ -1,7 +1,8 @@
 ---
-name: simplify
+name: simplify
 model: sonnet
 description: Reduces the complexity of working code - collapsing needless indirection, dead parameters, speculative abstraction and duplicated logic - without changing what it does. Use for "this is over-engineered", "why is this so complicated", "simplify this", "too many layers", "this could be much shorter", "do we need all this", "this is hard to follow", "reduce the complexity". Prefer this over leaving complexity that works - every unnecessary layer is paid for again by each person who reads it. Do NOT use for removing unused code, which is no-slop-check, or for restructuring without simplifying, which is safe-refactor.
+effort: medium
 ---
 
 # Simplify

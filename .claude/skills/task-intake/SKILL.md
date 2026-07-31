@@ -2,12 +2,15 @@
 name: task-intake
 model: opus
 description: Converts a rough, informal ask into a structured, confidence-scored brief and gets explicit approval before anything is logged or executed. Use for a new feature idea, a bug report, "can we support X", "add Y to the app", "I want users to be able to X", "users should be able to X", "it would be nice if", a vague architecture question, or anything where Goal/Input/Output/Constraints aren't spelled out. Prefer this over restating a brief inline — it is the only path that gets scope approved before work starts. Do NOT trigger for direct factual questions, one-word confirmations ("yes", "continue", "done"), or continuations of an already-approved brief.
+effort: high
+argument-hint: "[the rough ask, in your own words]"
 user-invocable: true
 allowed-tools:
   - Read
   - Grep
   - Glob
   - AskUserQuestion
+  - Skill
 provides: [intent-capture, task-brief]
 requires: [rough_prompt]
 produces_artifact: false
@@ -64,11 +67,30 @@ reaches this skill in the first place).
      focused only on the specific missing/ambiguous fields — not a generic "tell me
      more") — then redraft the brief before presenting it.
 
-3. **Present the brief plainly** (all six fields + the confidence score) and ask
-   directly: does this look right, or is anything missing/wrong? Do not use a
-   constrained multiple-choice question here — the user may want to adjust any single
-   field, not pick from a fixed list. Treat a plain affirmative as approval; treat
-   anything else as feedback — incorporate it and re-present. Repeat until approved.
+3. **Present the brief, then gate it with a real dialogue.** Write out all six fields
+   plus the confidence score as plain text first — the brief has to be readable before
+   it can be judged, and a dialogue box is not a place to read six fields. Then call
+   `AskUserQuestion` with these three options, in this order:
+
+   - **Approve** — say explicitly what approving commits to, naming any field filled by
+     assumption rather than by what the user actually said.
+   - **Keep refining** — nothing is written; redraft from the correction and present
+     again. This is the loop, and it may run more than once.
+   - **Cancel** — no brief, no plan, nothing written, `TASK.md` untouched.
+
+   `AskUserQuestion` always appends **Other** with free-text input, which is how the
+   user adjusts one specific field rather than picking a whole outcome. That is why a
+   fixed list is safe here; an earlier version of this step forbade multiple choice for
+   exactly that concern, and the free-text escape answers it.
+
+   Fold the highest-impact unknowns into the *same* dialogue as additional questions
+   (max four total) rather than resolving them in a later round — the fields that would
+   otherwise send you straight back into "keep refining" are the ones worth asking about
+   while the dialogue is already open.
+
+   Treat a plain affirmative in chat as approval too; the dialogue is the default path,
+   not a hoop to force someone through if they have already said yes. Anything that is
+   not approval is feedback — incorporate it and re-present.
    **Nothing gets written anywhere until this step produces an explicit approval.**
 
 4. **Hand off, don't execute.** Once approved:

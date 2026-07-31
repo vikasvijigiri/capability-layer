@@ -1,7 +1,8 @@
 ---
-name: backend-query-optimizer
+name: backend-query-optimizer
 model: sonnet
 description: Diagnoses and fixes a slow database query - reading the actual execution plan, choosing indexes, and reshaping the query rather than guessing. Use for "this query is slow", "add an index", "the database is struggling", "this endpoint times out", "full table scan", "why is this taking so long", "the report takes minutes", "N+1 queries". Prefer this over adding an index and hoping - an index chosen without reading the plan often goes unused while still costing write throughput. Do NOT use to avoid the query entirely by caching; that is backend-caching-strategy.
+effort: medium
 ---
 
 # Backend Query Optimizer

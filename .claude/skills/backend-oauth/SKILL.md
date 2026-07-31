@@ -1,7 +1,8 @@
 ---
-name: backend-oauth
+name: backend-oauth
 model: sonnet
 description: Generates OAuth provider configuration and integration-test scaffolding for an API. Use for "set up OAuth", "add Google/GitHub login", "configure OAuth client", "OAuth redirect URI", "auth provider integration", "let people sign in with google", "social login", "add sign in with github", "users shouldn't need a password". Prefer this over rolling your own provider integration - redirect URIs and client config are where it silently breaks. Do NOT use for session/cookie-based auth with no OAuth provider involved. Implementation-level; for choosing the stack, database or architecture pattern in the first place, use `stack-selector`.
+effort: medium
 ---
 
 # OAuth Skill

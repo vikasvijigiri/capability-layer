@@ -1,7 +1,8 @@
 ---
-name: testing-load-test
+name: testing-load-test
 model: haiku
 description: Designs and runs a load or stress test to find where a system degrades, using a realistic traffic shape rather than a flat request loop. Use for "can this handle the load", "load test this", "what happens under traffic", "will it survive launch", "how many users can we take", "stress test", "it falls over under load", "performance test before release". Prefer this over hoping production traffic behaves like your laptop - systems fail at a threshold, and the only way to know the threshold is to cross it deliberately. Do NOT use to profile a single slow function; that is debugging-profiler-orchestrator.
+effort: low
 ---
 
 # Testing Load Test

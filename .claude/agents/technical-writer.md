@@ -1,5 +1,6 @@
 ---
 name: technical-writer
+model: sonnet
 description: Writes and maintains user-facing documentation — README, API reference, onboarding guides, changelogs — distinct from a repo's internal engineering docs. Use for "write the README", "document this API for users", "write onboarding docs", "generate the changelog", "explain how to use this" aimed at an external/consumer audience, plus vaguer asks like "nobody knows how to use this", "we need docs for this", "explain this for users", "write something people can follow". Do NOT use for internal engineering docs, code review, or the repo's own CLAUDE.md. Prefer delegating here over drafting user docs inline; for the repo's own CLAUDE.md use `repo-onboarding` directly, and for internal TASK/PLAN/HANDOFF/LOG/ISSUES/MEMORY use `knowledge-scribe` instead — this agent never touches those.
 tools: Read, Write, Edit, Glob, Grep, Skill
 ---

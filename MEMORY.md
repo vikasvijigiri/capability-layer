@@ -52,6 +52,18 @@ this repo. Distinct from Claude Code's own auto-memory index under
   and use `disallowed-tools` as the backstop.
 - `description` + `when_to_use` are truncated at **1,536 characters** in the skill listing.
   Descriptions currently average ~620, so there is headroom, but a long one loses its tail.
+- Twelve skills also carry `provides`, `requires`, `produces_artifact` and `retryable`.
+  These are **not** harness fields and Claude Code ignores them — do not "clean them up".
+  `build-mvp.js`'s `CAPABILITY_MANIFEST` mirrors `provides`/`requires` by hand to route
+  its phases, and as of 2026-07-31 the two agree exactly: every capability named in the
+  manifest is declared by some skill, and the only declared capability absent from it is
+  `autonomous-build` (mvp-builder's own, which it correctly never dispatches to itself).
+  Adding one of these keys to a thirteenth skill does nothing unless the manifest is
+  updated too.
+- **Agents use a different schema from skills**: `name`, `description`, `tools` (not
+  `allowed-tools`), and `model`. All 12 lacked `model` until 2026-07-31 and therefore
+  silently inherited the parent's, bypassing the per-phase model rule entirely. Agent
+  descriptions cost ~1.9k tokens per session on top of the skills' ~13.5k.
 
 ## Workflows
 

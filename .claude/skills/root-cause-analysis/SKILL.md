@@ -1,7 +1,8 @@
 ---
-name: root-cause-analysis
+name: root-cause-analysis
 model: opus
 description: Traces a problem back to the condition that actually caused it, separating the trigger from the underlying cause and from the reason it went undetected. Use for "why did this happen", "root cause", "how did this get through", "post mortem", "it happened again", "this keeps coming back", "what went wrong here", "we fixed it but I do not know why it broke". Prefer this over fixing the symptom - a cause you never identified produces the same incident again under a different symptom. Do NOT use for a live outage in progress; restore service first and analyse after.
+effort: high
 ---
 
 # Root Cause Analysis

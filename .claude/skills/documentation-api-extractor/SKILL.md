@@ -1,7 +1,8 @@
 ---
-name: documentation-api-extractor
+name: documentation-api-extractor
 model: sonnet
 description: Extracts a structured API surface (functions, classes, endpoints, params) from source code for reference documentation. Use for "extract the API surface", "list all public endpoints", "generate an API reference", "what does this module expose", "list the public functions", "what endpoints exist", "pull out the api surface". Prefer this over reading the source by hand when the goal is a complete surface, not a spot answer. Do NOT use for full prose documentation — pair with doc-generator for that. Extraction only; for the narrative docs built on top, use the `technical-writer` agent.
+effort: medium
 ---
 
 # API Extractor Skill

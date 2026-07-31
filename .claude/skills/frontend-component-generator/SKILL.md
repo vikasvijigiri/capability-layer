@@ -1,7 +1,8 @@
 ---
-name: frontend-component-generator
+name: frontend-component-generator
 model: sonnet
 description: Scaffolds a new UI component (markup, styles, state hooks) conforming to the project's DESIGN.md tokens. Use for "create a new component", "scaffold a button/card/modal", "add a component following our design system", "make a new component", "build the UI for this", "we need a card for this", "add a form", "put a table on this page". Prefer this over writing markup freehand - it conforms to DESIGN.md instead of inventing new spacing and colour. Do NOT use when DESIGN.md doesn't exist yet - run the design-system skill or design-engineer agent first. Checks or generates against an existing design system; to define tokens, scales or DESIGN.md itself, use `design-system`.
+effort: medium
 ---
 
 # Component Generator Skill

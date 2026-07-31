@@ -20,11 +20,17 @@ section. Read the file directly when full history is actually needed. -->
 - 2026-07-31 — Initial commit `4069f4b`. `.gitignore`'s blanket `.claude` rule fixed.
 - 2026-07-31 — `.claude/capabilities/` removed; routing collapsed into
   `.claude/routing/capabilities.md`. 86 skills, each with a phase-based `model:`.
+- 2026-07-31 — Human-approval gates wired: `approval-brief` owns the dialogue, 9 skills
+  route to it. `mvp-builder` made capable of building. 12 agents given `model:`.
 
 <!-- session-context:start -->
 ## Current Work
 
-None active.
+**105 files uncommitted on `collapse-capabilities-into-routing`** — approval gates, the
+`mvp-builder` rewrite, three commands, agent `model:`, `pre-run/04-docs-staleness.py`, the
+`PermissionRequest` fix, frontmatter fill (`effort`/`argument-hint`/`context`), and
+read-only enforcement on six skills. All verified — three suites green, 86 skills and 12
+agents parse clean, registries deterministic — but none of it is in git.
 
 ## Pending
 
@@ -43,19 +49,32 @@ None active.
 
 ## Next Steps
 
-- Run `context-economy-audit` on the skill descriptions — the truncation above is now
-  the highest-cost problem in the repo.
+- Commit the working tree. It is verified but unrecorded in git.
+- Run `/skills-doctor` or `context-economy-audit` on the descriptions — 86 skills at
+  ~13.5k tokens plus 12 agents at ~1.9k, against a listing that renders roughly 5.7k.
+  Highest-cost problem in the repo.
 - Frontend still has no runtime-performance skill; `frontend-bundling-helper` covers
   bundle bytes only, not LCP/CLS/INP or re-render cost.
+- Decide whether `post-run/04-docs-sync.py` should drop `.claude` from its `noise_dirs`.
+  `pre-run/04-docs-staleness.py` now covers the gap, so this is cleanup, not a fix.
 - Decide whether `on-human-approval-request` should move from `Notification` to the more
   precise `PermissionRequest` event.
 
 ## Open Questions
 
-- One hook remains unverified against the live harness: the `permission_prompt` matcher
-  on `Notification` (no permission prompt has occurred while it was registered).
-  `pre-commit` is now verified — it blocked the initial commit twice, on AI attribution
-  and on a planted-secret fixture, and both were real.
+- **All hooks are now verified against the live harness.** `pre-commit` blocked the
+  initial commit twice (AI attribution, planted-secret fixture), and
+  `on-human-approval-request` was found registered on the wrong event entirely and moved
+  to `PermissionRequest` — see LOG.md 2026-07-31 07:30.
+- How many *other* hooks are wired to events that never fire? Audited on 2026-07-31 and
+  none found, but the method has a known blind spot: the `session_id` test only reaches
+  hooks that log the **raw** payload. `01-secret-scan.py`, `03-checkpoint.py` and
+  `01-env-check.py` log derived data and came back as false positives despite being
+  provably alive. A hook that both logs derived data *and* is wired wrong would still be
+  invisible.
+- Does the `agent:` frontmatter field actually dispatch a subagent? Unverified — it is
+  supported and parses, but no skill uses it. Proving it on one skill is the prerequisite
+  for declarative parallel fan-out, and would be done the same way `PermissionRequest` was.
 - Deleting `.claude/capabilities/backend/spec.md` dropped ~52 lines of backend
   conventions that nothing referenced and that partly described infrastructure which
   does not exist (a "repo telemetry integration" on topic `backend.*`). If any of it was

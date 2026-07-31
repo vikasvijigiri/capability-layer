@@ -1,7 +1,8 @@
 ---
-name: security-threat-model
+name: security-threat-model
 model: opus
 description: Works out how a feature could be attacked before it is built - who the attacker is, what they want, where the trust boundaries are and what fails first. Use for "is this design secure", "threat model this", "how could this be abused", "what could go wrong security-wise", "we are handling payments now", "this endpoint is public", "users can upload files", "what are the attack vectors". Prefer this over scanning the code after it is written - the expensive vulnerabilities are design decisions, and a scanner cannot see a missing trust boundary. Do NOT use for scanning existing code; those are the security-authz-check, security-injection-scanner and security-dependency-audit skills.
+effort: high
 ---
 
 # Security Threat Model

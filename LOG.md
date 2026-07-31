@@ -3,6 +3,147 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-07-31 09:30
+Closed the second silence hole in `pre-run/04-docs-staleness.py`. A commit empties
+`git status`, so the uncommitted-work check returned early the moment work was committed -
+including when it was committed *without* a log entry, baking the staleness into history
+where nothing could see it. It now also inspects `HEAD`: a last commit that changed source
+and touched neither `LOG.md` nor `HANDOFF.md` produces a nudge, self-clearing as soon as any
+later commit includes them.
+
+Added `tools/test_docs_staleness.py` (9 assertions) with explicit regressions for both bugs
+this hook has shipped. Git output is injected rather than read, so every branch is exercised
+without needing the repo in that state. Both bugs shared a shape worth naming: **the hook was
+silent, and silence is also what "no problem" looks like** - neither was caught by a check,
+only by eye.
+
+## 2026-07-31 09:00
+There is no per-skill permission-mode field - `auto`/`manual`/`plan`/`acceptEdits` are
+session settings, not frontmatter. `disallowed-tools` is the per-skill equivalent, and six
+skills declared themselves read-only in prose while holding unrestricted tools:
+`debugging-log-parser`, `debugging-profiler-orchestrator`, `documentation-link-checker`,
+`frontend-accessibility-check`, `frontend-responsive-audit`, `security-injection-scanner`.
+`security-injection-scanner`'s own description said "report only, per this capability's
+read-only design" while being able to edit any file in the repo. Now enforced; read-only
+skills went 1 to 7.
+
+**Recurring bug class, five instances now: prose declares a capability or constraint the
+wiring does not implement.** `mvp-builder` could not invoke the 11 skills in its own phase
+table; `on-human-approval-request` was registered on an event that never fires;
+`error-recovery` could not hand off to `knowledge-manager`; `04-docs-staleness.py` asked
+whether LOG.md had been touched rather than whether it was behind; six "read-only" skills
+could write anything. None were catchable by `tools/test_hooks.py`, which invokes scripts
+directly and therefore tests the script and never the registration. Worth a standing check
+in `/skills-doctor` rather than a sixth rediscovery.
+
+## 2026-07-31 08:30
+Filled the frontmatter fields that were appropriate and deliberately left the rest empty:
+`effort` on 85 (tracking the phase `model` already encodes - opus/high, sonnet/medium,
+haiku/low), `argument-hint` on the 14 user-invocable skills, `context` on the 3 with a
+companion file their body says to read rather than recall. Left empty on purpose:
+`disable-model-invocation` (it *removes* auto-triggering), `when_to_use` (adds to a listing
+budget already 2.4x over), `agent`/`background` (semantics unverified, and wrong on any
+interactive skill - `task-intake` runs a dialogue nobody would answer in a detached
+subagent).
+
+A CRLF bug in the fill script left a stray blank line inside the frontmatter of 73 files:
+`^description:.*$` consumes the `\r` of a CRLF pair, so the insert landed mid-line-break.
+YAML-valid, so every automated check passed - caught only by eye. Cleaned, and later passes
+anchor on `model:` with `[^\r\n]*` instead.
+
+## 2026-07-31 08:00
+Audited all 86 skills and 22 hooks for the capability-vs-wiring gap. One real defect:
+`error-recovery`'s body says "hand off to `knowledge-manager`, once per incident" and its
+`allowed-tools` had no `Skill`, so the step that turns a transient failure into a durable
+`ISSUES.md` record could never run.
+
+Two fixes were applied and then reverted after reading the design intent rather than the
+regex match: `task-intake` states "it does not write `TASK.md`" (knowledge-manager owns that
+write) and `repo-onboarding` only ever edits a skeleton the bootstrap hook creates. Granting
+either `Write` would have contradicted its own documented design.
+
+Hooks came back clean: no ghosts, one orphan (`02-git-tag.py`, deliberate per
+`decisions/2026-07-30-direct-hook-registration.md`), and one untestable without a real deploy
+failure. The `session_id` heuristic that found the `PermissionRequest` bug only reaches hooks
+that log the *raw* payload - `01-secret-scan.py`, `03-checkpoint.py` and `01-env-check.py`
+log derived data and were false positives, all three provably alive.
+
+## 2026-07-31 07:30
+`on-human-approval-request/01-email-sim.py` had never fired. It was registered on
+`Notification` with a `permission_prompt` matcher; all 37 log entries were synthetic
+payloads from `run_hook.py`, none carrying `session_id`. Diagnosis by elimination: removing
+the matcher entirely changed nothing across two real permission prompts, which ruled out the
+matcher; feeding the script a payload directly did write a line, which ruled out the writer.
+Wrong event, not wrong filter - this build does not emit `Notification` for permission
+prompts at all. Re-registered on `PermissionRequest`, verified with 6 real captures
+(`Bash` ×4, `Edit` ×2). The payload is also richer: `tool_name`, `tool_input` and
+`permission_suggestions`, none of which `Notification` would have carried. Closes the
+HANDOFF open question, which turns out to have been a defect rather than a preference.
+
+Lesson recorded in the hook's own docstring: `tools/test_hooks.py` passed this hook on every
+run because it invokes scripts directly, so it tests the script and never the registration.
+A hook suite structurally cannot detect a hook wired to an event that never fires. The tell
+is `session_id` - synthetic payloads never have one.
+
+Also fixed a design bug in `pre-run/04-docs-staleness.py`, introduced one turn earlier. It
+asked "is LOG.md among the changed files?", so once LOG.md was edited and left uncommitted it
+stayed in the changed set and the hook went silent for the rest of the session - quiet exactly
+when work was piling up. It now uses git for *what changed* and mtime for *whether the doc is
+behind*: a source file modified after the last LOG.md entry means the log is stale. The
+earlier "goes quiet after the docs are updated" test looked like a pass but was the bug
+demonstrating itself.
+
+## 2026-07-31 06:30
+Added `pre-run/04-docs-staleness.py` (22 hook entries). `post-run/04-docs-sync.py` could not
+catch this repo's own work for three independent reasons: it emits `systemMessage`, which
+renders in the user's UI and never enters the model's context; it fires on `Stop`, after the
+turn is over; and its `noise_dirs` contains `.claude`, so `os.walk` skips the whole capability
+layer - 28 of 29 uncommitted files were under `.claude/` and it saw none of them. The new hook
+runs on `UserPromptSubmit` and emits `additionalContext`, the same channel that makes the
+capability router and task-brief nudge land. Git decides what changed, not mtime, because a
+checkout or branch switch moves mtimes and would nag falsely. `04-docs-sync.py` keeps its
+`Stop`-side `decision: block` rule for new decision records - a per-turn nudge escalated to a
+block would just train the model to ignore blocks.
+
+## 2026-07-31 06:00
+All 12 agents were missing `model:` and silently inherited the parent's, so the per-phase model
+rule applied to the 86 skills had been bypassed entirely for agents - including `qa-engineer`
+and `devops-engineer`, the two it most directly targets. Assigned: opus for product-manager,
+solution-architect, design-engineer, security-reviewer; sonnet for the three engineers,
+technical-writer and knowledge-scribe; haiku for qa-engineer, devops-engineer and explore.
+
+Audited all 86 skills and 12 agents for frontmatter keys: no name/directory mismatches (which
+would make a skill silently invisible), no YAML-breaking `: "`, every model valid. Twelve skills
+carry `provides`/`requires`/`produces_artifact`/`retryable`, which are not harness fields - they
+are consumed by `build-mvp.js`'s `CAPABILITY_MANIFEST`, the two agree exactly, and MEMORY.md now
+records that so a future audit does not strip them.
+
+## 2026-07-31 05:30
+Added `/verify`, `/skills-doctor` and `/wip` commands. `/verify` codifies a five-part check
+assembled by hand six times in one session. Established that `user-invocable:` is not what makes
+a skill slash-invocable - only 15 of 86 set it, yet `/execution-planner`, which does not, works.
+
+## 2026-07-31 05:00
+Rewrote `mvp-builder`, which could not have built anything. `allowed-tools` was `[Read, Agent]`:
+no `Write`, no `Bash`, and no `Skill`, so every one of the 11 skills in its own phase table was
+unreachable. Independently, `SKILLS_ROOT` in `build-mvp.js` pointed at
+`C:/Users/VikasVijigiri/.claude/skills` - the global layer deleted on 2026-07-30 - so all 22
+`CAPABILITY_MANIFEST` paths handed subagents a directory that does not exist. Added the missing
+Design phase (`design-system` gates `DESIGN.md`, which `frontend-engineer` requires by contract)
+and the Outcome phase (`business-outcome-review` was in the spec but absent from the skill, so a
+run could finish having built the wrong product correctly). Workspace moved from `~/mvp-builds/`
+into the repo, where the hooks and validators actually apply.
+
+## 2026-07-31 04:50
+`approval-brief` - the skill whose entire job is human approval - never asked anything. It now
+owns a required `AskUserQuestion` gate (Approve / Cancel / Change something first), with the
+Approve label obliged to name the concrete action and restate the undo path. Nine skills got a
+`## Human gate` section routing to it rather than reimplementing the dialogue. Three of them -
+`deployment-pilot`, `workflow-orchestrator`, `code-review` - had `allowed-tools` lists omitting
+`AskUserQuestion` and `Skill`, so the instruction would have been dead text; both added.
+`mvp-builder` is explicitly exempt and marked so, since zero-checkpoint autonomy is the one
+property it exists to provide.
+
 ## 2026-07-31 04:40
 Removed `.claude/capabilities/` (36 files). The nine `index.md` files collapsed into
 `.claude/routing/capabilities.md`; the 25 superseded artefact copies and two unreferenced

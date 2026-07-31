@@ -1,7 +1,8 @@
 ---
-name: feasibility-check
+name: feasibility-check
 model: opus
 description: Judges whether proposed work is achievable within its stated constraints, and says plainly what would have to give if it is not. Use for "can we do this", "how hard is this", "is this realistic", "can we get this done by Friday", "is this even possible", "how long will this take", "is it worth attempting", "should we try this". Prefer this over starting and finding out - the cheapest place to discover something cannot be done is before the work begins. Do NOT use once work is underway and the real question is scope rather than viability.
+effort: high
 ---
 
 # Feasibility Check

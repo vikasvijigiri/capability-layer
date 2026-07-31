@@ -1,7 +1,8 @@
 ---
-name: debugging-repro-script
+name: debugging-repro-script
 model: sonnet
 description: Builds a minimal, deterministic reproduction script/test for a reported bug before any fix is attempted. Use for "reproduce this bug", "I can't reproduce it", "write a failing test for this issue", "minimal repro case", "works on my machine", "it only happens for some users", "it only happens sometimes", "need a failing test first". Prefer this over fixing from the description alone - a fix with no repro cannot be shown to have worked. Do NOT use once a reliable repro already exists. Scoped to a single diagnostic technique; for the overall bounded diagnose-fix-reverify loop on a repeatedly failing check, use `error-recovery`.
+effort: medium
 ---
 
 # Repro Script Skill

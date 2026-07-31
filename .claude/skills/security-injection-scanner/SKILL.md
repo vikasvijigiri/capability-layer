@@ -1,7 +1,9 @@
 ---
-name: security-injection-scanner
+name: security-injection-scanner
 model: sonnet
+disallowed-tools: Edit, Write, NotebookEdit
 description: Scans input-handling code paths for injection risk (SQL, command, template, NoSQL, LDAP) by tracing untrusted input to sinks. Use for "check for injection", "sql injection risk", "is this input sanitized", "can this be exploited", "is this input safe", "could someone break this with input", "we build a query from user input". Prefer this over reading the query by eye - tracing untrusted input to a sink is what finds the reachable path. Do NOT use to apply the fix — report only, per this capability's read-only design. A single targeted scan; for a full adversarial review of a pending diff, use `code-review` or the `security-reviewer` agent.
+effort: medium
 ---
 
 # Injection Scanner Skill

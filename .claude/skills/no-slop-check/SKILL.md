@@ -3,6 +3,10 @@ name: no-slop-check
 model: sonnet
 description: Runs the No-Slop Checklist (checklist.md) line-by-line over every source file, reporting unused scaffolding, speculative abstraction and placeholder comments with file:line references. Use for "check for slop", "dead code", "stale code", "unused files", "nobody imports this", "leftover junk", "clean this up", "tidy the repo", and before shipping, finalizing or handing over a repo. Prefer this over eyeballing the tree yourself — it catches the AI-authored residue a quick scan reliably misses. Do NOT use for logic bugs — that is code-review.
 user-invocable: true
+argument-hint: "[path or glob to sweep, default: whole repo]"
+effort: high
+context:
+  - checklist.md
 allowed-tools:
   - Read
   - Grep

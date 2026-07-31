@@ -1,7 +1,8 @@
 ---
-name: research-papers-extraction
+name: research-papers-extraction
 model: opus
 description: Extracts structured metadata (title, authors, abstract, key findings) from academic papers or long-form articles. Use for "summarize this paper", "extract findings from this article", "what does this paper claim", "literature review input", "what does this paper say", "summarise this study", "pull the findings out of this", "what did they actually measure". Prefer this over reading the abstract alone - the abstract routinely overstates the result. Do NOT use for casual blog posts with no formal claims to extract. Gathers evidence only; it does not decide — a decision reached this way still needs recording via `knowledge-manager`.
+effort: high
 ---
 
 # Papers Extraction Skill

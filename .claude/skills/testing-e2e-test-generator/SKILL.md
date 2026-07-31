@@ -1,7 +1,8 @@
 ---
-name: testing-e2e-test-generator
+name: testing-e2e-test-generator
 model: haiku
 description: Generates browser-driven end-to-end tests (Playwright-style) covering critical user flows. Use for "add e2e tests", "browser test this flow", "playwright test", "test the whole signup flow", "test the whole flow", "make sure signup still works", "test it like a user would", "check the happy path end to end". Prefer this over manual click-through - a flow nobody re-tests is a flow that silently breaks. Do NOT use for isolated function-level logic — that's unit-test-generator. Generates tests only; to run a suite, own coverage end-to-end or sweep for stale tests, use the `qa-engineer` agent.
+effort: low
 ---
 
 # E2E Test Generator Skill

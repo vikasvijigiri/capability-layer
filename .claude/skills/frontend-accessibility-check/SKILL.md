@@ -1,7 +1,9 @@
 ---
-name: frontend-accessibility-check
+name: frontend-accessibility-check
 model: haiku
+disallowed-tools: Edit, Write, NotebookEdit
 description: Runs an automated accessibility audit (axe-core or equivalent) on a page or component and reports violations by severity. Use for "check accessibility", "a11y audit", "is this WCAG compliant", "screen reader issues", "contrast check", "can screen readers use this", "is this usable for everyone", "the contrast looks low", "accessibility audit". Prefer this over visual inspection - most violations are invisible to a sighted reviewer. Do NOT use this to auto-fix violations — it only reports. Checks or generates against an existing design system; to define tokens, scales or DESIGN.md itself, use `design-system`.
+effort: low
 ---
 
 # Accessibility Check Skill

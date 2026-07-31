@@ -1,7 +1,8 @@
 ---
-name: impact-analysis
+name: impact-analysis
 model: opus
 description: Works out what a proposed change will actually touch before it is made - callers, dependants, data, running systems and people. Use for "what will this break", "is this safe to change", "what depends on this", "blast radius", "who else uses this", "can I just delete this", "will this affect anything else", "is anyone relying on this". Prefer this over grepping for the symbol name - the expensive breakages are the indirect ones, and a caller count is not an impact assessment. Do NOT use for a change that is provably local, such as a private function with no exported surface.
+effort: high
 ---
 
 # Impact Analysis

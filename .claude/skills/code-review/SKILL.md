@@ -1,7 +1,9 @@
 ---
-name: code-review
+name: code-review
 model: opus
 description: Independent Staff Engineer review of a pending git diff — requirements fit, correctness, architecture, maintainability, security, performance, naming, test coverage. Use for "review this", "check my code", "is this ready", "can I ship this", "code quality check", "audit diff", "find bugs in diff", "pre-commit check", before every commit, push, PR or release, and when asked about pending or recent changes. Prefer this over your own read of the diff - an independent pass is the entire value, and it is the step time pressure deletes first. Do NOT use for typos or single-line fixes.
+effort: high
+argument-hint: "[optional focus, e.g. security or a path]"
 user-invocable: true
 allowed-tools:
   - Bash(git status:*)
@@ -17,6 +19,8 @@ allowed-tools:
   - Bash(go vet:*)
   - Read
   - Grep
+  - AskUserQuestion
+  - Skill
 provides: [review]
 requires: [implementation]
 produces_artifact: false
@@ -54,3 +58,11 @@ Independent audit of pending git diffs against `engineering-policy` standards. F
 
 ### 5. Draft Commit / PR Message
 - Match existing repo commit style (`git log -n 5`). Draft commit/PR message. Do not run `git commit` or `git push` directly.
+
+## Human gate
+
+**This skill never runs `git commit`, `git push` or `git merge`, and never opens a PR.** It reviews and it drafts the message; the act itself is a separate, gated decision.
+
+When a Pass verdict is followed by an actual commit, push, merge or PR, gate that act first. One gate per act: a yes to committing is not a yes to pushing.
+
+Invoke `approval-brief` and let it run the `AskUserQuestion` dialogue. Do not write your own prose "shall I proceed?" -- the dialogue shape, the option wording and the no-bundling rule live in that one skill so they cannot drift apart here.

@@ -2,6 +2,10 @@
 name: knowledge-manager
 model: opus
 description: Owns the format and upkeep of a repo's persistent engineering docs — TASK.md, PLAN.md, MEMORY.md, HANDOFF.md, LOG.md, ISSUES.md, decision records. Use for "update the docs", "handoff", "log this", "record this decision", "write down what we decided", "note this for later", "where did we get to", when starting or finishing a unit of work, when a design decision is made or a failure diagnosed, and when those files no longer match reality. Prefer this over editing them freehand — a stale HANDOFF is worse than none, because the next session trusts it. Do NOT use for CLAUDE.md — repo-onboarding owns that.
+context:
+  - formats.md
+effort: high
+argument-hint: "[what happened, and which docs to update]"
 user-invocable: true
 allowed-tools:
   - Read

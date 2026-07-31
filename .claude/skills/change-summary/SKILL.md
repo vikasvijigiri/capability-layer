@@ -1,7 +1,8 @@
 ---
-name: change-summary
+name: change-summary
 model: opus
 description: Produces the summary a human needs for final review - what changed, why, what was deliberately not done, how to verify it and how to reverse it. Use at the end of a unit of work and for "summarise what you did", "what changed", "walk me through it", "write up the changes", "what did you actually do", "give me the summary", "recap this", "ready for review". Prefer this over a file list or commit log - a reviewer needs intent and risk, and a diff shows neither. Do NOT use as a substitute for code-review; this describes the change, it does not judge it.
+effort: high
 ---
 
 # Change Summary

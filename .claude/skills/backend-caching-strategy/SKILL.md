@@ -1,7 +1,8 @@
 ---
-name: backend-caching-strategy
+name: backend-caching-strategy
 model: sonnet
 description: Picks a caching layer, key scheme, TTL and invalidation strategy for a slow or expensive read path. Use for "cache this", "this query is slow", "add a cache layer", "cache invalidation strategy", "the same query runs constantly", "this page takes ages to load", "we hit the database too much", "make it faster without changing the logic". Prefer this over adding an index and hoping - key scheme and invalidation are where caching actually goes wrong. Do NOT use for a genuinely fast read path with no measured latency problem. Implementation-level; for choosing the stack, database or architecture pattern in the first place, use `stack-selector`.
+effort: medium
 ---
 
 # Caching Strategy Skill

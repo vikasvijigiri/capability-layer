@@ -1,7 +1,8 @@
 ---
-name: ai-text-classification
+name: ai-text-classification
 model: sonnet
 description: Classifies text into a fixed label set (intent, sentiment, category, priority) with confidence scores. Use for "classify this", "what category is this", "sentiment of this text", "intent detection", "tag this ticket/email", "sort these automatically", "tag incoming tickets", "work out what this is about", "route these to the right team". Prefer this over hand-written if/else rules once the label set is fixed. Do NOT use for open-ended extraction with no fixed label set — that's a different task. Implementation-level; for choosing models, providers or the overall AI architecture, use `stack-selector`.
+effort: medium
 ---
 
 # Text Classification Skill

@@ -1,7 +1,8 @@
 ---
-name: ai-moderation-filter
+name: ai-moderation-filter
 model: sonnet
 description: Screens text/content against a moderation policy (harassment, hate, self-harm, sexual, violence categories) and returns a pass/flag verdict per category. Use for "moderate this content", "is this safe to post", "content policy check", "flag toxic messages", "is this safe to show users", "filter out bad content", "users can post anything here", "block abusive text". Prefer this over a homemade keyword blocklist - category scoring catches what word lists miss. Do NOT use for a general quality/style review — that's a different concern. Implementation-level; for choosing models, providers or the overall AI architecture, use `stack-selector`.
+effort: medium
 ---
 
 # Moderation Filter Skill

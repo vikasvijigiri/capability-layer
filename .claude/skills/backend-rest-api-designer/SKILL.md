@@ -1,7 +1,8 @@
 ---
-name: backend-rest-api-designer
+name: backend-rest-api-designer
 model: opus
 description: Designs a REST API surface (routes, methods, status codes, pagination, error shape) before implementation begins. Use for "design this API", "what routes do we need", "REST endpoint design", "API contract", "pagination scheme", "what should the endpoints look like", "design the api", "how should the frontend talk to this", "we need an api for this". Prefer this over inventing routes while implementing - an unplanned API surface becomes a permanent contract. Do NOT use once implementation has already started against an agreed contract — that's backend-engineer's job. Implementation-level; for choosing the stack, database or architecture pattern in the first place, use `stack-selector`.
+effort: high
 ---
 
 # REST API Designer Skill

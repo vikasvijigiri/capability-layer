@@ -1,7 +1,8 @@
 ---
-name: documentation-adr-writer
+name: documentation-adr-writer
 model: opus
 description: Writes an Architecture Decision Record (context, decision, alternatives considered, consequences) for a design choice. Use for "record this decision", "write an ADR", "document why we chose X over Y", "architecture decision record", "write down why we chose this", "we'll forget why we did it this way", "document the tradeoff". Prefer this over a commit message - an unrecorded decision becomes an unexplainable constraint later. Do NOT use for a trivial/reversible choice with no real tradeoff to record. Writes the ADR body; `knowledge-manager` owns where decision records live and their required format — follow it rather than inventing a layout.
+effort: high
 ---
 
 # ADR Writer Skill

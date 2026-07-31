@@ -1,7 +1,9 @@
 ---
-name: debugging-profiler-orchestrator
+name: debugging-profiler-orchestrator
 model: sonnet
+disallowed-tools: Edit, Write, NotebookEdit
 description: Runs a CPU/memory profiler around a specified code region and summarizes hotspots. Use for "profile this", "why is this slow", "find the bottleneck", "CPU/memory hotspot", "performance regression", "it's slow", "takes forever", "what's eating all the time", "it used to be faster". Prefer this over guessing at the bottleneck - measured hotspots routinely contradict the obvious suspect. Do NOT use for a functional bug with no performance angle. Scoped to a single diagnostic technique; for the overall bounded diagnose-fix-reverify loop on a repeatedly failing check, use `error-recovery`.
+effort: medium
 ---
 
 # Profiler Orchestrator Skill

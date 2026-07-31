@@ -1,7 +1,8 @@
 ---
-name: debugging-flaky-test-diagnoser
+name: debugging-flaky-test-diagnoser
 model: sonnet
 description: Identifies why a test fails intermittently (timing, shared state, ordering, external dependency) by running it repeatedly under varied conditions. Use for "this test is flaky", "fails intermittently", "passes locally, fails in CI", "test ordering issue", "sometimes it passes sometimes it doesn't", "it's flaky", "green locally red in CI", "just re-run it and it works". Prefer this over retrying the job - a re-run that passes hides the shared state or ordering bug that caused it. Do NOT use for a test that fails deterministically — that's a real bug, not flakiness. Scoped to a single diagnostic technique; for the overall bounded diagnose-fix-reverify loop on a repeatedly failing check, use `error-recovery`.
+effort: medium
 ---
 
 # Flaky Test Diagnoser Skill

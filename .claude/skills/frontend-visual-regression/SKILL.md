@@ -1,7 +1,8 @@
 ---
-name: frontend-visual-regression
+name: frontend-visual-regression
 model: haiku
 description: Captures and diffs screenshots of UI components/pages against a baseline to catch unintended visual changes. Use for "visual regression check", "did this change how the page looks", "screenshot diff", "did my CSS change break anything", "does it still look right", "compare it to before", "check nothing shifted". Prefer this over a manual look - small unintended shifts are exactly what the eye skips. Do NOT use for functional/behavioral testing — that's a different concern from pixel diffs. Checks or generates against an existing design system; to define tokens, scales or DESIGN.md itself, use `design-system`.
+effort: low
 ---
 
 # Visual Regression Skill

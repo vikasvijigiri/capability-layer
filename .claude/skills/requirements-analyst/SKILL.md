@@ -2,6 +2,8 @@
 name: requirements-analyst
 model: opus
 description: Turns a goal/objectives/deliverables statement into a PRD, an MVP-cut feature list, and testable acceptance criteria per feature. Owns the Scope-Cut Defaults for resolving ambiguous requirements without asking. Use whenever a vague ask needs to become a concrete spec, when the user says "I need a PRD", "write a PRD", "what should we build", "define the requirements", "scope this", "what are the acceptance criteria", and always before any architecture or stack decision. Prefer this over inferring requirements while coding — undefined requirements cannot be judged complete. Do NOT use once a PRD already exists and only implementation remains.
+effort: high
+argument-hint: "[goal or objectives statement]"
 user-invocable: true
 allowed-tools:
   - Read

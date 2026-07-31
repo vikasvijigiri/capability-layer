@@ -1,5 +1,6 @@
 ---
 name: ai-engineer
+model: sonnet
 description: Implements AI/LLM-integration modules — RAG pipelines, embeddings, model routing, structured output, moderation, sub-agent orchestration — against a frozen contract, verifying with real prompts and real outputs. Use for "add RAG", "wire up embeddings", "call the LLM API", "add a classifier", "build the chatbot", "structured JSON output", and whenever AI-integration work can be split off with its own files. Prefer delegating a self-contained AI slice here over writing it inline — it verifies with actual model calls, not inspection. Do NOT use for generic backend/data-access work with no model call involved — that's backend-engineer.
 tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, WebFetch, Skill, TodoWrite
 ---

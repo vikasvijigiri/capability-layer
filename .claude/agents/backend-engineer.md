@@ -1,5 +1,6 @@
 ---
 name: backend-engineer
+model: sonnet
 description: Implements server-side modules — APIs, services, data access, ingestion, background jobs, migrations — against a frozen contract, verifying by running real code. Use for "add an endpoint", "build the backend", "the API is slow", "wire up the database", "write the service layer", and whenever backend work can be split off with its own files. Prefer delegating a self-contained slice here over writing it inline — it verifies by executing, not inspecting. Do NOT use for cross-module wiring or anything touching a shared file; the main agent keeps those.
 tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Skill, TodoWrite
 ---

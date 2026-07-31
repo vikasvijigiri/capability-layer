@@ -1,7 +1,8 @@
 ---
-name: testing-mutation-testing
+name: testing-mutation-testing
 model: haiku
 description: Injects small code mutations and checks whether the existing test suite catches them, to measure real test effectiveness beyond line coverage. Use for "mutation testing", "are these tests actually good", "test effectiveness", "coverage looks high but is it meaningful", "are these tests any good", "coverage is high but I don't trust it", "do the tests actually catch bugs", "is the suite worth anything". Prefer this over reading a coverage percentage - executed lines and asserted behaviour are different things. Do NOT use as a substitute for writing tests in the first place — it only measures suites that already exist. Generates tests only; to run a suite, own coverage end-to-end or sweep for stale tests, use the `qa-engineer` agent.
+effort: low
 ---
 
 # Mutation Testing Skill

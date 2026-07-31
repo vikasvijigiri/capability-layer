@@ -1,7 +1,8 @@
 ---
-name: deployment-cost-optimizer
+name: deployment-cost-optimizer
 model: haiku
 description: Finds and reduces recurring infrastructure and API spend, attributing cost to what actually drives it before changing anything. Use for "this is getting expensive", "reduce our cloud bill", "why are we paying so much", "the API costs are climbing", "can we cut costs", "we are over the free tier", "what is driving this bill", "optimise spend". Prefer this over turning things off to see what happens - unattributed cost cutting removes capacity you needed and misses the line item that actually dominates. Do NOT use to choose a cheaper stack up front; that is stack-selector.
+effort: low
 ---
 
 # Deployment Cost Optimizer

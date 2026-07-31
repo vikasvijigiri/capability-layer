@@ -1,7 +1,8 @@
 ---
-name: testing-unit-test-generator
+name: testing-unit-test-generator
 model: haiku
 description: Generates deterministic unit tests (happy path, edge cases, error cases) for a given function/module. Use for "write unit tests", "add tests for this function", "test coverage is thin", "cover the edge cases", "this function has no tests", "make sure this keeps working". Prefer this over testing only the happy path - error and boundary cases are where regressions land. Do NOT use for browser/UI-level tests — that's e2e-test-generator. Generates tests only; to run a suite, own coverage end-to-end or sweep for stale tests, use the `qa-engineer` agent.
+effort: low
 ---
 
 # Unit Test Generator Skill

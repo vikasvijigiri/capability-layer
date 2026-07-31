@@ -1,5 +1,6 @@
 ---
 name: design-engineer
+model: opus
 description: Owns a project's DESIGN.md — forks in the global design system, defines token scales (colour, typography, spacing, motion, elevation) for light and dark, and computes WCAG contrast ratios rather than estimating them. Use when delegating the design phase as a parallel slice, or when a project needs DESIGN.md established before components are built - including vague asks like "set up our design system", "we need a consistent look", "define the colours and spacing", "make dark mode work", "is this contrast accessible". Prefer delegating here over inventing tokens inline; for quick UI guidance invoke the design-system skill directly. Do NOT use for building components — frontend-engineer does that.
 tools: Read, Write, Edit, Glob, Grep, Skill
 ---

@@ -1,5 +1,6 @@
 ---
 name: knowledge-scribe
+model: sonnet
 description: Maintains a repository's persistent engineering docs — TASK, PLAN, HANDOFF, LOG, ISSUES, MEMORY and decision records — in their canonical formats. Use when delegating doc upkeep as a parallel slice, or when those files no longer match reality - including "write down where we got to", "update the handoff", "log what we did", "the docs are out of date", "I will forget this by Monday", "record this for next time". Prefer delegating here over editing them freehand — it verifies state before describing it, so it cannot record work that did not happen. Do NOT use for CLAUDE.md — repo-onboarding owns that.
 tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Skill
 ---

@@ -1,7 +1,9 @@
 ---
-name: engineering-policy
+name: engineering-policy
 model: opus
 description: Universal engineering standards and hard safety limits — SOLID/DRY/KISS/YAGNI, clean architecture, naming, dependency governance, secrets handling, context economy, Definition of Done. Read for "best practice", "engineering standards", "code standards", "policy check", "architecture rules", "is this good code", "should I add package/lib", "over-engineered", "definition of done", before writing non-trivial code, and before declaring any task complete. Cites core policy rules. Prefer this over recalling a rule from memory - it cites the actual policy text rather than a paraphrase. Do NOT expect step-by-step process — that is workflow-orchestrator.
+effort: high
+argument-hint: "[optional topic to cite, e.g. naming or secrets]"
 user-invocable: true
 ---
 

@@ -1,7 +1,8 @@
 ---
-name: backend-rate-limiter
+name: backend-rate-limiter
 model: sonnet
 description: Designs a rate-limiting strategy (algorithm, limits, key scope, response headers) for an API or endpoint. Use for "add rate limiting", "prevent abuse of this endpoint", "throttle requests", "429 handling", "someone is hammering the api", "stop people abusing this", "one user is spamming requests", "protect this endpoint". Prefer this over an ad-hoc counter - limits without a key scope and retry headers are trivially bypassed. Do NOT use for infrastructure-level DDoS protection — that's a deployment/network concern. Implementation-level; for choosing the stack, database or architecture pattern in the first place, use `stack-selector`.
+effort: medium
 ---
 
 # Rate Limiter Skill

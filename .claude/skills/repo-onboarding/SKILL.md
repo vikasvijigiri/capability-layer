@@ -1,7 +1,9 @@
 ---
-name: repo-onboarding
+name: repo-onboarding
 model: opus
 description: Writes or refreshes a repository's CLAUDE.md — what the project is, its architecture, stack, folder layout, commands, deployment, repo-local rules. Use for "document this repo", "write/update CLAUDE.md", "onboard me", "what is this repo", "what even is this repo", "what does this repo do", "explain this codebase", "nothing here says what this does", when CLAUDE.md or the README is missing, a stub, or contradicts the code, and always after a feature or build lands — one still describing the previous state is a defect. Prefer this over hand-writing project docs yourself. Do NOT use for TASK/PLAN/HANDOFF/LOG/ISSUES/MEMORY — knowledge-manager owns those.
+effort: high
+argument-hint: "[optional path, default: repo root]"
 user-invocable: true
 allowed-tools:
   - Read

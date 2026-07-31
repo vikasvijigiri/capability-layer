@@ -1,7 +1,8 @@
 ---
-name: work-decomposition
+name: work-decomposition
 model: opus
 description: Splits work into slices that can genuinely proceed independently, naming the contract each depends on and which can be delegated to a subagent. Use for "split this up", "can we parallelise this", "break this into pieces", "this is too big", "can two people work on this at once", "divide the work", "what can run in parallel", "can subagents do this". Prefer this over splitting by file or by person - work split without a frozen contract between the pieces produces merge conflicts and integration failure, not speed. Do NOT use for work that is genuinely sequential.
+effort: high
 ---
 
 # Work Decomposition

@@ -34,7 +34,18 @@ export const meta = {
 // SKILL.md at runtime -- keep it in sync by hand when a skill's capabilities change.
 // Absolute path, deliberately not '~/...' -- subagents dispatched via agent() are told
 // to Read this path, and the Read tool requires an absolute path (no tilde expansion).
-const SKILLS_ROOT = 'C:/Users/VikasVijigiri/.claude/skills'
+//
+// This pointed at 'C:/Users/VikasVijigiri/.claude/skills' until 2026-07-31 -- the global
+// layer, which was deleted on 2026-07-30. All 22 CAPABILITY_MANIFEST paths below
+// therefore resolved to a directory that does not exist, and every subagent dispatched
+// with one was told to Read nothing. It points into this repo now, because this repo is
+// where every skill lives.
+//
+// Still machine-specific: whoever drives these phases must substitute the real absolute
+// path to this checkout before handing a path to a subagent. Verify one path resolves
+// before dispatching twenty-two of them.
+const REPO_ROOT = 'c:/Users/VikasVijigiri/Documents/FDE_Vikas/Notes'
+const SKILLS_ROOT = `${REPO_ROOT}/.claude/skills`
 const CAPABILITY_MANIFEST = {
   'prd': { skill: 'requirements-analyst', path: `${SKILLS_ROOT}/requirements-analyst/SKILL.md` },
   'acceptance-criteria': { skill: 'requirements-analyst', path: `${SKILLS_ROOT}/requirements-analyst/SKILL.md` },

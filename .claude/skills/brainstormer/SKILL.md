@@ -1,6 +1,7 @@
 ---
 name: brainstormer
 description: Generates and develops ideas with you on any topic - technical, product, business or otherwise - keeping generation separate from judgement so the first idea does not become the only one. Use for "brainstorm", "any ideas", "what could we do", "help me think this through", "throw some ideas at me", "I am stuck", "what are our options", "bounce ideas", "spitball this", "what if we", "thinking out loud", "give me some angles". Prefer this over running with the first workable idea - the first idea becomes an anchor, and everything after it turns into a variation on it rather than a genuine alternative. Do NOT use once an option is chosen and the work is to specify or build it; that is requirements-analyst or execution-planner.
+effort: high
 model: opus
 disallowed-tools: Edit, Write, NotebookEdit
 ---

@@ -1,7 +1,8 @@
 ---
-name: ai-summarization
+name: ai-summarization
 model: sonnet
 description: Produces a length- and style-controlled summary of long text (extractive or abstractive) while preserving key facts and figures. Use for "summarize this", "give me the TL;DR", "condense this document", "executive summary of this", "too long to read", "shorten this", "give me the gist", "what does this say in short". Prefer this over truncating text - length control that preserves the key facts is the whole point. Do NOT use when the ask is really "extract structured fields" — that's api-extractor/text-classification territory. Implementation-level; for choosing models, providers or the overall AI architecture, use `stack-selector`.
+effort: medium
 ---
 
 # Summarization Skill

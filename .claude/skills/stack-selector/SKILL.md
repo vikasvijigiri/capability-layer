@@ -2,6 +2,8 @@
 name: stack-selector
 model: opus
 description: Picks an architecture pattern and a concrete free-tier/open-source stack, walking a fixed tie-break order, and records the decision as an ADR. Use for any "what stack should I use", "which framework", "which database", "which db", "how should we architect this" question — including one naming products directly ("postgres or mongo", "redis or not") — and before the first module of a new project is written. Prefer this over ad-hoc stack picking — an unrecorded stack choice becomes an unexplainable constraint later. Do NOT use for changes inside an already-chosen stack.
+effort: high
+argument-hint: "[what you are choosing a stack for]"
 user-invocable: true
 allowed-tools:
   - Read

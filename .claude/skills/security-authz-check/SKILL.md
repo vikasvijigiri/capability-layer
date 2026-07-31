@@ -1,7 +1,8 @@
 ---
-name: security-authz-check
+name: security-authz-check
 model: sonnet
 description: Reviews endpoints/resources for missing or inconsistent authorization checks (broken object-level authz, privilege escalation paths). Use for "check authorization", "can a user access another user's data", "authz review", "privilege escalation check", "can users see other people's data", "check the permissions", "is this endpoint protected", "could someone access what they shouldn't". Prefer this over trusting the UI to hide things - authorization holes are found at the API, not the screen. Do NOT use for authentication (login/identity) review — that's a distinct concern from authorization (permissions). A single targeted scan; for a full adversarial review of a pending diff, use `code-review` or the `security-reviewer` agent.
+effort: medium
 ---
 
 # Authorization Check Skill

@@ -1,7 +1,8 @@
 ---
-name: ai-rag
+name: ai-rag
 model: sonnet
 description: Assembles a retrieval-augmented-generation pipeline (retrieve, rank, generate, cite) without side-effects. Use for "RAG", "retrieval augmented", "answer with citations", "search my docs and answer", "hallucination check on an answer", "answer questions over my own docs", "make it cite where it got that", "it keeps making things up", "search my files and answer". Prefer this over hand-rolling a retrieval loop - grounding and citation are the parts that get skipped. Do NOT use for raw prompt engineering with no retrieval step. Implementation-level; for choosing models, providers or the overall AI architecture, use `stack-selector`.
+effort: medium
 ---
 
 # RAG Skill

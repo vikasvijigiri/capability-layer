@@ -1,7 +1,8 @@
 ---
-name: blueprint-promoter
+name: blueprint-promoter
 model: opus
 description: Decides when a solution has been repeated often enough to become a reusable blueprint, and promotes it. Use for "we keep doing this", "we have solved this before", "this is the third time", "make this reusable", "turn this into a pattern", "should this be a template", "promote this", "standardise how we do this". Prefer this over solving the same problem a fourth time from scratch - an unpromoted repeated solution is knowledge that leaves with the session. Do NOT promote on the first or second occurrence; two points are not a pattern.
+effort: high
 ---
 
 # Blueprint Promoter

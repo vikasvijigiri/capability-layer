@@ -1,7 +1,8 @@
 ---
-name: ai-hallucination-evaluator
+name: ai-hallucination-evaluator
 model: sonnet
 description: Scores a generated answer against its cited source evidence for factual grounding. Use for "is this answer hallucinating", "check this response against sources", "evaluate LLM output for accuracy", "fact-check this generation", "is this made up", "can I trust this output", "it sounds confident but wrong", "check it against the source". Prefer this over eyeballing a generated answer - confident wrong output reads exactly like correct output. Do NOT use for subjective quality/style review — that's a different concern. Implementation-level; for choosing models, providers or the overall AI architecture, use `stack-selector`.
+effort: medium
 ---
 
 # Hallucination Evaluator Skill

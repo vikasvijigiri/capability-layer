@@ -1,7 +1,9 @@
 ---
-name: workflow-orchestrator
+name: workflow-orchestrator
 model: opus
 description: Coordinates any non-trivial engineering request end-to-end (Understand → Load Context → Plan → Execute → Review → Knowledge Update → Git Ready → Ship Ready → Done). Use for multi-step feature/bug/refactor/docs/research/migration/security/performance work, "run pipeline", "execute step by step", "multi-file change", "complex task", "big feature", "refactor project", "full task pipeline", and whenever a request will touch several files or take more than one step. Prefer this over improvising the order of work - the gates it enforces are the ones that get skipped under time pressure. Do NOT use for one-line fixes or single-file edits.
+effort: high
+argument-hint: "[the request to run end to end]"
 user-invocable: true
 allowed-tools:
   - Read
@@ -9,6 +11,8 @@ allowed-tools:
   - Glob
   - TodoWrite
   - Agent
+  - AskUserQuestion
+  - Skill
 ---
 
 # Workflow Orchestrator
@@ -63,3 +67,11 @@ Understand → Load Context → Plan → Execute → Review → Knowledge Update
 
 ## Done Criteria
 Satisfied when Execute completes task Done Checks, Review passes, Knowledge docs update, and user approves deployment.
+
+## Human gate
+
+The `Git Ready` and `Ship Ready` stages are gates, not checkpoints to narrate past. At each, invoke `approval-brief` and let it run the dialogue before any commit, push, PR, merge, release or deploy.
+
+These are the two stages that get skipped under time pressure, which is the whole reason they are named stages rather than left to judgement.
+
+Invoke `approval-brief` and let it run the `AskUserQuestion` dialogue. Do not write your own prose "shall I proceed?" -- the dialogue shape, the option wording and the no-bundling rule live in that one skill so they cannot drift apart here.

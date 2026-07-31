@@ -1,7 +1,8 @@
 ---
-name: ai-embeddings
+name: ai-embeddings
 model: sonnet
 description: Generates and manages text embeddings for semantic search, clustering, or similarity scoring, including vector-store upsert plans. Use for "embed this", "semantic search over these docs", "find similar items", "cluster these texts", "set up a vector store", "find similar ones", "search by meaning not exact words", "group these together", "match on intent". Prefer this over keyword search when the user describes matching by meaning rather than exact text. Do NOT use for keyword/exact-match search — that's a simpler grep/index problem. Implementation-level; for choosing models, providers or the overall AI architecture, use `stack-selector`.
+effort: medium
 ---
 
 # Embeddings Skill

@@ -1,7 +1,8 @@
 ---
-name: requirements-traceability
+name: requirements-traceability
 model: opus
 description: Maps every line of a change back to the requirement it serves, and every requirement forward to the change that implements it - exposing both unrequested work and quietly dropped scope. Use for "does this match the brief", "did we do everything", "why is this in here", "trace this back", "is anything missing", "did we build extra", "check scope", "is this all in scope". Prefer this over reading the diff alone - a diff shows what was written, never what was asked for and skipped. Do NOT use before a brief exists; there is nothing to trace against.
+effort: high
 ---
 
 # Requirements Traceability

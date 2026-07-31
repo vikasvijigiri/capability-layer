@@ -1,7 +1,8 @@
 ---
-name: ai-agent-orchestrator
+name: ai-agent-orchestrator
 model: sonnet
 description: Plans and coordinates multiple sub-agents (e.g. small models for cheap subtasks, a larger model for synthesis) against a shared task, merging their outputs. Use for "coordinate multiple agents", "use sub-agents for this", "split this across agents", "big model plans, small models execute", "too big for one pass", "run these in parallel", "one plans, the others execute", "have one plan and others do the work". Prefer this over one long single-model pass when subtasks are genuinely independent. Do NOT use for a single-model, single-step task - that's overkill. Implementation-level; for choosing models, providers or the overall AI architecture, use `stack-selector`.
+effort: medium
 ---
 
 # Agent Orchestrator Skill

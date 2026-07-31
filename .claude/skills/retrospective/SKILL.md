@@ -1,7 +1,8 @@
 ---
-name: retrospective
+name: retrospective
 model: opus
 description: Extracts the durable lesson from finished work - what to keep doing, what to change, and what was learned that is not obvious from the diff. Use after a unit of work completes and for "what did we learn", "how did that go", "retro", "lessons learned", "what would we do differently", "that was painful", "why did that take so long", "post mortem on the process". Prefer this over moving straight to the next task - a lesson not written down is re-learned at full price. Do NOT use for incident causation - that is root-cause-analysis.
+effort: high
 ---
 
 # Retrospective

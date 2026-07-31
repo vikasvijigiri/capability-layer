@@ -2,6 +2,7 @@
 name: frontend-state-architecture
 model: opus
 description: Decides where client state lives, how data is fetched and cached, and how loading, empty and error states are represented - before components start holding state ad hoc. Use for "where should this state live", "do we need Redux/Zustand", "how should we fetch this", "server state vs client state", "prop drilling everywhere", "the data is out of sync", "two components disagree", "everything re-renders", "how do we handle loading". Prefer this over adding state to whichever component needed it first - state placed by convenience becomes the thing every later feature has to work around. Do NOT use to build one component's local state - that is `frontend-component-generator`.
+effort: high
 ---
 
 # State Architecture Skill

@@ -2,6 +2,7 @@
 name: frontend-form-builder
 model: sonnet
 description: Builds a form with its field types, validation rules, submission handling and error surfacing - including the failure paths that hand-written forms skip. Use for "build a form", "add a signup/checkout form", "form validation", "validate this input", "show the error next to the field", "the form loses my data", "double submit", "why does it clear when it fails", "required field handling". Prefer this over hand-wiring inputs and an onSubmit - the validation timing, the error placement and the resubmit path are exactly what gets skipped and exactly where users get stuck. Do NOT use for server-side validation of an API payload - that belongs with the endpoint.
+effort: medium
 ---
 
 # Form Builder Skill
