@@ -3,6 +3,56 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-01 16:40
+First `brainstormer` run end to end — the skill's gates and its `docs/specs/` path are
+now asserted by something other than its own text. Six futures generated for "how does
+software engineering change in 10 years", converged on trust-scarcity + agent-fleets, and
+the design that fell out is an **evidence ledger**: claims extracted only from explicit
+sources, checks executed and captured verbatim, and the *unbacked* set as the primary
+output rather than the pass list.
+
+Spec at `docs/specs/2026-08-01-evidence-ledger-design.md`. Units 1–4 in scope; unit 5
+(attention router) designed and deliberately not built. Gate ships advisory until
+extraction's false-positive rate is measured over ~20 real changes.
+
+Motivating failure is this repo's own: six hooks shipped naming deleted skills, past a
+green suite, because nothing asserted the named skill exists. That is criterion 2.
+
+Nothing implemented. `writing-plans` is next.
+
+## 2026-08-01 14:26
+Tore the capability layer down to two skills. Deleted 85 skills, 12 agents, 6 blueprints,
+7 workflows, 11 validators, 1 playbook, 1 template, 27 MCP docs, all five generated
+registries, `routing/capabilities.md` and its router hook, and the six tools that only
+served them. 182 deletions. `brainstormer`, `writing-plans` and `.claude/hooks/` survive.
+Safety commit `eaab430` first, so all of it is recoverable.
+
+"Keep the hooks as-is" was not satisfiable, and the reason is worth keeping. Three of them
+were wired to things that no longer exist:
+
+- `pre-run/03-task-brief-nudge.py` — deleted and unregistered. It named `task-intake` on
+  every prompt; the skill is gone, so it was injecting a dead instruction every turn.
+- `session-start/01-env-check.py` — checked three registries that no longer exist and would
+  have reported `missing registry` at every session start forever. Rewritten to assert what
+  now matters: every skill has a `SKILL.md` and a routing entry. Verified by planting an
+  unrouted skill and confirming it is reported, not just that the clean case is silent.
+- `tools/test_process_router.py` — six of seven match assertions named deleted skills.
+  Rewritten, and now also asserts the inverse (every skill *has* an entry), which the old
+  suite only emitted as a tolerated NOTE.
+
+**The Stop gate then demonstrated the same bug on itself:** it blocked the turn with
+"invoke `knowledge-manager` to record this unit of work" — a skill deleted ten minutes
+earlier. Six hooks carry user-visible strings naming `knowledge-manager` or `code-review`.
+That is the sixth instance of this repo's recurring class, *prose declares a capability the
+wiring does not implement*, and the first where the prose is inside a hook rather than a
+skill. A hook cannot check whether the skill it names exists; nothing does.
+
+`04-delivery-guard.py` also has a real Windows bug. `find_ai_attribution` scans the whole
+command string, and its `_STANDALONE` lookarounds exclude `/` but not `\`, so any path
+containing `\claude\` reads as AI attribution. Its own comment says a `~/.claude/` path
+must not trigger it — true on POSIX, false here. It blocked two legitimate commits before
+the message was moved onto stdin.
+
 ## 2026-08-01 14:07
 Adopted two skills from `obra/superpowers` (264k stars), whose `.claude/skills/brainstorm/`
 convention 6,912 repos share. `brainstormer` took the full superpowers shape by explicit

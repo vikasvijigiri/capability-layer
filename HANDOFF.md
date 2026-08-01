@@ -25,45 +25,60 @@ section. Read the file directly when full history is actually needed. -->
 - 2026-08-01 — `brainstormer` rebuilt on the `obra/superpowers` shape; new `writing-plans`
   skill adopted from the same source. 87 skills. Direction set: tear the capability layer
   down to these two skills plus hooks, and rebuild from superpowers and other repos.
+- 2026-08-01 — First `brainstormer` run end to end. Spec approved and committed:
+  `docs/specs/2026-08-01-evidence-ledger-design.md`. Next: `writing-plans`.
 
 <!-- session-context:start -->
 ## Current Work
 
-**Teardown in progress.** The capability layer is being stripped to two skills —
-`brainstormer` and `writing-plans`, both adopted from `obra/superpowers` — plus
-`.claude/hooks/`. Everything else under `.claude/` goes, and the layer gets rebuilt
-from superpowers and other public repos rather than extended in place.
+**Teardown done, uncommitted.** 182 deletions, 12 modifications, 0 untracked.
+`.claude/` is now `skills/` (`brainstormer`, `writing-plans`), `hooks/`, `routing/`,
+`commands/` and the two settings files. Safety commit `eaab430` holds everything
+that was removed.
 
-Approved scope: trim routing to the two surviving skills, delete `capabilities.md`
-and the nine-domain capability router with it, delete the two tests that only cover
-capability routing, keep `test_hooks.py` and `test_process_router.py` green. A safety
-commit lands first so every deletion is recoverable.
+All checks green and actually run: four suites pass (`All hook tests passed`,
+`All process-router tests passed (2 entries routed)`, `All docs-gate tests passed`,
+`All docs-staleness tests passed`), `01-env-check.py` reports `{"issues": []}` and
+was proved to detect a planted unrouted skill, frontmatter parses `2 skills;
+problems: none`, hook registration has no dangling paths in either direction,
+`compileall` exits 0.
+
+**Not committed** — the safety commit was approved, this was not.
 
 ## Pending
 
+- **Six hooks name skills that no longer exist, in user-visible output.**
+  `post-run/04-docs-sync.py:304`, `post-run/05-docs-gate.py:110`,
+  `pre-commit/05-docs-required.py:107` and `pre-run/04-docs-staleness.py:164,205`
+  say "invoke `knowledge-manager`"; `pre-commit/03-review-gate.py:184,195,204` and
+  `04-delivery-guard.py:293` say "run `code-review`". Both skills were deleted.
+  The Stop gate blocked a turn on this within minutes of the teardown. Nothing
+  checks whether a hook's named skill exists.
+- **`04-delivery-guard.py` false-positives on Windows paths.**
+  `find_ai_attribution` scans the whole command string and `_STANDALONE` excludes
+  `/` but not `\`, so any path containing `\claude\` is read as AI attribution. It
+  denied two legitimate commits. Fix: add `\\` to both lookaround character classes.
 - **The 500-token skill-response cap contradicts both surviving skills.** CLAUDE.md
   caps every skill response at 500 tokens; both present design in 200-300 word
   sections across three gates and emit full code blocks. Kept deliberately when the
   option to drop it was offered. No automated check can catch this.
-- **`docs/specs/` and `docs/plans/` do not exist yet.** Both adopted skills write
-  there. First real run of either will create them.
+- **`docs/specs/` and `docs/plans/` do not exist yet.** Both skills write there.
+- `docs/architecture/` (00-17) documents the deleted layer in detail and was left
+  untouched. Rebuild or delete; do not trust it.
+- `on-blueprint-promote/02-git-tag.py` is unregistered and fires on a concept that
+  no longer exists. Inert, not wrong — unlike the nudge that was removed.
 - `claude.ai Slack` connector still needs OAuth (the 1 of 19 not connected).
-- The description-truncation problem is largely dissolved by the teardown — two
-  skills fit the listing budget with room to spare. It returns as the layer is
-  rebuilt, so the budget is a design constraint on what gets added back, not a
-  cleanup task.
 
 ## Next Steps
 
-- Execute the teardown, then rewrite CLAUDE.md against what actually remains.
-  `repo-onboarding` owns that file and is itself being deleted, so it runs before
-  the deletion or not at all.
-- Rewrite `.claude/commands/verify.md`: it hardcodes 86 skills and four suites, two
-  of which are being deleted.
+- Commit the teardown.
+- Fix the six hook strings above, then decide whether a check should assert that
+  every skill name appearing in a hook's output resolves to a real skill directory.
+  That check is what would have caught all six, and the five earlier instances.
+- Rebuild from superpowers: `subagent-driven-development` and `executing-plans` are
+  what `writing-plans` should hand off to, and neither exists here.
 - `/skills-doctor` measures description budget across the skill layer. With two
   skills it has almost nothing to measure — decide whether it earns its place.
-- Rebuild from superpowers: `subagent-driven-development` and `executing-plans` are
-  the two `writing-plans` hands off to, and neither exists here.
 
 ## Open Questions
 
