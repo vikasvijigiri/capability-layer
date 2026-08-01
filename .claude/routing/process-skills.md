@@ -21,6 +21,18 @@ claim, so entries lean on multi-word phrases lifted from each skill's own
 
 ---
 
+## systematic-debugging
+
+Keywords: this is broken, why is this failing, the test fails, tests are failing, it worked before, debug this, whats wrong with, what is wrong with, nothing happens, silently doing nothing, figure out why, root cause, root cause this, why does this return, the fix did not work, still failing
+
+## knowledge-manager
+
+Keywords: log this, update the docs, record this, record this unit of work, write down what we decided, note this for later, capture this before we lose it, handoff, where did we get to, update handoff, add a decision record, log the decision
+
+## code-review
+
+Keywords: code review, review the diff, review this change, review my code, review the pr, review the branch, check this before i commit, look over these changes, sanity check this, is this ready to ship, no code review has been recorded
+
 ## task-brief
 
 Keywords: task brief, six line brief, 6 line brief, scope this, scope the task, break this into a brief, structure this task, turn this into a task, write the brief, what is out of scope, add support for, can we support, i want users to be able to, it would be nice if, new feature request

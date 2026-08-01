@@ -10,6 +10,45 @@
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
 
+### 2026-08-01 — Review gate that always asks before a commit or PR
+
+- **Goal**: A `code-review` skill that reviews the pending diff or PR, reports
+  findings, and requires explicit user sign-off — where that sign-off is the only
+  thing that writes the receipt `03-review-gate.py` checks, so an unreviewed
+  commit or PR is always interrupted.
+- **Input**: `03-review-gate.py` (working gate, `--record` mode, content
+  fingerprinting); `04-delivery-guard.py` (mechanical checks, already emits an
+  unverifiable "was this reviewed" note per commit);
+  `.claude/hooks/state/review-receipts.json`, holding one stale receipt;
+  `git diff` / `gh pr diff` / the GitHub MCP for PR content.
+- **Output**: `.claude/skills/code-review/SKILL.md`; a `## code-review` entry in
+  `.claude/routing/process-skills.md`; `03-review-gate.py` extended to match PR
+  actions; coverage for the new trigger in `tools/test_hooks.py`.
+- **Constraints**: Extend `03-review-gate.py` to match `gh pr create` / PR
+  actions — today it matches only `git commit` and `git push`. Write the receipt
+  through the existing `--record` mode; the fingerprint scheme and receipts file
+  are unchanged. Never self-record: no findings still requires sign-off, or the
+  every-time ask is lost. Needs a routing entry (`test_process_router.py`
+  enforces it). Follow the superpowers SKILL.md shape — trigger-only description
+  under 500 chars, Red Flags, Common Mistakes.
+- **Done Checks**:
+  1. `echo '{"tool_name":"Bash","tool_input":{"command":"gh pr create"}}' | python .claude/hooks/pre-commit/03-review-gate.py`
+     returns `permissionDecision: ask` on a dirty tree. Today it is silent.
+  2. After `--record`, the same payload is silent; after any further edit it
+     returns `ask` again.
+  3. `python tools/test_hooks.py` and `python tools/test_process_router.py` both
+     exit 0, the router reporting `4 entries routed`.
+- **Out of Scope**: The `\claude\` Windows false-positive in
+  `04-delivery-guard.py` (separate pending item). The secret-scan `deny` —
+  untouched. Posting review comments back to GitHub. Deleting the stale receipt
+  beyond what `--record` overwrites. Reviving any other deleted skill.
+- **Result**: All three Done Checks pass. Also fixed a latent bug the brief did
+  not anticipate: the receipts file is tracked, so `--record` changed the very
+  fingerprint it had just recorded under, and every receipt self-invalidated.
+  The gate had never been able to pass. Receipts path is now excluded from all
+  fingerprint inputs.
+- **Status**: Done
+
 ### 2026-07-30 — Wire repo hooks into Claude Code lifecycle events
 - **Goal**: Make `.claude/hooks/` fire automatically instead of only when something
   shells out to `tools/run_hook.py`.

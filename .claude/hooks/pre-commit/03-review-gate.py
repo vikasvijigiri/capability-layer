@@ -1,23 +1,29 @@
-"""Review Gate -- PreToolUse hook for `git commit` / `git push`.
+"""Review Gate -- PreToolUse hook for `git commit`, `git push` and `gh pr create`.
 
 Whether the diff gets reviewed is a judgment call, and judgment is exactly what gets
-skipped under time pressure. This hook converts that judgment into a mechanism. A commit
-is held for explicit approval unless a review receipt exists whose fingerprint matches
-the change being committed.
+skipped under time pressure. This hook converts that judgment into a mechanism. A
+delivery action is held for explicit approval unless a review receipt exists whose
+fingerprint matches the change being delivered.
 
 Two modes:
 
   stdin (hook)   PreToolUse payload -> allow silently, or return "ask" with the reason.
   --record       Writes the receipt for the current change. Run this as the last step of
                  a review, so the receipt can only exist if a review actually happened.
+                 Add `--pr` to record a pull-request review instead of a commit one.
 
-No skill owns the review or the recording -- the `code-review` skill that used to run
-`--record` automatically was deleted in the 2026-08-01 teardown. Until something replaces
-it, both steps are manual, which means this gate asks on every commit by default.
+The `code-review` skill owns both the review and the `--record` call. It requires the
+user's sign-off before recording, so the receipt cannot exist without a human having
+been asked. Nothing else should call `--record`.
 
 The fingerprint is the content of the change itself, not a timestamp. Amending the diff
 after a review invalidates the receipt automatically -- reviewing one change and
 committing a different one is the failure this is built to catch.
+
+A pull request delivers more than the working tree: it delivers every commit on this
+branch that the base does not have. So the PR fingerprint covers the branch diff as
+well as the working tree, which also means a commit review does not silently satisfy a
+PR gate. Reviewing today's edit is not reviewing the twelve commits shipping with it.
 
 Fails open by design: any internal error allows the operation. A broken gate must never
 be able to wedge a session.
@@ -45,11 +51,28 @@ import time
 # if the diffs happened to fingerprint alike. Repo-local is the correct scope.
 STATE_PATH = os.path.join(os.path.dirname(__file__), "..", "state", "review-receipts.json")
 
+# The receipts file is tracked, so writing a receipt changes `git status --porcelain`
+# and `git diff` -- which changes the very fingerprint the receipt was just recorded
+# under. Every receipt invalidated itself the instant it was written, and the gate
+# asked forever; the 2026-08-01 receipt reported "the change has been modified since
+# it was reviewed" for exactly this reason and nothing else. Excluding the path from
+# every fingerprint input is the fix. Gitignoring the file would also work, but it is
+# already tracked and this holds either way.
+RECEIPTS_PATHSPEC = ":(exclude).claude/hooks/state/review-receipts.json"
+
 # Only real delivery actions are gated. `git commit --dry-run`, `git log`, `git status`
 # and friends must stay frictionless.
 COMMIT_RE = re.compile(r"\bgit\s+(?:-[^\s]+\s+)*commit\b")
 PUSH_RE = re.compile(r"\bgit\s+(?:-[^\s]+\s+)*push\b")
 DRY_RUN_RE = re.compile(r"--dry-run\b")
+
+# Only PR verbs that actually deliver. `gh pr view`, `list`, `diff`, `checks` and
+# `status` are read-only and must stay frictionless -- gating them would make the
+# gate itself the reason people stop inspecting PRs.
+PR_RE = re.compile(r"\bgh\s+pr\s+(?:create|merge|ready)\b")
+
+# Bases tried in order when working out what a PR would actually deliver.
+PR_BASES = ("origin/main", "origin/master", "main", "master")
 
 # A receipt older than this is treated as stale even if the diff still matches, so a
 # review from days ago cannot silently authorise today's commit.
@@ -95,14 +118,34 @@ def fingerprint(root: str, action: str) -> str | None:
         # No commits means nothing to push; git will refuse on its own.
         return hashlib.sha256(head.encode("utf-8")).hexdigest() if head else None
 
-    blob = "\n".join((
-        run_git(["status", "--porcelain"], root),
-        run_git(["diff", "--cached"], root),
-        run_git(["diff"], root),
-    ))
+    parts = [
+        run_git(["status", "--porcelain", "--", ".", RECEIPTS_PATHSPEC], root),
+        run_git(["diff", "--cached", "--", ".", RECEIPTS_PATHSPEC], root),
+        run_git(["diff", "--", ".", RECEIPTS_PATHSPEC], root),
+    ]
+    if action == "pull request":
+        parts.append(branch_diff(root))
+
+    blob = "\n".join(parts)
     if not blob.strip():
         return None
     return hashlib.sha256(blob.encode("utf-8", "replace")).hexdigest()
+
+
+def branch_diff(root: str) -> str:
+    """Everything this branch would deliver that the base does not already have.
+
+    Falls back to the HEAD sha when no base can be resolved -- a detached head, a
+    repo with no `main`/`master`, or no remote. That still fingerprints *something*
+    that changes per commit, so the gate keeps asking rather than going quiet, which
+    is the safe direction for a hook that fails open everywhere else.
+    """
+    for base in PR_BASES:
+        merge_base = run_git(["merge-base", "HEAD", base], root).strip()
+        if merge_base:
+            return run_git(
+                ["diff", merge_base, "HEAD", "--", ".", RECEIPTS_PATHSPEC], root)
+    return run_git(["rev-parse", "HEAD"], root)
 
 
 def load_receipts() -> dict:
@@ -133,24 +176,24 @@ def ask(reason: str) -> None:
     }))
 
 
-def record() -> int:
+def record(action: str = "commit") -> int:
     cwd = os.getcwd()
     root = repo_root(cwd)
     if root is None:
         print("Not a git repository -- nothing to record.")
         return 1
-    digest = fingerprint(root, "commit")
+    digest = fingerprint(root, action)
     if digest is None:
-        print("No staged or unstaged changes -- nothing to review.")
+        print("Nothing to review -- no changes and nothing ahead of the base.")
         return 1
-    save_receipt(root, digest, "commit")
-    print(f"Review receipt recorded for {root} ({digest[:12]}).")
+    save_receipt(root, digest, action)
+    print(f"Review receipt recorded for {root} [{action}] ({digest[:12]}).")
     return 0
 
 
 def main() -> None:
     if "--record" in sys.argv:
-        sys.exit(record())
+        sys.exit(record("pull request" if "--pr" in sys.argv else "commit"))
 
     try:
         data = _load_payload()
@@ -164,7 +207,9 @@ def main() -> None:
     if DRY_RUN_RE.search(command):
         return
 
-    if COMMIT_RE.search(command):
+    if PR_RE.search(command):
+        action = "pull request"
+    elif COMMIT_RE.search(command):
         action = "commit"
     elif PUSH_RE.search(command):
         action = "push"
@@ -182,13 +227,31 @@ def main() -> None:
 
     receipt = load_receipts().get(root.lower())
 
+    record_cmd = f'python "{os.path.abspath(__file__)}" --record'
+    if action == "pull request":
+        record_cmd += " --pr"
+
     if receipt is None:
         ask(
             f"No code review has been recorded for this {action}.\n\n"
-            "CLAUDE.md lists diff review as a mandatory gate. Review the diff, "
-            "then record it with:\n"
-            f'    python "{os.path.abspath(__file__)}" --record\n\n'
+            "CLAUDE.md lists diff review as a mandatory gate. Invoke the "
+            "`code-review` skill, which reviews the change and asks you to sign "
+            "off before it records:\n"
+            f"    {record_cmd}\n\n"
             "Approve only if you deliberately want to skip review."
+        )
+        return
+
+    # A commit review does not cover a PR. The digests usually differ on their own
+    # because the PR fingerprint folds in the branch diff, but they collapse to the
+    # same value when the branch is level with its base -- so check the kind too.
+    if action == "pull request" and receipt.get("action") != "pull request":
+        ask(
+            "The recorded review covers the working tree, not this pull request.\n\n"
+            "A PR delivers every commit this branch has that the base does not. "
+            "Review the branch, then record it with:\n"
+            f"    {record_cmd}\n\n"
+            "Approve only if you accept opening an unreviewed pull request."
         )
         return
 

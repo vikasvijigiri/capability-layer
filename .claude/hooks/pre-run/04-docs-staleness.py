@@ -53,7 +53,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from _hooklib import load_payload  # noqa: E402
+from _hooklib import load_payload, save_turn_marker  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -147,6 +147,13 @@ def main():
     if not isinstance(prompt, str) or not prompt.strip():
         return
 
+    # Snapshot the docs before the turn does anything. `post-run/05-docs-gate.py`
+    # compares against this at Stop to tell "written this turn" from "written at
+    # some point", which mtimes could never distinguish. Must happen before the
+    # early returns below -- a turn that starts with a clean tree can still end
+    # with work worth recording.
+    save_turn_marker(REPO_ROOT)
+
     paths = changed_files()
     if not paths:
         # Clean tree. That is not proof the docs are current -- it may only mean
@@ -201,10 +208,9 @@ def main():
         f"changed more recently than {' and '.join(behind)}):",
         f"- changed: {areas}",
         f"- behind the work: {', '.join(behind)}",
-        "These files are written by hand and nothing writes "
-        "them — nothing does it automatically. Invoke it when a unit of work "
-        "finishes, not at the end of the session. Ignore this if the work is "
-        "still mid-flight or too small to record.",
+        "`knowledge-manager` owns these files; nothing writes them automatically. "
+        "Invoke it when a unit of work finishes, not at the end of the session. "
+        "Ignore this if the work is still mid-flight or too small to record.",
     ]
 
     print(json.dumps({

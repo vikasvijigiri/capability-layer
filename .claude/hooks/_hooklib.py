@@ -87,3 +87,50 @@ def deny(reason: str, event: str = "PreToolUse") -> None:
             "permissionDecisionReason": reason,
         }
     }))
+
+
+# --- turn-scoped knowledge-doc snapshot -------------------------------------
+#
+# `pre-run/04-docs-staleness.py` records the docs' content at UserPromptSubmit;
+# `post-run/05-docs-gate.py` compares at Stop. A digest change means this turn
+# wrote them.
+#
+# This exists because the gate previously compared mtimes, which false-blocked
+# three times on 2026-08-01 with the docs correctly written -- git's index
+# refresh bumps working-file mtimes, and an uncommitted backlog keeps old ones
+# forever. Content answers "was it written this turn"; timestamps only ever
+# approximated it. See decisions/2026-08-01-docs-gate-compares-content.md.
+
+TURN_MARKER = HOOKS_DIR / "state" / "docs-turn-marker.json"
+TRACKED_DOCS = ("LOG.md", "HANDOFF.md")
+
+
+def doc_digests(repo_root=None) -> dict:
+    """sha256 per tracked knowledge doc. A missing file digests as '' , not an error."""
+    import hashlib
+    root = Path(repo_root) if repo_root else HOOKS_DIR.parents[1]
+    out = {}
+    for name in TRACKED_DOCS:
+        try:
+            out[name] = hashlib.sha256((root / name).read_bytes()).hexdigest()
+        except OSError:
+            out[name] = ""
+    return out
+
+
+def save_turn_marker(repo_root=None) -> None:
+    """Snapshot the docs at the start of a turn. Never raises."""
+    try:
+        TURN_MARKER.parent.mkdir(parents=True, exist_ok=True)
+        TURN_MARKER.write_text(json.dumps(doc_digests(repo_root)), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def load_turn_marker():
+    """The snapshot, or None when there isn't a usable one (first turn, or corrupt)."""
+    try:
+        data = json.loads(TURN_MARKER.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None

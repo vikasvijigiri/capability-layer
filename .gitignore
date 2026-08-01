@@ -11,5 +11,14 @@
 # Belongs to the checkout, not the repo.
 .claude/settings.local.json
 
+# Hook state: per-turn and per-review bookkeeping, rewritten constantly and
+# meaningful only to this checkout. Tracking it churns every commit, and worse,
+# `05-docs-gate.py` counts changed files that are not knowledge docs -- so a
+# tracked marker makes the gate partly trigger on its own bookkeeping.
+# `review-receipts.json` was tracked until 2026-08-02 and its writes changed the
+# fingerprint it had just recorded, so no receipt ever survived; see
+# ISSUES.md 2026-08-01 21:15.
+.claude/hooks/state/
+
 __pycache__/
 *.pyc

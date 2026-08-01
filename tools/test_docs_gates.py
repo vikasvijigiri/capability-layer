@@ -68,22 +68,56 @@ with tempfile.TemporaryDirectory() as d:
         p.write_text("x", encoding="utf-8")
         os.utime(p, (now, now))
 
-    def docs(newer: bool) -> None:
-        for doc in ("LOG.md", "HANDOFF.md"):
-            p = tmp / doc
-            p.write_text("x", encoding="utf-8")
-            stamp = now + 10 if newer else now - 10
-            os.utime(p, (stamp, stamp))
+    # The gate compares doc CONTENT against a snapshot taken at UserPromptSubmit,
+    # not mtimes. It used to compare mtimes, which false-blocked three times on
+    # 2026-08-01 with the docs correctly written -- git's index refresh bumps
+    # working-file mtimes, and an uncommitted backlog keeps old ones forever.
+    # These cases pin the content semantics, including that mtime is now irrelevant.
+    snapshot = {}
+
+    def write_docs(log_body: str, handoff_body: str) -> None:
+        (tmp / "LOG.md").write_text(log_body, encoding="utf-8")
+        (tmp / "HANDOFF.md").write_text(handoff_body, encoding="utf-8")
 
     gate.changed_files = lambda: WORK
     gate.load_payload = lambda: {"stop_hook_active": False}
-    docs(False)
-    check("stop gate blocks when docs are behind", emit(gate).get("decision") == "block")
+    gate.doc_digests = lambda: {d: (tmp / d).read_text(encoding="utf-8")
+                                for d in ("LOG.md", "HANDOFF.md")}
+    gate.load_turn_marker = lambda: snapshot or None
 
-    docs(True)
-    check("stop gate silent when docs are current", emit(gate) == {})
+    write_docs("before", "before")
+    snapshot = {"LOG.md": "before", "HANDOFF.md": "before"}
+    check("stop gate blocks when neither doc was written this turn",
+          emit(gate).get("decision") == "block")
 
-    docs(False)
+    write_docs("AFTER", "before")
+    check("stop gate silent when LOG.md was written this turn", emit(gate) == {})
+
+    write_docs("before", "AFTER")
+    check("stop gate silent when HANDOFF.md was written this turn", emit(gate) == {})
+
+    # The regression that motivated the rewrite: correct content, ancient mtime.
+    write_docs("AFTER", "AFTER")
+    for doc in ("LOG.md", "HANDOFF.md"):
+        os.utime(tmp / doc, (0, 0))
+    check("stop gate ignores mtime -- silent on written docs with a 1970 mtime",
+          emit(gate) == {})
+
+    # ...and the inverse: fresh mtime must not excuse unwritten content.
+    write_docs("before", "before")
+    for doc in ("LOG.md", "HANDOFF.md"):
+        os.utime(tmp / doc, (now + 9999, now + 9999))
+    check("stop gate ignores mtime -- blocks on unwritten docs with a future mtime",
+          emit(gate).get("decision") == "block")
+
+    snapshot = {}
+    check("stop gate allows when no snapshot exists (first turn)", emit(gate) == {})
+
+    # Back to the blocking condition -- unwritten docs and a live snapshot -- so the
+    # cases below exercise their own guard rather than riding on an allow.
+    write_docs("before", "before")
+    snapshot = {"LOG.md": "before", "HANDOFF.md": "before"}
+
     gate.load_payload = lambda: {"stop_hook_active": True}
     check("stop gate honours stop_hook_active (cannot loop)", emit(gate) == {})
 

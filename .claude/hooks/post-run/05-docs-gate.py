@@ -34,7 +34,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from _hooklib import load_payload  # noqa: E402
+from _hooklib import doc_digests, load_payload, load_turn_marker  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -83,23 +83,32 @@ def main():
     if len(work) < MIN_FILES:
         return
 
-    newest = 0.0
-    for rel in work:
-        try:
-            newest = max(newest, (REPO_ROOT / rel).stat().st_mtime)
-        except OSError:
-            continue
-    if not newest:
+    # Did THIS turn write the docs? Compare their content against the snapshot
+    # `pre-run/04-docs-staleness.py` takes at UserPromptSubmit.
+    #
+    # This replaced an mtime comparison ("are the docs older than the newest changed
+    # file?") that produced three false blocks on 2026-08-01 alone, every one of them
+    # on a turn where the docs had in fact been written. Two independent causes:
+    # git's index refresh bumps working-file mtimes during `git add`, so a file could
+    # land 13 seconds after a correct write; and a large uncommitted backlog keeps old
+    # mtimes forever, so the gate stayed permanently hot. A gate that cries wolf gets
+    # clicked through, which is the exact failure it exists to prevent.
+    #
+    # Content beats timestamps here for the same reason `pre-commit/05-docs-required.py`
+    # checks staged *paths* rather than clock values, and has never false-positived.
+    before = load_turn_marker()
+    now = doc_digests()
+
+    if before is None:
+        # No snapshot -- first turn of a session, or the UserPromptSubmit hook did not
+        # run. Cannot tell recorded from unrecorded, so allow. A missed block is
+        # recoverable; a false one teaches the user to ignore this gate.
         return
 
-    behind = []
-    for doc in ("LOG.md", "HANDOFF.md"):
-        try:
-            if (REPO_ROOT / doc).stat().st_mtime < newest:
-                behind.append(doc)
-        except OSError:
-            behind.append(doc)
-    if not behind:
+    behind = [doc for doc in ("LOG.md", "HANDOFF.md")
+              if now.get(doc) == before.get(doc)]
+    if len(behind) < 2:
+        # Either file written this turn counts as recording the work.
         return
 
     print(json.dumps({
@@ -107,8 +116,9 @@ def main():
         "reason": (
             f"{len(work)} files changed and {' and '.join(behind)} "
             f"{'are' if len(behind) > 1 else 'is'} older than the newest of them. "
-            "Record this unit of work in LOG.md and HANDOFF.md before ending "
-            "the turn -- it owns these files and nothing writes them automatically. "
+            "Invoke `knowledge-manager` to record this unit of work in LOG.md and "
+            "HANDOFF.md before ending the turn -- it owns these files and nothing "
+            "writes them automatically. "
             "No hook can invoke a skill, which is why this is a block rather than "
             "another reminder. If the work is genuinely mid-flight or not worth "
             "recording, say so explicitly and continue; this fires once per turn."

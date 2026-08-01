@@ -12,13 +12,16 @@ from _hooklib import load_payload, write_log  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 CLAUDE_DIR = ROOT / ".claude"
-# The capability layer was torn down on 2026-08-01: agents, blueprints, mcps,
-# playbooks, registry, templates, validators and workflows were all deleted, and
-# with them the generated registries this hook used to check. What remains is
-# hooks, commands, routing and two skills. Recover any of it from `eaab430`.
+# `.claude/` holds exactly this and nothing else. Anything new here is reported
+# rather than silently tolerated -- an unrecognised file is usually a leftover
+# from something deleted, and this repo has been bitten by those repeatedly.
+#
+# README.md and PREREQUISITES.md were removed on 2026-08-01: both duplicated
+# CLAUDE.md or described capabilities that no longer exist, and neither was
+# referenced by anything. Their two load-bearing facts moved to CLAUDE.md's
+# Gotchas. Re-add a name here only when a file genuinely belongs in `.claude/`.
 KNOWN_DIRS = {"commands", "hooks", "routing", "skills"}
-KNOWN_FILES = {"README.md", "settings.json", "settings.local.json",
-               "PREREQUISITES.md"}
+KNOWN_FILES = {"settings.json", "settings.local.json"}
 
 
 def collect_issues():

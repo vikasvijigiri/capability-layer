@@ -105,7 +105,14 @@ no log entry.
   any hook, fire it with `tools/run_hook.py` against a realistic payload.
 - Hook scripts read input via `_hooklib.load_payload()`, so both stdin and
   `HOOK_PAYLOAD` work.
-- The `github` MCP server needs `GITHUB_TOKEN` in the environment.
+- **A skill is silently invisible** if it is a flat `.md` rather than
+  `<name>/SKILL.md`, or if its frontmatter `name:` differs from its directory.
+  Nothing errors — it just never appears. `tools/test_process_router.py` checks
+  both.
+- The `github` MCP server needs `GITHUB_TOKEN` in the environment. `gh` itself is
+  already authenticated on this machine; if it ever needs redoing, `gh auth login`
+  is an interactive browser flow that cannot be scripted, and the MSI installer
+  needs admin rights — the working install is a user-local zip on `PATH`.
 
 ---
 

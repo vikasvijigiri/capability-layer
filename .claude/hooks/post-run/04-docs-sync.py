@@ -301,7 +301,7 @@ def check_docs_sync(repo_root="."):
         owners = []
         if any(doc in joined for doc in
                ("HANDOFF.md", "LOG.md", "MEMORY.md", "decisions/", "decision")):
-            owners.append("HANDOFF/LOG/MEMORY/decisions are written by hand; nothing writes them automatically")
+            owners.append("`knowledge-manager` owns HANDOFF/LOG/MEMORY/decisions; nothing writes them automatically")
         if "CLAUDE.md" in joined:
             owners.append("CLAUDE.md is a bootloader — update the pointer, not the detail")
         if "openapi.yaml" in joined:

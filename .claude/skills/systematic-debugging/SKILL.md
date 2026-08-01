@@ -1,0 +1,152 @@
+---
+name: systematic-debugging
+description: Use when encountering any bug, test failure, or unexpected behaviour, before proposing a fix. Triggers include "this is broken", "why is this failing", "the test fails", "it worked before", "debug this", "what's wrong with", "this returns the wrong", "nothing happens", "it's silently doing nothing", "figure out why", "root cause", a hook that produced no output when it should have, a check that passes when it should fail. Also use after a fix did not work, and especially under time pressure, when guessing feels faster. Do NOT use for a failure you have already root-caused and only need to fix, or for a known-unimplemented feature.
+effort: high
+model: opus
+---
+
+# Systematic Debugging
+
+Find the root cause before proposing a fix. A symptom fix is a failure, even
+when the symptom goes away.
+
+Cap visible output at ~500 tokens. The hypothesis and the evidence, not a
+narration of everything you looked at.
+
+<HARD-GATE>
+NO FIX WITHOUT ROOT-CAUSE INVESTIGATION FIRST.
+
+If you have not completed Phase 1, you may not propose a fix. Violating the
+letter of this is violating the spirit of it.
+</HARD-GATE>
+
+## In this repo, silence is the symptom
+
+Most failures here do not throw. A hook that fails open, a gate that never
+fires, a skill whose description silently vanished — each looks exactly like
+"no problem". Two consequences:
+
+- **Absence of output is data, not reassurance.** Prove the thing ran.
+- **The repo's recurring failure is that prose declares a capability the wiring
+  does not implement** — seven instances so far. When something is documented and
+  not working, suspect the wiring before the logic.
+
+Useful levers: `tools/run_hook.py <event> '<json>'` fires one hook against a real
+payload; `PYTHONIOENCODING=utf-8` first, or `→`/`—` raise `UnicodeEncodeError` and
+a passing run reads as a failure; the four suites in `tools/`.
+
+## Phase 1 — Root cause
+
+Complete this before anything else.
+
+1. **Read the error completely.** Stack trace, line numbers, exit codes. It
+   often contains the answer.
+2. **Reproduce it.** Exact steps, every time. Not reproducible means gather more
+   data, never guess.
+3. **Check what changed.** `git diff`, `git log --oneline -5`, new config, new
+   dependency.
+4. **Instrument the boundaries.** For anything with more than one component, log
+   what enters and what leaves each one, then run *once* to find which boundary
+   breaks. Narrow to the component before investigating inside it.
+5. **Trace backwards.** Where did the bad value originate? What passed it in?
+   Keep going up until you reach the source. Fix there, not where it surfaced.
+
+## Phase 2 — Pattern
+
+1. **Find something similar that works** in this codebase.
+2. **Read the working version completely.** Not a skim. Partial understanding
+   guarantees a wrong fix.
+3. **List every difference**, however small. "That can't matter" is where the
+   bug lives.
+
+## Phase 3 — Hypothesis
+
+1. **State one hypothesis**: "X is the root cause, because Y." Specific, written
+   down, falsifiable.
+2. **Test it with the smallest possible change.** One variable.
+3. **Confirmed → Phase 4. Not confirmed → new hypothesis.** Never stack a second
+   fix on an unconfirmed first.
+4. **Say "I don't understand X"** when true. Do not narrate a guess as a finding.
+
+## Phase 4 — Fix
+
+1. **Write the failing test first.** Simplest reproduction that fails for the
+   right reason. Watch it fail before you fix.
+2. **One fix, addressing the cause.** No "while I'm here".
+3. **Verify:** the test passes, nothing else broke, the original symptom is gone.
+   Quote the real output.
+4. **Record it in `ISSUES.md`** — symptom, diagnosis, every attempt with its
+   outcome, fix, status. Format is in `knowledge-manager`'s `formats.md`. The
+   failed attempts are the valuable part; they stop the next person re-running
+   them.
+
+**If the fix does not work:** count your attempts. Under three, return to Phase 1
+with what you learned. **Three or more, stop and question the architecture** —
+when each fix reveals a new problem somewhere else, that is not a failed
+hypothesis, it is the wrong design. Raise it with the user rather than trying
+a fourth.
+
+## Test the test before you trust it
+
+A test that fails can be wrong about the code. On 2026-08-01 a gate test
+reported two false failures and three rounds went into theorising about CRLF
+round-tripping; the harness was reading and rewriting files through text mode.
+Rewritten to snapshot bytes, all six cases passed and the code had been correct
+throughout.
+
+- Make the harness byte-exact and state-independent before believing its verdict.
+- A test that depends on leftover state from an earlier test measures the wrong
+  thing. One passed only because a previous case had written a receipt.
+- Reasoning about whether a test is correct is slower and less reliable than
+  making it deterministic.
+
+## Red Flags — stop and return to Phase 1
+
+- "Quick fix now, investigate later."
+- "Just try changing X and see."
+- "It's probably X, let me fix that."
+- "I don't fully understand this, but this might work."
+- Proposing a fix before tracing the data flow.
+- Changing several things and running the tests.
+- "One more attempt" when you have already tried two.
+- Each fix surfacing a new problem somewhere else.
+
+From the user: *"is that not happening?"* means you assumed without verifying.
+*"stop guessing"* means exactly that. Both mean return to Phase 1.
+
+## Common Mistakes
+
+| Mistake | Why it bites |
+|---|---|
+| Treating no-output as no-problem | Here, silence is the most common symptom of a real bug |
+| Fixing where the error surfaced | The bad value came from somewhere upstream and will come back |
+| Two changes in one test cycle | You cannot tell which one worked, and one may have added a bug |
+| Trusting a failing test over the code | The harness is code too, and it is usually the newer, less-exercised code |
+| Skipping `ISSUES.md` because it's fixed | The attempts that failed are what save the next person an hour |
+| Debugging by reasoning alone | Run the thing. This repo's bugs do not announce themselves |
+
+## Quick Reference
+
+| Phase | Do | Done when |
+|---|---|---|
+| 1 Root cause | Read, reproduce, diff, instrument, trace back | You can say what and why |
+| 2 Pattern | Find a working twin, read it fully, list differences | The difference is named |
+| 3 Hypothesis | One theory, smallest test, one variable | Confirmed, or replaced |
+| 4 Fix | Failing test, one fix, verify, record | Symptom gone, `ISSUES.md` written |
+
+## Routing
+
+- Mandatory validator: none. The Phase 4 failing test is the gate — a fix with
+  no test that failed first is not verified.
+- Terminal handoff: none. Writes the `ISSUES.md` entry itself, per
+  `knowledge-manager`'s format; hand off to `knowledge-manager` only if the
+  incident also changes `MEMORY.md` or warrants a decision record.
+- A `Resolved` incident that would still be true in three months, independent of
+  this bug's code, earns one `MEMORY.md` line. `Escalated` and `Abandoned` never
+  do — an unresolved incident is a hypothesis, not a lesson.
+- If the fix turns into a design change, stop and use `brainstormer`.
+
+## Success
+
+The root cause is named, a test that failed for the right reason now passes,
+nothing else broke, and `ISSUES.md` carries the attempts as well as the answer.
