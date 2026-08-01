@@ -7,11 +7,6 @@
             "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start/01-env-check.py\"",
             "statusMessage": "Checking .claude/ structure against convention..."
-          },
-          {
-            "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start/02-bootstrap-docs.py\"",
-            "statusMessage": "Bootstrapping repo docs and loading minimal context..."
           }
         ]
       }
