@@ -114,6 +114,9 @@ Each skill declares a `model:` matching its pipeline phase — `opus` up to and
 including planning, `sonnet` for implementation, `haiku` for testing and
 deployment.
 
+Please note that your response from any skill you invoke should use minimal
+tokens and should respond in minimal time. Hard cap of 500 tokens.
+
 **The skill listing is truncated against a token budget.** At 86 skills roughly
 half the descriptions arrive as bare names with no trigger surface, and which
 half varies between turns. Never conclude a skill does not exist because it has
@@ -140,11 +143,22 @@ copies it also held were deleted — they were history, and two routable paths f
 one artefact means the stale one eventually wins. Recover any of it from commit
 `4069f4b` if needed.
 
-Capability matching is not left to recall: `.claude/hooks/pre-run/02-capability-router.py`
-scans each prompt against every `Keywords:` line in
-`.claude/routing/capabilities.md` and injects the matches. It tells you which
-domain matched — then invoke that domain's skills by name. It matches words; it
-does not understand intent.
+Capability matching is not left to recall. Two routers scan every prompt and
+inject their matches; both match words, neither understands intent:
+
+- `.claude/hooks/pre-run/02-capability-router.py` reads
+  `.claude/routing/capabilities.md` and names the matched **domain** — then
+  invoke that domain's `<domain>-` skills by name.
+- `.claude/hooks/pre-run/05-process-skill-router.py` reads
+  `.claude/routing/process-skills.md` and names matched **process skills**
+  directly. Process skills carry no prefix and belong to no domain, so the
+  capability router structurally cannot reach them; without this second file
+  they are invisible on any turn their description is truncated out of the
+  listing.
+
+Add a capability keyword to `capabilities.md`; add a process-skill keyword to
+`process-skills.md`. Putting a process skill in the first file emits a
+`<domain>-` prefix that matches nothing.
 
 Adding a capability is one edit: a new `## <domain>` section in
 `.claude/routing/capabilities.md`. The router hook, `tools/generate_registry.py`

@@ -3,6 +3,32 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-01 14:07
+Adopted two skills from `obra/superpowers` (264k stars), whose `.claude/skills/brainstorm/`
+convention 6,912 repos share. `brainstormer` took the full superpowers shape by explicit
+choice over a read-only variant: `disallowed-tools` dropped, `HARD-GATE`, Anti-Pattern,
+10-step Checklist, a dot Process Flow with three approval diamonds, a spec written to
+`docs/specs/` and committed, terminal handoff to `writing-plans`. New skill `writing-plans`
+adopted from superpowers' own, plus three blocking `AskUserQuestion` gates (decomposition,
+task breakdown, written plan), one-question-per-message and prefer-multiple-choice. 87 skills.
+
+Neither superpowers nor the widely-copied gist uses `AskUserQuestion` — both gate on plain
+text, with superpowers going as far as "This offer MUST be its own message" to force the
+pause. The structured gates here are a deliberate departure, not prior art.
+
+`execution-planner`'s "Nothing else produces a plan" corrected to "Nothing else produces
+`PLAN.md`" and delineated: it owns ordering, dependencies and risk; `writing-plans` owns the
+task-by-task script with real code. Two skills, two artefacts, no duplicate implementation.
+
+**Open contradiction, recorded not fixed:** CLAUDE.md now caps every skill response at 500
+tokens. Both adopted skills present design in 200-300 word sections across three gates and
+emit full code blocks. No check can catch this — it fails at runtime as either a truncated
+design or an ignored cap.
+
+**CLAUDE.md's skill split was already wrong before this change.** It claimed 54 capability /
+32 process; the real split was 55 / 31 (now 55 / 32). Counted per prefix: ai 9, backend 8,
+debugging 5, deployment 7, documentation 5, frontend 8, research 5, security 4, testing 4.
+
 ## 2026-07-31 10:45
 Ran `code-review` over `4850fbd..dfdd726`, the two commits that had never been reviewed.
 **Verdict: pass, two findings.**

@@ -38,6 +38,11 @@
             "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-run/04-docs-staleness.py\"",
             "statusMessage": "Checking whether LOG.md and HANDOFF.md match the working tree..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-run/05-process-skill-router.py\"",
+            "statusMessage": "Matching request against process-skill keywords..."
           }
         ]
       }

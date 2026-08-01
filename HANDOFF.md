@@ -22,38 +22,48 @@ section. Read the file directly when full history is actually needed. -->
   `.claude/routing/capabilities.md`. 86 skills, each with a phase-based `model:`.
 - 2026-07-31 — Human-approval gates wired: `approval-brief` owns the dialogue, 9 skills
   route to it. `mvp-builder` made capable of building. 12 agents given `model:`.
+- 2026-08-01 — `brainstormer` rebuilt on the `obra/superpowers` shape; new `writing-plans`
+  skill adopted from the same source. 87 skills. Direction set: tear the capability layer
+  down to these two skills plus hooks, and rebuild from superpowers and other repos.
 
 <!-- session-context:start -->
 ## Current Work
 
-**Committed as `4850fbd`.** Three docs hooks now guard record-keeping at three
-moments: a nudge on `UserPromptSubmit`, a `Stop` block, and a `PreToolUse` deny on
-unlogged commits. The `Stop` block is unproven in this build; the commit deny is not.
+**Teardown in progress.** The capability layer is being stripped to two skills —
+`brainstormer` and `writing-plans`, both adopted from `obra/superpowers` — plus
+`.claude/hooks/`. Everything else under `.claude/` goes, and the layer gets rebuilt
+from superpowers and other public repos rather than extended in place.
+
+Approved scope: trim routing to the two surviving skills, delete `capabilities.md`
+and the nine-domain capability router with it, delete the two tests that only cover
+capability routing, keep `test_hooks.py` and `test_process_router.py` green. A safety
+commit lands first so every deletion is recoverable.
 
 ## Pending
 
-- **The skill listing is truncated against a token budget.** 86 descriptions total
-  ~13k tokens; measured on 2026-07-31, ~36 rendered (~5.7k) and 47 arrived as bare
-  names with no trigger surface. Which half renders varies between turns, so a skill
-  can be untriggerable on the turn that needed it. This is why the keyword router is
-  load-bearing rather than redundant. Run `context-economy-audit` to cut description
-  length — note it now says adding trigger phrasings and staying in budget are in
-  direct conflict past this point.
+- **The 500-token skill-response cap contradicts both surviving skills.** CLAUDE.md
+  caps every skill response at 500 tokens; both present design in 200-300 word
+  sections across three gates and emit full code blocks. Kept deliberately when the
+  option to drop it was offered. No automated check can catch this.
+- **`docs/specs/` and `docs/plans/` do not exist yet.** Both adopted skills write
+  there. First real run of either will create them.
 - `claude.ai Slack` connector still needs OAuth (the 1 of 19 not connected).
-- `linear`, `notion`, `sentry` are wired in `.mcp.json` but have no `.claude/mcps/` doc —
-  surfaced by `mcps.json`'s `wired_but_undocumented` field.
-- `.claude/mcps/figma-mcp.md` describes a PAT-based config; the wired server uses the
-  OAuth remote endpoint. Doc is stale.
+- The description-truncation problem is largely dissolved by the teardown — two
+  skills fit the listing budget with room to spare. It returns as the layer is
+  rebuilt, so the budget is a design constraint on what gets added back, not a
+  cleanup task.
 
 ## Next Steps
 
-- Run `/skills-doctor` or `context-economy-audit` on the descriptions — 86 skills at
-  ~13.5k tokens plus 12 agents at ~1.9k, against a listing that renders roughly 5.7k.
-  Highest-cost problem in the repo.
-- Frontend still has no runtime-performance skill; `frontend-bundling-helper` covers
-  bundle bytes only, not LCP/CLS/INP or re-render cost.
-- Decide whether `post-run/04-docs-sync.py` should drop `.claude` from its `noise_dirs`.
-  `pre-run/04-docs-staleness.py` now covers the gap, so this is cleanup, not a fix.
+- Execute the teardown, then rewrite CLAUDE.md against what actually remains.
+  `repo-onboarding` owns that file and is itself being deleted, so it runs before
+  the deletion or not at all.
+- Rewrite `.claude/commands/verify.md`: it hardcodes 86 skills and four suites, two
+  of which are being deleted.
+- `/skills-doctor` measures description budget across the skill layer. With two
+  skills it has almost nothing to measure — decide whether it earns its place.
+- Rebuild from superpowers: `subagent-driven-development` and `executing-plans` are
+  the two `writing-plans` hands off to, and neither exists here.
 
 ## Open Questions
 
@@ -77,10 +87,14 @@ unlogged commits. The `Stop` block is unproven in this build; the commit deny is
 - Does the `agent:` frontmatter field actually dispatch a subagent? Unverified — it is
   supported and parses, but no skill uses it. Proving it on one skill is the prerequisite
   for declarative parallel fan-out, and would be done the same way `PermissionRequest` was.
-- Deleting `.claude/capabilities/backend/spec.md` dropped ~52 lines of backend
-  conventions that nothing referenced and that partly described infrastructure which
-  does not exist (a "repo telemetry integration" on topic `backend.*`). If any of it was
-  wanted, it is in `4069f4b`.
-- Most of the 86 skills have still never been invoked; their descriptions remain
-  untested as trigger surfaces, and half are truncated away on any given turn.
+- **The deleted layer is recoverable but only from git.** 85 skills, 12 agents, 6
+  blueprints, 7 workflows, 11 validators, 1 playbook, 1 template and 27 MCP docs live in
+  history from `4069f4b` through the safety commit. Nothing else holds a copy.
+- Neither surviving skill has ever been run end to end. Their gates, handoffs and file
+  paths are asserted by their own text and by nothing else — the same "prose declares a
+  capability the wiring does not implement" class this repo has hit five times.
+- `writing-plans` hands off to `backend-engineer`, `frontend-engineer`, `ai-engineer`,
+  `qa-engineer`, `work-decomposition` and `workflow-orchestrator`. **All six are being
+  deleted.** Its execution handoff points at nothing until the rebuild supplies
+  replacements.
 <!-- session-context:end -->

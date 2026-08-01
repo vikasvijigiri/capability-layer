@@ -10,12 +10,14 @@
       ]
     },
     "pre-run": {
-      "description": "Before work starts on a turn; logs, routes capabilities, nudges task-intake",
+      "description": "Before work starts on a turn; logs, routes capabilities and process skills, nudges task-intake, checks doc staleness",
       "claude_code_event": "UserPromptSubmit",
       "subscribers": [
         ".claude/hooks/pre-run/01-log.py",
         ".claude/hooks/pre-run/02-capability-router.py",
-        ".claude/hooks/pre-run/03-task-brief-nudge.py"
+        ".claude/hooks/pre-run/03-task-brief-nudge.py",
+        ".claude/hooks/pre-run/04-docs-staleness.py",
+        ".claude/hooks/pre-run/05-process-skill-router.py"
       ]
     },
     "post-run": {

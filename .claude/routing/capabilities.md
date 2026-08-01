@@ -17,6 +17,13 @@ Three consumers parse this file, so its structure is load-bearing:
 the skills' name prefix exactly. Exactly one `Keywords:` line per domain, comma
 separated. Add a domain by adding a section; nothing else needs editing.
 
+**Scope.** This file routes only the 54 `<domain>-` prefixed capability skills,
+because a match here resolves to a *name prefix*, not a skill. The 31 unprefixed
+process skills (`brainstormer`, `code-review`, `error-recovery`, …) are routed by
+`.claude/routing/process-skills.md` and `05-process-skill-router.py`, which name
+skills directly. Do not add a process-skill keyword here — it would emit a
+`<domain>-` prefix that matches nothing.
+
 Skill-level routing — which validator is mandatory, which blueprint takes
 precedence, which workflow orchestrates the multi-step case — lives in each
 skill's own `## Routing` section, not here. That was duplicated in both places
@@ -99,7 +106,8 @@ Artefacts:
 
 Order note: `design-system` gates this capability. It owns `DESIGN.md`, the token
 table every `frontend-` skill generates and checks against, and it is an
-unprefixed process skill, so a `frontend-` prefix scan will not surface it. For a
+unprefixed process skill, so a `frontend-` prefix scan will not surface it —
+`process-skills.md` routes it by name instead. For a
 new feature: `frontend-ux-flow` → `design-system` (if no `DESIGN.md`) →
 `frontend-state-architecture` → `frontend-component-generator` /
 `frontend-form-builder` → the audit skills.

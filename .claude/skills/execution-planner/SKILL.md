@@ -8,7 +8,13 @@ effort: high
 # Execution Planner
 
 Produces the content of `PLAN.md`. `knowledge-manager` owns its *format*; this skill owns
-what goes in it. Nothing else produces a plan.
+what goes in it. Nothing else produces `PLAN.md`.
+
+`writing-plans` is not a duplicate of this skill: it turns an approved spec into the
+task-by-task implementation script (exact files, real code, TDD steps) at
+`docs/plans/YYYY-MM-DD-<feature>.md`. This skill decides order, dependencies, parallelism
+and risk across the whole effort; that one decides what the engineer types. When both run,
+this one runs first and its ordering constrains the task sequence there.
 
 ## Steps
 

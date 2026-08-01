@@ -1,5 +1,5 @@
 ---
-description: Run every repo check — three test suites, registry drift, and an 86-skill frontmatter parse — and report real output
+description: Run every repo check — four test suites, registry drift, and an 86-skill frontmatter parse — and report real output
 ---
 
 Run the full check set for this repo. Fixed procedure, no judgement about which
@@ -12,10 +12,11 @@ already turned a passing run into a fake failure once.
 
 Run these in order and report each one's real output line, not a paraphrase:
 
-1. **Test suites** — all three, and do not stop at the first failure:
+1. **Test suites** — all four, and do not stop at the first failure:
    - `python tools/test_hooks.py`
    - `python tools/test_resolver.py`
    - `python tools/test_router.py`
+   - `python tools/test_process_router.py`
 
 2. **Registry drift** — the registries are generated, so any diff is real drift:
    - copy `.claude/registry/capabilities.json` aside
