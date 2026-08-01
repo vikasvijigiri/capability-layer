@@ -26,16 +26,6 @@
           },
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-run/02-capability-router.py\"",
-            "statusMessage": "Matching request against capability keywords..."
-          },
-          {
-            "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-run/03-task-brief-nudge.py\"",
-            "statusMessage": "Reminding about the task-brief format..."
-          },
-          {
-            "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-run/04-docs-staleness.py\"",
             "statusMessage": "Checking whether LOG.md and HANDOFF.md match the working tree..."
           },

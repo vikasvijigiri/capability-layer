@@ -2,10 +2,9 @@
 PostToolUse hook -- global, fires after Edit/Write completes on any file
 under .claude/hooks/**/*.py.
 
-Purpose: same failure class task_brief_nudge.py and the git_delivery_guard
-code-review reminder both exist to patch -- "did you actually verify this"
-is model judgment, and that judgment can silently skip testing a hook
-change before considering it done. A real bug (git_delivery_guard.py's
+Purpose: the same failure class 04-delivery-guard.py's review reminder exists
+to patch -- "did you actually verify this" is model judgment, and that judgment
+can silently skip testing a hook change before considering it done. A real bug (04-delivery-guard.py's
 AI-attribution regex false-positiving on the literal filename "CLAUDE.md",
 blocking a legitimate commit) only got caught because testing happened to
 occur anyway, not because anything enforced it.

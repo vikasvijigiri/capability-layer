@@ -3,8 +3,8 @@
 Why this exists
 ---------------
 `pre-run/04-docs-staleness.py` beeps at the start of a turn. It cannot do more:
-a hook is a subprocess with no tool access, so it can never invoke
-`knowledge-manager` itself. Nothing connects the warning to the action, and the
+a hook is a subprocess with no tool access, so it can never write the docs
+itself. Nothing connects the warning to the action, and the
 gap was demonstrably not closed by warning harder -- across three consecutive
 turns the nudge fired correctly, was read, and was converted into a question to
 the user instead of an action.
@@ -107,7 +107,7 @@ def main():
         "reason": (
             f"{len(work)} files changed and {' and '.join(behind)} "
             f"{'are' if len(behind) > 1 else 'is'} older than the newest of them. "
-            "Invoke `knowledge-manager` to record this unit of work before ending "
+            "Record this unit of work in LOG.md and HANDOFF.md before ending "
             "the turn -- it owns these files and nothing writes them automatically. "
             "No hook can invoke a skill, which is why this is a block rather than "
             "another reminder. If the work is genuinely mid-flight or not worth "

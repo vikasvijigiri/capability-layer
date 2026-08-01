@@ -1,212 +1,120 @@
-# UAIOS Bootloader — CLAUDE.md
+# UAIOS — CLAUDE.md
 
-Purpose: tiny bootloader for Claude Code. Keep this file small. Do not
-duplicate project knowledge here. Direct Claude to the appropriate capability
-package and enforce absolute rules.
+A Claude Code capability layer: skills, lifecycle hooks and slash commands that
+enforce a spec → plan → build → verify workflow, plus the knowledge docs that
+carry state between sessions. There is no application code here.
 
----
-
-Identity
-
-You are the engineering AI for this repository.
-Optimize for correctness, maintainability, token efficiency, and validation.
-Prefer existing implementations over creating new ones. Always verify; never
-assume.
+This file is a bootloader. Keep it under ~150 lines and point at the thing that
+owns the work rather than restating it. History belongs in `LOG.md` and git.
 
 ---
 
-Core Principles
+## Working agreement
 
-- Validation first
-- Reuse first
-- Blueprint first
-- Workflow second
-- Compose skills third
-- Minimize token usage
-- Prefer deterministic solutions
-- Keep prompts minimal
-- Document architectural decisions
+- **Validate, don't assume.** Never report a check as passing unless you ran it
+  and can quote its output.
+- **Reuse before creating.** Recover a deleted file from git rather than
+  rewriting it from memory.
+- **Be terse.** Cap skill and command responses at ~500 tokens.
+- **Prefer deterministic mechanisms** — a hook or a test over a written rule.
 
 ---
 
-Execution Model
+## Skills
 
-Always solve tasks in this order:
+In `.claude/skills/<name>/SKILL.md`. Each states its own triggers, gates and
+handoffs — read the skill, don't infer an order from this list.
 
-1. Understand
-2. Retrieve minimal context
-3. Identify capability
-4. Check Blueprint
-5. Check Workflow
-6. Delegate (agent/subagent) if needed
-7. Compose Skills
-8. Execute
-9. Validate
-10. Reflect
-11. Learn
+- `task-brief` — rough ask → six-field brief (Goal / Constraints / Inputs /
+  Outputs / Done-check / Out-of-scope), approved, written to `TASK.md`.
+- `brainstormer` — open question → design spec at
+  `docs/specs/YYYY-MM-DD-<topic>-design.md`.
+- `writing-plans` — approved spec → task-by-task plan at
+  `docs/plans/YYYY-MM-DD-<feature>.md`.
 
-Do not skip validation.
-
----
-
-Capability Resolution Protocol
-
-There is no deterministic dispatcher in this environment — this is
-best-effort, probabilistic keyword/intent matching against the table below.
-Maximize recall: a false-positive capability load costs a little context; a
-missed one costs correctness. Never silently skip this step because a prompt
-is short, informal, or badly worded.
-
-Mandatory for every incoming request, before drafting any response:
-
-1. Scan the request against ALL `Keywords:` lines in
-   `.claude/routing/capabilities.md` (fuzzy match — synonyms, typos, partial
-   phrases, and multi-domain prompts all count; a request may match 2+
-   capabilities at once, e.g. "fix the slow db and make it look nicer" →
-   `backend` + `frontend`).
-2. For each matched capability, invoke the `<domain>-` skills by name. Each
-   skill's own `## Routing` section names its mandatory validator and the
-   blueprint or workflow that takes precedence — read those, not a folder.
-3. If nothing matches with reasonable confidence, do not stay silent: state
-   which capability you considered closest and why, or ask one clarifying
-   question — never proceed with zero capability/skill consideration.
-4. Execute using the declared MCPs/tools.
-5. Run validators before making side effects permanent.
-6. Capture reflection and promote reusable artefacts.
-
-Resolution order: Capability → Blueprint → Workflow → Agent → Skills → MCP → Validation → Learning
+Every skill **must** also have a `## <name>` entry in
+`.claude/routing/process-skills.md`; the skill listing is truncated against a
+token budget, so that file is the only routing signal that always survives.
+`session-start/01-env-check.py` reports any skill that lacks one, and
+`tools/test_process_router.py` fails the build.
 
 ---
 
-Repository Map (top-level)
+## Commands
 
-- `docs/` — architecture and guides (`docs/architecture/00`–`17` + diagrams)
-- `.claude/routing/capabilities.md` — the nine capabilities (`ai`, `backend`,
-  `debugging`, `deployment`, `documentation`, `frontend`, `research`,
-  `security`, `testing`): keyword lists and per-domain artefact pointers
-- `.claude/agents/` — repo-local subagent definitions
-- `.claude/hooks/` — lifecycle hooks (`pre-run`, `post-run`, `on-validate-fail`,
-  `on-artifact-create`, `on-deploy-failure`, etc.), run via `tools/run_hook.py`
-- `.claude/registry/` — machine-readable `capabilities.json`/`agents.json`,
-  regenerated via `tools/generate_registry.py`
-- `.claude/mcps/` — MCP server reference docs (purpose/config/security notes; not the live client config)
-- `.mcp.json` — root-level, project-scoped MCP server config actually loaded by Claude Code; requires `GITHUB_TOKEN` in the environment for the `github` entry
-- `.vscode/mcp.json` — VS Code's own MCP config (same servers, VS Code's `servers`/`${input:...}` schema); kept in sync with `.mcp.json` by hand
-- `tools/` — `run_hook.py`, `generate_registry.py`
+    /verify         all four test suites + env check + hook registration + frontmatter parse
+    /save           stage, describe and commit (local only)
+    /wip            branch, uncommitted work, which knowledge docs went stale
+    /skills-doctor  skill layer health — description budget, YAML, name mismatches
 
-There is no global layer — `~/.claude/` holds no skills, agents, hooks or
-workflows. Everything this repo can do lives in this repo.
+Raw equivalents, run from the repo root:
 
-Skills
+    python tools/test_hooks.py
+    python tools/test_process_router.py
+    python tools/test_docs_gates.py
+    python tools/test_docs_staleness.py
+    python tools/run_hook.py <event> '<json-payload>'   # fire one hook manually
 
-All 86 skills live in `.claude/skills/<name>/SKILL.md` and are invoked by name
-through the Skill tool. Two kinds, distinguished by name:
-
-- **Process skills** (32, unprefixed) — cross-cutting: `code-review`,
-  `task-intake`, `error-recovery`, `knowledge-manager`, `workflow-orchestrator`
-  and so on. They apply regardless of domain.
-- **Capability skills** (54, prefixed `<domain>-`) — `backend-caching-strategy`,
-  `ai-rag`, `testing-unit-test-generator`. The prefix is what keeps
-  same-named responsibilities in different domains apart, and it groups each
-  skill back to its capability.
-
-Each skill declares a `model:` matching its pipeline phase — `opus` up to and
-including planning, `sonnet` for implementation, `haiku` for testing and
-deployment.
-
-Please note that your response from any skill you invoke should use minimal
-tokens and should respond in minimal time. Hard cap of 500 tokens.
-
-**The skill listing is truncated against a token budget.** At 86 skills roughly
-half the descriptions arrive as bare names with no trigger surface, and which
-half varies between turns. Never conclude a skill does not exist because it has
-no description in the listing; check `.claude/registry/skills.json`. This is why
-the keyword router below is load-bearing rather than redundant.
-
-Artefacts
-
-Every non-skill artefact also lives in a top-level directory under `.claude/`,
-using the same `<domain>-` prefix:
-
-- `.claude/blueprints/` (6) — promoted solutions, preferred over composing skills
-- `.claude/workflows/` (7) — orchestrated multi-step task graphs
-- `.claude/validators/` (11) — must run before side effects are committed
-- `.claude/playbooks/` (1), `.claude/templates/` (1)
-
-Which validator is mandatory, which blueprint takes precedence and which
-workflow orchestrates the multi-step case is stated in each skill's own
-`## Routing` section. There is no second copy of that routing anywhere.
-
-`.claude/capabilities/` was removed on 2026-07-31. Its nine `index.md` files
-collapsed into `.claude/routing/capabilities.md`, and the superseded artefact
-copies it also held were deleted — they were history, and two routable paths for
-one artefact means the stale one eventually wins. Recover any of it from commit
-`4069f4b` if needed.
-
-Capability matching is not left to recall. Two routers scan every prompt and
-inject their matches; both match words, neither understands intent:
-
-- `.claude/hooks/pre-run/02-capability-router.py` reads
-  `.claude/routing/capabilities.md` and names the matched **domain** — then
-  invoke that domain's `<domain>-` skills by name.
-- `.claude/hooks/pre-run/05-process-skill-router.py` reads
-  `.claude/routing/process-skills.md` and names matched **process skills**
-  directly. Process skills carry no prefix and belong to no domain, so the
-  capability router structurally cannot reach them; without this second file
-  they are invisible on any turn their description is truncated out of the
-  listing.
-
-Add a capability keyword to `capabilities.md`; add a process-skill keyword to
-`process-skills.md`. Putting a process skill in the first file emits a
-`<domain>-` prefix that matches nothing.
-
-Adding a capability is one edit: a new `## <domain>` section in
-`.claude/routing/capabilities.md`. The router hook, `tools/generate_registry.py`
-and `tools/resolve_capability.py` all derive the capability list from those
-headings, so they cannot disagree about which capabilities exist.
+Run `/verify` before declaring any work done.
 
 ---
 
-Mandatory Rules (absolute)
+## Repository map
 
-- Never modify generated files.
-- Never bypass validators.
-- Never ignore failing tests.
-- Always prefer existing Blueprints.
-- Always update docs when architecture changes.
-- Always run validators before completion.
-- Never create duplicate implementations.
+| Path | What it is |
+|---|---|
+| `.claude/skills/` | `task-brief`, `brainstormer`, `writing-plans` |
+| `.claude/routing/process-skills.md` | keyword → skill-name routing (mandatory per skill) |
+| `.claude/hooks/<event>/` | lifecycle hooks; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-*` |
+| `.claude/settings.json` | what actually fires; `hooks_registry.json` only documents intent |
+| `.claude/commands/` | the four slash commands above |
+| `tools/` | `run_hook.py` + four test suites |
+| `docs/specs/`, `docs/plans/` | skill outputs |
+| `docs/00-*.md … 17-*.md` | design notes for the *pre-2026-08-01* layer — stale, read with suspicion |
+| `decisions/` | dated ADRs |
+| `.mcp.json`, `.vscode/mcp.json` | MCP servers, kept in sync by hand |
 
----
-
-References
-
-Load only the referenced location for deep context. Examples:
-
-- Architecture: `docs/architecture/`
-- Capability routing: `.claude/routing/capabilities.md`
-- Skills: `.claude/skills/<name>/SKILL.md`; index at `.claude/registry/skills.json`
-- Blueprints: `.claude/blueprints/<domain>-<name>.md`
+There is no global layer — `~/.claude/` holds no skills, agents or hooks.
 
 ---
 
-Startup Checklist (every conversation)
+## Knowledge docs
 
-- Read `CLAUDE.md`
-- Identify capability (the router hook injects the keyword match for you)
-- Invoke the matched skills by name; read their `## Routing` sections
-- Execute
-- Validate
-- Reflect
+Six files at the repo root carry state between sessions. Hooks read and gate on
+them, so they are code, not commentary:
+
+`TASK.md` (active task) · `PLAN.md` · `HANDOFF.md` (current work, pending, next)
+· `LOG.md` (history) · `ISSUES.md` · `MEMORY.md`
+
+Three hooks watch them at three moments: `pre-run/04-docs-staleness.py` warns
+when they drift from the diff, `post-run/05-docs-gate.py` tries to block the
+turn from ending (`Stop` blocking is unproven in this build), and
+`pre-commit/05-docs-required.py` denies a multi-file commit that touches neither
+`LOG.md` nor `HANDOFF.md` — `PreToolUse` deny is the mechanism that demonstrably
+works. Override with `ALLOW_UNLOGGED_COMMIT=1` when a commit genuinely warrants
+no log entry.
 
 ---
 
-Hooks
+## Gotchas
 
-- Hooks live under `.claude/hooks/` and are lightweight scripts invoked on lifecycle events (e.g., `pre-run`, `post-run`, `on-validate-fail`, `on-blueprint-promote`).
-- Use `tools/run_hook.py <event> '<json-payload>'` to trigger hooks safely. Hooks receive the payload in the `HOOK_PAYLOAD` environment variable.
-- Every validator must call `on-validate-fail` on failure and
-  `on-artifact-create` on pass (see `.claude/validators/*.md`) — a validator
-  that never calls a hook is not wired, not just undocumented.
+- **Set `PYTHONIOENCODING=utf-8` before running any tool script.** Several print
+  `→` and `—`; the Windows console default (cp1252) raises `UnicodeEncodeError`
+  and turns a passing run into a fake failure.
+- **A hook bug's symptom is silence** — identical to "no problem". After editing
+  any hook, fire it with `tools/run_hook.py` against a realistic payload.
+- Hook scripts read input via `_hooklib.load_payload()`, so both stdin and
+  `HOOK_PAYLOAD` work.
+- The `github` MCP server needs `GITHUB_TOKEN` in the environment.
 
-End of CLAUDE.md
+---
+
+## Never
+
+- Ignore a failing test, or weaken/delete one to make a build pass.
+- Report a check as passing that was not actually run.
+- Commit secrets or credentials.
+- Push, merge, publish or deploy without explicit user approval.
+- Create a duplicate implementation of something that already exists.
+- Put AI attribution in git history — `pre-commit/04-delivery-guard.py` denies
+  the commit.

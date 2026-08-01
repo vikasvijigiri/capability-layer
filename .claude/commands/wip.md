@@ -36,8 +36,8 @@ Report:
 
 Rules:
 
-- Read-only. If docs are stale, say so and offer `knowledge-manager`; do not fix
-  them as a side effect of asking where you were.
+- Read-only. If docs are stale, say which ones and stop there; do not fix them as
+  a side effect of asking where you were.
 - Do not restate the conversation. This reads the repo; if the two disagree, the
   repo is right and the disagreement is the finding.
 - If I passed an argument, treat it as a focus area (e.g. `docs`, `git`) and say

@@ -1,15 +1,19 @@
 """Review Gate -- PreToolUse hook for `git commit` / `git push`.
 
-Skills cannot fire themselves: nothing in the harness invokes `code-review`, so whether
-it runs is a judgment call, and judgment is exactly what gets skipped under time pressure.
-This hook converts that judgment into a mechanism. A commit is held for explicit approval
-unless a review receipt exists whose fingerprint matches the change being committed.
+Whether the diff gets reviewed is a judgment call, and judgment is exactly what gets
+skipped under time pressure. This hook converts that judgment into a mechanism. A commit
+is held for explicit approval unless a review receipt exists whose fingerprint matches
+the change being committed.
 
 Two modes:
 
   stdin (hook)   PreToolUse payload -> allow silently, or return "ask" with the reason.
-  --record       Writes the receipt for the current change. The `code-review` skill runs
-                 this as its final step, so the receipt can only exist if a review did.
+  --record       Writes the receipt for the current change. Run this as the last step of
+                 a review, so the receipt can only exist if a review actually happened.
+
+No skill owns the review or the recording -- the `code-review` skill that used to run
+`--record` automatically was deleted in the 2026-08-01 teardown. Until something replaces
+it, both steps are manual, which means this gate asks on every commit by default.
 
 The fingerprint is the content of the change itself, not a timestamp. Amending the diff
 after a review invalidates the receipt automatically -- reviewing one change and
@@ -181,8 +185,8 @@ def main() -> None:
     if receipt is None:
         ask(
             f"No code review has been recorded for this {action}.\n\n"
-            "CLAUDE.md lists diff review as a mandatory gate. Run the `code-review` "
-            "skill on this diff, then record it with:\n"
+            "CLAUDE.md lists diff review as a mandatory gate. Review the diff, "
+            "then record it with:\n"
             f'    python "{os.path.abspath(__file__)}" --record\n\n'
             "Approve only if you deliberately want to skip review."
         )
@@ -192,7 +196,7 @@ def main() -> None:
         ask(
             f"The change has been modified since it was reviewed, so the existing "
             f"review no longer covers this {action}.\n\n"
-            "Re-run `code-review` on the current diff and record it again. "
+            "Re-review the current diff and record it again. "
             "Approve only if you accept committing unreviewed changes."
         )
         return
@@ -201,7 +205,7 @@ def main() -> None:
     if age > MAX_RECEIPT_AGE_SECONDS:
         ask(
             f"The review for this change is {int(age // 3600)} hours old and has expired.\n\n"
-            "Re-run `code-review` to confirm it still holds, then record it again."
+            "Re-review to confirm it still holds, then record it again."
         )
         return
 

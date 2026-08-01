@@ -4,40 +4,29 @@
 this repo. Distinct from Claude Code's own auto-memory index under
 ~/.claude/projects/<slug>/memory/ -- this file is checked into the repo. -->
 
-## Skills and capabilities
+## Skills
+
+The capability layer (85 skills, 12 agents, blueprints, workflows, validators, templates,
+playbooks, MCP docs, generated registries, nine-domain capability routing) was deleted on
+2026-08-01. Everything is recoverable from commit `eaab430`. Two skills remain,
+`brainstormer` and `writing-plans`, both adopted from `obra/superpowers`. The facts below
+outlived the teardown; anything tied to the deleted machinery went with it.
 
 - There is **no global layer**. `~/.claude/` holds no skills, agents, hooks or workflows;
   everything lives in this repo. A backup of the removed global config is at
   `~/.claude/backups/global-config-20260730-221402/`.
-- All 61 skills are at `.claude/skills/<name>/SKILL.md`. Claude Code only discovers that
-  exact layout — a flat `.md` file, or a frontmatter `name:` that differs from the
-  directory name, is silently invisible. `skills.json` records `discoverable` per skill
-  for exactly this reason.
-- Capability skills are prefixed `<domain>-`; the 15 unprefixed ones are cross-cutting
-  process skills. `deployment-pilot` is a process skill despite matching a domain prefix,
-  so prefix-matching alone mis-files it — `generate_registry.py` excludes it explicitly.
-- Every artefact type is top-level under `.claude/` with the same `<domain>-` prefix:
-  `blueprints/`, `workflows/`, `validators/`, `playbooks/`, `templates/`.
-  `.claude/capabilities/<domain>/` keeps only `index.md` — the `Keywords:` line the
-  router scans, plus the precedence rules a flat list cannot express.
-- Copies under `capabilities/<domain>/` carry a **Superseded** banner. They are history:
-  never edit or link to them. The registries exclude them on purpose — two routable paths
-  for one artefact means the stale one eventually wins.
-- Prefixing traps that already bit once, both handled explicitly in the generator:
-  a stem already starting with its domain (`ai-output-validator`) must not become
-  `ai-ai-output`, and `deployment-pilot` is a *process* skill that matches a domain
-  prefix, so prefix-matching alone mis-files it.
-- Registries are **generated**. Run `python tools/generate_registry.py`; never hand-edit
-  `.claude/registry/*.json`. Any diff after regenerating is real drift.
-
-## Skill and agent descriptions
-
-- The description is the **only** trigger surface. Every skill and agent follows the
-  `task-intake` shape: what it does → quoted real-user phrasings → `Prefer this over …`
-  → `Do NOT use for …`. All 73 conform; keep new ones to it.
-- Include **vague, symptom-level** phrasings, not just expert terms. `"429 handling"` only
+- Skills live at `.claude/skills/<name>/SKILL.md`. Claude Code only discovers that exact
+  layout — a flat `.md` file, or a frontmatter `name:` that differs from the directory
+  name, is silently invisible.
+- **The skill listing is truncated against a token budget**, and which descriptions render
+  varies between turns, so a skill can be untriggerable on the turn that needed it. This is
+  why `routing/process-skills.md` is load-bearing rather than redundant, and why the budget
+  is a design constraint on what gets added back, not a cleanup task for later.
+- The description is a skill's only *listing-side* trigger surface. Shape that works:
+  what it does → quoted real-user phrasings → `Prefer this over …` → `Do NOT use for …`.
+  Include **vague, symptom-level** phrasings, not just expert terms — `"429 handling"` only
   fires for someone who already knows the answer; `"someone is hammering the api"` is how
-  the problem actually arrives. Aim for ~7 quoted phrases spanning both registers.
+  the problem actually arrives.
 - **Never write `: "` inside a description.** An unquoted YAML scalar containing
   colon-space-quote parses as a mapping and the description silently vanishes — the skill
   stays listed but becomes untriggerable. Use ` - "` instead. (Bare `: ` mid-sentence
@@ -51,33 +40,21 @@ this repo. Distinct from Claude Code's own auto-memory index under
   field** - a skill that should run in plan mode must call `EnterPlanMode` from its body,
   and use `disallowed-tools` as the backstop.
 - `description` + `when_to_use` are truncated at **1,536 characters** in the skill listing.
-  Descriptions currently average ~620, so there is headroom, but a long one loses its tail.
-- Twelve skills also carry `provides`, `requires`, `produces_artifact` and `retryable`.
-  These are **not** harness fields and Claude Code ignores them — do not "clean them up".
-  `build-mvp.js`'s `CAPABILITY_MANIFEST` mirrors `provides`/`requires` by hand to route
-  its phases, and as of 2026-07-31 the two agree exactly: every capability named in the
-  manifest is declared by some skill, and the only declared capability absent from it is
-  `autonomous-build` (mvp-builder's own, which it correctly never dispatches to itself).
-  Adding one of these keys to a thirteenth skill does nothing unless the manifest is
-  updated too.
+- `user-invocable:` is **not** what makes a skill slash-invocable. Skills without it work
+  as `/name` anyway.
 - **Agents use a different schema from skills**: `name`, `description`, `tools` (not
-  `allowed-tools`), and `model`. All 12 lacked `model` until 2026-07-31 and therefore
-  silently inherited the parent's, bypassing the per-phase model rule entirely. Agent
-  descriptions cost ~1.9k tokens per session on top of the skills' ~13.5k.
-
-## Workflows
-
-- **There is no workflow runtime in Claude Code.** The files in `.claude/workflows/` are
+  `allowed-tools`), and `model`. An agent without `model` silently inherits the parent's.
+- **There is no workflow runtime in Claude Code.** Files under a `workflows/` directory are
   documents to follow, not executables. Nothing discovers or fires them.
-- `build-mvp.js` is a phase *specification*, not a script: it calls host-injected
-  `agent()`/`phase()` primitives and has a top-level `return`, so Node rejects it with
-  `SyntaxError: Illegal return statement`. `mvp-builder` reads it for phase order and
-  drives each phase with the real Skill and Agent tools.
-- Workflows, blueprints and validators are reached through the **`## Routing` section in
-  each capability skill's body** - not through discovery. The body costs no context until
-  the skill loads, which is why the routing lives there and not in the description.
-- Every capability skill names a required validator. CLAUDE.md makes running it mandatory
-  before a side effect; a skipped validator is a failed run.
+
+## Recurring bug class
+
+**Prose declares a capability the wiring does not implement.** Five instances before the
+teardown: a skill whose `allowed-tools` omitted `Skill` and so could never invoke the
+skills its own body named; a hook registered on an event that never fires; six skills
+documented as read-only while holding unrestricted tools; a staleness hook asking the wrong
+question. None were catchable by the hook suite, which invokes scripts directly and
+therefore tests the script and never the registration. Check the wiring, not the prose.
 
 ## Hooks
 

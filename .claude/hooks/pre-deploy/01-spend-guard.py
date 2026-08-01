@@ -3,12 +3,12 @@ PreToolUse hook -- global, fires on Bash/PowerShell calls that invoke a cloud-pr
 CLI (vercel, netlify, flyctl, railway, supabase, doctl, heroku, aws, gcloud, az).
 
 Scope, by design: fast, deterministic, mechanical checks only -- same discipline as
-git_delivery_guard.py. See .claude/hooks/deploy-spend-guard.md for the full spec.
+pre-commit/04-delivery-guard.py.
 
-Decision policy, deliberately different from git_delivery_guard.py: deny or allow,
-**never** ask. git_delivery_guard.py can force an "ask" because a human is expected to
+Decision policy, deliberately different from 04-delivery-guard.py: deny or allow,
+**never** ask. 04-delivery-guard.py can force an "ask" because a human is expected to
 be present for a push/PR/release; this hook exists specifically for autonomous runs
-(mvp-builder) where nobody is present to answer a prompt -- an unanswered "ask" would
+where nobody is present to answer a prompt -- an unanswered "ask" would
 either hang indefinitely or fall back unpredictably. So this hook only ever denies (with
 a reason) or allows silently.
 

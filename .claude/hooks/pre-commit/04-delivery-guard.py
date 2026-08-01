@@ -6,11 +6,10 @@ Scope, by design: fast, deterministic, mechanical checks only (secret
 patterns, obvious debug statements, stray temp/local-env files,
 protected-branch detection). It cannot
 judge SOLID/DRY/architecture/commit-message quality -- that needs actual
-reasoning about the diff's content, which belongs to the companion
-`code-review` skill (.claude/skills/code-review/SKILL.md), run by the
-model itself before attempting the delivery action. This script is the
-deterministic safety net underneath that judgment call, not a replacement
-for it. See .claude/hooks/git-delivery-guard.md for the full spec.
+reasoning about the diff's content, which the model must do itself before
+attempting the delivery action. No skill owns that review; it was deleted in
+the 2026-08-01 teardown and not replaced. This script is the deterministic
+safety net underneath that judgment call, not a replacement for it.
 
 Decision rules:
 - Secrets/credentials found in the pending diff -> hard `deny`. This is the
@@ -27,11 +26,13 @@ Decision rules:
   silently push/merge/publish/release. Plain `commit` is local, so it only
   gets the checks, not the forced ask.
 - Exception, narrow and path-scoped: a repo under ~/mvp-builds/<slug>/ is an
-  `mvp-builder` autonomous-build workspace, freshly created per run, never an
-  existing/shared repo -- the forced `ask` above is skipped there (mvp-builder
-  runs unattended and has no human to answer it), everywhere else this is
-  completely unchanged. The secret-scan `deny` is NOT part of this exception --
-  it stays universal and non-negotiable in every repo, including this one.
+  autonomous-build workspace, freshly created per run, never an existing/shared
+  repo -- the forced `ask` above is skipped there, since an unattended run has no
+  human to answer it. Everywhere else this is completely unchanged. The
+  secret-scan `deny` is NOT part of this exception -- it stays universal and
+  non-negotiable in every repo, including this one.
+  (The skill that created those workspaces was deleted on 2026-08-01. The path
+  check is inert until something writes to ~/mvp-builds again, not wrong.)
 """
 
 import sys as _sys
@@ -281,16 +282,14 @@ def main():
 
     soft_notes = []
     if action == "commit":
-        # Unconditional, every commit -- mirrors task_brief_nudge's own fix for
-        # the same failure class. code-review is model-judgment-triggered, and
-        # that judgment already failed once in practice (a commit went through
-        # with no review at all). This hook has no way to *verify* review
-        # happened -- it only has the current Bash call, not conversation
-        # history -- so it can't gate on that the way the secret-scan deny
-        # does. What it CAN do is make sure the option is never silently
-        # forgotten, same principle as the UserPromptSubmit nudge.
+        # Unconditional, every commit. Diff review is model judgment, and that
+        # judgment already failed once in practice (a commit went through with
+        # no review at all). This hook has no way to *verify* review happened --
+        # it only has the current Bash call, not conversation history -- so it
+        # can't gate on that the way the secret-scan deny does. What it CAN do
+        # is make sure the option is never silently forgotten.
         soft_notes.append(
-            "this hook cannot verify whether `code-review` ran on this diff -- "
+            "this hook cannot verify whether the diff was reviewed -- "
             "if it hasn't, run it before proceeding"
         )
     if find_debug_statements(diff):

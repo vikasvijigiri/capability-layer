@@ -2,13 +2,14 @@
 
 Why this exists
 ---------------
-`02-capability-router.py` closed the routing gap for the 54 `<domain>-` prefixed
-capability skills. It cannot close it for the 31 unprefixed process skills:
-`capabilities.md` maps keywords to a *name prefix*, so the most that router can
-ever emit is "skills prefixed `frontend-` are in the listing". `brainstormer`,
-`code-review`, `error-recovery` and the rest carry no prefix and belong to no
-domain, so they were unreachable by the only routing signal that survives skill-
-listing truncation.
+The skill listing is truncated against a token budget, so a skill's `description:`
+-- its only other trigger surface -- can be absent on the exact turn it was needed.
+This hook is the routing signal that survives that truncation: it matches the prompt
+against `routing/process-skills.md` and injects the names of any skills that hit.
+
+It replaced an earlier domain-prefix router that mapped keywords to a *name prefix*
+(`frontend-`, `backend-`) rather than to a skill. That could never reach a skill
+without a prefix, which is all of them now.
 
 Observed failure, 2026-08-01: a request to brainstorm a research-tooling idea
 matched the `research` capability (on the word "papers") and surfaced the
@@ -55,9 +56,7 @@ MAX_SKILLS = 3
 def load_process_skills():
     """Parse `.claude/routing/process-skills.md` into [(skill, [keyword, ...])].
 
-    One `## <skill-name>` heading per entry, one `Keywords:` line beneath it --
-    the same structural contract `capabilities.md` uses, so the two routing files
-    stay readable as a pair.
+    One `## <skill-name>` heading per entry, one `Keywords:` line beneath it.
 
     A heading is an entry only if it is a single whitespace-free token, so a
     prose section (`## Format contract`) is never mistaken for a skill. A heading

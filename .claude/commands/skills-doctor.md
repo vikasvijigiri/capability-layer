@@ -14,15 +14,15 @@ Report, in this order:
    token count. Then compare against what actually rendered in the current session's
    skill listing: count how many skills arrived with a description versus as a bare
    name. The listing is truncated against a budget, so a skill can be untriggerable
-   on the exact turn that needed it — `execution-planner` looked broken for this
-   reason while being perfectly valid. Name the ten longest descriptions, since
+   on the exact turn that needed it — a skill has looked broken for this reason
+   while being perfectly valid. Name the ten longest descriptions, since
    those are the lever.
 
 2. **YAML breakage.** Parse each frontmatter block with a strict parser. Report any
    that fail, and any where the result is not a mapping. Specifically flag `: "`
    anywhere in a `description` — colon-space-quote makes an unquoted scalar parse
    as a mapping and the description silently vanishes, leaving the skill listed but
-   untriggerable. This has broken `design-system` once already.
+   untriggerable. This has silently broken a skill in this repo once already.
 
 3. **Discovery shape.** Claude Code only finds `.claude/skills/<name>/SKILL.md`
    where the frontmatter `name:` equals the directory name. Report any mismatch,
@@ -34,15 +34,16 @@ Report, in this order:
    opus up to and including planning, sonnet for implementation, haiku for testing
    and deployment. Flag anything that looks misfiled.
 
-5. **Reachability.** For each of the nine `## <domain>` sections in
-   `.claude/routing/capabilities.md`, confirm at least one `<domain>-` skill exists.
-   Then list capability skills whose `## Routing` section names a validator,
-   blueprint or workflow file that does not exist on disk.
+5. **Reachability.** Every skill must have a `## <name>` entry in
+   `.claude/routing/process-skills.md`, and every entry there must name a real
+   skill directory. With the capability router gone this file is the only routing
+   signal that survives listing truncation, so an unrouted skill is invisible on
+   any turn its description is truncated away.
 
-6. **Orphans.** Artefacts in `.claude/blueprints/`, `.claude/validators/`,
-   `.claude/workflows/`, `.claude/playbooks/` and `.claude/templates/` that no
-   skill's `## Routing` section references. These are unreachable — the Figma MCP
-   sat wired-but-untriggerable exactly this way.
+6. **Dangling references.** Names a skill's body hands off to — other skills,
+   agents, commands, file paths it writes to — that do not exist. The 2026-08-01
+   teardown deleted 85 skills and 12 agents; a handoff naming one of them is dead
+   text that reads as a working path.
 
 Report findings most-actionable first, each with a `file:line` where one applies,
 what is wrong, and a one-line fix. A byte count on its own is not a finding — say

@@ -1,83 +1,105 @@
 ---
 name: brainstormer
-description: Generates and develops ideas with you on any topic - technical, product, business or otherwise - keeping generation separate from judgement so the first idea does not become the only one, then turns the chosen direction into a committed design spec. Use for "brainstorm", "any ideas", "what could we do", "help me think this through", "throw some ideas at me", "I am stuck", "what are our options", "bounce ideas", "spitball this", "what if we", "thinking out loud", "give me some angles". Prefer this over running with the first workable idea - the first idea becomes an anchor, and everything after it turns into a variation on it rather than a genuine alternative. Do NOT use once a spec exists and the work is to plan or build it; that is writing-plans.
+description: Use when creative work is about to start (a new feature, component, product direction or behaviour change) and the approach is not yet settled. Triggers include "any ideas", "what could we do", "help me think this through", "what are our options", "bounce ideas", "spitball this", "what if we", "thinking out loud", "give me some angles", "I am stuck", "riff on this", "how should we approach", "is there a better way". Also use when the first workable idea is about to become the only one considered, or when a request spans several subsystems and needs decomposing before anything is designed. Do NOT use once a design or spec exists and the work is to plan or build it (writing-plans), nor when the solution is already settled and only scope is vague (task-brief).
 effort: high
 model: opus
 ---
 
 # Brainstormer
-## Purpose
 
-Help the user discover the best problem and solution space, then turn the
-chosen direction into a fully formed design spec through collaborative
-dialogue.
+Turn an idea into an approved design spec through dialogue. Discover the
+problem space before the solution space, keep generation separate from
+judgement, then commit the chosen direction to `docs/specs/`.
 
-Start by understanding the current context, then ask questions one at a time to
-refine the idea. Once you understand what is being built, present the design
-and get approval.
-
-Please note that your response from any skill you invoke should use minimal
-tokens and should respond in minimal time. Hard cap of 500 tokens.
+Cap visible output at ~500 tokens per turn. Design sections are the exception —
+scale those to complexity, up to 200-300 words each.
 
 <HARD-GATE>
-Do NOT invoke any implementation skill, write any code, scaffold any project,
-or take any implementation action until you have presented a design and the
-user has approved it. This applies to EVERY project regardless of perceived
-simplicity.
+Do NOT write code, scaffold a project, invoke an implementation skill, or take
+any implementation action until you have presented a design and the user has
+approved it. Every project, regardless of perceived simplicity.
 </HARD-GATE>
 
----
+## Anti-Pattern: "too simple to need a design"
 
-## Anti-Pattern: "This Is Too Simple To Need A Design"
-
-Every project goes through this process. A todo list, a single-function
-utility, a config change — all of them. "Simple" projects are where unexamined
-assumptions cause the most wasted work. The design can be short (a few
-sentences for truly simple projects), but you MUST present it and get approval.
-
----
+Every project goes through this — a todo list, a one-function utility, a config
+change. "Simple" is where unexamined assumptions cost the most. The design may
+be three sentences, but you MUST present it and get approval.
 
 ## Principles
 
-- Understand before solving.
-- Expand before narrowing.
-- Challenge assumptions.
-- Prefer genuinely different alternatives over variations.
-- Separate generation from evaluation.
-- Converge only when appropriate.
-- YAGNI ruthlessly — remove unnecessary features from every approach.
+Understand before solving. Expand before narrowing. Challenge assumptions.
+Prefer genuinely different alternatives over variations. Separate generation
+from evaluation. Converge only when generation is done. YAGNI ruthlessly.
 
----
+## Process
 
-## Checklist
+Create a task per step and complete them in order.
 
-You MUST create a task for each of these items and complete them in order:
+**1. Explore context** — files, docs, recent commits for technical topics; the
+stated goal and constraints for non-technical ones.
 
-1. **Explore context** — files, docs, recent commits for technical topics; the
-   user's stated goal and constraints for non-technical ones
-2. **Assess scope** — if the request spans multiple independent subsystems,
-   flag it and decompose before refining details
-3. **Ask clarifying questions** — one at a time; purpose, constraints, success
-   criteria
-4. **Propose 2-3 approaches** — genuinely different, with trade-offs and your
-   recommendation
-5. **Converge** — present the surviving directions via `AskUserQuestion`, with
-   options to go wider or re-frame the problem
-6. **Present design** — in sections scaled to their complexity, approval after
-   each section
-7. **Write design doc** — `docs/specs/YYYY-MM-DD-<topic>-design.md`, then commit
-8. **Spec self-review** — placeholders, contradictions, ambiguity, scope
-9. **User reviews written spec** — ask before proceeding
-10. **Transition** — invoke `writing-plans` to create the implementation plan
+**2. Assess scope** — if the request spans independent subsystems, say so now
+and decompose into sub-projects: what the pieces are, how they relate, what
+order. Brainstorm the first one through the normal flow; each gets its own
+spec → plan → build cycle. Questions spent refining the wrong scope are wasted.
 
----
+**3. Ask clarifying questions** — purpose, constraints, success criteria.
+- One question per message. Break wide topics into several turns.
+- Use `AskUserQuestion`, not prose with lettered options — the user should
+  click, not retype.
+- 2-4 options, each a real position, each `description` saying what choosing it
+  implies. `multiSelect: true` when answers aren't exclusive.
+- Never add "other" / "none of these" — the tool appends one.
+- Open prose is fine when the answer is a name, number, or unanticipatable
+  sentence.
+
+**4. Propose 2-3 approaches** — genuinely different, with trade-offs. Lead with
+your recommendation and why.
+
+**5. Converge** — `AskUserQuestion` over the surviving directions, always
+including "go wider" and "re-frame the problem". `multiSelect: true`; real
+answers are often "explore these two together". Ask the converging question
+once, here only. Earlier questions ask what the problem is, never which idea
+wins.
+
+**6. Present the design** — section by section, approval after each. Technical:
+architecture, components, data flow, error handling, testing. Product or
+business: the problem, the user, the wedge, constraints, how success is
+measured. Be ready to go back.
+
+**7. Write the spec** to `docs/specs/YYYY-MM-DD-<topic>-design.md` (user
+preference overrides the path) and commit it.
+
+**8. Self-review the spec** with fresh eyes — placeholders and TBDs;
+contradictions between sections; scope focused enough for one plan; any
+requirement readable two ways. Fix inline, don't re-review.
+
+**9. User reviews the written spec.** Ask, then wait:
+> "Spec written and committed to `<path>`. Please review it and tell me if you
+> want changes before we write the implementation plan."
+
+**10. Hand off** to `writing-plans`. Nothing else.
+
+## Design guidance
+
+**For isolation and clarity (technical):** break the system into units with one
+purpose each, well-defined interfaces, independently testable. Per unit: what
+does it do, how do you use it, what does it depend on? If you can't understand
+one without reading its internals, or can't change internals without breaking
+consumers, the boundaries need work. A file growing large is usually a signal
+it does too much.
+
+**In existing codebases:** explore before proposing; follow existing patterns.
+Include targeted improvements where existing problems affect this work. Don't
+propose unrelated refactoring.
 
 ## Process Flow
 
 ```dot
 digraph brainstorming {
     "Explore context" [shape=box];
-    "Ask clarifying questions" [shape=box];
+    "AskUserQuestion: clarify" [shape=diamond];
     "Propose 2-3 approaches" [shape=box];
     "AskUserQuestion: converge" [shape=diamond];
     "Present design sections" [shape=box];
@@ -87,10 +109,10 @@ digraph brainstorming {
     "User reviews spec?" [shape=diamond];
     "Invoke writing-plans" [shape=doublecircle];
 
-    "Explore context" -> "Ask clarifying questions";
-    "Ask clarifying questions" -> "Propose 2-3 approaches";
+    "Explore context" -> "AskUserQuestion: clarify";
+    "AskUserQuestion: clarify" -> "Propose 2-3 approaches";
     "Propose 2-3 approaches" -> "AskUserQuestion: converge";
-    "AskUserQuestion: converge" -> "Ask clarifying questions" [label="go wider / re-frame"];
+    "AskUserQuestion: converge" -> "AskUserQuestion: clarify" [label="go wider / re-frame"];
     "AskUserQuestion: converge" -> "Present design sections" [label="direction chosen"];
     "Present design sections" -> "User approves design?";
     "User approves design?" -> "Present design sections" [label="no, revise"];
@@ -102,141 +124,42 @@ digraph brainstorming {
 }
 ```
 
-**The terminal state is invoking `writing-plans`.** Do NOT invoke any other
-implementation skill from here.
+## Red Flags — stop, you are about to skip a gate
 
----
+- "This one is simple enough to just build."
+- "They already know what they want, so I'll skip to the design." They asked for
+  options; giving one is not giving options.
+- Three approaches that are one approach with different parameters.
+- Asking which idea wins before generation is finished — that collapses
+  generation into evaluation, the exact failure this skill prevents.
+- Writing the spec before the design was approved section by section.
+- Invoking anything but `writing-plans` at the end.
 
-## The Process
+**Each of these means go back a step. The gate is not optional.**
 
-**Understanding the idea:**
+## Common Mistakes
 
-- Check the current state first — files, docs, recent commits
-- Before asking detailed questions, assess scope: if the request describes
-  multiple independent subsystems, flag it immediately. Don't spend questions
-  refining details of a project that needs decomposing first.
-- If it is too large for a single spec, help decompose into sub-projects: what
-  are the independent pieces, how do they relate, what order should they be
-  built? Then brainstorm the first sub-project through the normal flow. Each
-  sub-project gets its own spec → plan → implementation cycle.
-- Ask questions one at a time
-- Prefer multiple choice when possible, but open-ended is fine
-- Only one question per message — break wide topics into several questions
-- Focus on purpose, constraints, success criteria
-
-**Exploring approaches:**
-
-- Propose 2-3 genuinely different approaches with trade-offs
-- Lead with your recommended option and explain why
-- YAGNI ruthlessly
-
-**Converging:**
-
-- Use `AskUserQuestion` with the surviving directions as options
-- Always include an option to go wider, and one to re-frame the problem
-- Use `multiSelect: true` — real answers are often "explore these two together"
-- One question, at the convergence point only. Asking after the first batch
-  collapses generation into evaluation, which is what this skill exists to
-  prevent.
-
-**Presenting the design:**
-
-- Scale each section to its complexity: a few sentences if straightforward, up
-  to 200-300 words if nuanced
-- Ask after each section whether it looks right so far
-- For technical topics cover architecture, components, data flow, error
-  handling, testing. For product or business topics cover the problem, the
-  user, the wedge, the constraints and how success is measured.
-- Be ready to go back and clarify
-
-**Design for isolation and clarity (technical topics):**
-
-- Break the system into smaller units that each have one clear purpose,
-  communicate through well-defined interfaces, and can be understood and tested
-  independently
-- For each unit: what does it do, how do you use it, what does it depend on?
-- Can someone understand a unit without reading its internals? Can you change
-  the internals without breaking consumers? If not, the boundaries need work.
-- When a file grows large, that is often a signal it is doing too much
-
-**Working in existing codebases:**
-
-- Explore the current structure before proposing changes. Follow existing
-  patterns.
-- Where existing code has problems that affect the work, include targeted
-  improvements as part of the design
-- Don't propose unrelated refactoring
-
----
-
-## After the Design
-
-**Documentation:**
-
-- Write the validated design to `docs/specs/YYYY-MM-DD-<topic>-design.md`
-  (user preferences for spec location override this default)
-- Commit the design document to git
-
-**Spec self-review** — after writing, look at it with fresh eyes:
-
-1. **Placeholder scan** — any "TBD", "TODO", incomplete sections, or vague
-   requirements? Fix them.
-2. **Internal consistency** — do any sections contradict each other? Does the
-   architecture match the feature descriptions?
-3. **Scope check** — focused enough for a single implementation plan, or does
-   it need decomposition?
-4. **Ambiguity check** — could any requirement be read two ways? Pick one and
-   make it explicit.
-
-Fix issues inline. No need to re-review — fix and move on.
-
-**User review gate** — after the self-review passes:
-
-> "Spec written and committed to `<path>`. Please review it and let me know if
-> you want to make any changes before we start writing out the implementation
-> plan."
-
-Wait for the response. If changes are requested, make them and re-run the
-self-review. Only proceed once the user approves.
-
-**Implementation:**
-
-- Invoke `writing-plans` to create the implementation plan
-- Do NOT invoke any other skill
-
----
-
-## Boundaries
-
-Do not:
-
-- write code
-- scaffold a project
-- invoke an implementation skill
-- continue into execution
-
-Designing the solution and committing the spec are in scope. Building it is
-not.
-
----
+| Mistake | Why it bites |
+|---|---|
+| Several questions in one message | The user answers the easy one; the rest are lost |
+| Lettered options in prose | The user cannot click; answers arrive unstructured |
+| Adding "other / none of these" | The tool appends one — yours crowds out a real position |
+| Refining details across several subsystems | Decompose first, or the questions are wasted |
 
 ## Routing
 
-- Mandatory validator: none — this skill produces a spec, not a side effect on
-  running code. The spec self-review above is the gate.
-- Terminal handoff: `writing-plans`
-- Precedes: `requirements-analyst` owns the PRD when one is needed; this skill
-  owns the design spec that precedes it.
-
----
+- Mandatory validator: none — this produces a spec, not a change to running
+  code. The self-review and the user review gate are the gates.
+- Terminal handoff: `writing-plans`.
+- Alternative to `task-brief`, never a successor. Use this when the solution is
+  open; a finished brief already commits to one, which would reduce
+  brainstorming to variations on an answer already given.
+- Out of scope: writing code, scaffolding, invoking an implementation skill,
+  continuing into execution. Designing and committing the spec are in scope;
+  building is not.
 
 ## Success
 
-The skill is complete when:
-
-- the problem is understood,
-- assumptions are visible,
-- credible alternatives exist,
-- trade-offs are clear,
-- the user has chosen a direction,
-- the design spec is written, committed and approved.
+The problem is understood, assumptions are visible, credible alternatives were
+offered, trade-offs are clear, the user chose a direction, and the spec is
+written, committed and approved.

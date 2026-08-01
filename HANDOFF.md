@@ -31,6 +31,53 @@ section. Read the file directly when full history is actually needed. -->
 <!-- session-context:start -->
 ## Current Work
 
+**Three skills rewritten against the superpowers standard, uncommitted.**
+Descriptions are now trigger-only — the old ones summarised the workflow, which
+`writing-skills` forbids because the summary becomes a shortcut agents take instead of
+reading the skill. Bodies 4094 → 3357 words (prose −30%, offset by new Red Flags and
+Common Mistakes tables that two of the three lacked). Global layer confirmed empty:
+`~/.claude/` has no `skills/` directory, so these three are the entire layer.
+
+`tools/test_process_router.py` gained four per-skill frontmatter assertions after a
+`: "` in a description silently deleted `brainstormer`'s description mid-edit — it stayed
+listed and routed while being untriggerable by description. Guard proved by planting the
+bug and watching it fail. Four suites pass, `compileall` 0, env-check `{"issues": []}`.
+
+Still open on the skills: `brainstormer` should be `brainstorming` per the standard's
+verb-first naming (skipped — pure churn), and none of the three has had a baseline
+pressure-scenario run, so the Iron Law is unmet and every gate is text-asserted.
+
+**All dead-capability references cleared, uncommitted.** 22 sites in 13 files, found
+by grepping all 146 names from `git ls-tree eaab430` rather than a remembered list —
+the guessed list missed twelve. Six were actionable dead instructions (`approval-brief`,
+`requirements-analyst`, `knowledge-manager` ×2, `repo-onboarding` ×2, plus a botched
+find/replace leaving "Review the diff skill on this diff"); the rest were rationale
+docstrings and four dead file paths. Every edited hook was run against a real payload
+and its decision asserted — 12/12 as expected. Four suites pass, `compileall` exits 0.
+
+Two mentions kept on purpose, both marked as history: `03-review-gate.py` records that
+the deleted `code-review` skill used to run `--record`, **so that gate now asks on
+every commit**; and `04-delivery-guard.py`'s `~/mvp-builds/` exception, whose code is
+live but inert.
+
+**Skill `task-brief` added, uncommitted.** Rough ask → six-line brief → approval
+gate → `TASK.md`. Recovered from `task-intake` at `eaab430`, with claim-verification
+added from `gitlens/dev-scope` and a verbatim-request line from `Embody/brief`.
+Third skill; routing entry added and `3 entries routed`. Four suites pass,
+`01-env-check.py` logs `{"issues": []}`, frontmatter parses 3 skills clean.
+**Never executed** — its gates are text-asserted only, same caveat as the other two.
+
+**CLAUDE.md no longer prescribes a skill order.** `## Golden path` is now `## Skills`
+— three one-line entries, no arrows, matching what public repos do. Sequencing is each
+skill's own `## Routing` section to decide, not the bootloader's.
+
+**`CLAUDE.md` rewritten, uncommitted.** Reshaped from changelog to bootloader
+against public CLAUDE.md conventions; 131 → 122 lines. Dropped the mid-rebuild
+preamble and the deletion inventory (LOG.md and `eaab430` own those), fixed a dead
+`docs/architecture/` pointer, and gave the six root knowledge docs the section they
+never had. No code touched, so the green results below still stand — but `/verify`
+was not re-run this turn.
+
 **Teardown done, uncommitted.** 182 deletions, 12 modifications, 0 untracked.
 `.claude/` is now `skills/` (`brainstormer`, `writing-plans`), `hooks/`, `routing/`,
 `commands/` and the two settings files. Safety commit `eaab430` holds everything
@@ -47,13 +94,12 @@ problems: none`, hook registration has no dangling paths in either direction,
 
 ## Pending
 
-- **Six hooks name skills that no longer exist, in user-visible output.**
-  `post-run/04-docs-sync.py:304`, `post-run/05-docs-gate.py:110`,
-  `pre-commit/05-docs-required.py:107` and `pre-run/04-docs-staleness.py:164,205`
-  say "invoke `knowledge-manager`"; `pre-commit/03-review-gate.py:184,195,204` and
-  `04-delivery-guard.py:293` say "run `code-review`". Both skills were deleted.
-  The Stop gate blocked a turn on this within minutes of the teardown. Nothing
-  checks whether a hook's named skill exists.
+- **Nothing checks that a name in a hook or skill resolves to something real.**
+  The dead-reference sweep on 2026-08-01 cleared 22 sites, but by hand. This is
+  the repo's most-repeated failure — seven instances now — and the only one with
+  no automated guard. A check would grep `.claude/**` for backticked kebab-case
+  tokens and `.claude/**` paths, then assert each resolves to a real skill,
+  command, agent or file. The sweep script in LOG 19:20 is the prototype.
 - **`04-delivery-guard.py` false-positives on Windows paths.**
   `find_ai_attribution` scans the whole command string and `_STANDALONE` excludes
   `/` but not `\`, so any path containing `\claude\` is read as AI attribution. It

@@ -16,9 +16,8 @@ this repo's own work for three independent reasons:
 
 This hook fixes the channel and the timing. `UserPromptSubmit` is the one event
 whose `additionalContext` is injected straight into the turn -- the same
-mechanism that makes `02-capability-router.py` and `03-task-brief-nudge.py`
-actually land -- and it fires at the start of a turn, while there is still a turn
-left to act in.
+mechanism that makes `05-process-skill-router.py` actually land -- and it fires
+at the start of a turn, while there is still a turn left to act in.
 
 It does not replace `post-run/04-docs-sync.py`. That hook keeps its `Stop`-side
 `decision: block` rule for a new decision record, which is a genuine gate; this
@@ -161,7 +160,7 @@ def main():
                     f"Docs staleness (git — the last commit changed {len(work)} files and "
                     f"touched neither LOG.md nor HANDOFF.md):\n"
                     f"- committed: {areas}\n"
-                    "`knowledge-manager` owns those files. A commit empties `git status`, "
+                    "Those files are written by hand. A commit empties `git status`, "
                     "so this is the only point at which an unrecorded commit is still "
                     "visible. Ignore if that commit was deliberately not worth logging."
                 ),
@@ -202,7 +201,7 @@ def main():
         f"changed more recently than {' and '.join(behind)}):",
         f"- changed: {areas}",
         f"- behind the work: {', '.join(behind)}",
-        "`knowledge-manager` owns these files and is the only thing that writes "
+        "These files are written by hand and nothing writes "
         "them — nothing does it automatically. Invoke it when a unit of work "
         "finishes, not at the end of the session. Ignore this if the work is "
         "still mid-flight or too small to record.",

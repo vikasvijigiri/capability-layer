@@ -1,10 +1,14 @@
 # Prerequisites checklist
 
-A global, running checklist of external services/API keys needed across projects —
-one place to look instead of digging through each project's own `HANDOFF.md`. Owned
-and updated by the `deployment-pilot` skill (see its SKILL.md) whenever it hits a
-must-supply credential it can't generate itself; not preloaded at `SessionStart` —
-consulted on demand, same treatment as `decisions/`/`ISSUES.md`.
+A running checklist of external services/API keys needed across projects — one
+place to look instead of digging through each project's own `HANDOFF.md`. Written
+by hand whenever a task hits a must-supply credential it can't generate itself; not
+preloaded at `SessionStart` — consulted on demand, same treatment as
+`decisions/`/`ISSUES.md`.
+
+The deployment skills that used to own this file were deleted on 2026-08-01. The
+entries below are still accurate as credential records; the "Used by" lines that
+name a skill are historical.
 
 Format per entry:
 

@@ -3,6 +3,181 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-01 20:15
+Audited all three skills against `obra/superpowers`' own `writing-skills` (the closest
+thing to an authoritative standard) plus five upstream skills as a baseline, then acted
+on it. Confirmed first that the global layer is empty — `~/.claude/` has no `skills/`
+directory at all, and the plugin marketplace has none installed. These three are the
+whole skill layer.
+
+**The defect was never length, it was kind.** All three descriptions summarised the
+workflow. `writing-skills` forbids that specifically, from their own testing: a
+description that summarises the process becomes a shortcut the agent takes *instead of*
+reading the skill — their case had an agent do one review where the flowchart specified
+two. `task-brief`'s was the worst, naming all six fields, the verification step, the
+approval gate and the `TASK.md` write; an agent could execute it without opening the
+file, skipping the confidence score and the HARD-GATE entirely. All three are now
+trigger-only: symptoms, quoted phrases, and an explicit "Do NOT use for" boundary.
+Total length is roughly unchanged (2159 → 2239) after being cut to 370 and expanded
+back on request — the content is what changed, not the size.
+
+**Bodies 4094 → 3357 words.** Prose down ~30% — `brainstormer`'s Checklist and "The
+Process" were the same ten steps written twice, and `writing-plans` described its three
+gates in three separate places — partly offset by ~200 words of new Red Flags and
+Common Mistakes tables, which the standard treats as the primary anti-rationalisation
+tool and which two of the three lacked entirely.
+
+**Broke a skill live and caught it by luck, then fixed that.** Writing
+`...not yet settled: "any ideas"` into `brainstormer`'s description made YAML parse the
+scalar as a mapping; the description silently vanished and the listing rendered the bare
+title `Brainstormer`. Untriggerable by description, still listed, still routed — exactly
+what `/skills-doctor` check 2 warns about, and nothing in the suite caught it. The only
+signal was noticing the rendered listing.
+
+So `tools/test_process_router.py` now asserts, per skill: frontmatter parses to a
+mapping, description is non-empty, `name` matches the directory, and frontmatter is
+within the 1024-char hard spec limit. The 500-char description target is a NOTE, not a
+failure — it is superpowers' "if possible" guidance about truncation budget, and richer
+trigger coverage is worth spending some of it. Proved by planting `: "` back into
+`task-brief` and confirming `FAIL: task-brief frontmatter parses -- mapping values are
+not allowed here`, then restoring.
+
+Four suites pass, `compileall` exits 0, `01-env-check.py` logs `{"issues": []}`.
+
+Not done, deliberately: `brainstormer` should be `brainstorming` per the standard's
+verb-first naming, but the rename churns routing, CLAUDE.md, history and muscle memory
+for zero functional gain. And the Iron Law — "no skill without a failing test first",
+meaning a baseline pressure scenario run *without* the skill — is still unmet on all
+three. That is the honest remaining gap; every gate in these files is asserted by its
+own text.
+
+## 2026-08-01 19:20
+Cleared every reference to a deleted capability across `.claude/`. **22 sites in 13
+files.** This closes HANDOFF's top pending item and the recurring class behind it —
+*prose declares a capability the wiring does not implement*, now at its seventh instance.
+
+Method matters more than the count. The first pass grepped eight names I could remember
+and found six. The second pass took **all 146 capability names from `git ls-tree eaab430`**
+and grepped every `.py`/`.md`/`.json` under `.claude/` for each — that found twelve more,
+including three the guessed list would never have reached (`repo-onboarding`,
+`deployment-pilot`, `stack-selector`). Guessing the search terms was the bug, not the
+grep.
+
+Actionable dead instructions fixed (these told Claude to invoke something absent):
+
+- `writing-plans` — "Route to `approval-brief` before anything irreversible" → stop and
+  ask the user directly. Also dropped `execution-planner` and a paragraph naming five
+  deleted agents.
+- `brainstormer` — "Precedes `requirements-analyst`" → replaced with the real
+  relationship, that it is an alternative to `task-brief` and never a successor.
+- `/wip` — "offer `knowledge-manager`" → say which docs are stale and stop.
+- `post-run/04-docs-sync.py` — user-visible "`repo-onboarding` — owns CLAUDE.md".
+- `session-start/02-bootstrap-docs.py` — user-visible "run the repo-onboarding skill".
+- `pre-commit/03-review-gate.py` — a botched earlier find/replace had left the literal
+  sentence "Review the diff skill on this diff".
+
+Also fixed four dead file paths (`.claude/skills/code-review/SKILL.md`,
+`.claude/hooks/{git-delivery-guard,deploy-spend-guard,forbidden-change-guard}.md`) and
+the rationale docstrings naming `02-capability-router.py`, `03-task-brief-nudge.py`,
+`capabilities.md` and `git_delivery_guard.py`.
+
+Two references kept deliberately, both labelled as history rather than left dangling:
+`03-review-gate.py` now states that the `code-review` skill which used to run `--record`
+is gone, **so the gate asks on every commit by default** — that is a live behavioural
+consequence a reader needs; and `04-delivery-guard.py`'s `~/mvp-builds/` path exception,
+whose code is still live and inert rather than wrong.
+
+Verified, not assumed: a 12-case payload harness ran every edited hook and asserted the
+decision each returned — `01-spend-guard` deny/silent, `01-forbidden-change-guard` deny,
+`03-review-gate` ask, `05-process-skill-router` match/silent, and the three Stop/
+SessionStart hooks. All 12 as expected. Four suites pass, `compileall` exits 0. The
+final all-names sweep returns only the two deliberate mentions.
+
+Worth keeping: the spend guard denied the first test attempt, because the shell line
+driving the test contained the vendor keyword and a `&&`. The hook was right. Tests for
+a command-scanning hook cannot be written as shell one-liners.
+
+## 2026-08-01 18:35
+Corrected the golden path. `task-brief → brainstormer → writing-plans`, written into
+CLAUDE.md an hour earlier, was wrong — and the sentence directly beneath the arrow
+already contradicted it.
+
+`brainstormer` exists because the first idea becomes an anchor. A finished brief *is*
+that anchor: Goal and Outputs commit to a solution shape, so brainstorming afterwards
+degenerates into variations on an answer already given. The reverse direction fails too
+— `writing-plans` requires a design spec and six lines in `TASK.md` is not one.
+
+`task-brief`'s terminal handoff narrowed to direct execution and nothing else. Its
+bailout is now step 3's blank-field rule rather than a handoff: if Outputs or Done-check
+cannot be filled because the approach is undecided, abandon the brief and start at
+`brainstormer` — do not guess fields to keep the brief alive.
+
+**Then dropped the flow from CLAUDE.md entirely.** The corrected two-lane diagram was
+still the wrong kind of thing: CLAUDE.md prescribing an order the skills should decide
+per ask. Checked what public repos do — 18,496 CLAUDE.md files reference
+`.claude/skills`, and the pattern is a plain `## Skills` section naming the directory
+and listing one line per skill, with no sequencing at all
+(`mongodb/mongodb-atlas-kubernetes`, `mizchi/skills`). Adopted that. The
+`## Golden path` section is now `## Skills`: three one-line entries and "read the skill,
+don't infer an order from this list."
+
+The ordering rationale is not lost — it lives in `task-brief`'s own `## Routing`, which
+is where a skill's relationships belong and where it stays correct if the skill changes.
+
+Worth keeping: the contradiction shipped inside a single section, between an ASCII arrow
+and the prose under it. The arrow was the part that read as authoritative — which is the
+argument against putting an arrow in CLAUDE.md at all.
+
+Four suites re-run and pass.
+
+## 2026-08-01 18:10
+Added skill `task-brief` — rough ask → six-line brief (Goal / Constraints / Inputs /
+Outputs / Done-check / Out-of-scope) → approval gate → `TASK.md`. Third skill; routing
+entry added, `test_process_router.py` now reports `3 entries routed`.
+
+Recovered rather than written: `task-intake` at `eaab430` already had these six fields
+mapped onto `TASK.md`'s own field names, plus a 0–100 confidence score that decides
+whether to ask clarifying questions before presenting. Both kept. Its handoffs to
+`knowledge-manager` and `workflow-orchestrator` were rewritten — those are deleted, so
+the skill now writes `TASK.md` itself and hands off to `brainstormer`, `writing-plans`,
+or direct execution.
+
+GitHub search (2,116 repos carry the pattern) contributed two things the old version
+lacked. From `gitkraken/vscode-gitlens` `dev-scope`: **verify claims against the
+codebase before filling any field**, bucketed confirmed/disputed/unverifiable. That is
+the highest-value addition here — a brief built on a wrong premise looks approved, which
+is this repo's own recurring failure class. From `dylanroscover/Embody` `brief`: record
+the request verbatim as line zero so compression drift stays visible, and skip the brief
+outright when it costs more than the work.
+
+`pre-run/03-task-brief-nudge.py` deliberately **not** restored.
+`05-process-skill-router.py` now covers its job via keywords, without injecting a fixed
+string on every turn.
+
+Checks run: four suites pass, `01-env-check.py` logs `{"issues": []}`, frontmatter parses
+3 skills with names matching directories. The skill itself has never been executed — its
+gates are asserted by its own text, same as the other two.
+
+## 2026-08-01 17:35
+Rewrote `CLAUDE.md` against the section order public CLAUDE.md surveys converge on
+(overview → working agreement → golden path → commands → map → knowledge docs →
+gotchas → never). 131 → 122 lines. The file had drifted into a changelog: a
+"State: mid-rebuild" preamble and a full "What was deleted on 2026-08-01" inventory,
+both of which are LOG.md's and `eaab430`'s job, not a bootloader's.
+
+Two real errors fixed, not just reshaped prose:
+
+- It pointed at `docs/architecture/`, which does not exist. The actual design set is
+  `docs/00-*.md … 17-*.md`, and it describes the pre-teardown layer, so the map now
+  says to read it with suspicion.
+- The six root knowledge docs were absent entirely, despite hooks referencing them
+  584 times. They now have their own section, with the honest gate strengths:
+  `PreToolUse` deny works, `Stop` blocking is still unproven at 130 payloads.
+
+Added the `PYTHONIOENCODING=utf-8` gotcha (it was only in `/verify`, where it is
+found after the failure rather than before) and the `ALLOW_UNLOGGED_COMMIT=1`
+override. No code changed; `/verify` not run.
+
 ## 2026-08-01 16:40
 First `brainstormer` run end to end — the skill's gates and its `docs/specs/` path are
 now asserted by something other than its own text. Six futures generated for "how does

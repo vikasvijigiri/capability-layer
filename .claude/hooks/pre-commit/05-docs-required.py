@@ -104,7 +104,7 @@ def main():
     write_log("pre-commit-scan.log", "DOCS-REQUIRED-DENY", {"staged": len(work)})
     deny(
         f"{len(work)} files staged and neither LOG.md nor HANDOFF.md is among them. "
-        "Invoke `knowledge-manager` to record this unit of work, then stage the docs "
+        "Record this unit of work in LOG.md/HANDOFF.md, then stage the docs "
         "and commit again. Once this commit lands, `git status` goes clean and the "
         "staleness is invisible -- this is the last point it can be caught. "
         "Set ALLOW_UNLOGGED_COMMIT=1 for a commit genuinely not worth logging."

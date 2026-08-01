@@ -376,7 +376,7 @@ Execution Plan is a table, one row per step, and every row declares who executes
 Owner = a real registered skill/subagent/workflow name, Kind = skill|subagent|workflow|
 direct, Depends on = step numbers. Hooks are never Owners (they fire on events, a plan
 cannot invoke one). Use (resolve-at-runtime) when an owner honestly isn't knowable yet.
-Full spec: the PLAN.md section of knowledge-manager's formats.md. -->
+Sections: Objective / Execution Plan / Dependencies / Risks / Acceptance Criteria. -->
 
 ## Objective
 
@@ -434,9 +434,9 @@ ISSUES_MD_SKELETON = """# Issues
 
 <!-- Append-only, newest entry at the TOP, never rewrite old ones -- same discipline
 as LOG.md. One entry per incident (the whole diagnose/fix sequence), written by the
-error-recovery skill once a bounded recovery loop reaches a terminal state.
+Written once a bounded diagnose-fix-reverify loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
-of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
+one entry per incident, newest first. Not preloaded at SessionStart -- read on demand. -->
 """
 
 DECISIONS_README_SKELETON = """# Decisions
@@ -634,8 +634,8 @@ def main():
         sections.append(
             "--- CLAUDE.md is still a stub ---\n"
             "This repo's CLAUDE.md hasn't been filled in yet (still the auto-generated "
-            "skeleton). Once there's enough context about this repo, consider running the "
-            "repo-onboarding skill to flesh it out with real project specifics."
+            "skeleton). Once there's enough context about this repo, fill it in with "
+            "real project specifics — commands, layout, gotchas, and hard rules."
         )
     # Full CLAUDE.md content is deliberately NOT injected here -- Claude Code
     # already auto-loads project CLAUDE.md on its own for every session, so
