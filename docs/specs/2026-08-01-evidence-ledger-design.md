@@ -42,12 +42,36 @@ Turns a change into a list of falsifiable assertions.
 
 - **Input:** the diff, plus `docs/plans/*.md` if one covers the change.
 - **Output:** a list of claims, each with a source location.
-- **Sources are explicit only** — plan steps, test names, hook registrations in
-  `.claude/settings.json`. No inference from prose. No model guessing what a
-  diff asserts.
-- A change with no plan yields no claims, and the ledger reports it as
+- **Sources are explicit only** — no inference from prose, no model guessing
+  what a diff asserts. Three sources, and only three:
+  1. **Plan steps** — each step in a `docs/plans/*.md` covering the change.
+  2. **Test names** — tests added or modified by the diff.
+  3. **Declared repo invariants** — see below.
+- A change with no plan still yields invariant claims. A change with no plan
+  *and* no invariant touched yields no claims, and the ledger reports it as
   **unverifiable — not verified**. Those are different states and must never
   collapse into each other.
+
+#### Declared repo invariants
+
+Plan steps and test names are both *per-change* claim sources, and neither can
+express "no hook names a skill that does not exist" — that is a property of the
+repo, asserted by nobody, which is exactly why it broke. So the extractor has a
+third source: a declared list of invariants, each a `(statement, check command)`
+pair, held in one file.
+
+- The extractor emits a claim for **every** declared invariant on every run,
+  independent of the diff. Invariants are cheap and always-on; there is no
+  relevance filter to get wrong.
+- Adding an invariant is a deliberate act of writing down something previously
+  only in someone's head. The list starts with the one that broke: every skill
+  name appearing in a hook's user-visible output resolves to a real
+  `.claude/skills/<name>/SKILL.md`.
+- An invariant's check counts as part of the repo's check surface. Adding one
+  therefore means adding it to `/verify` too — see the constraint in unit 2,
+  which this does not weaken: the runner still may only invoke checks `/verify`
+  runs, and the invariant list and `/verify` are kept in agreement by a test
+  that fails if they diverge.
 
 ### 2. Check runner
 
@@ -59,7 +83,9 @@ Executes checks and captures results.
   passing if it executed it and captured the exit code. This is the repo's
   standing rule applied to the tool that enforces the repo's standing rules.
 - Every check it can invoke must already be something `/verify` runs. It
-  introduces no new check surface.
+  introduces no new check surface of its own. An invariant's check is added to
+  `/verify` when the invariant is declared, so this holds by construction and a
+  test enforces the agreement.
 
 ### 3. Coverage mapper
 
@@ -77,11 +103,36 @@ Decides whether the change proceeds.
 - **Output:** a verdict, and the unbacked claims as the reason.
 - Gates on "is this assertion actually checked?" — replacing ritual gates
   (docs-updated?, attribution-absent?) as the model for what a gate is for.
-- **Ships advisory.** It reports and blocks nothing until extraction has run
-  over roughly 20 real changes and its false-positive rate has been measured.
-  Flipping to blocking is a config change and a deliberate decision, never the
-  default. Rationale: an unreliable blocking gate teaches engineers to bypass
-  gates, which is worse than no gate.
+- **Ships advisory.** It reports and blocks nothing until it has earned
+  blocking mode against a mechanical threshold. Rationale: an unreliable
+  blocking gate teaches engineers to bypass gates, which is worse than no gate.
+
+#### The flip to blocking
+
+Not a judgment call. Three conditions, all required:
+
+1. **Volume** — at least 20 changes have been run through the ledger that
+   produced at least one claim. Changes reporting `unverifiable` do not count
+   toward the 20; they exercise nothing.
+2. **Adjudication** — every unbacked claim reported across those changes has
+   been labeled by a human as `true` or `false-positive`, and the label is
+   recorded next to the claim. An unlabeled report blocks the flip; silence is
+   not consent.
+3. **Rate** — false positives are **at most 10%** of adjudicated unbacked
+   claims. If the rate exceeds it, the extractor's sources are wrong and the
+   fix is to narrow them, not to raise the ceiling.
+
+**A false positive is** an unbacked claim that is either (a) actually checked by
+something the mapper failed to connect, or (b) not a falsifiable assertion at
+all. A claim that is genuinely unchecked is a **true** report even if the human
+judges it unimportant — "not worth checking" is a decision about the invariant
+list, not an extractor defect, and conflating the two is how the rate gets
+gamed.
+
+10% is a stated tolerance, not a derived one: at that rate a human adjudicating
+a 3-claim report sees a spurious claim roughly one run in three, which is
+irritating but not yet training them to ignore the output. Revisit it with real
+data; do not silently drift it.
 
 ### 5. Attention router — designed, not built
 
@@ -92,7 +143,7 @@ plan.
 
 ## Data flow
 
-    diff + plan
+    diff + plan + invariant list
       → [1] claims
       → [2] run records
       → [3] coverage map  (unbacked set = the product)
@@ -104,8 +155,11 @@ and no upstream unit.
 
 ## Error handling
 
-- **Extraction finds no plan** → `unverifiable`, reported as such. Not a
-  failure, not a pass.
+- **Extraction finds no plan and no invariant** → `unverifiable`, reported as
+  such. Not a failure, not a pass.
+- **The invariant list and `/verify` disagree** → loud failure of the ledger
+  itself, not a per-claim `unbacked`. An invariant whose check nothing runs is a
+  broken tool, not a broken change.
 - **A check errors or times out** → the claim is `unbacked`, and the captured
   stderr is the reason. An erroring check never counts as evidence.
 - **The ledger itself fails** → it must fail loudly. A silent ledger and a clean
@@ -114,13 +168,21 @@ and no upstream unit.
 
 ## Testing
 
-- **Unit 1:** fixture plan + fixture diff → expected claim list.
+- **Unit 1:** fixture plan + fixture diff → expected claim list; a diff with no
+  plan still yields the invariant claims; a repo with neither yields
+  `unverifiable`.
 - **Unit 2:** a passing check, a failing check, an erroring check, a timeout —
   four run records, exit codes captured verbatim.
 - **Unit 3:** hand-written claims + run records → expected unbacked set.
-- **Unit 4:** advisory mode reports and does not block; blocking mode blocks.
-- **End to end:** plant a plan step with no check behind it and confirm it is
-  reported.
+- **Unit 4:** advisory mode reports and does not block; blocking mode blocks;
+  the flip is refused when volume, adjudication or rate is unmet — one test per
+  condition.
+- **Invariant/`verify` agreement:** a declared invariant whose check `/verify`
+  does not run makes the suite fail.
+- **End to end, criterion 1:** plant a plan step with no check behind it and
+  confirm it is reported.
+- **End to end, criterion 2:** plant a hook naming a nonexistent skill, with
+  every other check green, and confirm the invariant claim comes back unbacked.
 
 ## Constraints
 
@@ -136,12 +198,17 @@ and no upstream unit.
 1. For a change with a plan, the ledger names **every** plan step with no
    executed check behind it, and misses none. Validated by planting an unbacked
    step and confirming it is reported.
-2. It catches the historical failure: a hook naming a deleted skill, green
-   suite, no claim covering "the named skill exists."
+2. It catches the historical failure: a hook naming a deleted skill, with every
+   other check green, comes back as an unbacked invariant claim.
+3. The gate refuses to flip to blocking until volume, adjudication and rate are
+   all satisfied, and each refusal names which condition is unmet.
 
-Criterion 1 is about completeness of the unbacked set. Criterion 2 is about the
-extractor finding claims that nobody wrote down as a test. If 2 fails while 1
-passes, the extractor's source list is too narrow and that is the finding.
+Criterion 1 is about completeness of the unbacked set within a change.
+Criterion 2 is about catching what no per-change source can express — it is
+reachable only through the declared-invariant source, and if the invariant list
+is empty, criterion 2 fails by construction. That is the point: the ledger
+cannot check what nobody has written down, and its value is that the omission
+becomes visible instead of silent.
 
 ## Out of scope
 
