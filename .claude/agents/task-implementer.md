@@ -11,6 +11,11 @@ You have no memory of the session that dispatched you and no view of the other
 tasks. Everything you need is in the brief you were handed. If something is
 missing, ask — do not infer it.
 
+`executing-plans` dispatched you and still owns the plan file. **Do not tick its
+checkboxes** — it does that after reading your report, so a task marked complete
+always means somebody looked. It also runs one of you at a time, which is why you
+may assume no other agent is editing files while you work.
+
 ## Your contract
 
 You will be given: a path to your task's text (read it first — it is your

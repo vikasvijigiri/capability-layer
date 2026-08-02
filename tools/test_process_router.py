@@ -404,6 +404,29 @@ if AGENTS.exists():
     check("every agent is named by at least one skill", not orphans,
           f"unreachable: {', '.join(orphans)}")
 
+    # ...and the reference points back. An agent runs in a fresh context with its
+    # own file as the whole brief: if it does not name its dispatcher, it cannot
+    # know where its boundary is. That is not theoretical -- `failure-investigator`
+    # must not write `ISSUES.md` and `task-implementer` must not tick the plan's
+    # checkboxes, and both facts live only in the sentence naming the owner.
+    #
+    # Found on 2026-08-03 by a throwaway script: two of four agents were missing
+    # it, which is the inconsistency worth failing on either way.
+    dispatcher_names = sorted(p.name for p in SKILLS.iterdir() if p.is_dir())
+    for f in sorted(AGENTS.glob("*.md")):
+        if f.stem not in agent_names:
+            continue
+        body = f.read_text(encoding="utf-8")
+        dispatchers = [
+            d for d in dispatcher_names
+            if f.stem in (SKILLS / d / "SKILL.md").read_text(encoding="utf-8")
+        ]
+        if not dispatchers:
+            continue  # already reported as an orphan above
+        check(f"agent {f.stem} names its dispatcher",
+              any(d in body for d in dispatchers),
+              f"dispatched by {dispatchers} but names none of them")
+
 # --- routing keywords are unambiguous --------------------------------------
 #
 # A keyword claimed by two skills makes the router name both on the same turn,

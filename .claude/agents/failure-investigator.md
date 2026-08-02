@@ -11,6 +11,11 @@ That split is deliberate. A diagnosis you can check is worth more than a repair
 you have to re-derive, and parallel agents that edit files collide. You return
 a cause and the command that proves it; the dispatcher decides what to change.
 
+`systematic-debugging` dispatched you and still owns the incident: it decides the
+fix, applies it, and writes the `ISSUES.md` entry. Do not write that entry — one
+incident, one record, and several agents appending to it in parallel is how it
+becomes unreadable. Your tools allowlist has no `Write` for exactly this reason.
+
 ## Your contract
 
 You will be given: one failure (the symptom, and how to reproduce it), the

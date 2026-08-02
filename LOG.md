@@ -3,6 +3,35 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-03 01:45
+**Audited agent ↔ skill referencing. Forward direction was clean; the back
+reference was not.** Every agent had exactly one owner, `CLAUDE.md` and
+`workflow.md` agreed with the skills, no dangling names, every model pinned, and
+every `tools:` allowlist matching its role — `diff-reviewer` and
+`failure-investigator` correctly have no `Write`, since they report rather than
+repair.
+
+Three gaps, none of which any suite would have caught:
+
+1. **Two of four agents never named their dispatcher.** `diff-reviewer` and
+   `source-digger` did; `failure-investigator` and `task-implementer` did not.
+   This matters because an agent runs in a fresh context with its own file as the
+   entire brief — `failure-investigator` must not write `ISSUES.md` and
+   `task-implementer` must not tick the plan's checkboxes, and both facts live
+   only in the sentence naming the owner. Added to both, with the reason.
+2. **`diff-reviewer` still described the review receipt**, deleted 2026-08-02, in
+   both its description and its body — telling a subagent that `code-review`
+   "records the receipt". Rewritten to say the opposite: nothing mechanical
+   records a review now, so its findings *are* the review or there isn't one.
+3. My audit script found (1) but not (2). It compared **names**, not **claims** —
+   the same blind spot `test_referenced_paths.py` exists to cover for hooks.
+
+`test_process_router.py` now asserts the back reference, and it was proven to
+fail: removing the sentence from `task-implementer` produced
+`FAIL: agent task-implementer names its dispatcher -- dispatched by
+['executing-plans'] but names none of them`. A throwaway script found the gap;
+leaving it throwaway is how it comes back.
+
 ## 2026-08-03 01:10
 **All three check kinds are on, and detection is now language-agnostic by
 construction.** `typecheck` and `lint` had both been `false`; both are live.
