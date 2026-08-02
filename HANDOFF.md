@@ -15,10 +15,19 @@ section. Read the file directly when full history is actually needed. -->
 <!-- session-context:start -->
 ## Current Work
 
+**The git chain was run live for the first time, against a one-line file.**
+`docs/2026-08-02-git-flow-walkthrough.md` records it. Subject: `dummy.py`
+(`import os`), still staged and uncommitted. `Write` and `git add -- dummy.py`
+passed; `git commit -m "…" -- dummy.py` was denied for real by
+`pre-commit/05-docs-required.py`. That is the first end-to-end exercise of the
+gates against a real change rather than a synthetic payload, and it found two
+defects (both in Pending below). It is **not** the "first real end-to-end run"
+Next Steps asks for — stages 1-6 were skipped, only 7's gates were exercised.
+
 **The automation question is settled and three of its four recommendations are
 done.** `docs/research/2026-08-02-automating-the-git-chain.md`: **hooks cannot
 invoke skills** (official docs, fetched), so no new skill automates anything — but a
-hook *can* run git, and the 85-file backlog is a missing commit boundary, not a
+hook *can* run git, and the backlog is a missing commit boundary, not a
 missing threshold.
 
 Landed this session:
@@ -36,14 +45,23 @@ Landed this session:
   Never `git add .`, never `.claude/`, never code, never pushes.
 - **`decisions/2026-08-02-gate-on-blast-radius.md`** — the three-band rule, with the
   file-count threshold explicitly rejected on evidence.
-- **`tools/test_artifact_autocommit.py`** — sixth suite. `CLAUDE.md`, `/verify` and
-  `hooks_registry.json` updated to match.
+- **The staging hole is closed.** `session-start/03-index-baseline.py` records what
+  an earlier session left staged (git cannot tell "staged now" from "staged
+  Tuesday"), and `pre-commit/06-index-scope-guard.py` asks before a blanket
+  `git add` or before a commit spends inherited files. A pathspec commit is exempt
+  by design and by test — without that, the auto-commit hook would deadlock against
+  it. `ALLOW_WIDE_STAGE=1` overrides.
+- **`/git-state`** — granular git accounting, eight sections, every command verified
+  against this repo before shipping. Counts only; judging is `/wip`'s job.
+- **Two new suites**: `test_artifact_autocommit.py`, `test_index_scope_guard.py`.
+  `CLAUDE.md`, `/verify` and `hooks_registry.json` updated to say seven.
 
-Six suites pass: `All hook tests passed`, `All process-router tests passed (11
-entries routed)`, `All hook-registration tests passed (26 hooks, 13 events)`,
+Seven suites pass: `All hook tests passed`, `All process-router tests passed (11
+entries routed)`, `All hook-registration tests passed (28 hooks, 13 events)`,
 `All docs-gate tests passed`, `All docs-staleness tests passed`,
-`All artifact-autocommit tests passed`. Not re-run this session: `compileall`,
-env-check, the broken-path-reference sweep.
+`All artifact-autocommit tests passed`, `All index-scope-guard tests passed`. Not
+re-run this session: env-check, the broken-path-reference sweep. `compileall` was
+clean at 17:30, before the last six file edits.
 
 **In flight**: `docs/specs/2026-08-02-brainstormer-grounding-design.md` is
 written and approved section-by-section, **not implemented and not committed**.
@@ -52,9 +70,9 @@ questions, kill after approaches), a mandatory `## Prior art` spec section, and
 five mechanical rules in `tools/test_docs_gates.py`. Next step for it is
 `writing-plans`; nothing has been handed off yet.
 
-**Uncommitted and unreviewed**: 84 entries total. 49 are *already staged* from
-earlier sessions (48 `docs/archive/` renames + `.claude/workflow.md`), which is
-why the spec could not be committed alone — see the commit note below.
+**Uncommitted and unreviewed**: 89 paths — 50 staged (49 `docs/archive/` renames
+plus `.claude/workflow.md`, all rename-only: `0 insertions(+), 0 deletions(-)`),
+22 modified, 17 untracked. The three buckets overlap; `/git-state` breaks it down.
 
 Eleven skills, `11 entries routed`, every workflow stage owned. The chain is
 1 `task-brief` → 2 `brainstormer` → 3 `writing-plans` → 4 `executing-plans` →
@@ -67,11 +85,6 @@ Stage 8 is new this session and is the only stage **skipped by absence rather
 than judgement**: `delivering` branches to it when the repo has a deploy target
 and straight to 9 when it does not. Stages 7 and 8 take separate approvals, and
 8's is per target.
-
-Five suites pass — `All process-router tests passed (11 entries routed)`,
-`All hook tests passed`, `All hook-registration tests passed (25 hooks, 13
-events)`, `All docs-gate tests passed`, `All docs-staleness tests passed`. Not
-re-run this session: `compileall`, env-check, the broken-path-reference sweep.
 
 ## Pending
 
@@ -111,11 +124,9 @@ re-run this session: `compileall`, env-check, the broken-path-reference sweep.
   trade is deliberate — see LOG 2026-08-02 — but the test that would let them
   be cut safely does not exist: replay the real phrasings and confirm the router
   still lands them.
-- **Adopt blast-radius banding, or decide against it explicitly.**
-  `011matthias/agentic-ops1.01` gates only push/merge/deploy and treats a
-  feature-branch commit as autonomous. Unchanged from the last two sessions;
-  deserves a `decisions/` record either way. Now supported by three independent
-  sources — see `docs/research/2026-08-02-generic-pipeline-skillset.md`.
+- **RESOLVED — blast-radius banding adopted**, see
+  `decisions/2026-08-02-gate-on-blast-radius.md`. Three bands, and the file-count
+  threshold rejected on evidence. Kept here only as a pointer.
 - **A pre-execution consistency gate is missing.** spec-kit runs `analyze`
   (spec vs plan vs tasks, coverage gaps) *before* implementing. Here that check
   lives inside `executing-plans`' opening scan rather than as its own stage.
@@ -132,6 +143,15 @@ re-run this session: `compileall`, env-check, the broken-path-reference sweep.
   was fixed this session. Nothing asserts a skill's claims about the repo stay
   true — the guard added this session covers names, not claims.
 
+- **`04-delivery-guard.py` false-positives on `git merge-base`** — a read-only
+  query — because it matches the verb anywhere in the command. It can `deny`, and
+  `decisions/2026-08-01-review-gate-matches-verbs-anywhere.md` says that reasoning
+  is correct for `ask` and wrong for `deny`. Second known false positive in this
+  hook; the `\claude\` Windows-path bug below is the first. Both unfixed.
+- **The review of this session's 39 files found five defects and none is recorded
+  as reviewed.** All five are fixed, but the diff moved afterwards, so there is
+  **no receipt** and `pre-commit/03-review-gate.py` will keep asking — correctly.
+  A re-review of the updated diff is the next step for delivery.
 - **`post-run/06-artifact-autocommit.py` has never fired in this repo.** Wired,
   documented, and covered by 24 cases in `tools/test_artifact_autocommit.py` against
   a throwaway git repo — but every one of those runs is synthetic. It commits, so the
@@ -145,6 +165,19 @@ re-run this session: `compileall`, env-check, the broken-path-reference sweep.
   is therefore advertising something an agent cannot do — only the user can, via
   `settings.json` `env` or the shell that launched Claude Code. Either the
   message says so or the hook learns to parse a leading assignment.
+- **`pre-commit/05-docs-required.py` judges the index, not the commit.** It counts
+  `git diff --cached --name-only`, so a pathspec commit of one file is blocked by
+  the 50 staged files it would not have committed — observed live 2026-08-02 18:08.
+  `06-index-scope-guard` has `PATHSPEC_COMMIT_RE` for exactly this; `05` has no
+  equivalent. Arguably correct as-is (those 50 really are unrecorded), so this is a
+  decision to make, not a bug to fix silently. Whichever way it goes, the two hooks
+  should agree on whether a pathspec commit is scoped.
+- **`04-delivery-guard.py` reads git output as cp1252.** `UnicodeDecodeError:
+  'charmap' codec can't decode byte 0x90` from a subprocess reader thread on a push
+  payload, 2026-08-02. Fails open and still emitted its `ask`, so nothing was lost.
+  Third known defect in this hook (Windows `\claude\` paths and `git merge-base`
+  above are the other two); all three unfixed. Fix is `encoding="utf-8",
+  errors="replace"` on the `subprocess.run`, as `03-review-gate.py` already does.
 - **The index is dirty across sessions.** 49 files staged since an earlier
   session means any commit sweeps them in. Decide per commit: `git commit -- <path>`
   (index untouched), reset to stage one file, or log and land everything at once.

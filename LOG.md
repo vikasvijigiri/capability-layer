@@ -3,6 +3,99 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-02 18:08
+Ran the git chain live against a one-line file (`dummy.py`, `import os`) and wrote
+`docs/2026-08-02-git-flow-walkthrough.md` — every quote in it is from the run, not
+reconstructed. `Write` → `git add -- dummy.py` both passed; `git commit -m "…" --
+dummy.py` was **denied for real** by `pre-commit/05-docs-required.py`. First
+observed live firing of `06-index-scope-guard` (both triggers), `03-review-gate`
+(stale-receipt branch) and `04-delivery-guard`'s push `ask`.
+
+**`05-docs-required.py` judges the index, not the commit.** It counts
+`git diff --cached --name-only` (51) while git would have committed one file.
+`06-index-scope-guard` has `PATHSPEC_COMMIT_RE`; `05` has no equivalent, so a
+scoped one-file commit inherits the docs obligation of 50 files it never touches.
+Not fixed — the reading that it is working as intended is also defensible.
+
+`04-delivery-guard.py` raised `UnicodeDecodeError: 'charmap' codec can't decode
+byte 0x90` from a subprocess reader thread on the push payload — it reads git
+output with the cp1252 console default. Failed open, still emitted its `ask`.
+Third known defect in that hook.
+
+Two demo mistakes, both instructive and both in the walkthrough: a payload file
+with `"cwd":"c:\\Users\\…"` is invalid JSON (`\U`), and all six hooks fail open on
+it — six silent allows and six silent crashes are the same output. And
+`echo "… git commit …"` was itself denied, because `is_git_commit()` tokenises on
+whitespace and matches inside quotes (deliberate, per
+`decisions/2026-08-01-review-gate-matches-verbs-anywhere.md`).
+
+`dummy.py` remains staged and uncommitted. No suites run this turn.
+
+## 2026-08-02 18:40
+Closed the staging hole, then reviewed the session's work and fixed the five
+findings. New: `.claude/hooks/session-start/03-index-baseline.py`,
+`.claude/hooks/pre-commit/06-index-scope-guard.py`,
+`tools/test_index_scope_guard.py`, `.claude/commands/git-state.md`. Edited:
+`_hooklib.py`, `pre-run/04-docs-staleness.py`, `post-run/06-artifact-autocommit.py`,
+`CLAUDE.md`, `settings.json`, `hooks_registry.json`, `verify.md`, two test files.
+Seven suites pass — `All hook tests passed`, `All process-router tests passed (11
+entries routed)`, `All hook-registration tests passed (28 hooks, 13 events)`,
+`All docs-gate tests passed`, `All docs-staleness tests passed`,
+`All artifact-autocommit tests passed`, `All index-scope-guard tests passed`. 89
+files still uncommitted; no review receipt recorded.
+
+**Git cannot distinguish "staged a moment ago" from "staged on Tuesday", which is
+why the staging hole existed at all.** The index records paths, not arrival times,
+so no commit-time check could tell inherited work from current work. The fix is a
+SessionStart baseline: snapshot what was already staged, then treat anything still
+in that set at commit time as work this session never chose. Fires as `ask` on two
+triggers — a blanket `git add` (where the index silently grows) and a commit that
+would spend inherited files (where the harm actually lands). Trigger 2 is the
+load-bearing one: staging a file hurts nobody, committing it does.
+
+**`decisions/2026-08-01-review-gate-matches-verbs-anywhere.md` resolved a test
+failure instead of me inventing a policy.** A case asserting `echo 'git add .'`
+should ask was failing, and the ADR already settles it: err toward firing for
+`ask`, never for `deny`. The bug was the regex lookahead (`.` followed by a quote),
+not the expectation. **An ADR earning its keep by answering a question months
+later is the whole point of keeping them** — worth noting because this is the first
+time one has.
+
+**A pathspec commit must be exempt from the guard, or the two new hooks deadlock.**
+`git commit -- a.md b.md` cannot sweep, and `06-artifact-autocommit.py` commits
+exactly that way — without the exemption the automation would trip a gate it can
+never answer. Pinned by a test rather than left to reasoning.
+
+**Review found five defects, two of them in code written an hour earlier.** The
+sharpest: on a failed commit the auto-commit hook left artefacts **staged**, so
+next session's baseline would record them as inherited and the scope guard would
+interrogate the user about files the automation staged itself — **two new hooks
+manufacturing false positives for each other**. Fixed with a surgical
+`git restore --staged` on the failure path. Also fixed: a test whose docstring
+claimed to cover `03-index-baseline.py` and never executed it (instance nine of
+prose asserting coverage the wiring lacks, and mine); `04-docs-staleness.py`
+keeping its own `changed_files` on plain `--porcelain` while `_hooklib` moved to
+`-uall`, so the two genuinely disagreed — banner said 85, gate said 88;
+`06-index-scope-guard.py` ignoring `payload["cwd"]` unlike its sibling; and
+`CLAUDE.md` saying "Three hooks watch them" when there are four.
+
+**Two of my test assertions were wrong, not the code — the second time today.**
+One pinned the pre-fix staged-on-failure behaviour; one demanded a fully clean
+index when the correct answer was *precisely* clean, and failing it proved the
+restore is surgical rather than a blanket reset. Both are now assertions about
+behaviour rather than about implementation.
+
+**The base branch is `master`, and the session banner says `main`.**
+`git merge-base HEAD main` → `fatal: Not a valid object name main`. Anything
+assuming `main` breaks silently, so `/git-state` detects the base rather than
+naming it. Not recorded in `MEMORY.md` — `git branch` already answers it.
+
+**Unfixed, found while testing: `04-delivery-guard.py` false-positives on
+`git merge-base`.** A read-only query trips its merge rule because it matches the
+verb anywhere. The ADR above is explicit that this reasoning is correct for `ask`
+and wrong for `deny` — and this guard denies. Second known false positive in it,
+alongside the `\claude\` Windows-path bug.
+
 ## 2026-08-02 17:30
 Fixed `post-run/05-docs-gate.py`. Four files: `.claude/hooks/_hooklib.py`,
 `.claude/hooks/post-run/05-docs-gate.py`, `tools/test_docs_gates.py`, `ISSUES.md`.
