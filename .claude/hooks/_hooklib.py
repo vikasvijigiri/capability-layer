@@ -36,11 +36,71 @@ HOOKS_DIR = Path(__file__).resolve().parent
 # Two copies of these patterns would diverge, and the copy that diverged would
 # be the one guarding the unattended path.
 
+# Content patterns -- a credential pasted into a source file. Provider prefixes
+# are taken from each vendor's published token format, the same basis gitleaks
+# uses; they are high-signal because the prefix plus length is not something
+# ordinary source contains by accident.
 SECRET_PATTERNS = [
-    re.compile(r"AKIA[0-9A-Z]{16}"),                        # AWS access key
-    re.compile(r"-----BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY-----"),
-    re.compile(r"ghp_[A-Za-z0-9]{36}"),                     # GitHub PAT
-    re.compile(r"(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*[\"'][^\"']{8,}[\"']"),
+    # --- cloud
+    re.compile(r"AKIA[0-9A-Z]{16}"),                          # AWS access key id
+    re.compile(r"(?i)aws(.{0,20})?secret(.{0,20})?[\"'][0-9a-zA-Z/+]{40}[\"']"),
+    re.compile(r"AIza[0-9A-Za-z_\-]{35}"),                    # Google API key
+    # --- source hosts
+    re.compile(r"gh[pousr]_[A-Za-z0-9]{36,}"),                # GitHub PAT / OAuth / refresh
+    re.compile(r"glpat-[A-Za-z0-9_\-]{20,}"),                 # GitLab PAT
+    # --- payments and comms
+    re.compile(r"(?:sk|rk)_live_[0-9a-zA-Z]{20,}"),           # Stripe live key
+    re.compile(r"xox[baprs]-[0-9A-Za-z\-]{10,}"),             # Slack
+    re.compile(r"SG\.[A-Za-z0-9_\-]{22}\.[A-Za-z0-9_\-]{43}"),  # SendGrid
+    re.compile(r"SK[0-9a-fA-F]{32}"),                         # Twilio
+    # --- model providers
+    re.compile(r"sk-ant-[A-Za-z0-9_\-]{20,}"),                # Anthropic
+    re.compile(r"sk-[A-Za-z0-9]{32,}"),                       # OpenAI and lookalikes
+    # --- package registries
+    re.compile(r"npm_[A-Za-z0-9]{36}"),
+    # --- key material and tokens
+    re.compile(r"-----BEGIN (RSA|EC|DSA|OPENSSH|PGP)? ?PRIVATE KEY( BLOCK)?-----"),
+    re.compile(r"eyJ[A-Za-z0-9_\-]{10,}\.eyJ[A-Za-z0-9_\-]{10,}\."),  # JWT
+    # --- connection strings carrying inline credentials. The single highest
+    # value pattern for a web app, and the one a prefix list never catches.
+    re.compile(r"(?i)\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|amqp)://"
+               r"[^\s:/@]+:[^\s:/@]+@"),
+    # --- generic assignment, last because it is the noisiest
+    re.compile(r"(?i)(api[_-]?key|secret|token|password|passwd|pwd)\s*[:=]\s*"
+               r"[\"'][^\"']{8,}[\"']"),
+]
+
+# Path patterns -- files whose *existence* in a commit is the leak, whatever they
+# contain. A `.env` holding a database DSN with inline credentials matches a
+# content pattern above; one holding `STRIPE_KEY=<redacted-by-teammate>` does
+# not, and both belong out of git. Shape borrowed from carlrannaberg/claudekit's
+# sensitive-patterns.ts, which blocks by path for exactly this reason.
+#
+# No literal example DSN here on purpose: this file is itself scanned, and a
+# realistic one in a comment made the repo uncommittable the moment the pattern
+# was added. `tools/test_hooks.py` documents the same trap for `AKIA`.
+#
+# fnmatch semantics, matched against the repo-relative POSIX path and against the
+# bare filename, so `id_rsa` matches at any depth.
+SECRET_PATH_PATTERNS = [
+    ".env", ".env.*",                                    # …but see SECRET_PATH_ALLOW
+    "*.pem", "*.key", "*.crt", "*.cer", "*.p12", "*.pfx", "*.ppk",
+    "id_rsa*", "id_dsa*", "id_ecdsa*", "id_ed25519*",
+    ".ssh/*", ".aws/*", ".azure/*", ".gcloud/*", ".kube/*",
+    "*.keystore", "keystore", "truststore",
+    ".npmrc", ".pypirc", ".netrc", ".authinfo", ".git-credentials", ".pgpass",
+    "credentials.*", "secrets.*", "api-keys.*", "*.token", ".secrets",
+    "wallet.dat", "wallet.json", "*.wallet", "seed.txt",
+    "*.sqlite3", "dump.sql", "*.dump", "prod.db", "production.db",
+    "terraform.tfvars", "*.tfstate",
+    "serviceaccount*.json", "gcp-key.json",
+]
+
+# Templates are the point of committing an env file at all -- they document the
+# variables without carrying values. Checked before SECRET_PATH_PATTERNS.
+SECRET_PATH_ALLOW = [
+    ".env.example", ".env.template", ".env.sample", ".env.dist",
+    "*.pem.example", "*.example", "*.template", "*.sample",
 ]
 
 # CLAUDE.md: "Never put AI attribution in git history." Enforced on the message
@@ -74,16 +134,48 @@ def current_branch(repo_root=None):
     return proc.stdout.strip() or None if proc.returncode == 0 else None
 
 
-def scan_for_secrets(paths, repo_root=None):
-    """Paths whose content matches a credential pattern. Unreadable files are skipped.
+def secret_path_hit(rel):
+    """True when a path is one that should never be committed, whatever it holds.
 
-    Skipping unreadable files is safe here only because the caller refuses on any
-    finding: a file that cannot be read cannot be shown to match, and the commit
-    it belongs to is a local checkpoint that has not left the machine.
+    Allowlist wins: `.env.example` documents the variables and carries no values,
+    which is the whole reason to commit one.
+    """
+    import fnmatch
+    norm = str(rel).replace("\\", "/")
+    # NOT lstrip("./") -- that strips a *character set*, so ".env" becomes "env"
+    # and the single most important pattern here silently stops matching. Caught
+    # on 2026-08-02 by running it; the identical bug had just been fixed in
+    # tools/test_referenced_paths.py, which is how often this one bites.
+    while norm.startswith("./"):
+        norm = norm[2:]
+    name = norm.rsplit("/", 1)[-1]
+    for pattern in SECRET_PATH_ALLOW:
+        if fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(norm, pattern):
+            return False
+    for pattern in SECRET_PATH_PATTERNS:
+        if fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(norm, pattern):
+            return True
+    return False
+
+
+def scan_for_secrets(paths, repo_root=None):
+    """Paths that are a credential risk, by name or by content.
+
+    Two axes, because each misses what the other catches. A `.env` whose values a
+    teammate already redacted matches no content pattern and still must not be
+    committed; a key pasted into `app.py` has an innocuous path.
+
+    Unreadable files are skipped for the content check but still judged on path.
+    That is safe only because every caller refuses on any finding: a file that
+    cannot be read cannot be shown to match, and the commit is a local checkpoint
+    that has not left the machine.
     """
     root = Path(repo_root) if repo_root else HOOKS_DIR.parents[1]
     findings = []
     for rel in paths:
+        if secret_path_hit(rel):
+            findings.append(f"{rel} (path)")
+            continue
         target = root / rel
         try:
             text = target.read_text(encoding="utf-8", errors="ignore")

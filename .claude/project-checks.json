@@ -1,0 +1,11 @@
+{
+  "_note": "What `the checks pass` means here. Read by .claude/hooks/_projectchecks.py, which the auto-commit gates on. Any key may be a command string, or false to disable that check as a stated decision. An absent key means detect it.",
+
+  "typecheck": false,
+  "lint": false,
+
+  "_why_disabled": "No TypeScript and no configured linter in this repo -- it is hooks, skills and their suites. Stating that here is deliberate: an absent key would be silently indistinguishable from a linter nobody wired up.",
+
+  "timeout": 300,
+  "max_files": 25
+}

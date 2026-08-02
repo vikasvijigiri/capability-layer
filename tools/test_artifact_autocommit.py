@@ -87,9 +87,9 @@ mod = load()
 # is the exact failure mode CLAUDE.md warns about for hooks.
 
 check("a re-entry flag exists", bool(getattr(mod, "REENTRY_FLAG", "")))
-check("run_suites propagates the flag to every suite it runs",
-      'REENTRY_FLAG: "1"' in HOOK.read_text(encoding="utf-8"),
-      "suites would re-enter this hook and recurse")
+check("run_suites propagates the flag to every check it runs",
+      "REENTRY_FLAG" in HOOK.read_text(encoding="utf-8"),
+      "checks would re-enter this hook and recurse")
 
 # With the flag set, main() must do nothing at all.
 os.environ[mod.REENTRY_FLAG] = "1"
@@ -129,8 +129,8 @@ check("an unreadable path is skipped rather than crashed on",
 
 check("main and master are protected",
       {"main", "master"} <= mod.PROTECTED_BRANCHES)
-check("MAX_FILES is a real ceiling",
-      isinstance(mod.MAX_FILES, int) and 0 < mod.MAX_FILES <= 100)
+check("the size ceiling has a sane default",
+      isinstance(mod.DEFAULT_MAX_FILES, int) and 0 < mod.DEFAULT_MAX_FILES <= 100)
 check("settings.json is never auto-committed",
       ".claude/settings.json" in mod.NEVER_AUTO)
 check("settings.local.json is never auto-committed",
@@ -153,15 +153,24 @@ check("attribution patterns would catch a planted trailer",
       any(p.search(_msg + "\nCo-authored-by: Claude <n@a>")
           for p in mod.AI_ATTRIBUTION_PATTERNS))
 
-_real_dir = mod.SUITE_DIR
-try:
-    mod.SUITE_DIR = ROOT / "_no_such_tools_dir"
-    _ok, _detail = mod.run_suites()
-    check("a repo with no suites still commits", _ok)
-    check("...but says there was nothing to verify", "nothing to verify" in _detail,
-          _detail)
-finally:
-    mod.SUITE_DIR = _real_dir
+# Delegated to _projectchecks now, and covered in depth by
+# tools/test_project_checks.py. What matters here is the wiring: run_suites must
+# return the three-value shape the gates below depend on.
+#
+# Against an EMPTY temp root, never the real one. The re-entry flag is popped
+# above so that main() can be driven, which means a run_suites() call aimed at
+# this repo would run this very suite, which pops the flag, which calls
+# run_suites()... The guard protects the hook's own path; it cannot protect a
+# test that deliberately steps around it. Found by a 120s timeout on 2026-08-03.
+_saved_root = mod.REPO_ROOT
+with tempfile.TemporaryDirectory() as _empty:
+    mod.REPO_ROOT = Path(_empty)
+    _probe = mod.run_suites()
+mod.REPO_ROOT = _saved_root
+check("run_suites returns (ok, detail, ran_test)",
+      isinstance(_probe, tuple) and len(_probe) == 3, str(_probe)[:80])
+check("...and reports no test ran when nothing is detected",
+      _probe[0] is True and _probe[2] is False, str(_probe)[:80])
 
 # ------------------------------------------------------------- behaviour, on git
 
@@ -169,7 +178,12 @@ with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
     new_repo(tmp)
     mod.REPO_ROOT = tmp
-    mod.SUITE_DIR = tmp / "tools"          # absent -> "nothing to verify", fast
+    # A real, detectable, passing suite. Without one, gate 4b correctly refuses
+    # every commit containing code, and the happy path below could not exist --
+    # which is the whole point of that gate.
+    write(tmp, "tools/test_smoke.py", "print('smoke ok')\n")
+    run(tmp, "add", "-A")
+    run(tmp, "commit", "-q", "-m", "add suite")
     mod.load_payload = lambda: {"stop_hook_active": False}
 
     base = commit_count(tmp)
@@ -217,13 +231,13 @@ with tempfile.TemporaryDirectory() as d:
 
     # --- too large to be a checkpoint
     at = commit_count(tmp)
-    for i in range(mod.MAX_FILES + 2):
+    for i in range(mod.DEFAULT_MAX_FILES + 2):
         write(tmp, f"bulk/f{i}.py", f"n = {i}\n")
     result = emit(mod)
     check("refuses a change too large to be a checkpoint",
-          "MAX_FILES" in json.dumps(result), json.dumps(result)[:160])
+          "max_files" in json.dumps(result), json.dumps(result)[:160])
     check("...and commits nothing", commit_count(tmp) == at)
-    for i in range(mod.MAX_FILES + 2):
+    for i in range(mod.DEFAULT_MAX_FILES + 2):
         (tmp / "bulk" / f"f{i}.py").unlink()
 
     # --- red suites stop the commit
@@ -231,7 +245,7 @@ with tempfile.TemporaryDirectory() as d:
     write(tmp, "src/ok2.py", "y = 2\n")
     _saved = mod.run_suites
     try:
-        mod.run_suites = lambda: (False, "test_x.py: 1 failed")
+        mod.run_suites = lambda: (False, "test_x.py: 1 failed", True)
         result = emit(mod)
         check("refuses while the suites are red",
               "red" in json.dumps(result), json.dumps(result)[:160])
@@ -252,6 +266,35 @@ with tempfile.TemporaryDirectory() as d:
     # file. `_hooklib.changed_paths` documents the same trap.
     check("...which is left uncommitted in the tree",
           ".claude/settings.json" in run(tmp, "status", "--porcelain", "-uall"))
+
+# --- gate 4b: code with nothing that could have failed
+#
+# The gate that makes unattended committing mean anything. A repo with no test
+# command commits prose freely and refuses code, because "all checks passed" and
+# "no check ran" are the same boolean and completely different facts.
+with tempfile.TemporaryDirectory() as d2:
+    tmp2 = Path(d2)
+    new_repo(tmp2)
+    mod.REPO_ROOT = tmp2
+    base2 = commit_count(tmp2)
+
+    write(tmp2, "README.md", "# docs\n")
+    emit(mod)
+    check("prose commits fine with no test command",
+          commit_count(tmp2) == base2 + 1)
+
+    write(tmp2, "src/api.py", "def add(a, b):\n    return a + b\n")
+    result = emit(mod)
+    check("code is REFUSED when no test check ran",
+          "REFUSED" in json.dumps(result) and "no test check" in json.dumps(result),
+          json.dumps(result)[:180])
+    check("...and nothing was committed", commit_count(tmp2) == base2 + 1)
+
+    # Saying "this project has no tests" out loud is a decision, and it unblocks.
+    write(tmp2, ".claude/project-checks.json", json.dumps({"test": False}))
+    emit(mod)
+    check('...until `"test": false` states it deliberately',
+          commit_count(tmp2) == base2 + 2)
 
 print()
 if failures:

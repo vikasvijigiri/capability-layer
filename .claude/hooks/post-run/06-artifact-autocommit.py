@@ -68,6 +68,12 @@ from _hooklib import (  # noqa: E402
     load_payload,
     scan_for_secrets,
 )
+from _projectchecks import (  # noqa: E402
+    CONFIG_NAME,
+    changed_includes_code,
+    load_config,
+    run_checks,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -75,15 +81,16 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 # somebody should look at before it is written down as one commit. Refusing is
 # the safe direction: the files stay in the working tree and `03-checkpoint.py`
 # has already snapshotted them, so nothing is at risk either way.
-MAX_FILES = 25
+#
+# Overridable via `max_files` in .claude/project-checks.json, because a scaffold
+# -- `create-next-app` and friends -- is legitimately hundreds of files on its
+# first commit. Raising it is a decision someone types, not a default that drifts.
+DEFAULT_MAX_FILES = 25
 
 # Paths never committed automatically, whatever else is true. `settings.json`
 # decides what fires; committing a change to it unattended means the mechanism
 # that governs this hook was altered without anyone reading the diff.
 NEVER_AUTO = (".claude/settings.json", ".claude/settings.local.json")
-
-SUITE_GLOB = "test_*.py"
-SUITE_DIR = REPO_ROOT / "tools"
 
 # Re-entry guard. `tools/test_hooks.py` fires the whole `post-run` event, which
 # reaches this hook, which runs the suites, which runs `test_hooks.py` -- an
@@ -116,36 +123,15 @@ def speak(text: str) -> None:
 
 
 def run_suites():
-    """(ok, detail). ok is False only when a suite actually ran and failed.
+    """(ok, detail, ran_test) for whatever this project's checks are.
 
-    A repo with no suites is not a failing repo -- it commits, and the caller
-    says so, because "verified" and "nothing to verify" must not read alike.
+    Delegates to `_projectchecks`, which detects `npm test`, `tsc --noEmit`,
+    `pytest`, `cargo test`, this repo's own `tools/test_*.py` and so on, and lets
+    `.claude/project-checks.json` override any of them. Until 2026-08-02 this
+    function hardcoded `tools/test_*.py`, which would have found nothing at all
+    in a web app and reported "nothing to verify" on every commit.
     """
-    if not SUITE_DIR.is_dir():
-        return True, "no tools/ directory -- nothing to verify"
-    suites = sorted(SUITE_DIR.glob(SUITE_GLOB))
-    if not suites:
-        return True, "no test suites found -- nothing to verify"
-
-    failed = []
-    for suite in suites:
-        try:
-            proc = subprocess.run(
-                [sys.executable, str(suite)], cwd=str(REPO_ROOT),
-                capture_output=True, text=True, encoding="utf-8",
-                errors="replace", timeout=300,
-                env={**os.environ, "PYTHONIOENCODING": "utf-8",
-                     REENTRY_FLAG: "1"},
-            )
-        except Exception as exc:  # noqa: BLE001
-            failed.append(f"{suite.name} ({exc})")
-            continue
-        if proc.returncode != 0:
-            tail = (proc.stdout or proc.stderr or "").strip().splitlines()
-            failed.append(f"{suite.name}: {tail[-1] if tail else 'exit ' + str(proc.returncode)}")
-    if failed:
-        return False, "; ".join(failed)
-    return True, f"{len(suites)} suite(s) green"
+    return run_checks(REPO_ROOT, extra_env={REENTRY_FLAG: "1"})
 
 
 def build_message(paths, suite_detail):
@@ -199,10 +185,12 @@ def main():
         return
 
     # --- gate 2: size
-    if len(paths) > MAX_FILES:
+    max_files = load_config(REPO_ROOT).get("max_files", DEFAULT_MAX_FILES)
+    if len(paths) > max_files:
         speak(f"Auto-commit skipped: {len(paths)} changed files is past "
-              f"MAX_FILES={MAX_FILES} and is a unit of work, not a checkpoint. "
-              f"Review it and commit deliberately.")
+              f"max_files={max_files} and is a unit of work, not a checkpoint. "
+              f"Review it and commit deliberately, or raise `max_files` in "
+              f"{CONFIG_NAME} if this project scaffolds in bulk.")
         return
 
     # --- gate 3: secrets. This hook's commits never reach 01-secret-scan.py,
@@ -214,12 +202,33 @@ def main():
               f"-- do not override; a committed key is unrecoverable once pushed.")
         return
 
-    # --- gate 4: the suites
-    ok, suite_detail = run_suites()
+    # --- gate 4: the project's own checks
+    ok, suite_detail, ran_test = run_suites()
     if not ok:
-        speak(f"Auto-commit skipped: suites are red ({suite_detail}). "
+        speak(f"Auto-commit skipped: checks are red ({suite_detail}). "
               f"{len(paths)} file(s) left uncommitted -- a red checkpoint is "
               f"worse than none. `03-checkpoint.py` has already snapshotted them.")
+        return
+
+    # --- gate 4b: code with nothing that could have failed
+    #
+    # "All checks passed" and "no check ran" are the same boolean and completely
+    # different facts. Committing code unattended on the second one is the whole
+    # safety story evaporating quietly, which is the failure mode this repo keeps
+    # rediscovering. Prose-only turns are unaffected: a README has nothing a
+    # suite could have caught.
+    # `"test": false` is the stated decision that this project has no suite. The
+    # refusal message offers it as the way out, so it has to actually open --
+    # an escape hatch that does not is worse than none, because the next person
+    # disables the whole hook instead.
+    test_disabled = load_config(REPO_ROOT).get("test") is False
+    if not ran_test and not test_disabled and changed_includes_code(paths):
+        speak(f"Auto-commit REFUSED: this turn changed code but no test check "
+              f"ran ({suite_detail}). An unattended commit is only as good as "
+              f"what could have failed, and nothing could have. Add a test "
+              f"command to {CONFIG_NAME}, or set `\"test\": false` there to say "
+              f"deliberately that this project has none. {len(paths)} file(s) "
+              f"left uncommitted.")
         return
 
     message = build_message(paths, suite_detail)
