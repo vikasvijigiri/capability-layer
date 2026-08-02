@@ -15,14 +15,35 @@ section. Read the file directly when full history is actually needed. -->
 <!-- session-context:start -->
 ## Current Work
 
-**Two artefacts written this session, neither committed, neither implemented.**
+**The automation question is settled and three of its four recommendations are
+done.** `docs/research/2026-08-02-automating-the-git-chain.md`: **hooks cannot
+invoke skills** (official docs, fetched), so no new skill automates anything — but a
+hook *can* run git, and the 85-file backlog is a missing commit boundary, not a
+missing threshold.
 
-`docs/research/2026-08-02-automating-the-git-chain.md` settles the automation
-question: **hooks cannot invoke skills** (official docs, fetched), so no new skill
-automates anything — but a hook *can* run git itself, and the 84-file backlog is
-a missing commit boundary rather than a missing threshold. Its four ordered
-recommendations are the best-known next work in this repo and are listed under
-Next Steps.
+Landed this session:
+
+- **`post-run/05-docs-gate.py` fixed.** It had a standing trigger (the whole
+  uncommitted backlog) against a per-turn satisfaction condition (doc digests vs a
+  UserPromptSubmit snapshot), so above `MIN_FILES = 10` every turn demanded both docs
+  be rewritten. Five blocks in one session, three talked past with its own escape
+  hatch. `save_turn_marker` now records the work set too. `ISSUES.md` 2026-08-02 17:30
+  carries the incident **including a wrong first diagnosis that got published** —
+  read that before trusting any hook's own error text again.
+- **`post-run/06-artifact-autocommit.py` written, wired and tested.** Commits prose
+  artefacts (`.md` under `docs/specs|research|plans/`, `decisions/`, and the root
+  knowledge docs) at the `knowledge-manager` boundary, by explicit pathspec.
+  Never `git add .`, never `.claude/`, never code, never pushes.
+- **`decisions/2026-08-02-gate-on-blast-radius.md`** — the three-band rule, with the
+  file-count threshold explicitly rejected on evidence.
+- **`tools/test_artifact_autocommit.py`** — sixth suite. `CLAUDE.md`, `/verify` and
+  `hooks_registry.json` updated to match.
+
+Six suites pass: `All hook tests passed`, `All process-router tests passed (11
+entries routed)`, `All hook-registration tests passed (26 hooks, 13 events)`,
+`All docs-gate tests passed`, `All docs-staleness tests passed`,
+`All artifact-autocommit tests passed`. Not re-run this session: `compileall`,
+env-check, the broken-path-reference sweep.
 
 **In flight**: `docs/specs/2026-08-02-brainstormer-grounding-design.md` is
 written and approved section-by-section, **not implemented and not committed**.
@@ -111,17 +132,13 @@ re-run this session: `compileall`, env-check, the broken-path-reference sweep.
   was fixed this session. Nothing asserts a skill's claims about the repo stay
   true — the guard added this session covers names, not claims.
 
-- **`post-run/06-artifact-autocommit.py` is written but DEAD, and the build is red
-  because of it.** `python tools/test_hook_registration.py` →
-  `1 failed: every hook on disk is wired in settings.json`. That failure is
-  correct: the hook exists and is declared in `hooks_registry.json`, but only
-  `settings.json` makes a hook fire, and **the permission classifier refused that
-  edit twice** — once for the file, once for the registration. It needs a human to
-  paste the `Stop` entry (the snippet is in the 2026-08-02 17:30 `LOG.md` entry's
-  context, or reconstruct it from any sibling `post-run` entry). Until then **the
-  hook has never executed once**, which in this repo is the failure mode that has
-  bitten eight times. Either wire it or delete the file; leaving it is the one
-  state that is worse than both.
+- **`post-run/06-artifact-autocommit.py` has never fired in this repo.** Wired,
+  documented, and covered by 24 cases in `tools/test_artifact_autocommit.py` against
+  a throwaway git repo — but every one of those runs is synthetic. It commits, so the
+  first real firing deserves watching: confirm it takes only the prose artefacts,
+  leaves the index alone, and that `git log -1` looks right. Two bugs were caught by
+  the tests and would both have been invisible in review (see `ISSUES.md`
+  2026-08-02 18:10).
 - **`ALLOW_UNLOGGED_COMMIT=1` is unreachable from a tool call.** Set inline in a
   Bash command it does not reach `pre-commit/05-docs-required.py`, which reads
   Claude Code's own environment. Every hook message that advertises the override

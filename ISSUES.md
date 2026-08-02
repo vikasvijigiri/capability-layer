@@ -6,6 +6,44 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-02 18:10 — the new auto-commit hook committed nothing, and said it succeeded
+- **Phase/Context**: first test run of `post-run/06-artifact-autocommit.py`, before it
+  had ever fired for real.
+- **Symptom**: the hook reported a successful commit; `git show --name-only HEAD`
+  returned an empty list. Two separate causes, both invisible in review, both fatal to
+  the hook's entire purpose.
+- **Diagnosis**:
+  - **(a) A pathspec commit cannot commit an untracked file.** `git commit -F msg --
+    <paths>` fails with "did not match any file(s) known to git" when a path is
+    untracked — and a *brand-new* spec, research doc or decision record is always
+    untracked. The hook's only real use case was the one case it could not handle.
+  - **(b) `git status --porcelain` collapses untracked directories.** A new
+    `docs/specs/` reports as one entry `?? docs/specs/`, not `?? docs/specs/s.md`. The
+    trailing slash never matches `.endswith(".md")`, so every file in a new directory
+    was invisible to the artefact filter.
+- **Attempts**:
+  - 1. Wrote 24 test cases against a throwaway git repo before the first real firing →
+    caught both bugs immediately. Had it been wired and left untested, it would have
+    reported success while committing nothing, indefinitely.
+  - 2. Fixed (a) by staging the computed paths first with `git add -- <paths>` →
+    revealed (b), because the spec still did not appear in the commit.
+  - 3. Fixed (b) with `git status --porcelain -uall` in `_hooklib.changed_paths` →
+    both resolved.
+  - 4. Two test assertions were themselves wrong and had to be corrected, not the code:
+    one expected `["LOG.md", "docs/specs/s.md"]` when `HANDOFF.md` legitimately belonged
+    in the commit; one stubbed *every* git call, so it only ever exercised the `add`
+    failure path and never the `commit` one. **The "does not sweep" case initially
+    passed for the wrong reason — nothing was being committed at all.** A green test
+    over a dead code path is worse than a red one.
+- **Fix**: `git add -- <explicit paths>` before the pathspec commit (still impossible to
+  sweep, since the paths are the computed artefact list); `-uall` on the shared
+  `changed_paths`, which also makes the docs gate's work-set comparison see new files.
+  Failure messages now distinguish the stage failure (index unchanged) from the commit
+  failure (files left staged), so the recovery differs correctly.
+- **Status**: `Resolved` — `All artifact-autocommit tests passed` (24 cases), and all
+  six suites green including `All hook-registration tests passed (26 hooks, 13 events)`.
+  **Still unproven in this repo**: the hook has never fired outside the temp-repo tests.
+
 ## 2026-08-02 17:30 — the docs gate blocked five turns in a row and could not be satisfied
 - **Phase/Context**: `post-run/05-docs-gate.py`, the `Stop` gate that refuses to end
   a turn leaving substantial work unrecorded. Backlog stood at 83-84 uncommitted files.
