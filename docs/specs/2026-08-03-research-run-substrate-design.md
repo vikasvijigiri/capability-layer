@@ -266,7 +266,15 @@ They measure whether being wrong is *detectable*.
 
 1. Which layer is the first independently useful deliverable — Store+Executor
    alone, or the thinnest vertical slice touching all four components?
-2. Whether convergence assertions belong in the first slice or are deferred.
-   Flagged during design as possible over-engineering; the user approved them
-   in, but the plan should re-test that against build cost.
+2. ~~Whether convergence assertions belong in the first slice.~~ **Decided
+   2026-08-03: deferred.** The user approved the spec and explicitly parked the
+   converged-looking-but-wrong problem for later work. So the first plan does
+   **not** build convergence assertions, and the `checked / passed / never
+   declared` tri-state is not in scope for it.
+
+   What must survive the deferral: §4's admission that the architecture cannot
+   detect this class of error. Dropping the mechanism is a scheduling decision;
+   dropping the acknowledgement would turn a known limit into a silent one, and
+   the whole spec is built against exactly that failure. Keep it stated in any
+   README or user-facing text the plan produces.
 3. The agent layer's model and API surface, deliberately unpinned here.
