@@ -119,9 +119,39 @@ them, so they are code, not commentary:
 · `LOG.md` (history) · `ISSUES.md` · `MEMORY.md`
 
 Two hooks watch them now: `pre-run/04-docs-staleness.py` warns when they drift
-from the diff, and `post-run/06-artifact-autocommit.py` commits them — the only
-hook here that acts rather than asks, scoped to `.md` prose so it can never sweep
-code.
+from the diff, and `post-run/06-artifact-autocommit.py` commits them along with
+everything else the turn changed — the only hook here that acts rather than asks.
+
+## The commit loop
+
+Commits are automatic and local. `post-run/06-artifact-autocommit.py` fires at
+the end of every turn and commits what changed, as a `wip:` checkpoint, if and
+only if all five hold:
+
+| Gate | Refuses when |
+|---|---|
+| branch | on `main`/`master`/`develop`/`release` |
+| size | more than `MAX_FILES = 25` changed — that is a unit of work, not a checkpoint |
+| secrets | any changed file matches `_hooklib.SECRET_PATTERNS` |
+| suites | any `tools/test_*.py` exits non-zero |
+| message | the generated subject matches `_hooklib.AI_ATTRIBUTION_PATTERNS` |
+
+Every clause is a fact about the artefact, never about process. A refusal is
+always spoken; nothing is skipped silently. It **never pushes** and never
+`git add .` — always an explicit pathspec.
+
+**Review moves to the push/PR**, over the whole branch, because a commit that
+needs a human is not a checkpoint. The `wip:` prefix is deliberate: squash-merge
+collapses them into the one message a human writes.
+
+Two things this depends on, both easy to break:
+
+- `UAIOS_AUTOCOMMIT_RUNNING` guards re-entry. `tools/test_hooks.py` fires the
+  whole `post-run` event, so without it the hook runs the suites which run the
+  hook, unbounded — it presents as a hang, not an error.
+- The hook's commits **bypass `PreToolUse` entirely**, so the secret scan and the
+  attribution check are enforced *inline* from `_hooklib`, not by
+  `pre-commit/01-secret-scan.py`, which never sees them.
 
 `post-run/05-docs-gate.py` and `pre-commit/05-docs-required.py` were deleted on
 2026-08-02, along with `pre-commit/03-review-gate.py`. All three gated *process

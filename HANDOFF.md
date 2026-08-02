@@ -35,6 +35,20 @@ classifier refuses to let me edit `settings.json` or widen my own permissions,
 and refuses `git rm` on repo source. Both are correct. Expect to hand the user a
 command for either.
 
+**The autonomous commit loop is live** (LOG 2026-08-02 20:50). Every turn ends in
+a `wip:` checkpoint if five artefact gates pass; review moved to the push/PR.
+First self-made commit: `45267c7`.
+
+**Phase 3 is blocked on one command.** 17 `git rm`s, which the classifier refuses.
+Either add `"Bash(git rm:*)"` to `.claude/settings.local.json` allow, or run the
+deletion by hand — then phases 3 and 4 proceed unattended. Phase 2 (writing
+`permissions`) is permanently the user's: the classifier will not let me widen my
+own boundary, correctly.
+
+**One recommendation against the approved plan:** keep
+`on-artifact-create/02-hook-self-test-nudge.py`. It is on the deletion list, and
+it is what forced the run that found both bugs above. Target becomes 9, not 8.
+
 **Next: phases 2-4.** (2) move static rules into `permissions.allow`/`deny`.
 (3) prune the remaining 17 to 8 — keep only what denies something irreversible
 (`01-secret-scan`, `02-branch-guard`, `01-forbidden-change-guard`,

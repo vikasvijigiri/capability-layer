@@ -182,7 +182,8 @@ intentions:
 | Never push, merge, publish or deploy without explicit approval | `delivering` HARD-GATE, `releasing` HARD-GATE, `pre-commit/02-branch-guard.py` |
 | Never spend money on an unattended cloud command | `pre-deploy/01-spend-guard.py` — denies, never asks |
 | Never call a release live on the deploy tool's exit code | `releasing` mandatory smoke check |
-| Never deliver an unreviewed change | `code-review`'s own HARD-GATE — the receipt hook was deleted 2026-08-02 |
+| Never deliver an unreviewed change | `code-review` over the branch at the push/PR boundary. Commits below that are unreviewed `wip:` checkpoints by design |
+| Never auto-commit a secret, a red suite, or onto a protected branch | `post-run/06-artifact-autocommit.py`, enforced inline — its commits never reach `PreToolUse` |
 | Never commit secrets | `pre-commit/01-secret-scan.py` |
 | Never leave a unit of work unrecorded | `knowledge-manager`, prompted by `pre-run/04-docs-staleness.py` |
 | Never put AI attribution in git history | `pre-commit/04-delivery-guard.py` |

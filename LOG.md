@@ -3,6 +3,38 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-02 20:50
+**The git flow is autonomous.** `post-run/06-artifact-autocommit.py` widened from
+prose-only to everything a turn changes, and `45267c7` is the first commit it made
+by itself: `wip: checkpoint 4 file(s) -- .claude (3), tools (1)`, gated on
+`6 suite(s) green`. Local only, never pushes.
+
+The design decision underneath it: **review moves from the commit to the PR.**
+"Commits are autonomous" and "a human reviews each commit" cannot both hold — that
+was `03-review-gate.py`'s deadlock. Commits are now unreviewed `wip:` checkpoints,
+squashed at merge, and `code-review` runs once over `git diff <merge-base> HEAD`.
+
+Five gates, all facts about the artefact rather than about process: branch not
+protected, ≤ `MAX_FILES = 25`, no credential pattern, suites green, generated
+message carries no AI attribution. Secret-scan and attribution patterns moved to
+`_hooklib` because **this hook's commits never reach `PreToolUse`** — a second
+copy would have drifted, and the copy that drifted would be the one guarding the
+unattended path.
+
+**Two real bugs, both found by running it rather than reading it.**
+
+1. *Unbounded recursion, presenting as a hang.* `test_hooks.py` fires the whole
+   `post-run` event → this hook → `run_suites()` → `test_hooks.py`. The run timed
+   out at two minutes with no error. Fixed with `UAIOS_AUTOCOMMIT_RUNNING`.
+2. *The fix then disabled the thing it was testing.* The guard made `main()` a
+   no-op unconditionally, so `test_artifact_autocommit.py` failed 10 assertions
+   whenever it ran nested — which made the suite gate permanently red, which meant
+   the hook could never commit. Diagnosed only because the hook *said* why it
+   skipped. A guard that disables the code under test is its own failure mode.
+
+Both would have been invisible without firing the hook. The self-test nudge that
+demanded it is on the phase-3 deletion list; on this evidence it should stay.
+
 ## 2026-08-02 20:05
 **Phase 1 done: the three process-compliance gates are gone.** Deleted
 `pre-commit/03-review-gate.py`, `pre-commit/05-docs-required.py`,

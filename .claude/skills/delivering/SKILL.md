@@ -40,10 +40,15 @@ behind it, not a judgement.
 2. **The work was verified against what was asked.** `verifying-work` produced a
    coverage verdict, and its gaps are closed or explicitly accepted. Green
    suites are not that verdict.
-3. **The change was reviewed and signed off.** `code-review` ran, the user
-   answered explicitly, and the answer is written down. Since 2026-08-02 no hook
-   checks this — name the commit or conversation where the sign-off happened, or
-   treat review as not done.
+3. **The branch was reviewed and signed off.** `code-review` ran over
+   `git diff <merge-base> HEAD` — the branch, not the working tree — the user
+   answered explicitly, and the answer is written down.
+
+   This is *the* review boundary. Since 2026-08-02 commits are automatic `wip:`
+   checkpoints made by `post-run/06-artifact-autocommit.py`; none of them was
+   reviewed and none was meant to be. Everything they contain is reviewed here,
+   once, or not at all. Squash-merge so the checkpoints collapse into the message
+   a human actually wrote.
 
 State which of the three you actually ran. "All good" is not one of them.
 
