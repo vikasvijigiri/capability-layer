@@ -38,13 +38,36 @@ Decision rules:
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
-from _hooklib import load_payload as _load_payload  # noqa: E402
+from _hooklib import (  # noqa: E402
+    authorization_in,
+    load_payload as _load_payload,
+    recent_user_messages,
+)
 
 import json
 import os
 import re
 import subprocess
 import sys
+
+
+# Evidence that the diff was reviewed this session. Every pattern is anchored on
+# word boundaries: without them `approve` also matches "disapprove" and `review`
+# matches "preview" and "reviewer", so the note would fall silent on turns that
+# never mentioned a review -- worse than the unconditional note it replaced,
+# because it would look like it had checked.
+#
+# Deliberately looser than 03-review-gate.py's list: a miss here costs one
+# redundant reminder, whereas a miss there would forge a receipt.
+REVIEW_SIGNOFF_PATTERNS = [
+    r"\bapproved?\b",
+    r"\bsign(?:ed)?[-\s]?off\b",
+    r"\blgtm\b",
+    r"\blooks good\b",
+    r"\breviewed\b",
+    r"\breview the diff\b",
+]
+REVIEW_LOOKBACK = 6
 
 
 MVP_BUILDS_ROOT = os.path.normcase(os.path.normpath(os.path.expanduser("~/mvp-builds")))
@@ -240,7 +263,7 @@ def soft_note(note):
 
 def main():
     try:
-        data = _load_payload()
+        data = payload = _load_payload()
     except Exception:
         return
 
@@ -282,16 +305,21 @@ def main():
 
     soft_notes = []
     if action == "commit":
-        # Unconditional, every commit. Diff review is model judgment, and that
-        # judgment already failed once in practice (a commit went through with
-        # no review at all). This hook has no way to *verify* review happened --
-        # it only has the current Bash call, not conversation history -- so it
-        # can't gate on that the way the secret-scan deny does. What it CAN do
-        # is make sure the option is never silently forgotten.
-        soft_notes.append(
-            "this hook cannot verify whether the diff was reviewed -- "
-            "if it hasn't, run it before proceeding"
+        # This used to say the hook "cannot verify whether the diff was
+        # reviewed -- it only has the current Bash call, not conversation
+        # history". That was simply wrong: the PreToolUse payload carries
+        # `transcript_path`, so the session's user turns are readable. The note
+        # fired on every single commit and said nothing, which is how a warning
+        # becomes wallpaper. Corrected 2026-08-02.
+        signoff = authorization_in(
+            recent_user_messages(payload.get("transcript_path")),
+            REVIEW_SIGNOFF_PATTERNS, max_turns=REVIEW_LOOKBACK,
         )
+        if signoff is None:
+            soft_notes.append(
+                "no review sign-off found in recent turns -- review the diff "
+                "before proceeding"
+            )
     if find_debug_statements(diff):
         soft_notes.append("the diff contains what looks like a leftover debug statement (console.log/debugger/pdb.set_trace/breakpoint)")
     junk_files = find_junk_files(gather_changed_files(action, cwd))

@@ -53,7 +53,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from _hooklib import load_payload, save_turn_marker  # noqa: E402
+from _hooklib import changed_paths, load_payload, save_turn_marker  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -65,6 +65,18 @@ KNOWLEDGE_DOCS = {"LOG.md", "HANDOFF.md", "TASK.md", "PLAN.md", "MEMORY.md", "IS
 # High enough that routine edits stay quiet, low enough that a real unit of work
 # never slips past.
 MIN_FILES_TO_REPORT = 3
+
+# Uncommitted work piling up is a real but MILD problem, so this number is high on
+# purpose. `post-run/03-checkpoint.py` snapshots the whole tree to
+# `refs/checkpoints/` every turn and keeps 50, so a backlog is not a loss risk --
+# the only genuine harm is that a large diff reviews worse than a small one.
+#
+# 25 is calibrated to fire roughly once per session: an ordinary 3-10 file turn
+# never trips it, and the 2026-08-01 session that prompted this reached 23 and
+# then 27. Raising it further would have made it silent on the exact case it was
+# built for; lowering it turns a third turn-boundary warning into noise, next to
+# the two that already fire here.
+BACKLOG_FILES = 25
 
 
 def _git(*args):
@@ -80,22 +92,16 @@ def _git(*args):
 
 
 def changed_files():
-    """Repo-relative paths with uncommitted changes, or None if git cannot answer."""
-    out = _git("status", "--porcelain")
-    if out is None:
-        return None
+    """Repo-relative paths with uncommitted changes, or None if git cannot answer.
 
-    paths = []
-    for line in out.splitlines():
-        if len(line) < 4:
-            continue
-        path = line[3:].strip().strip('"')
-        # Renames arrive as "old -> new"; the new path is what exists now.
-        if " -> " in path:
-            path = path.split(" -> ", 1)[1]
-        if path:
-            paths.append(path)
-    return paths
+    Delegates to `_hooklib.changed_paths`. This used to be a near-copy on plain
+    `git status --porcelain`, and once `_hooklib` moved to `-uall` on 2026-08-02 the
+    two genuinely disagreed: this hook's banner reported 85 files while
+    `post-run/05-docs-gate.py` counted 88, because the default collapses an untracked
+    directory to a single entry. One implementation of "what changed" or the numbers
+    drift again.
+    """
+    return changed_paths(REPO_ROOT)
 
 
 def head_files():
@@ -199,19 +205,38 @@ def main():
                 behind.append(doc)
         except OSError:
             behind.append(doc)  # missing entirely is as behind as it gets
-    if not behind:
+
+    backlog = len(work) >= BACKLOG_FILES
+    if not behind and not backlog:
         return
 
     areas = ", ".join(f"{name} ({n})" for name, n in summarize(work)[:5])
-    lines = [
-        f"Docs staleness (git + mtime — {len(work)} uncommitted non-doc files "
-        f"changed more recently than {' and '.join(behind)}):",
-        f"- changed: {areas}",
-        f"- behind the work: {', '.join(behind)}",
-        "`knowledge-manager` owns these files; nothing writes them automatically. "
-        "Invoke it when a unit of work finishes, not at the end of the session. "
-        "Ignore this if the work is still mid-flight or too small to record.",
-    ]
+    lines = []
+
+    if behind:
+        lines += [
+            f"Docs staleness (git + mtime — {len(work)} uncommitted non-doc files "
+            f"changed more recently than {' and '.join(behind)}):",
+            f"- changed: {areas}",
+            f"- behind the work: {', '.join(behind)}",
+            "`knowledge-manager` owns these files; nothing writes them automatically. "
+            "Invoke it when a unit of work finishes, not at the end of the session. "
+            "Ignore this if the work is still mid-flight or too small to record.",
+        ]
+
+    if backlog:
+        # Separate concern from staleness -- the docs can be perfectly current and
+        # the backlog still be too big to review well. Nothing is at risk of being
+        # lost (see BACKLOG_FILES), so this is a nudge, never a block.
+        if not behind:
+            lines.append(f"Uncommitted backlog ({len(work)} non-doc files):")
+            lines.append(f"- changed: {areas}")
+        lines.append(
+            f"{len(work)} files is past the point where one review covers them well. "
+            "Consider `code-review` and a commit at the next natural boundary. Work "
+            "is snapshotted to `refs/checkpoints/` every turn, so nothing is at risk "
+            "— this is about reviewability, not safety."
+        )
 
     print(json.dumps({
         "hookSpecificOutput": {

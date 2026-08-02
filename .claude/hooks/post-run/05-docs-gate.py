@@ -34,11 +34,15 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from _hooklib import doc_digests, load_payload, load_turn_marker  # noqa: E402
+from _hooklib import (  # noqa: E402
+    KNOWLEDGE_DOCS,
+    changed_paths,
+    doc_digests,
+    load_payload,
+    load_turn_marker,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-
-KNOWLEDGE_DOCS = {"LOG.md", "HANDOFF.md", "TASK.md", "PLAN.md", "MEMORY.md", "ISSUES.md"}
 
 # Higher than the pre-run nudge's threshold of 3. The nudge is cheap and should
 # fire early and often; a block is expensive and must be rare enough that
@@ -47,25 +51,8 @@ MIN_FILES = 10
 
 
 def changed_files():
-    try:
-        proc = subprocess.run(
-            ["git", "status", "--porcelain"],
-            cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=10,
-        )
-    except Exception:
-        return None
-    if proc.returncode != 0:
-        return None
-    out = []
-    for line in proc.stdout.splitlines():
-        if len(line) < 4:
-            continue
-        path = line[3:].strip().strip('"')
-        if " -> " in path:
-            path = path.split(" -> ", 1)[1]
-        if path:
-            out.append(path)
-    return out
+    """Delegates to `_hooklib.changed_paths` so this and `save_turn_marker` agree."""
+    return changed_paths(REPO_ROOT)
 
 
 def main():
@@ -99,6 +86,21 @@ def main():
     before = load_turn_marker()
     now = doc_digests()
 
+    # Did THIS turn add any work? The `work` set above is the whole uncommitted
+    # backlog -- a standing condition. Comparing a standing trigger against a
+    # per-turn doc check meant that once the backlog passed MIN_FILES, every later
+    # turn tripped the gate, including turns that changed nothing. It fired five
+    # times in one session on 2026-08-02 and its escape hatch was used three times,
+    # which is how a gate stops being read. `save_turn_marker` now records the work
+    # set at UserPromptSubmit so the two comparisons are on the same footing.
+    #
+    # A marker with no `work` key (written before this change) or `work: null` (git
+    # could not answer) is not evidence that the turn was idle, so neither excuses
+    # it -- the gate keeps its previous behaviour rather than silently going quiet.
+    if before is not None and isinstance(before.get("work"), list):
+        if sorted(work) == before["work"]:
+            return
+
     if before is None:
         # No snapshot -- first turn of a session, or the UserPromptSubmit hook did not
         # run. Cannot tell recorded from unrecorded, so allow. A missed block is
@@ -114,8 +116,9 @@ def main():
     print(json.dumps({
         "decision": "block",
         "reason": (
-            f"{len(work)} files changed and {' and '.join(behind)} "
-            f"{'are' if len(behind) > 1 else 'is'} older than the newest of them. "
+            f"This turn changed files and {' and '.join(behind)} "
+            f"{'were' if len(behind) > 1 else 'was'} not written during it "
+            f"({len(work)} files uncommitted in total). "
             "Invoke `knowledge-manager` to record this unit of work in LOG.md and "
             "HANDOFF.md before ending the turn -- it owns these files and nothing "
             "writes them automatically. "

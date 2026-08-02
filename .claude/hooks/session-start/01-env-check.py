@@ -4,6 +4,7 @@ Drift detection, not a gate: it reports and never blocks, because a session that
 cannot start is far worse than one that starts with a stale registry.
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -20,8 +21,11 @@ CLAUDE_DIR = ROOT / ".claude"
 # CLAUDE.md or described capabilities that no longer exist, and neither was
 # referenced by anything. Their two load-bearing facts moved to CLAUDE.md's
 # Gotchas. Re-add a name here only when a file genuinely belongs in `.claude/`.
-KNOWN_DIRS = {"commands", "hooks", "routing", "skills"}
-KNOWN_FILES = {"settings.json", "settings.local.json"}
+KNOWN_DIRS = {"agents", "commands", "hooks", "routing", "skills"}
+# `workflow.md` moved here from `docs/` on 2026-08-02: it is the stage -> skill
+# chain the routing file and every skill's handoff refer to, so it belongs
+# beside them rather than in the docs tree.
+KNOWN_FILES = {"settings.json", "settings.local.json", "workflow.md"}
 
 
 def collect_issues():
@@ -54,7 +58,26 @@ def collect_issues():
 
 def main():
     load_payload()  # drain stdin so the harness is never left waiting on us
-    write_log("session-start.log", "SESSION-START", {"issues": collect_issues()})
+    issues = collect_issues()
+    write_log("session-start.log", "SESSION-START", {"issues": issues})
+
+    # Surface them. Until 2026-08-02 this hook only ever wrote to the log, so
+    # every finding it made was invisible in the session it was made in -- an
+    # unrouted skill and a stray `.claude/` file had been sitting in
+    # session-start.log unread. A check nobody sees is not a check.
+    #
+    # Silent when clean: a clean start must stay quiet, or the noise trains the
+    # reader to skip the one start that was not clean.
+    if issues:
+        lines = ["`.claude/` structure check found "
+                 f"{len(issues)} issue{'s' if len(issues) > 1 else ''}:"]
+        lines += [f"- {i}" for i in issues]
+        print(json.dumps({
+            "hookSpecificOutput": {
+                "hookEventName": "SessionStart",
+                "additionalContext": "\n".join(lines),
+            }
+        }))
 
 
 if __name__ == "__main__":

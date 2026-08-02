@@ -15,6 +15,23 @@ section. Read the file directly when full history is actually needed. -->
 <!-- session-context:start -->
 ## Current Work
 
+**The backlog is landing, and the gate layer is being cut from 28 hooks to 8.**
+Five GitHub repos were read and they agree: every hook in all of them verifies an
+*artefact* (types, lint, tests, generated files); not one enforces process. Ours
+gate process compliance, which is unfalsifiable, which is why they grew to
+contradict each other. `obra/superpowers` is the sharpest comparison — 14 skills,
+1 hook, and its chain completes. See LOG 2026-08-02 19:26.
+
+Decided: delete the review receipt outright; delete the dead `on-*` observability
+hooks; land the backlog as several commits.
+
+**Phase 1 is blocked on a permission, not a decision.** Unregistering the three
+hooks requires editing `.claude/settings.json`, which the auto-mode classifier
+denies — and a chat approval does not satisfy it. The files cannot be deleted
+first: a registered hook missing from disk exits 2, and PreToolUse exit 2 means
+deny, so every Bash call would fail. Needs a permission rule or the user's own
+edit. Everything else in phase 1 is done or in flight.
+
 **The git chain was run live for the first time, against a one-line file.**
 `docs/2026-08-02-git-flow-walkthrough.md` records it. Subject: `dummy.py`
 (`import os`), still staged and uncommitted. `Write` and `git add -- dummy.py`

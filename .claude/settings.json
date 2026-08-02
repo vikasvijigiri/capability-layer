@@ -7,6 +7,16 @@
             "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start/01-env-check.py\"",
             "statusMessage": "Checking .claude/ structure against convention..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start/02-bootstrap-docs.py\"",
+            "statusMessage": "Loading knowledge docs into session context..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start/03-index-baseline.py\"",
+            "statusMessage": "Recording which files were already staged..."
           }
         ]
       }
@@ -59,6 +69,11 @@
             "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-run/04-docs-sync.py\"",
             "statusMessage": "Checking whether project docs are stale..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-run/06-artifact-autocommit.py\"",
+            "statusMessage": "Committing prose artefacts of this unit of work..."
           }
         ]
       }
@@ -107,6 +122,11 @@
             "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-deploy/01-spend-guard.py\"",
             "statusMessage": "Running deploy spend guard checks..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit/06-index-scope-guard.py\"",
+            "statusMessage": "Checking what this would stage or commit..."
           }
         ]
       },
@@ -122,6 +142,16 @@
       }
     ],
     "PostToolUse": [
+      {
+        "matcher": "Read|WebFetch|Bash|PowerShell|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool/01-context-budget.py\"",
+            "statusMessage": "Metering context ingested by this result..."
+          }
+        ]
+      },
       {
         "matcher": "Write",
         "hooks": [

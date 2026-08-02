@@ -110,6 +110,32 @@ with tempfile.TemporaryDirectory() as d:
     check("stop gate ignores mtime -- blocks on unwritten docs with a future mtime",
           emit(gate).get("decision") == "block")
 
+    # The trigger must be per-turn, not standing. The gate's `work` set is the whole
+    # uncommitted backlog, so once it passes MIN_FILES every later turn tripped the
+    # gate -- including turns that changed nothing -- because the doc check is
+    # per-turn while the trigger was not. Five blocks in one session on 2026-08-02,
+    # three of them talked past with the gate's own escape hatch. The marker now
+    # carries the turn-start work set so "this turn added nothing" is answerable.
+    write_docs("before", "before")
+    snapshot = {"LOG.md": "before", "HANDOFF.md": "before", "work": sorted(WORK)}
+    check("stop gate silent when this turn added no work", emit(gate) == {})
+
+    snapshot = {"LOG.md": "before", "HANDOFF.md": "before", "work": sorted(WORK[:11])}
+    check("stop gate blocks when this turn added work and docs are unwritten",
+          emit(gate).get("decision") == "block")
+
+    reason = emit(gate).get("reason", "")
+    check("block reason does not claim an mtime comparison it no longer performs",
+          "older than" not in reason, f"reason was: {reason[:80]}")
+
+    snapshot = {"LOG.md": "before", "HANDOFF.md": "before"}
+    check("stop gate still blocks on a legacy marker with no work key",
+          emit(gate).get("decision") == "block")
+
+    snapshot = {"LOG.md": "before", "HANDOFF.md": "before", "work": None}
+    check("stop gate blocks when the turn-start work set was unknowable",
+          emit(gate).get("decision") == "block")
+
     snapshot = {}
     check("stop gate allows when no snapshot exists (first turn)", emit(gate) == {})
 

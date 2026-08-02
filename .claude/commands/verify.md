@@ -1,5 +1,5 @@
 ---
-description: Run every repo check — four test suites, the env check, hook registration and a skill frontmatter parse — and report real output
+description: Run every repo check — seven test suites, the env check, hook registration and a skill frontmatter parse — and report real output
 ---
 
 Run the full check set for this repo. Fixed procedure, no judgement about which
@@ -12,30 +12,35 @@ already turned a passing run into a fake failure once.
 
 Run these in order and report each one's real output line, not a paraphrase:
 
-1. **Test suites** — all four, and do not stop at the first failure:
+1. **Test suites** — all five, and do not stop at the first failure:
    - `python tools/test_hooks.py`
    - `python tools/test_process_router.py`
+   - `python tools/test_hook_registration.py`
    - `python tools/test_docs_gates.py`
    - `python tools/test_docs_staleness.py`
+   - `python tools/test_artifact_autocommit.py`
+   - `python tools/test_index_scope_guard.py`
 
 2. **Environment check** — `01-env-check.py` is the only thing asserting that
    every skill has a `SKILL.md` and a routing entry, and it reports rather than
    blocks, so its output has to be read deliberately:
    - `echo '{"hook_event_name":"SessionStart"}' | python .claude/hooks/session-start/01-env-check.py`
-   - then read the last line of `.claude/hooks/session-start.log`
-   - `{"issues": []}` is the pass. Any entry is a real finding.
+   - Since 2026-08-02 it prints its findings as `additionalContext` and stays
+     silent when clean, so **no output is the pass**. It also appends to
+     `.claude/hooks/session-start.log`; `{"issues": []}` there is the same pass.
+     Any entry is a real finding.
 
 3. **Skill frontmatter** — parse every `.claude/skills/*/SKILL.md` and report
    the count plus any problems. A skill is a problem if it has no frontmatter,
    the frontmatter is not a YAML mapping, or `description` or `model` is missing
    or empty. Report the model split.
 
-4. **Hook registration** — every script under `.claude/hooks/*/` should appear
-   in `.claude/settings.json`, and every path named in `settings.json` and in
-   `.claude/hooks/hooks_registry.json` should exist on disk. A hook registered
-   but deleted, or present but unregistered, is invisible either way — and the
-   test suites cannot catch it, because they invoke scripts directly and so test
-   the script and never the registration. Report both directions.
+4. **Hook registration** — `tools/test_hook_registration.py` in step 1 now
+   asserts this in all three directions (disk / `settings.json` /
+   `hooks_registry.json`). It exists because this step was prose for two weeks
+   and the drift accumulated anyway: `02-bootstrap-docs.py` sat on disk and in
+   the registry but not in `settings.json`, so it never fired in a real session.
+   Report that suite's count line; no manual cross-check is needed.
 
 5. **Compilation** — `python -m compileall -q tools .claude/hooks`.
 

@@ -110,6 +110,30 @@ with tempfile.TemporaryDirectory() as d:
     ctx = run([], ["src/a.py"], doc_mtime_newer=True, tmp=tmp)
     check("silent for a small unlogged commit", ctx == "", f"got: {ctx[:80]!r}")
 
+    # Backlog warning. Deliberately independent of staleness: the docs can be
+    # perfectly current while the uncommitted pile is too large to review in one
+    # pass, and before this existed that case was silent. Fires on file count
+    # alone, never blocks -- `post-run/03-checkpoint.py` already makes a backlog
+    # recoverable, so the only harm is reviewability.
+    big = [f"src/f{i}.py" for i in range(mod.BACKLOG_FILES + 5)]
+    small = [f"src/f{i}.py" for i in range(mod.BACKLOG_FILES - 5)]
+    BACKLOG_MARK = "past the point where one review"
+
+    ctx = run(big, [], doc_mtime_newer=True, tmp=tmp)
+    check("backlog warns even when the docs are current", BACKLOG_MARK in ctx,
+          f"got: {ctx[:80]!r}")
+
+    ctx = run(small, [], doc_mtime_newer=True, tmp=tmp)
+    check("no backlog warning below the threshold", ctx == "", f"got: {ctx[:80]!r}")
+
+    ctx = run(big, [], doc_mtime_newer=False, tmp=tmp)
+    check("backlog and staleness both reported when both apply",
+          BACKLOG_MARK in ctx and "Docs staleness" in ctx, f"got: {ctx[:80]!r}")
+
+    ctx = run(small, [], doc_mtime_newer=False, tmp=tmp)
+    check("staleness alone carries no backlog line",
+          "Docs staleness" in ctx and BACKLOG_MARK not in ctx, f"got: {ctx[:80]!r}")
+
     mod.changed_files = lambda: None  # git unavailable
     mod.head_files = lambda: []
     buf = io.StringIO()

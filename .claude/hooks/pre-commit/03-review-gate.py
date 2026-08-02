@@ -34,7 +34,43 @@ from __future__ import annotations
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
-from _hooklib import load_payload as _load_payload  # noqa: E402
+from _hooklib import (  # noqa: E402
+    authorization_in as _authorization_in,
+    find_transcript as _find_transcript,
+    load_payload as _load_payload,
+    recent_user_messages as _recent_user_messages,
+)
+
+# Phrases that mean the user signed off on a review, in their own words or via an
+# AskUserQuestion click. Scanned over a SHORT window -- sign-off has to be about
+# the change in front of us, not something said twenty turns ago about a diff
+# that has since moved.
+SIGNOFF_PATTERNS = [
+    r"\bapprove(?:d)?\b",
+    r"\bsign(?:ed)?[-\s]?off\b",
+    r"\blgtm\b",
+    r"\blooks good\b",
+    r"\brecord it\b",
+    r"\bship it\b",
+    r"\bgo ahead\b",
+    r"\byes\b",
+]
+# One turn, not several. `recent_user_messages` already filters to real user
+# text plus AskUserQuestion clicks, so "the last user turn" means the last thing
+# the user actually said or chose. A four-turn window matched an "Approve" click
+# from six turns earlier that had approved a task brief, not this diff -- close
+# enough to look right, wrong enough to record a receipt nobody gave.
+#
+# This still cannot prove WHAT was approved, only that approval was the user's
+# most recent act. That is a speed bump, not a proof; the skill's HARD-GATE
+# remains the real control, and this stops the accidental case that already
+# happened once.
+SIGNOFF_LOOKBACK = 1
+
+# The approval word must land in the first few words. "Approve and record" and
+# "yes, go ahead" lead with the decision; "I review, you approve" -- an option
+# label about who reviews -- does not, and matched before this was added.
+SIGNOFF_HEAD_WORDS = 3
 
 
 import hashlib
@@ -176,12 +212,47 @@ def ask(reason: str) -> None:
     }))
 
 
-def record(action: str = "commit") -> int:
+def signoff_evidence(cwd: str):
+    """The user's own sign-off words from the last few turns, or None.
+
+    A receipt asserts that a human saw this change and accepted it. Nothing used
+    to check that: on 2026-08-01 a `--record` run made purely to test the
+    mechanism wrote a receipt claiming a sign-off that had never happened, and it
+    was undetectable afterwards because a forged receipt and a real one are the
+    same file. `--record` has no way to know whether its caller is a review or a
+    test, so the evidence has to come from outside it -- the transcript.
+
+    Fails CLOSED, unlike every other path in this hook: no transcript, no
+    messages, or no matching phrase all mean "cannot prove a sign-off", and
+    refusing to record merely leaves the gate asking. A gate that asks when it
+    should not is recoverable; a forged receipt silently disarms it.
+    """
+    messages = _recent_user_messages(_find_transcript(cwd))
+    return _authorization_in(messages, SIGNOFF_PATTERNS,
+                             max_turns=SIGNOFF_LOOKBACK,
+                             head_words=SIGNOFF_HEAD_WORDS)
+
+
+def record(action: str = "commit", force: bool = False) -> int:
     cwd = os.getcwd()
     root = repo_root(cwd)
     if root is None:
         print("Not a git repository -- nothing to record.")
         return 1
+
+    if not force:
+        evidence = signoff_evidence(cwd)
+        if evidence is None:
+            print(
+                "Refusing to record: no user sign-off found in the last "
+                f"{SIGNOFF_LOOKBACK} turns.\n"
+                "A receipt claims a human reviewed this change. Present the "
+                "findings and get an explicit answer first.\n"
+                "Use --force only to test the mechanism itself, never to record "
+                "a real review."
+            )
+            return 2
+        print(f"Sign-off found: {evidence!r}")
     digest = fingerprint(root, action)
     if digest is None:
         print("Nothing to review -- no changes and nothing ahead of the base.")
@@ -193,7 +264,10 @@ def record(action: str = "commit") -> int:
 
 def main() -> None:
     if "--record" in sys.argv:
-        sys.exit(record("pull request" if "--pr" in sys.argv else "commit"))
+        sys.exit(record(
+            "pull request" if "--pr" in sys.argv else "commit",
+            force="--force" in sys.argv,
+        ))
 
     try:
         data = _load_payload()
