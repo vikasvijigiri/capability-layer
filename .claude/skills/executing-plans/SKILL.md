@@ -1,8 +1,8 @@
 ---
 name: executing-plans
 description: Use when an approved plan or task list exists and the work is to carry it out. Triggers include "execute the plan", "run the plan", "implement this", "start building", "work through the tasks", "do task 3", "build it", "carry this out", "go ahead and implement", "continue the plan", "pick up where we left off". Also use for open-ended work with no fixed end state - an experiment loop, a research programme - where the plan is a direction rather than a task list. Do NOT use to write the plan (writing-plans), to diagnose a failure the run hit (systematic-debugging), or to judge whether the result is right (verifying-work).
-effort: high
-model: opus
+effort: medium
+model: sonnet
 ---
 
 # Executing Plans

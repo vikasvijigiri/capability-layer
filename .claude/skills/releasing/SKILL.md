@@ -1,8 +1,8 @@
 ---
 name: releasing
 description: Use when delivered work needs to reach a running environment - deployed, released, published, rolled out or promoted. Triggers include "deploy this", "deploy to prod", "push it live", "roll this out", "publish the package", "release to staging", "promote to production", "is it live", "put it on vercel", "deploy to render", "run the deploy", "roll it back", "revert the deploy". Also use when work has landed on a branch and the environment still serves the old version. Do NOT use to merge, push or open a PR (delivering), to prove the work meets the brief (verifying-work), or to diagnose a deploy that failed - roll back first, then systematic-debugging.
-effort: high
-model: opus
+effort: low
+model: sonnet
 ---
 
 # Releasing

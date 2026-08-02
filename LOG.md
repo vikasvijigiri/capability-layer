@@ -3,6 +3,28 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-02 22:05
+**Model and effort budget, differentiated.** All 11 skills declared
+`model: opus` + `effort: high` — never a decision, just a default nobody
+revisited, and `05-process-skill-router.py` suggests a skill on most turns so it
+applied constantly.
+
+Now `opus: 4, sonnet: 10, haiku: 1` and `high: 5, medium: 3, low: 3`. Opus keeps
+only planning and diagnosis (`brainstormer`, `writing-plans`, `research`,
+`systematic-debugging`); coding, review, checking and fixed-shape procedure drop
+to sonnet; `source-digger` drops to haiku since it only extracts.
+
+**`systematic-debugging` keeps opus against the stated "opus for planning only"
+rule.** Diagnosis is not planning, but on 2026-08-02 three bugs were caught in
+reasoning alone and were invisible in the diff: the unbounded recursion that
+presented as a hang, the re-entry guard that disabled the test proving it, and
+the review-gate/docs-gate fingerprint deadlock. Flagged to the user as an
+interpretation rather than applied silently.
+
+Also recorded in `CLAUDE.md`: `/fast` as the second lever, and the honest one —
+**request shape is the largest and it belongs to the user.** The longest
+deliberation goes on resolving ambiguity, not on solving problems.
+
 ## 2026-08-02 21:30
 **Phase 3 done: 25 hooks → 9, across 7 events.** Deleted 16 hooks, 6 now-empty
 event directories, 2 orphaned suites (`test_docs_staleness`,

@@ -1,8 +1,8 @@
 ---
 name: task-brief
 description: Use when a request names work to do but leaves the goal, constraints or scope unstated, and the approach itself is already settled. Triggers include "add X", "can we support Y", "fix the thing where", "I want users to be able to", "users should be able to", "it would be nice if", "make it so that", a bug report worth tracking, a vague architecture ask, or any request whose Goal, Inputs, Outputs, Done-check and Out-of-scope are not already written down. Also use when nothing has said what NOT to touch and scope creep is the real risk. Do NOT use for a direct factual question, a one-word confirmation, a continuation of work already scoped, a change smaller than the brief itself, or an ask where the approach is still open (brainstormer).
-effort: high
-model: opus
+effort: medium
+model: sonnet
 ---
 
 # Task Brief

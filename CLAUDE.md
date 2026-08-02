@@ -67,6 +67,39 @@ token budget, so that file is the only routing signal that always survives.
 
 ---
 
+## Model and effort budget
+
+Every skill declared `model: opus` + `effort: high` until 2026-08-02 — a default
+nobody revisited, and `pre-run/05-process-skill-router.py` suggests a skill on
+most turns, so it applied constantly. The policy now:
+
+| Model | Skills | Why |
+|---|---|---|
+| `opus` | `brainstormer`, `writing-plans`, `research`, `systematic-debugging` | planning and diagnosis — open-ended, and a wrong answer is expensive |
+| `sonnet` | `code-review`, `executing-plans`, `task-brief`, `verifying-work`, `delivering`, `releasing`, `knowledge-manager` | coding, checking, and fixed-shape procedure |
+| `haiku` | agent `source-digger` | pure extraction, no judgement |
+
+`effort` tracks the same axis: `high` where the output is a judgement, `medium`
+where it is structured, `low` where the skill is a checklist with a fixed shape.
+Testing costs no model at all here — it is `python tools/test_*.py`.
+
+`systematic-debugging` keeps `opus` although diagnosis is not planning. On
+2026-08-02 three bugs were caught only in reasoning and were invisible in the
+diff: an unbounded recursion that presented as a hang, a re-entry guard that
+disabled the test proving it, and a fingerprint deadlock between two gates. That
+is the class of thing this budget buys.
+
+**`/fast`** is the other lever — same Opus 5, less extended thinking. Correct for
+mechanical stretches (doc sweeps, bulk deletion); turn it off for debugging.
+
+**Request shape is the biggest lever and it is the user's.** The longest
+deliberation is spent resolving ambiguity, not solving problems — "is this
+blocked or should I retry", "unregister or delete first", "which approval did
+they mean". One goal per request cuts it directly; "implement all" across four
+partly-blocked phases maximises it.
+
+---
+
 ## Commands
 
     /verify         all five test suites + hook registration + frontmatter parse
