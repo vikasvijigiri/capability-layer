@@ -23,7 +23,6 @@ from _hooklib import load_payload as _load_payload  # noqa: E402
 
 import json
 import re
-import sys
 
 
 FORBIDDEN_PATH_PATTERNS = [

@@ -27,7 +27,6 @@ from _hooklib import load_payload as _load_payload  # noqa: E402
 
 import json
 import os
-import sys
 
 
 def is_hook_script(path):

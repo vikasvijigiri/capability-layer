@@ -36,9 +36,9 @@ typed; an absent key means "detect it".
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
-
 import subprocess
 import sys
 from pathlib import Path
@@ -159,12 +159,41 @@ def resolve_checks(root=None):
         if override is False:
             disabled.append(kind)
             continue
+        # A list, because one kind often needs several commands -- `ruff check`
+        # and a JSON-validity pass are both "lint" and neither is the other's
+        # subcommand. Chaining them into one shell string hides which failed.
+        if isinstance(override, list):
+            checks.extend((kind, c.strip()) for c in override
+                          if isinstance(c, str) and c.strip())
+            continue
         if isinstance(override, str) and override.strip():
             checks.append((kind, override.strip()))
             continue
         checks.extend((k, c) for k, c in detected if k == kind)
 
     return checks, disabled
+
+
+def tool_missing(command: str) -> bool:
+    """True when the command's executable is not on PATH.
+
+    A configured check naming an uninstalled tool must skip, never fail. Failing
+    would refuse every commit until someone installed it -- and the person who
+    hits that is usually a new clone, not the person who wrote the config.
+    claudekit calls this `checkToolAvailable` and skips for the same reason.
+
+    `python -m x` is resolved by importability, not PATH, so it is checked that
+    way; anything else is a plain executable lookup on the first token.
+    """
+    import shutil
+    parts = command.split()
+    if not parts:
+        return True
+    if parts[0].strip('"').endswith(("python", "python.exe", "python3")) \
+            and len(parts) > 2 and parts[1] == "-m":
+        return importlib.util.find_spec(parts[2].split(".")[0]) is None
+    exe = parts[0].strip('"')
+    return shutil.which(exe) is None and not Path(exe).exists()
 
 
 def run_checks(root=None, extra_env=None):
@@ -183,11 +212,22 @@ def run_checks(root=None, extra_env=None):
         return True, f"no checks detected{note}", False
 
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", **(extra_env or {})}
-    failed, ran, ran_test = [], 0, False
+    failed, ran, ran_test, skipped = [], 0, False, []
 
     for kind, command in checks:
+        if tool_missing(command):
+            # Skipped, and named in the detail. A silently absent check is the
+            # thing this module exists to prevent.
+            skipped.append(f"{kind} (`{command.split()[0]}` not installed)")
+            continue
         try:
-            proc = subprocess.run(
+            # nosec B602 -- shell=True is required and the input is not hostile.
+            # `command` comes from detection or from .claude/project-checks.json,
+            # both inside the repo; anyone who can write that file can already
+            # write the hooks themselves. Commands are strings like `npm test`,
+            # which need a shell to resolve. Annotated per-site rather than
+            # silencing B602 repo-wide, so a NEW shell=True elsewhere still fails.
+            proc = subprocess.run(  # noqa: S602
                 command, cwd=str(root), shell=True, capture_output=True,
                 text=True, encoding="utf-8", errors="replace",
                 timeout=timeout, env=env,
@@ -214,6 +254,11 @@ def run_checks(root=None, extra_env=None):
     if failed:
         return False, "; ".join(failed), ran_test
 
-    kinds = ", ".join(sorted({k for k, _ in checks}))
+    if not ran:
+        note = f"; {', '.join(disabled)} disabled" if disabled else ""
+        return True, f"nothing ran -- {', '.join(skipped) or 'no checks'}{note}", False
+
+    kinds = ", ".join(sorted({k for k, c in checks if not tool_missing(c)}))
     note = f"; {', '.join(disabled)} disabled" if disabled else ""
+    note += f"; skipped {', '.join(skipped)}" if skipped else ""
     return True, f"{ran} check(s) green ({kinds}){note}", ran_test

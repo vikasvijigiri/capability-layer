@@ -1,0 +1,52 @@
+# Lint config for the hook and tool scripts. Enabled 2026-08-03; `lint` had been
+# `false` in .claude/project-checks.json because nothing was wired, and the first
+# run found four unused imports that had been sitting in shipped hooks.
+#
+# `_projectchecks.detect_checks` looks for this file by name, so its existence is
+# what turns linting on.
+
+line-length = 100
+target-version = "py311"
+
+exclude = [".git", "__pycache__", "docs/archive"]
+
+[lint]
+# E,F  pycodestyle errors + pyflakes -- the default, and the set that caught the
+#      unused imports.
+# I    import sorting.
+# B    bugbear: mutable default args, loop-variable capture, the bugs that read
+#      as correct code.
+# S    bandit's rules, native to ruff, so `shell=True` is caught here instead of
+#      needing a second tool in the chain. The two legitimate sites carry
+#      per-line `# noqa: S602` with the reason.
+# UP   pyupgrade -- this repo is py311+ only.
+select = ["E", "F", "I", "B", "S", "UP"]
+
+ignore = [
+    "E501",    # line length is checked by the formatter's judgement, not a hard stop
+    "S101",    # `assert` is how the test suites here assert
+    "S404",    # importing subprocess is the job of a hook runner
+    "S603",    # subprocess without shell -- the safe form, flagged anyway
+    "S607",    # partial executable path: `git`, `npm` and `python` come from PATH
+              # by design, since the whole point is to run the project's own tools
+]
+
+[lint.per-file-ignores]
+# The suites plant fake credentials and run throwaway repos on purpose.
+"tools/test_*.py" = ["S105", "S106", "S108", "S310", "B011"]
+# Hooks end in a deliberate `except Exception: pass` -- a hook that raises can
+# wedge a session, and every one documents this in its own docstring. S110 is
+# try-except-pass, S112 the `continue` variant. (B902 was listed here first and
+# is not a ruff selector at all; the commit gate caught it, which is the system
+# working.)
+#
+# I001 is off here and the reason is load-bearing, not stylistic. Every hook does:
+#
+#     import sys
+#     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+#     from _hooklib import ...          # noqa: E402
+#
+# isort wants to hoist that last import above the `sys.path.insert` that makes it
+# resolvable. Applying the fix would break all nine hooks at once, silently, since
+# an ImportError in a hook is invisible until the moment it matters.
+".claude/hooks/**" = ["S110", "S112", "I001"]

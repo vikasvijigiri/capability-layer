@@ -14,9 +14,9 @@ Run: python tools/test_process_router.py
 """
 from __future__ import annotations
 
-import re
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path

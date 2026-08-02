@@ -12,7 +12,6 @@ Exit code is still set on a finding, so `run_hook.py` keeps working for any
 caller that reads it.
 """
 
-import json
 import os
 import re
 import subprocess
