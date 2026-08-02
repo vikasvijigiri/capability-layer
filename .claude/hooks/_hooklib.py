@@ -162,14 +162,18 @@ def load_index_baseline():
 # --- turn-scoped knowledge-doc snapshot -------------------------------------
 #
 # `pre-run/04-docs-staleness.py` records the docs' content at UserPromptSubmit;
-# `post-run/05-docs-gate.py` compares at Stop. A digest change means this turn
-# wrote them.
+# `post-run/06-artifact-autocommit.py` compares at Stop. A digest change means
+# this turn wrote them, which is this repo's boundary for "a unit of work
+# finished" -- and therefore the moment to commit the prose.
 #
-# This exists because the gate previously compared mtimes, which false-blocked
-# three times on 2026-08-01 with the docs correctly written -- git's index
-# refresh bumps working-file mtimes, and an uncommitted backlog keeps old ones
-# forever. Content answers "was it written this turn"; timestamps only ever
-# approximated it. See decisions/2026-08-01-docs-gate-compares-content.md.
+# `post-run/05-docs-gate.py` was the original consumer and blocked the turn on
+# the same signal; it was deleted on 2026-08-02. The comparison survives because
+# the auto-commit needs exactly the same question answered.
+#
+# Content, not mtime: the old gate compared mtimes and false-blocked three times
+# on 2026-08-01 with the docs correctly written -- git's index refresh bumps
+# working-file mtimes, and an uncommitted backlog keeps old ones forever. See
+# decisions/2026-08-01-docs-gate-compares-content.md.
 
 TURN_MARKER = HOOKS_DIR / "state" / "docs-turn-marker.json"
 TRACKED_DOCS = ("LOG.md", "HANDOFF.md")
@@ -194,10 +198,10 @@ KNOWLEDGE_DOCS = {"LOG.md", "HANDOFF.md", "TASK.md", "PLAN.md", "MEMORY.md", "IS
 def changed_paths(repo_root=None):
     """Paths git reports as changed, or None when git cannot answer.
 
-    One implementation on purpose. `post-run/05-docs-gate.py` compares the work
-    set it sees against the one `save_turn_marker` recorded at the start of the
-    turn; two near-copies of this parsing would make that comparison meaningless
-    the first time they diverged.
+    One implementation on purpose. `post-run/06-artifact-autocommit.py` compares
+    the work set it sees against the one `save_turn_marker` recorded at the start
+    of the turn; two near-copies of this parsing would make that comparison
+    meaningless the first time they diverged.
     """
     root = Path(repo_root) if repo_root else HOOKS_DIR.parents[1]
     try:

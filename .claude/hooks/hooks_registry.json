@@ -20,26 +20,23 @@
    ]
   },
   "post-run": {
-   "description": "After a turn completes; audit, notify, checkpoint, doc-staleness check",
+   "description": "After a turn completes; audit, notify, checkpoint, doc-staleness check, artefact auto-commit",
    "claude_code_event": "Stop",
    "subscribers": [
     ".claude/hooks/post-run/01-audit.py",
     ".claude/hooks/post-run/02-slack.py",
     ".claude/hooks/post-run/03-checkpoint.py",
     ".claude/hooks/post-run/04-docs-sync.py",
-    ".claude/hooks/post-run/05-docs-gate.py",
     ".claude/hooks/post-run/06-artifact-autocommit.py"
    ]
   },
   "pre-commit": {
-   "description": "Before a git commit/push finalizes; secrets, branch, review receipt, delivery gate",
+   "description": "Before a git commit/push finalizes; secrets, branch, delivery gate, index scope",
    "claude_code_event": "PreToolUse (Bash|PowerShell)",
    "subscribers": [
     ".claude/hooks/pre-commit/01-secret-scan.py",
     ".claude/hooks/pre-commit/02-branch-guard.py",
-    ".claude/hooks/pre-commit/03-review-gate.py",
     ".claude/hooks/pre-commit/04-delivery-guard.py",
-    ".claude/hooks/pre-commit/05-docs-required.py",
     ".claude/hooks/pre-commit/06-index-scope-guard.py"
    ]
   },

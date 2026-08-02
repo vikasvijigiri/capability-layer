@@ -81,20 +81,18 @@ rule; grep for counter-examples before letting it override the plan.
 
 ## Committing costs a review
 
-`pre-commit/03-review-gate.py` fires on every `git commit`, and its receipt is
-fingerprinted to the exact content — so a receipt goes stale the moment the next
-task edits anything. A plan whose every task ends in "commit" therefore needs a
-`code-review` sign-off per task.
-
-Say which you are doing before Task 1:
+A plan whose every task ends in "commit" needs a `code-review` sign-off per task,
+because each commit delivers content nobody has looked at yet. Say which you are
+doing before Task 1:
 
 1. **Commit per task** — sign off each through `code-review`. Correct, and the
    history is clean.
 2. **Execute the run, commit once** — one review over the whole change. Cheaper,
    and the plan's per-task commit steps get ticked as batched.
 
-`pre-commit/05-docs-required.py` only denies at 10+ staged files with neither
-`LOG.md` nor `HANDOFF.md`, so ordinary per-task commits clear it.
+Choose deliberately. Until 2026-08-02 `pre-commit/03-review-gate.py` forced the
+question by interrupting every commit; it was deleted, so nothing asks now and
+option 2 is what happens by default if you say nothing.
 
 ## Open-ended work: the loop mode
 

@@ -40,8 +40,10 @@ behind it, not a judgement.
 2. **The work was verified against what was asked.** `verifying-work` produced a
    coverage verdict, and its gaps are closed or explicitly accepted. Green
    suites are not that verdict.
-3. **The change was reviewed and signed off.** `code-review` recorded a receipt.
-   If `pre-commit/03-review-gate.py` would still ask, review is not done.
+3. **The change was reviewed and signed off.** `code-review` ran, the user
+   answered explicitly, and the answer is written down. Since 2026-08-02 no hook
+   checks this — name the commit or conversation where the sign-off happened, or
+   treat review as not done.
 
 State which of the three you actually ran. "All good" is not one of them.
 
@@ -75,14 +77,12 @@ left the machine and the merge is recoverable. Only once green: `git branch -d`.
 
 **Pull request.** `git push -u origin <branch>`, then open the PR against the
 base with `gh`, following the repo's PR template if one exists, and report the
-URL. Record the review with `--pr`:
+URL.
 
-```bash
-python ".claude/hooks/pre-commit/03-review-gate.py" --record --pr
-```
-
-A plain `--record` fingerprints the working tree, not the branch against its
-base — the wrong one leaves the gate asking, correctly.
+A PR delivers every commit this branch has that the base does not — so the
+review that covers it is one over `git diff <merge-base> HEAD`, not over today's
+working tree. If `code-review` only saw the working tree, review the branch
+before opening the PR.
 
 **Keep as-is.** Report the branch name and stop. This is a legitimate outcome,
 not a failure to deliver.
@@ -96,12 +96,12 @@ missing thing.
 |---|---|---|
 | `01-secret-scan.py` | A staged file matches a credential pattern | Remove the secret. Never override |
 | `02-branch-guard.py` | The commit is destined for a protected branch | Branch first |
-| `03-review-gate.py` | No receipt, or the content moved since the receipt | `code-review`, then re-record |
-| `05-docs-required.py` | 10+ staged files touching neither `LOG.md` nor `HANDOFF.md` | `knowledge-manager`. `ALLOW_UNLOGGED_COMMIT=1` only for a commit genuinely worth no entry |
 | `04-delivery-guard.py` | AI attribution in the commit message | Remove it — git history carries no AI attribution here |
+| `06-index-scope-guard.py` | A blanket `git add`, or a commit spending files staged before this session | Name the paths: `git commit -- <paths>` |
 
-A gate that asks twice is telling you the change moved between the review and
-the delivery. Re-review; do not click through.
+`03-review-gate.py` and `05-docs-required.py` were deleted on 2026-08-02, so
+review and recording are no longer enforced here at all — they are steps 2 and 3
+of the checklist above and nothing will stop you skipping them.
 
 ## Before anything irreversible
 

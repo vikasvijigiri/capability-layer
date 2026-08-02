@@ -1,5 +1,5 @@
 ---
-description: Run every repo check — seven test suites, the env check, hook registration and a skill frontmatter parse — and report real output
+description: Run every repo check — six test suites, the env check, hook registration and a skill frontmatter parse — and report real output
 ---
 
 Run the full check set for this repo. Fixed procedure, no judgement about which
@@ -12,11 +12,10 @@ already turned a passing run into a fake failure once.
 
 Run these in order and report each one's real output line, not a paraphrase:
 
-1. **Test suites** — all five, and do not stop at the first failure:
+1. **Test suites** — all six, and do not stop at the first failure:
    - `python tools/test_hooks.py`
    - `python tools/test_process_router.py`
    - `python tools/test_hook_registration.py`
-   - `python tools/test_docs_gates.py`
    - `python tools/test_docs_staleness.py`
    - `python tools/test_artifact_autocommit.py`
    - `python tools/test_index_scope_guard.py`

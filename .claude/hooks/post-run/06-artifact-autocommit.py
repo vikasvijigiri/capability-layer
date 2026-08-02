@@ -28,8 +28,8 @@ unrelated commit. A pathspec commit cannot do that and leaves the index untouche
 Deliberately bypassed gates, and why that is acceptable here
 ------------------------------------------------------------
 A commit made from this subprocess does not pass through `PreToolUse`, so
-`01-secret-scan.py`, `03-review-gate.py`, `05-docs-required.py` and
-`04-delivery-guard.py` never see it. That is a real hole, and it is the whole
+`01-secret-scan.py`, `02-branch-guard.py`, `04-delivery-guard.py` and
+`06-index-scope-guard.py` never see it. That is a real hole, and it is the whole
 reason the scope is this narrow:
 
 - **Never code.** `.md` only, under fixed roots. No tests, no hooks, no

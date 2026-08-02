@@ -70,7 +70,7 @@ token budget, so that file is the only routing signal that always survives.
 
 ## Commands
 
-    /verify         all seven test suites + env check + hook registration + frontmatter parse
+    /verify         all six test suites + env check + hook registration + frontmatter parse
     /save           stage, describe and commit (local only)
     /wip            branch, uncommitted work, which knowledge docs went stale
     /skills-doctor  skill layer health — description budget, YAML, name mismatches
@@ -80,7 +80,6 @@ Raw equivalents, run from the repo root:
     python tools/test_hooks.py
     python tools/test_process_router.py
     python tools/test_hook_registration.py
-    python tools/test_docs_gates.py
     python tools/test_docs_staleness.py
     python tools/test_artifact_autocommit.py
     python tools/test_index_scope_guard.py
@@ -101,7 +100,7 @@ Run `/verify` before declaring any work done.
 | `.claude/hooks/<event>/` | lifecycle hooks; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-*` |
 | `.claude/settings.json` | what actually fires; `hooks_registry.json` only documents intent |
 | `.claude/commands/` | the four slash commands above |
-| `tools/` | `run_hook.py` + seven test suites |
+| `tools/` | `run_hook.py` + six test suites |
 | `docs/specs/`, `docs/plans/`, `docs/research/` | skill outputs, one dated file each |
 | `docs/archive/` | the pre-2026-08-01 design layer; superseded, see `docs/archive/ARCHIVE.md` |
 | `decisions/` | dated ADRs |
@@ -119,16 +118,18 @@ them, so they are code, not commentary:
 `TASK.md` (active task) · `PLAN.md` · `HANDOFF.md` (current work, pending, next)
 · `LOG.md` (history) · `ISSUES.md` · `MEMORY.md`
 
-Four hooks watch them at four moments: `pre-run/04-docs-staleness.py` warns when
-they drift from the diff, `post-run/05-docs-gate.py` blocks the turn from ending
-(observed working 2026-08-02 — it had been documented as unproven since the build
-began), `pre-commit/05-docs-required.py` denies a commit of 10+ files touching
-neither `LOG.md` nor `HANDOFF.md`, and `post-run/06-artifact-autocommit.py`
-commits them — the only hook here that acts rather than asks, scoped to `.md`
-prose so it can never sweep code past the other three. Override the docs-required
-gate with `ALLOW_UNLOGGED_COMMIT=1` when a commit genuinely warrants no log entry
-— note it must be set in Claude Code's own environment, not inline in a Bash
-command, where it never reaches the hook.
+Two hooks watch them now: `pre-run/04-docs-staleness.py` warns when they drift
+from the diff, and `post-run/06-artifact-autocommit.py` commits them — the only
+hook here that acts rather than asks, scoped to `.md` prose so it can never sweep
+code.
+
+`post-run/05-docs-gate.py` and `pre-commit/05-docs-required.py` were deleted on
+2026-08-02, along with `pre-commit/03-review-gate.py`. All three gated *process
+compliance* rather than artefact correctness, and the review gate fingerprinted
+the whole working tree — so writing the log entry `05-docs-required` demanded
+invalidated the receipt `03-review-gate` demanded, a deadlock proven by
+measurement. Five comparable repos were read and not one enforces process this
+way; see `LOG.md` 2026-08-02 19:26 and `docs/2026-08-02-git-flow-walkthrough.md`.
 
 Staging is guarded by `session-start/03-index-baseline.py` plus
 `pre-commit/06-index-scope-guard.py`: the first records what was already staged

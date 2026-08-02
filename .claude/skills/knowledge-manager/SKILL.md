@@ -1,6 +1,6 @@
 ---
 name: knowledge-manager
-description: Use when a unit of work finishes and the repo's persistent docs no longer match reality, or when a docs gate blocks a turn or a commit saying "record this unit of work in LOG.md and HANDOFF.md". Triggers include "log this", "update the docs", "record this", "write down what we decided", "note this for later", "handoff", "where did we get to", "capture this before we lose it", finishing a task, making a hard-to-reverse decision, or diagnosing a failure worth remembering. Owns TASK.md, PLAN.md, MEMORY.md, HANDOFF.md, LOG.md, ISSUES.md and decisions/. Do NOT use for CLAUDE.md, for a change with nothing worth recording, or to restate a diff that git already holds.
+description: Use when a unit of work finishes and the repo's persistent docs no longer match reality, or when the staleness warning says LOG.md and HANDOFF.md are behind the work. Triggers include "log this", "update the docs", "record this", "write down what we decided", "note this for later", "handoff", "where did we get to", "capture this before we lose it", finishing a task, making a hard-to-reverse decision, or diagnosing a failure worth remembering. Owns TASK.md, PLAN.md, MEMORY.md, HANDOFF.md, LOG.md, ISSUES.md and decisions/. Do NOT use for CLAUDE.md, for a change with nothing worth recording, or to restate a diff that git already holds.
 context:
   - formats.md
 effort: high
@@ -10,7 +10,7 @@ model: opus
 # Knowledge Manager
 
 Owns exactly seven things: `TASK.md`, `PLAN.md`, `MEMORY.md`, `HANDOFF.md`,
-`LOG.md`, `ISSUES.md`, `decisions/`. Nothing else. Four hooks gate on these
+`LOG.md`, `ISSUES.md`, `decisions/`. Nothing else. One hook warns about these
 files and none can write them — a hook is a subprocess with no tool access, so
 it can refuse a turn but cannot compose an entry. That is the gap this fills.
 
@@ -121,8 +121,10 @@ visible in `git show`.
 ## Routing
 
 - Mandatory validator: none. The gates that fire when these files go stale are
-  `pre-run/04-docs-staleness.py` (warns), `post-run/05-docs-gate.py` (blocks the
-  turn) and `pre-commit/05-docs-required.py` (denies the commit).
+  `pre-run/04-docs-staleness.py`, which warns and nothing more.
+  `post-run/05-docs-gate.py` (blocked the turn) and
+  `pre-commit/05-docs-required.py` (denied the commit) were deleted on
+  2026-08-02 — so recording is now entirely on you.
 - Terminal handoff: none. This records and stops.
 - Invoked at the end of a unit of work, not at the end of a session — a session
   that ran four units owes four log entries, written as each finished.

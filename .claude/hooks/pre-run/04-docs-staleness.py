@@ -153,11 +153,11 @@ def main():
     if not isinstance(prompt, str) or not prompt.strip():
         return
 
-    # Snapshot the docs before the turn does anything. `post-run/05-docs-gate.py`
-    # compares against this at Stop to tell "written this turn" from "written at
-    # some point", which mtimes could never distinguish. Must happen before the
-    # early returns below -- a turn that starts with a clean tree can still end
-    # with work worth recording.
+    # Snapshot the docs before the turn does anything.
+    # `post-run/06-artifact-autocommit.py` compares against this at Stop to tell
+    # "written this turn" from "written at some point", which mtimes could never
+    # distinguish. Must happen before the early returns below -- a turn that
+    # starts with a clean tree can still end with work worth recording.
     save_turn_marker(REPO_ROOT)
 
     paths = changed_files()

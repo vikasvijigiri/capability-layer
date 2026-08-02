@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Use when a change is about to be delivered and has not been reviewed - before "git commit", "git push", "gh pr create", or whenever the review gate returns "No code review has been recorded". Triggers include "review the diff", "review this change", "review my code", "review the PR", "check this before I commit", "is this ready to ship", "look over these changes", "code review", "can you sanity check this". Also use when the gate asks a second time because the change moved after an earlier review. Do NOT use to write new code, to fix what the review finds (report first, fix as separate work), or for a diff you have not actually read.
+description: Use when a change is about to be delivered and has not been reviewed - before "git commit", "git push", "gh pr create". Triggers include "review the diff", "review this change", "review my code", "review the PR", "check this before I commit", "is this ready to ship", "look over these changes", "code review", "can you sanity check this". Also use again when the change moves after an earlier review, since the earlier one no longer covers it. Do NOT use to write new code, to fix what the review finds (report first, fix as separate work), or for a diff you have not actually read.
 effort: high
 model: opus
 ---
@@ -8,30 +8,31 @@ model: opus
 # Code Review
 
 Review a pending change, report what is actually wrong with it, then get the
-user's sign-off. The sign-off is the only thing that records a review receipt,
-which is what lets `pre-commit/03-review-gate.py` stop asking.
+user's sign-off.
 
 Cap visible output at ~500 tokens. Findings, not a recap of the diff.
 
 <HARD-GATE>
-NEVER run `--record` without the user explicitly signing off in this turn.
-Recording is the whole mechanism: the receipt is a claim that a human was shown
-this change and accepted it. Recording on your own judgement — however clean the
-diff — forges that claim and silently disarms the gate.
+NEVER report a change as reviewed without having read the actual diff, and never
+treat your own approval as the user's. "No findings" is not sign-off — ask anyway.
 
-"No findings" is not sign-off. Ask anyway.
+State plainly what you read and what you did not. A review that silently skipped
+half the change is worse than no review, because it is indistinguishable from a
+thorough one.
 </HARD-GATE>
 
-## Why the gate needs you
+## Why this is a skill and not a hook
 
 A hook fires once, mechanically, and cannot read a diff or hold a conversation.
-`03-review-gate.py` therefore can only ask *whether* a review happened; it cannot
-perform one. It answers that question by looking for a receipt fingerprinted to
-the exact content being delivered. No receipt, or a receipt for different
-content, means it interrupts.
+`pre-commit/03-review-gate.py` tried to enforce this and was deleted on
+2026-08-02: it could only ask *whether* a review happened, never perform one, and
+its receipt fingerprinted the whole working tree — so writing the log entry that
+`05-docs-required.py` demanded invalidated the receipt, a measured deadlock.
+Five comparable repos were read and not one gates review this way.
 
-Nothing else writes that receipt. If you skip the sign-off, the gate asks
-forever and the user learns to click through it — which is worse than no gate.
+So the enforcement is this skill plus the user, not a mechanism. The upside is
+that it can no longer be satisfied by a file on disk; the cost is that skipping
+it is now silent. Do not skip it.
 
 ## Steps
 
@@ -67,38 +68,32 @@ identical to a review that never happened.
 
 **4. Get sign-off.** `AskUserQuestion`:
 
-- **Approve and record** — runs `--record`, the gate stops asking for this exact
-  content. State plainly that you are recording on their authority.
-- **Approve without recording** — they accept the change but the gate keeps
-  asking. Correct when the diff is about to move again.
-- **Not yet** — nothing recorded. They want findings addressed first.
+- **Approve** — they accept the change as reviewed.
+- **Approve with findings noted** — they accept it and want the findings recorded
+  in `ISSUES.md` or `HANDOFF.md` rather than fixed now.
+- **Not yet** — they want findings addressed first.
 
 Free-text **Other** is appended by the tool. A plain "yes"/"approved" in chat is
 sign-off; the dialogue is the default, not a hoop.
 
-**5. Record, only on approval.**
-
-```bash
-python ".claude/hooks/pre-commit/03-review-gate.py" --record        # commit or push
-python ".claude/hooks/pre-commit/03-review-gate.py" --record --pr   # pull request
-```
-
-`--pr` fingerprints the branch against its base; plain `--record` fingerprints
-the working tree. Recording the wrong one leaves the gate asking, correctly.
+**5. Say what the review covered.** One line naming the files read and the files
+not read. Since 2026-08-02 nothing mechanical records this, so the statement in
+the conversation — and in the commit message, if one follows — is the only trace
+the review happened at all. Write it as evidence, not as reassurance.
 
 Then stop. Do not commit, push, or open the PR yourself unless separately asked.
 
-## Red Flags — stop, do not record
+## Red Flags — stop and ask
 
-- "The diff is small and clean, I'll record and mention it after."
+- "The diff is small and clean, I'll call it reviewed and mention it after."
 - "They said 'go ahead' about the task, so that covers the review."
 - "No findings, so there is nothing to sign off on."
-- "I'll record now and they can review the summary." Backwards — the receipt
-  claims they already did.
-- "The gate is noisy, recording will quiet it down." The noise is the feature.
+- "I'll say it's reviewed and they can read the summary." Backwards — the claim
+  asserts they already did.
+- "The suites pass, so it is reviewed." Passing is not reading.
 - Reviewing `git diff` for a PR. That is today's edit, not the branch.
 
-**Each of these means: do not run `--record`. Ask.**
+**Each of these means: ask.**
 
 ## Common Mistakes
 
@@ -107,14 +102,14 @@ Then stop. Do not commit, push, or open the PR yourself unless separately asked.
 | Summarising the diff instead of judging it | The user can read the diff; they cannot see what you think is wrong with it |
 | Findings with no `file:line` | Unactionable, and indistinguishable from a guess |
 | Reviewing only tracked changes | A brand-new untracked file has no diff and is the likeliest place for a defect |
-| Fixing findings inside the review | The receipt then covers content that no longer exists; the gate re-asks and the review is wasted |
-| Recording with `--record` when the delivery is a PR | Wrong fingerprint kind; the gate asks again and the sign-off is lost |
+| Fixing findings inside the review | The sign-off then covers content that no longer exists, and nobody can tell which version was accepted |
+| Reviewing the working tree when the delivery is a PR | A PR delivers every commit the base lacks, not today's edit |
 
 ## Next step — you MUST take it
 
-**The terminal state is invoking `delivering`**, once the user has signed off
-and the receipt is recorded. Do not commit, push or open the PR here; that skill
-owns the route and its own approval gate.
+**The terminal state is invoking `delivering`**, once the user has signed off.
+Do not commit, push or open the PR here; that skill owns the route and its own
+approval gate.
 
 ## Parallel work — `diff-reviewer`
 
@@ -126,26 +121,25 @@ with `file:line`; you merge them, drop duplicates, and present one list.
 Hand over the diff as a **path**, never pasted: anything you paste into a
 dispatch stays in your context for the rest of the session.
 
-What does not delegate: assembling the surface, showing the user, asking for
-sign-off, and running `--record`. The receipt claims a human saw this change —
-no agent can make that claim on their behalf.
+What does not delegate: assembling the surface, showing the user, and asking for
+sign-off. An agent reporting "looks good" is not a review a human gave.
 
 **Only when the user has asked for subagents.**
 
 ## Routing
 
-- Mandatory validator: none. The sign-off in step 4 is the gate, and it is the
-  only thing that may write a receipt.
-- Terminal handoff: `delivering`, once the user has signed off. This skill
-  records the receipt; it does not push, merge or open the PR itself — that is
-  `delivering`'s job, and it has its own approval gate.
-- Triggered by `03-review-gate.py` returning `ask` on `git commit`, `git push`
-  or `gh pr create`, or invoked directly before any of those.
+- Mandatory validator: none. The sign-off in step 4 is the gate.
+- Terminal handoff: `delivering`, once the user has signed off. This skill does
+  not push, merge or open the PR itself — that is `delivering`'s job, and it has
+  its own approval gate.
+- Invoked directly before `git commit`, `git push` or `gh pr create`. Nothing
+  fires it automatically: `03-review-gate.py` did until it was deleted on
+  2026-08-02, so this is now a habit rather than an interrupt.
 - Findings that need real work become their own task via `task-brief`. Do not
   absorb them here.
 
 ## Success
 
-The user saw the findings, said yes or no explicitly, and the receipt exists if
-and only if they said yes. Re-running the same delivery command now passes the
-gate silently; changing one byte of the diff makes it ask again.
+The user saw the findings, said yes or no explicitly, and the answer is written
+somewhere durable — the commit message, `HANDOFF.md`, or `ISSUES.md`. A review
+that lives only in the conversation is lost at the next context reset.
