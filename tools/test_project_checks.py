@@ -38,6 +38,11 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 def load(rel: str, name: str):
     spec = importlib.util.spec_from_file_location(name, ROOT / rel)
+    # Not type-checker appeasement: a mistyped path returns None here and fails
+    # two lines down as `NoneType has no attribute loader`, which reads like a
+    # bug in the module under test rather than a wrong path in this file.
+    assert spec is not None, f"no import spec for {rel}"
+    assert spec.loader is not None, f"no loader for {rel}"
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
     spec.loader.exec_module(mod)
@@ -83,18 +88,75 @@ pnpm = tree({"package.json": json.dumps({"scripts": {"test": "vitest"}}),
 check("the lockfile picks the package manager, not a guess",
       "pnpm test" in commands(pnpm), commands(pnpm))
 
-py = tree({"pyproject.toml": "[project]\nname='x'\n", "ruff.toml": ""})
-check("a python app detects pytest and ruff",
-      kinds(py) == {"test", "lint"}, str(kinds(py)))
+py = tree({"pyproject.toml": "[project]\nname='x'\n", "ruff.toml": "",
+           "mypy.ini": "[mypy]\n"})
+check("a python app detects pytest, ruff and mypy",
+      kinds(py) == {"test", "lint", "typecheck"}, str(kinds(py)))
 check("...with pytest as the test command", "pytest -q" in commands(py))
+check("...ruff as the linter", "ruff check" in commands(py))
+check("...and mypy as the typechecker", "mypy" in commands(py))
 
-rust = tree({"Cargo.toml": "[package]\nname='x'\n"})
-check("a rust crate detects cargo test and clippy",
-      kinds(rust) == {"test", "lint"} and "cargo test" in commands(rust))
+# A config file is what turns each on, so its absence must turn it off.
+py_bare = tree({"pyproject.toml": "[project]\nname='x'\n"})
+check("no ruff.toml means no lint", "lint" not in kinds(py_bare))
+check("no mypy.ini means no typecheck", "typecheck" not in kinds(py_bare))
 
-go = tree({"go.mod": "module x\n"})
-check("a go module detects go test and vet",
-      kinds(go) == {"test", "lint"} and "go test ./..." in commands(go))
+check("this repo now resolves all three kinds",
+      {k for k, _ in pc.resolve_checks(ROOT)[0]} == {"test", "lint", "typecheck"},
+      str({k for k, _ in pc.resolve_checks(ROOT)[0]}))
+
+
+# --- a configured tool that is not installed must skip, never fail ----------
+#
+# Otherwise the first fresh clone refuses every commit until someone installs a
+# linter, and the person who hits that is never the person who wrote the config.
+
+check("a missing python module is detected",
+      pc.tool_missing("python -m definitely_not_installed check"))
+check("a missing executable is detected",
+      pc.tool_missing("definitely-not-a-real-binary --version"))
+check("an installed module is not flagged",
+      not pc.tool_missing("python -m json.tool"))
+
+ghost = tree({".claude/project-checks.json": json.dumps(
+    {"test": "python -m no_such_test_runner", "lint": False})})
+ok, detail, ran_test = pc.run_checks(ghost)
+check("an uninstalled tool skips rather than failing", ok, detail)
+check("...and says which one, by name",
+      "not installed" in detail and "no_such_test_runner" in detail, detail)
+check("...and still reports that no test ran", ran_test is False)
+
+# --- the table is language-agnostic; each ecosystem is a row, not a code path
+ECOSYSTEMS = [
+    ("rust",   {"Cargo.toml": "[package]\nname='x'\n"},          {"test", "lint"}, "cargo test"),
+    ("go",     {"go.mod": "module x\n"},                          {"test", "lint"}, "go test ./..."),
+    ("maven",  {"pom.xml": "<project/>\n"},                       {"test"},         "mvn"),
+    ("gradle", {"build.gradle.kts": "plugins {}\n"},              {"test"},         "gradle"),
+    ("ruby",   {"Rakefile": "task :test\n", ".rubocop.yml": ""},  {"test", "lint"}, "rubocop"),
+    ("php",    {"phpunit.xml": "<phpunit/>\n"},                   {"test"},         "phpunit"),
+    ("elixir", {"mix.exs": "defmodule X do\nend\n"},              {"test", "lint"}, "mix test"),
+    ("deno",   {"deno.json": "{}\n"},          {"test", "lint", "typecheck"},       "deno test"),
+    ("dotnet", {"App.csproj": "<Project/>\n"},                    {"test"},         "dotnet test"),
+]
+for label, files, want_kinds, want_cmd in ECOSYSTEMS:
+    t = tree(files)
+    check(f"{label} detects {sorted(want_kinds)}", kinds(t) == want_kinds, str(kinds(t)))
+    check(f"...with {want_cmd!r} among its commands", want_cmd in commands(t), commands(t))
+
+# `make` is the closest thing to a universal interface, so it is detected -- but
+# only for targets that exist. A Makefile with no `test:` target must not produce
+# a `make test` command that fails for everyone.
+mk = tree({"Makefile": "build:\n\tcc x.c\n\ntest:\n\t./run\n"})
+check("make detects only the targets that exist",
+      kinds(mk) == {"test"} and "make test" in commands(mk), commands(mk))
+mk_none = tree({"Makefile": "build:\n\tcc x.c\n"})
+check("a Makefile with no test target detects nothing",
+      pc.detect_checks(mk_none) == [], str(pc.detect_checks(mk_none)))
+
+# Two markers meaning the same tool must not run it twice.
+dup = tree({"pyproject.toml": "[project]\nname='x'\n", "pytest.ini": "[pytest]\n"})
+check("duplicate markers do not duplicate the command",
+      [c for _, c in pc.detect_checks(dup)].count("pytest -q") == 1)
 
 empty = tree({"README.md": "# hi\n"})
 check("a project with no markers detects nothing", pc.detect_checks(empty) == [])

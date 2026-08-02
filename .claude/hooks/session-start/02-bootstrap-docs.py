@@ -76,7 +76,7 @@ def detect_stack(root):
     pkg_json = read_json_if_file(os.path.join(root, "package.json"))
     if pkg_json is not None:
         languages.add("TypeScript" if exists("tsconfig.json") else "JavaScript")
-        deps = {}
+        deps: dict[str, str] = {}
         deps.update(pkg_json.get("dependencies", {}) or {})
         deps.update(pkg_json.get("devDependencies", {}) or {})
         for dep, label in (
@@ -93,7 +93,7 @@ def detect_stack(root):
     if exists("vercel.json") or os.path.isdir(os.path.join(root, ".vercel")):
         deployment = "Vercel"
     elif pkg_json is not None:
-        pkg_deps = {}
+        pkg_deps: dict[str, str] = {}
         pkg_deps.update(pkg_json.get("dependencies", {}) or {})
         pkg_deps.update(pkg_json.get("devDependencies", {}) or {})
         if "vercel" in pkg_deps:
@@ -176,7 +176,7 @@ def detect_stack(root):
                     monorepo_tool = f"multiple packages under {sub}/"
                     break
 
-    all_deps = {}
+    all_deps: dict[str, str] = {}
     if pkg_json is not None:
         all_deps.update(pkg_json.get("dependencies", {}) or {})
         all_deps.update(pkg_json.get("devDependencies", {}) or {})
@@ -563,7 +563,7 @@ def parse_last_n_log_entries(log_path, n=LOG_ENTRIES):
 def _parse_env_file(path):
     """Return {key: value} for non-comment lines. Values are never logged
     or surfaced anywhere -- only key names and whether a value is blank."""
-    values = {}
+    values: dict[str, str] = {}
     if not os.path.isfile(path):
         return values
     with open(path, encoding="utf-8") as f:

@@ -21,6 +21,14 @@ Three ideas here, the first two taken from carlrannaberg/claudekit's
      safety story evaporating. So `run_checks` reports whether a *test* actually
      ran, and the caller refuses to commit code on the strength of nothing.
 
+**Nothing here is language-specific.** The three kinds -- test, typecheck, lint --
+are the same question in every ecosystem, and which command answers them lives in
+`MARKER_CHECKS`, a table. Node, Deno, Python, Rust, Go, Java, Kotlin, Ruby, PHP,
+Elixir, .NET and plain `make` are rows in it; adding one more is a row, not a code
+change. Node is the single special case, because its checks live in
+`package.json` scripts rather than in a file's existence and the runner depends
+on the lockfile.
+
 Config lives in `.claude/project-checks.json`:
 
     {
@@ -91,55 +99,141 @@ def _package_json(root: Path) -> dict:
         return {}
 
 
+# Marker file -> the checks its presence implies. Language-agnostic by
+# construction: supporting a new ecosystem is a row here, not a code change, and
+# nothing above or below this table knows what language anything is written in.
+#
+# `{py}` expands to this interpreter, quoted. Double quotes and not shlex.quote:
+# commands run under shell=True, which is cmd.exe on Windows, and cmd.exe does
+# not treat '...' as quoting -- the interpreter path came through literally and
+# every detected suite died with "The filename, directory name, or volume label
+# syntax is incorrect."
+#
+# A marker only ever *adds* checks. Nothing here fails a project for lacking a
+# toolchain, and `tool_missing` skips any command whose executable is absent, so
+# a Rust repo on a machine without cargo is skipped-and-named, never blocked.
+MARKER_CHECKS: dict[str, list[tuple[str, str]]] = {
+    # --- Rust
+    "Cargo.toml": [("test", "cargo test"), ("lint", "cargo clippy -- -D warnings")],
+    # --- Go
+    "go.mod": [("test", "go test ./..."), ("lint", "go vet ./...")],
+    # --- Java / Kotlin / JVM
+    "pom.xml": [("test", "mvn -q -B test")],
+    "build.gradle": [("test", "gradle --quiet test")],
+    "build.gradle.kts": [("test", "gradle --quiet test")],
+    # --- Ruby
+    "Rakefile": [("test", "bundle exec rake test")],
+    ".rubocop.yml": [("lint", "bundle exec rubocop")],
+    # --- PHP
+    "phpunit.xml": [("test", "vendor/bin/phpunit")],
+    "phpunit.xml.dist": [("test", "vendor/bin/phpunit")],
+    # --- Elixir
+    "mix.exs": [("test", "mix test"), ("lint", "mix credo --strict")],
+    # --- Deno
+    "deno.json": [("test", "deno test -A"), ("lint", "deno lint"),
+                  ("typecheck", "deno check .")],
+    "deno.jsonc": [("test", "deno test -A"), ("lint", "deno lint")],
+    # --- Python
+    "pyproject.toml": [("test", "pytest -q")],
+    "pytest.ini": [("test", "pytest -q")],
+    "ruff.toml": [("lint", "{py} -m ruff check .")],
+    ".ruff.toml": [("lint", "{py} -m ruff check .")],
+    "mypy.ini": [("typecheck", "{py} -m mypy")],
+    ".mypy.ini": [("typecheck", "{py} -m mypy")],
+}
+
+# Markers matched by glob rather than exact name.
+GLOB_MARKER_CHECKS: dict[str, list[tuple[str, str]]] = {
+    "*.sln": [("test", "dotnet test")],
+    "*.csproj": [("test", "dotnet test")],
+}
+
+
+def _node_checks(root: Path):
+    """Node is the one ecosystem worth special-casing.
+
+    Its checks live in `package.json` scripts rather than in the marker file's
+    existence, and which runner invokes them depends on the lockfile. No table
+    encodes that without becoming a program.
+    """
+    pkg = _package_json(root)
+    scripts = pkg.get("scripts") or {} if isinstance(pkg, dict) else {}
+    if not scripts:
+        return []
+
+    pm = _package_manager(root)
+    runner = "npm run" if pm == "npm" else f"{pm} run"
+    found = []
+    if "test" in scripts:
+        found.append(("test", f"{pm} test"))
+    if "typecheck" in scripts:
+        found.append(("typecheck", f"{runner} typecheck"))
+    elif (root / "tsconfig.json").is_file():
+        exec_prefix = {"npm": "npx", "pnpm": "pnpm exec",
+                       "yarn": "yarn", "bun": "bunx"}[pm]
+        found.append(("typecheck", f"{exec_prefix} tsc --noEmit"))
+    if "lint" in scripts:
+        found.append(("lint", f"{runner} lint"))
+    return found
+
+
+def _make_checks(root: Path):
+    """`make test` / `make lint`, but only for targets that actually exist.
+
+    A Makefile is the closest thing to a universal build interface, and also the
+    easiest way to detect a target that was never written. Reading it is cheap.
+    """
+    makefile = next((root / n for n in ("Makefile", "makefile", "GNUmakefile")
+                     if (root / n).is_file()), None)
+    if makefile is None:
+        return []
+    try:
+        text = makefile.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return []
+    import re as _re
+    return [(kind, f"make {kind}") for kind in ("test", "lint", "typecheck")
+            if _re.search(rf"(?m)^{kind}\s*:", text)]
+
+
 def detect_checks(root=None):
     """[(kind, command)] this project appears to support, in run order.
 
-    Detection is by marker file, never by guessing: a `test` script in
-    package.json, a `tsconfig.json` next to a typescript dep, a `pyproject.toml`.
-    A project with none of them detects nothing, and the caller decides what that
-    means.
+    Detection is by marker file, never by guessing. A project with no markers
+    detects nothing, and the caller decides what that means -- which for a change
+    containing code is a refusal, not a pass.
     """
     root = Path(root) if root else REPO_ROOT
     found = []
 
-    pkg = _package_json(root)
-    scripts = pkg.get("scripts") or {} if isinstance(pkg, dict) else {}
-    if scripts:
-        pm = _package_manager(root)
-        runner = f"{pm} run" if pm != "npm" else "npm run"
-        if "test" in scripts:
-            found.append(("test", f"{pm} test" if pm != "yarn" else "yarn test"))
-        if "typecheck" in scripts:
-            found.append(("typecheck", f"{runner} typecheck"))
-        elif (root / "tsconfig.json").is_file():
-            exec_prefix = {"npm": "npx", "pnpm": "pnpm exec",
-                           "yarn": "yarn", "bun": "bunx"}[pm]
-            found.append(("typecheck", f"{exec_prefix} tsc --noEmit"))
-        if "lint" in scripts:
-            found.append(("lint", f"{runner} lint"))
+    found.extend(_node_checks(root))
 
-    # Python. `tools/test_*.py` is this repo's own shape and stays supported;
-    # pytest is what an application would use.
-    if (root / "pyproject.toml").is_file() or (root / "pytest.ini").is_file() \
-            or (root / "tests").is_dir():
-        found.append(("test", "pytest -q"))
-    py_suites = sorted((root / "tools").glob("test_*.py")) if (root / "tools").is_dir() else []
-    for suite in py_suites:
-        # Double quotes, not shlex.quote: these run under shell=True, which is
-        # cmd.exe on Windows, and cmd.exe does not treat '...' as quoting -- the
-        # interpreter path came through literally and every suite failed with
-        # "The filename, directory name, or volume label syntax is incorrect."
-        # Double quotes are understood by both cmd.exe and POSIX shells.
-        found.append(("test", f'"{sys.executable}" tools/{suite.name}'))
-    if (root / "ruff.toml").is_file() or (root / ".ruff.toml").is_file():
-        found.append(("lint", "ruff check ."))
+    for marker, checks in MARKER_CHECKS.items():
+        if (root / marker).is_file():
+            found.extend((kind, cmd.replace("{py}", f'"{sys.executable}"'))
+                         for kind, cmd in checks)
 
-    if (root / "Cargo.toml").is_file():
-        found += [("test", "cargo test"), ("lint", "cargo clippy -- -D warnings")]
-    if (root / "go.mod").is_file():
-        found += [("test", "go test ./..."), ("lint", "go vet ./...")]
+    for pattern, checks in GLOB_MARKER_CHECKS.items():
+        if any(root.glob(pattern)):
+            found.extend(checks)
 
-    return found
+    found.extend(_make_checks(root))
+
+    # This repo's own shape: standalone `tools/test_*.py` scripts, each its own
+    # suite with no runner. Kept because it is what this repo is, not because
+    # Python is special -- an equivalent convention in any language would earn
+    # its own entry.
+    if (root / "tools").is_dir():
+        for suite in sorted((root / "tools").glob("test_*.py")):
+            found.append(("test", f'"{sys.executable}" tools/{suite.name}'))
+
+    # A marker can fire twice -- pyproject.toml and pytest.ini both mean pytest.
+    seen, unique = set(), []
+    for kind, cmd in found:
+        if (kind, cmd) not in seen:
+            seen.add((kind, cmd))
+            unique.append((kind, cmd))
+    return unique
 
 
 def resolve_checks(root=None):
@@ -152,7 +246,8 @@ def resolve_checks(root=None):
     root = Path(root) if root else REPO_ROOT
     config = load_config(root)
     detected = detect_checks(root)
-    checks, disabled = [], []
+    checks: list[tuple[str, str]] = []
+    disabled: list[str] = []
 
     for kind in ("test", "typecheck", "lint"):
         override = config.get(kind)
@@ -217,8 +312,13 @@ def run_checks(root=None, extra_env=None):
     for kind, command in checks:
         if tool_missing(command):
             # Skipped, and named in the detail. A silently absent check is the
-            # thing this module exists to prevent.
-            skipped.append(f"{kind} (`{command.split()[0]}` not installed)")
+            # thing this module exists to prevent. Name the *module* for
+            # `python -m x`, not the interpreter -- "`python` not installed" is
+            # both wrong and useless when the missing thing is `mypy`.
+            parts = command.split()
+            missing = (parts[2] if len(parts) > 2 and parts[1] == "-m"
+                       else parts[0].strip('"'))
+            skipped.append(f"{kind} (`{missing}` not installed)")
             continue
         try:
             # nosec B602 -- shell=True is required and the input is not hostile.

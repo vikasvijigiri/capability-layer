@@ -136,7 +136,7 @@ def run_suites():
 
 def build_message(paths, suite_detail):
     """A checkpoint subject the hook can actually justify, plus the evidence."""
-    groups = {}
+    groups: dict[str, int] = {}
     for p in paths:
         head = p.split("/")[0] if "/" in p else "(root)"
         groups[head] = groups.get(head, 0) + 1

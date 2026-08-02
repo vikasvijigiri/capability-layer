@@ -38,6 +38,11 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 def load():
     spec = importlib.util.spec_from_file_location("autocommit", HOOK)
+    # Real asserts, not type-checker appeasement: a mistyped path returns None
+    # and fails two lines down as `NoneType has no attribute loader`, which reads
+    # like a bug in the hook rather than a wrong path here.
+    assert spec is not None, f"no import spec for {HOOK}"
+    assert spec.loader is not None, f"no loader for {HOOK}"
     mod = importlib.util.module_from_spec(spec)
     sys.modules["autocommit"] = mod
     spec.loader.exec_module(mod)

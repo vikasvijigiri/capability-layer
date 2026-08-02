@@ -1,5 +1,5 @@
 ---
-description: Run every repo check — five test suites, hook registration and a skill frontmatter parse — and report real output
+description: Run every repo check — the project's own lint and test commands, hook imports and a skill frontmatter parse — and report real output
 ---
 
 Run the full check set for this repo. Fixed procedure, no judgement about which
@@ -12,12 +12,24 @@ already turned a passing run into a fake failure once.
 
 Run these in order and report each one's real output line, not a paraphrase:
 
-1. **Test suites** — all five, and do not stop at the first failure:
-   - `python tools/test_hooks.py`
-   - `python tools/test_process_router.py`
-   - `python tools/test_hook_registration.py`
-   - `python tools/test_artifact_autocommit.py`
-   - `python tools/test_referenced_paths.py`
+1. **Everything the commit gate runs** — one command, because `/verify` and the
+   auto-commit must never disagree about what "the checks pass" means. Two
+   sources of truth for that is how a green `/verify` starts coexisting with a
+   gate that refuses:
+
+   ```bash
+   python -c "import importlib.util as u; s=u.spec_from_file_location('pc','.claude/hooks/_projectchecks.py'); m=u.module_from_spec(s); s.loader.exec_module(m); ok,detail,ran=m.run_checks(); print(('PASS' if ok else 'FAIL'), detail, '| test ran:', ran)"
+   ```
+
+   This resolves `.claude/project-checks.json` over detection and currently
+   covers **six test suites plus `ruff` and the config-JSON validator**. Report
+   its real line. `ran_test: False` on a change containing code is a failure
+   even when `ok` is True — that is the distinction the gate turns on.
+
+   To see which suite failed rather than the summary, run them individually:
+   `tools/test_hooks.py`, `test_process_router.py`, `test_hook_registration.py`,
+   `test_artifact_autocommit.py`, `test_project_checks.py`,
+   `test_referenced_paths.py`. Do not stop at the first failure.
 
 2. **Every hook imports** — `01-env-check.py` did this until it was deleted on
    2026-08-02, and `test_process_router.py` now covers the skill/routing half of

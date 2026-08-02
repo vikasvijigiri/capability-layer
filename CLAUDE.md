@@ -99,7 +99,7 @@ trigger breadth belongs in the routing file and descriptions stay ~380 chars.
 
 ## Commands
 
-    /verify         all five test suites + hook registration + frontmatter parse
+    /verify         the project's own lint + test commands, hook imports, frontmatter parse
     /save           stage, describe and commit (local only)
     /wip            branch, uncommitted work, which knowledge docs went stale
     /skills-doctor  skill layer health — description budget, YAML, name mismatches
@@ -110,7 +110,10 @@ Raw equivalents, run from the repo root:
     python tools/test_process_router.py
     python tools/test_hook_registration.py
     python tools/test_artifact_autocommit.py
+    python tools/test_project_checks.py
     python tools/test_referenced_paths.py
+    python tools/check_config_json.py
+    python -m ruff check .
     python tools/run_hook.py <event> '<json-payload>'   # fire one hook manually
 
 Run `/verify` before declaring any work done.
@@ -128,7 +131,7 @@ Run `/verify` before declaring any work done.
 | `.claude/hooks/<event>/` | nine hooks over seven events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |
 | `.claude/settings.json` | what actually fires; `hooks_registry.json` only documents intent |
 | `.claude/commands/` | the four slash commands above |
-| `tools/` | `run_hook.py` + five test suites |
+| `tools/` | `run_hook.py`, six test suites, `check_config_json.py` |
 | `docs/specs/`, `docs/plans/`, `docs/research/` | skill outputs, one dated file each |
 | `docs/archive/` | the pre-2026-08-01 design layer; superseded, see `docs/archive/ARCHIVE.md` |
 | `decisions/` | dated ADRs |
@@ -156,14 +159,17 @@ The staleness warner, the Stop gate and the commit gate were all deleted on
 
 Commits are automatic and local. `post-run/06-artifact-autocommit.py` fires at
 the end of every turn and commits what changed, as a `wip:` checkpoint, if and
-only if all five hold:
+only if all six hold. What "the checks pass" means is `.claude/project-checks.json`
+resolved over detection by `.claude/hooks/_projectchecks.py` — the same code
+`/verify` calls, so the two can never disagree:
 
 | Gate | Refuses when |
 |---|---|
 | branch | on `main`/`master`/`develop`/`release` |
 | size | more than `MAX_FILES = 25` changed — that is a unit of work, not a checkpoint |
 | secrets | any changed file matches `_hooklib.SECRET_PATTERNS` |
-| suites | any `tools/test_*.py` exits non-zero |
+| checks | any command from `.claude/project-checks.json` exits non-zero — currently six suites, `ruff`, and the config-JSON validator |
+| unverified code | the change contains code and **no test check ran** — passing and having nothing to run are different facts |
 | message | the generated subject matches `_hooklib.AI_ATTRIBUTION_PATTERNS` |
 
 Every clause is a fact about the artefact, never about process. A refusal is

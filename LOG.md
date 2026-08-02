@@ -3,6 +3,55 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-03 01:10
+**All three check kinds are on, and detection is now language-agnostic by
+construction.** `typecheck` and `lint` had both been `false`; both are live.
+
+    9 check(s) green (lint, test, typecheck)
+
+**`typecheck: false` was an assumption, and it was wrong.** The stated reason was
+that an unannotated codebase would drown in mypy findings. Measured instead: six
+errors across nineteen files, all one pattern — `spec_from_file_location`
+returning `ModuleSpec | None`. Fixed with asserts that improve the failure
+message rather than silence the checker: a mistyped path used to surface as
+`NoneType has no attribute loader`, reading like a bug in the module under test.
+`check_untyped_defs = True` then surfaced nine more, all `var-annotated` on empty
+literals, all annotated. Zero suppressions.
+
+`ruff.toml` selects `E,F,I,B,S,UP`. The `S` set is bandit's rules native to ruff,
+so `shell=True` is caught without a second tool; the two legitimate sites carry
+per-line `# noqa: S602` with the reason, rather than the rule being switched off
+repo-wide — a new one elsewhere still fails. First run found four unused imports
+in shipped hooks.
+
+**`I001` is off for `.claude/hooks/**` and the reason is load-bearing.** Every
+hook does `sys.path.insert(...)` and *then* `from _hooklib import ...`; isort
+wants to hoist that import above the line that makes it resolvable. Auto-fixing
+would have broken all nine hooks at once, silently.
+
+**Language independence.** The critique was fair: the three *kinds* were already
+neutral, but the detection table was hardcoded Python covering four ecosystems.
+It is now `MARKER_CHECKS`, a data table — Rust, Go, Maven, Gradle, Ruby, PHP,
+Elixir, Deno, .NET, Python and plain `make` are rows, and adding one is a row
+rather than a code change. Node stays the one special case: its checks live in
+`package.json` scripts and the runner depends on the lockfile, which no table
+encodes without becoming a program. `make` is detected only for targets that
+actually exist in the Makefile.
+
+Two bugs the gate caught in my own work, both while it was gating me:
+
+1. `ruff.toml` selected `B902`, which is not a ruff rule at all. The commit gate
+   refused, quoting `Unknown rule selector`. The system catching its own
+   misconfiguration is the system working.
+2. The skip message for an uninstalled tool said `` `python` not installed ``
+   when the missing thing was `mypy` — it named `command.split()[0]`. Both wrong
+   and useless. Now names the module for `python -m x`.
+
+`tool_missing` is what makes any of this safe on a fresh clone: a configured
+command whose executable is absent is **skipped and named**, never failed.
+Otherwise the first clone without ruff refuses every commit, and the person who
+hits that is never the person who wrote the config.
+
 ## 2026-08-03 00:20
 **Branch scope is now visible, as facts in a command and a question in a skill.**
 Nothing asked whether a branch had accumulated more than one concern.

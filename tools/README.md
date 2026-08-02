@@ -6,7 +6,7 @@ Helper scripts and the repo's test suites.
   Passes the payload via `HOOK_PAYLOAD`; scripts read it through
   `_hooklib.load_payload()`, which handles both that and stdin.
 
-Test suites — all five run by `/verify`:
+Test suites — all six run by `/verify`:
 
 - `test_hooks.py` — every hook script against realistic payloads.
 - `test_process_router.py` — skill routing: matching, fail-open, and that every
@@ -14,6 +14,14 @@ Test suites — all five run by `/verify`:
 - `test_hook_registration.py` — disk, `settings.json` and `hooks_registry.json`
   agree, in all three directions.
 - `test_artifact_autocommit.py` — what the `Stop` auto-commit will and will not take.
+- `test_project_checks.py` — check detection per project type, and the credential
+  patterns on both axes (path and content).
+
+Not a suite, but run by the commit gate as a lint check:
+
+- `check_config_json.py` — every tracked `.json` parses, and `settings.json`
+  registers no hook that is missing from disk. A stray comma there silently
+  turns the whole hook layer off.
 - `test_referenced_paths.py` — every hook or tool path named in prose exists, or
   is marked gone on the same line. Added after deleting three hooks broke four
   skills and a slash command with every suite still green.

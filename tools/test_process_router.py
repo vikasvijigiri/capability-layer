@@ -54,6 +54,12 @@ def run_hook(prompt: str) -> str:
 
 def load_module(path: Path, name: str):
     spec = importlib.util.spec_from_file_location(name, path)
+    # Both asserts are real, not type-checker appeasement: a mistyped path makes
+    # spec_from_file_location return None, and the failure surfaces three lines
+    # later as `NoneType has no attribute loader` -- which reads like a bug in
+    # the module under test rather than a wrong path in this file.
+    assert spec is not None, f"no import spec for {path}"
+    assert spec.loader is not None, f"no loader for {path}"
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
     spec.loader.exec_module(mod)
