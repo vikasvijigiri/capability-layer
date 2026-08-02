@@ -1,6 +1,6 @@
 ---
 name: knowledge-manager
-description: Use when a unit of work finishes and the repo's persistent docs no longer match reality, or when the staleness warning says LOG.md and HANDOFF.md are behind the work. Triggers include "log this", "update the docs", "record this", "write down what we decided", "note this for later", "handoff", "where did we get to", "capture this before we lose it", finishing a task, making a hard-to-reverse decision, or diagnosing a failure worth remembering. Owns TASK.md, PLAN.md, MEMORY.md, HANDOFF.md, LOG.md, ISSUES.md and decisions/. Do NOT use for CLAUDE.md, for a change with nothing worth recording, or to restate a diff that git already holds.
+description: Use when a unit of work finishes and the repo's persistent docs no longer match reality. Triggers include "log this", "record this", "handoff", "where did we get to", finishing a task, or making a hard-to-reverse decision. Owns TASK.md, PLAN.md, MEMORY.md, HANDOFF.md, LOG.md, ISSUES.md and decisions/. Do NOT use for CLAUDE.md, or to restate a diff git already holds.
 context:
   - formats.md
 effort: low

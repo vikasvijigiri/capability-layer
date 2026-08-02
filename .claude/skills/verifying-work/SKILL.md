@@ -1,6 +1,6 @@
 ---
 name: verifying-work
-description: Use when work is finished and about to be called done, before review or delivery. Triggers include "is this done", "did we solve it", "check this works", "verify this", "does this meet the brief", "are we finished", "confirm it works", "did it actually work", "prove it works", "validate this". Also use when a claim of completion is about to be made in any wording at all, and whenever a plan's tasks are all ticked. Do NOT use to judge code quality or find defects in a diff (code-review), to diagnose a failure you already found (systematic-debugging), or to run the repo's own suites when nothing is being claimed (/verify).
+description: Use when work is finished and about to be called done, before review or delivery. Triggers include "is this done", "does this meet the brief", "prove it works", "are we finished", or any completion claim in any wording. Do NOT use to find defects in a diff (code-review), to diagnose a failure you already found (systematic-debugging), or to run suites when nothing is claimed (/verify).
 effort: medium
 model: sonnet
 ---

@@ -514,14 +514,39 @@ def parse_handoff_status(handoff_path):
         text,
     )
     if tagged is not None:
-        return tagged.group(1).strip()
+        return _clip(tagged.group(1).strip(), HANDOFF_BUDGET, "HANDOFF.md")
     match = re.search(r"(?ms)^## Current Work\s*\n.*\Z", text)
     if match is None:
-        return text  # older/unrecognized format -- fall back to the whole file
-    return match.group(0).strip()
+        # Older/unrecognised format. Falling back to the whole file is right --
+        # something is better than nothing -- but it must still be budgeted, or
+        # an unmarked HANDOFF.md injects itself entirely.
+        return _clip(text, HANDOFF_BUDGET, "HANDOFF.md")
+    return _clip(match.group(0).strip(), HANDOFF_BUDGET, "HANDOFF.md")
 
 
-def parse_last_n_log_entries(log_path, n=5):
+# Character budgets for what this hook injects at session start.
+#
+# Measured 2026-08-02: the payload was 26,990 chars (~6,750 tokens) spent before
+# the user had typed anything, because both parsers below were uncapped -- five
+# whole LOG entries plus everything in HANDOFF.md from "Current Work" onward.
+# Long entries are good writing and bad context; the fix is a budget here, not
+# shorter entries.
+#
+# Truncation always names the file, so the full text stays one Read away. An
+# injected summary is a pointer, never a replacement.
+HANDOFF_BUDGET = 2400
+LOG_ENTRY_BUDGET = 700
+LOG_TOTAL_BUDGET = 2400
+LOG_ENTRIES = 3
+
+
+def _clip(text, budget, what):
+    if len(text) <= budget:
+        return text
+    return text[:budget].rstrip() + f"\n[... clipped, Read {what} for the rest]"
+
+
+def parse_last_n_log_entries(log_path, n=LOG_ENTRIES):
     if not os.path.isfile(log_path):
         return ""
     with open(log_path, encoding="utf-8") as f:
@@ -530,9 +555,9 @@ def parse_last_n_log_entries(log_path, n=5):
     entries = []
     i = 1
     while i < len(parts) - 1:
-        entries.append(parts[i] + parts[i + 1])
+        entries.append(_clip(parts[i] + parts[i + 1], LOG_ENTRY_BUDGET, "LOG.md"))
         i += 2
-    return "".join(entries[:n])
+    return _clip("".join(entries[:n]), LOG_TOTAL_BUDGET, "LOG.md")
 
 
 def _parse_env_file(path):
@@ -658,9 +683,13 @@ def main():
             + handoff_status
         )
 
-    last_logs = parse_last_n_log_entries(os.path.join(root, "LOG.md"), n=5)
+    # No explicit n: the budget lives with the parser, next to the other three
+    # constants. Passing n=5 here silently overrode LOG_ENTRIES and shipped four
+    # entries under a header claiming five -- caught by running the hook.
+    last_logs = parse_last_n_log_entries(os.path.join(root, "LOG.md"))
     if last_logs.strip():
-        sections.append("--- LOG.md (last 5 entries) ---\n" + last_logs)
+        sections.append(
+            f"--- LOG.md (last {LOG_ENTRIES} entries, clipped) ---\n" + last_logs)
 
     decision_files = list_decisions(root)
     if decision_files:

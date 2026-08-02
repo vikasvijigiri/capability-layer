@@ -1,7 +1,7 @@
 ---
 name: writing-plans
 model: opus
-description: Use when an approved spec or design document exists for a multi-step task and no implementation code has been written yet. Triggers include "write the implementation plan", "turn the spec into tasks", "plan the tasks", "break the spec into steps", "break this down", "bite-sized tasks", "task by task plan", "hand this to a subagent", "what does the engineer actually do", "what order should we build this in". Also use when a spec is approved and someone is about to start coding straight from it, since a spec says what to build but not the order or how each piece is proved. Do NOT use before a spec exists (brainstormer), for a six-line brief rather than a spec (task-brief), or for a single change that needs no sequencing.
+description: Use when an approved spec exists for a multi-step task and no implementation code is written yet. Triggers include "write the implementation plan", "turn the spec into tasks", "break this down", "what order should we build this in". Do NOT use before a spec exists (brainstormer), for a six-line brief (task-brief), or for a single change needing no sequencing.
 effort: high
 ---
 

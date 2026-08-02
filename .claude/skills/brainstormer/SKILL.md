@@ -1,6 +1,6 @@
 ---
 name: brainstormer
-description: Use when creative work is about to start (a new feature, component, product direction or behaviour change) and the approach is not yet settled. Triggers include "any ideas", "what could we do", "help me think this through", "what are our options", "bounce ideas", "spitball this", "what if we", "thinking out loud", "give me some angles", "I am stuck", "riff on this", "how should we approach", "is there a better way". Also use when the first workable idea is about to become the only one considered, or when a request spans several subsystems and needs decomposing before anything is designed. Do NOT use once a design or spec exists and the work is to plan or build it (writing-plans), nor when the solution is already settled and only scope is vague (task-brief).
+description: Use when creative work is starting and the approach is not yet settled - a feature, direction or behaviour change. Triggers include "any ideas", "what are our options", "how should we approach", "is there a better way", "I am stuck". Do NOT use once a design exists and the work is to plan or build it (writing-plans), or when only scope is vague (task-brief).
 effort: high
 model: opus
 ---

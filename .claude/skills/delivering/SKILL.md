@@ -1,6 +1,6 @@
 ---
 name: delivering
-description: Use when verified, reviewed work needs to reach its destination in the repository - merged, pushed, opened as a PR or handed over. Triggers include "ship it", "deliver this", "merge this", "open a PR", "raise the PR", "push this up", "wrap this up", "finish the branch", "how do we land this", "what do we do with this branch". Also use when a branch is complete and the integration route has not been chosen. Do NOT use to review the change first (code-review), to prove it works (verifying-work), to put the change into a running environment (releasing), or to record what happened afterwards (knowledge-manager).
+description: Use when verified, reviewed work needs to reach its destination - merged, pushed or opened as a PR. Triggers include "ship it", "open a PR", "merge this", "push this up", "how do we land this". Do NOT use to review it first (code-review), to prove it works (verifying-work), to deploy it (releasing), or to record it (knowledge-manager).
 effort: low
 model: sonnet
 ---

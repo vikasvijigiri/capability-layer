@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Use when a change is about to be delivered and has not been reviewed - before "git commit", "git push", "gh pr create". Triggers include "review the diff", "review this change", "review my code", "review the PR", "check this before I commit", "is this ready to ship", "look over these changes", "code review", "can you sanity check this". Also use again when the change moves after an earlier review, since the earlier one no longer covers it. Do NOT use to write new code, to fix what the review finds (report first, fix as separate work), or for a diff you have not actually read.
+description: Use before a change is delivered - before "git commit", "git push" or "gh pr create". Triggers include "review this change", "review the PR", "is this ready to ship", "code review", "sanity check this". Do NOT use to write code, to fix what the review finds (report first, fix separately), or for a diff you have not actually read.
 effort: high
 model: sonnet
 ---

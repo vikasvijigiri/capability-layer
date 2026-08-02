@@ -1,6 +1,6 @@
 ---
 name: research
-description: Use when a decision needs evidence from outside your own knowledge, before designing or building. Triggers include "use github and see how people do it", "how do people usually handle this", "is there a better version", "fetch some standard repos", "what's the prior art", "what's the standard approach", "check whether this exists already", "look this up", "investigate", "find evidence for", "compare the options". Also use before adopting any pattern you have not verified in a primary source. Do NOT use for a single-fact lookup one search answers, for a question about this repo alone that Grep settles, or once the evidence is in hand and the work is to design from it.
+description: Use when a decision needs evidence from outside your own knowledge, before designing or building. Triggers include "how do people usually handle this", "what's the prior art", "check whether this exists already", "compare the options", "investigate". Do NOT use for a single-fact lookup, for a question about this repo that Grep settles, or once the evidence is in hand.
 effort: high
 model: opus
 ---

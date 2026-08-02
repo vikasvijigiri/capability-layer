@@ -1,6 +1,6 @@
 ---
 name: systematic-debugging
-description: Use when encountering any bug, test failure, or unexpected behaviour, before proposing a fix. Triggers include "this is broken", "why is this failing", "the test fails", "it worked before", "debug this", "what's wrong with", "this returns the wrong", "nothing happens", "it's silently doing nothing", "figure out why", "root cause", a hook that produced no output when it should have, a check that passes when it should fail. Also use after a fix did not work, and especially under time pressure, when guessing feels faster. Do NOT use for a failure you have already root-caused and only need to fix, or for a known-unimplemented feature.
+description: Use on any bug, test failure or unexpected behaviour, before proposing a fix. Triggers include "why is this failing", "this is broken", "it worked before", "figure out why", "root cause", a hook that produced no output, a check that passes when it should fail. Do NOT use for a failure already root-caused, or a known-unimplemented feature.
 effort: high
 model: opus
 ---

@@ -23,11 +23,11 @@ claim, so entries lean on multi-word phrases lifted from each skill's own
 
 ## research
 
-Keywords: use github, using github, see github, check github, from github, connect to github, a better version, see how people do it, how do people usually handle, is there a better version, fetching the best version, fetch some standard repos, whats the prior art, what is the prior art, standard approach, check whether this exists, look this up, investigate this, find evidence for, compare the options, what do other repos do
+Keywords: use github, using github, see github, check github, from github, connect to github, a better version, see how people do it, how do people usually handle, is there a better version, fetching the best version, fetch some standard repos, whats the prior art, what is the prior art, standard approach, check whether this exists, look this up, investigate this, find evidence for, compare the options, what do other repos do, use github and see how people do it, what's the standard approach
 
 ## systematic-debugging
 
-Keywords: this is broken, why is this failing, the test fails, tests are failing, it worked before, debug this, whats wrong with, what is wrong with, nothing happens, silently doing nothing, figure out why, root cause, root cause this, why does this return, the fix did not work, still failing
+Keywords: this is broken, why is this failing, the test fails, tests are failing, it worked before, debug this, whats wrong with, what is wrong with, nothing happens, silently doing nothing, figure out why, root cause, root cause this, why does this return, the fix did not work, still failing, it's silently doing nothing, this returns the wrong, what's wrong with
 
 ## knowledge-manager
 
@@ -35,19 +35,19 @@ Keywords: log this, update the docs, record this, record this unit of work, writ
 
 ## code-review
 
-Keywords: code review, review the diff, review this change, review my code, review the pr, review the branch, check this before i commit, look over these changes, sanity check this, is this ready to ship, no code review has been recorded
+Keywords: code review, review the diff, review this change, review my code, review the pr, review the branch, check this before i commit, look over these changes, sanity check this, is this ready to ship, no code review has been recorded, can you sanity check this
 
 ## task-brief
 
-Keywords: task brief, six line brief, 6 line brief, scope this, scope the task, break this into a brief, structure this task, turn this into a task, write the brief, what is out of scope, add support for, can we support, i want users to be able to, it would be nice if, new feature request
+Keywords: task brief, six line brief, 6 line brief, scope this, scope the task, break this into a brief, structure this task, turn this into a task, write the brief, what is out of scope, add support for, can we support, i want users to be able to, it would be nice if, new feature request, fix the thing where
 
 ## brainstormer
 
-Keywords: brainstorm, spitball, bounce ideas, any ideas, what could we do, throw some ideas, thinking out loud, give me some angles, what are our options, help me think this through, i am stuck, im stuck, what if we, ideate, riff on
+Keywords: brainstorm, spitball, bounce ideas, any ideas, what could we do, throw some ideas, thinking out loud, give me some angles, what are our options, help me think this through, i am stuck, im stuck, what if we, ideate, riff on, riff on this, spitball this
 
 ## writing-plans
 
-Keywords: implementation plan, write the implementation plan, turn the spec into tasks, plan the tasks, break the spec into steps, bite-sized tasks, task by task plan, hand this to a subagent
+Keywords: implementation plan, write the implementation plan, turn the spec into tasks, plan the tasks, break the spec into steps, bite-sized tasks, task by task plan, hand this to a subagent, what does the engineer actually do
 
 ## executing-plans
 
@@ -63,4 +63,4 @@ Keywords: ship it, ship this, deliver this, land this, merge this, open a pr, ra
 
 ## releasing
 
-Keywords: deploy this, deploy it, deploy to prod, deploy to production, deploy to staging, run the deploy, push it live, put it live, go live, is it live, roll this out, roll it out, release it, release to staging, promote to production, promote to prod, publish the package, publish it, cut a release, ship to prod, roll it back, roll back the deploy, revert the deploy, the deploy failed
+Keywords: deploy this, deploy it, deploy to prod, deploy to production, deploy to staging, run the deploy, push it live, put it live, go live, is it live, roll this out, roll it out, release it, release to staging, promote to production, promote to prod, publish the package, publish it, cut a release, ship to prod, roll it back, roll back the deploy, revert the deploy, the deploy failed, deploy to render, put it on vercel, deploy to vercel

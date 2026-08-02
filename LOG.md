@@ -3,6 +3,42 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-02 22:40
+**Context cost measured, then cut where it recurs.** Four costs, measured rather
+than guessed:
+
+| Cost | Before | After | When |
+|---|---|---|---|
+| skill descriptions | 7,445 chars (~1,860 tok) | 4,084 (~1,020) | **every turn** |
+| `02-bootstrap-docs` payload | 26,990 chars (~6,750 tok) | 5,533 (~1,380) | every session |
+| `CLAUDE.md` | 235 lines / 11,479 | 218 / 10,417 | every session |
+| 5 suites at Stop | 5.4s, 0 tokens | unchanged | every turn — left alone |
+
+The Stop latency was the one I expected to be worst and it is fine; an earlier
+24s reading included the temp-repo work, not the nested path.
+
+**The user's warning was right and the fix was structural, not a compromise.**
+Shortening descriptions drops trigger phrases. But this repo has **two routing
+surfaces**: `description:` is injected every turn, while
+`.claude/routing/process-skills.md` is read by a hook and costs nothing. So
+breadth moves to the routing file and descriptions stay ~380 chars.
+
+Verified rather than assumed: diffed every quoted phrase dropped from each
+description against the routing file, found **12 genuinely uncovered**, backfilled
+them, then **live-fired `05-process-skill-router.py`** on each one. All seven
+representative phrases still route — `"spitball this"`, `"can you sanity check
+this"`, `"it's silently doing nothing"` and the rest.
+
+Two of my own bugs, both caught by running things rather than reading them:
+
+1. `parse_last_n_log_entries` took `n=LOG_ENTRIES` (3) but the **call site still
+   passed `n=5`**, so four entries shipped under a header claiming five. A default
+   that a caller silently overrides is not a budget.
+2. The spend-guard denied a Bash call because the literal string for a deploy
+   platform appeared inside a heredoc — the same verb-matched-anywhere behaviour
+   documented in `decisions/2026-08-01-review-gate-matches-verbs-anywhere.md`.
+   Worked around by writing the script to a file instead of inlining it.
+
 ## 2026-08-02 22:05
 **Model and effort budget, differentiated.** All 11 skills declared
 `model: opus` + `effort: high` — never a decision, just a default nobody

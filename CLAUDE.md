@@ -79,24 +79,21 @@ most turns, so it applied constantly. The policy now:
 | `sonnet` | `code-review`, `executing-plans`, `task-brief`, `verifying-work`, `delivering`, `releasing`, `knowledge-manager` | coding, checking, and fixed-shape procedure |
 | `haiku` | agent `source-digger` | pure extraction, no judgement |
 
-`effort` tracks the same axis: `high` where the output is a judgement, `medium`
-where it is structured, `low` where the skill is a checklist with a fixed shape.
-Testing costs no model at all here — it is `python tools/test_*.py`.
+`effort` tracks the same axis: `high` for a judgement, `medium` for structured
+work, `low` for a fixed-shape checklist. `systematic-debugging` keeps `opus`
+though diagnosis is not planning — three 2026-08-02 bugs were caught in reasoning
+alone and were invisible in the diff.
 
-`systematic-debugging` keeps `opus` although diagnosis is not planning. On
-2026-08-02 three bugs were caught only in reasoning and were invisible in the
-diff: an unbounded recursion that presented as a hang, a re-entry guard that
-disabled the test proving it, and a fingerprint deadlock between two gates. That
-is the class of thing this budget buys.
+Two other levers: **`/fast`** (same Opus 5, less extended thinking — right for
+doc sweeps and bulk edits, wrong for debugging), and **request shape**, which is
+the biggest and is the user's. Deliberation goes on resolving ambiguity, not
+solving problems; one goal per request cuts it directly.
 
-**`/fast`** is the other lever — same Opus 5, less extended thinking. Correct for
-mechanical stretches (doc sweeps, bulk deletion); turn it off for debugging.
-
-**Request shape is the biggest lever and it is the user's.** The longest
-deliberation is spent resolving ambiguity, not solving problems — "is this
-blocked or should I retry", "unregister or delete first", "which approval did
-they mean". One goal per request cuts it directly; "implement all" across four
-partly-blocked phases maximises it.
+Descriptions are injected **every turn** (~1,000 tokens for eleven) while
+`.claude/routing/process-skills.md` is read by a hook and costs nothing — so
+trigger breadth belongs in the routing file and descriptions stay ~380 chars.
+`session-start/02-bootstrap-docs.py` is budgeted for the same reason: it injected
+26,990 chars before anyone typed, and now clips to ~5,500.
 
 ---
 
@@ -170,36 +167,22 @@ only if all five hold:
 | message | the generated subject matches `_hooklib.AI_ATTRIBUTION_PATTERNS` |
 
 Every clause is a fact about the artefact, never about process. A refusal is
-always spoken; nothing is skipped silently. It **never pushes** and never
-`git add .` — always an explicit pathspec.
+always spoken. It **never pushes**, never `git add .`.
 
-**Review moves to the push/PR**, over the whole branch, because a commit that
-needs a human is not a checkpoint. The `wip:` prefix is deliberate: squash-merge
-collapses them into the one message a human writes.
+**Review moves to the push/PR**, over the whole branch — a commit that needs a
+human is not a checkpoint. `wip:` is deliberate: squash-merge collapses them.
 
 Two things this depends on, both easy to break:
 
 - `UAIOS_AUTOCOMMIT_RUNNING` guards re-entry. `tools/test_hooks.py` fires the
   whole `post-run` event, so without it the hook runs the suites which run the
-  hook, unbounded — it presents as a hang, not an error.
-- The hook's commits **bypass `PreToolUse` entirely**, so the secret scan and the
-  attribution check are enforced *inline* from `_hooklib`, not by
-  `pre-commit/01-secret-scan.py`, which never sees them.
+  hook, unbounded — presenting as a hang, not an error.
+- Its commits **bypass `PreToolUse`**, so the secret and attribution checks run
+  *inline* from `_hooklib`; `pre-commit/01-secret-scan.py` never sees them.
 
-`post-run/05-docs-gate.py` and `pre-commit/05-docs-required.py` were deleted on
-2026-08-02, along with `pre-commit/03-review-gate.py`. All three gated *process
-compliance* rather than artefact correctness, and the review gate fingerprinted
-the whole working tree — so writing the log entry `05-docs-required` demanded
-invalidated the receipt `03-review-gate` demanded, a deadlock proven by
-measurement. Five comparable repos were read and not one enforces process this
-way; see `LOG.md` 2026-08-02 19:26 and `docs/2026-08-02-git-flow-walkthrough.md`.
-
-Staging is no longer guarded. `session-start/03-index-baseline.py` and
-`pre-commit/06-index-scope-guard.py` were deleted on 2026-08-02 with the rest of
-the process gates — the condition they existed for (50 files inherited in the
-index across sessions) cannot recur while the auto-commit empties the tree every
-turn. If a large staged set ever appears, the auto-commit has been refusing and
-its reason is in the Stop output.
+Nineteen hooks were deleted on 2026-08-02, including every process-compliance
+gate and the staging guards. Why, and the deadlock that proved it: `LOG.md`
+2026-08-02 19:26 / 21:30, and `docs/2026-08-02-git-flow-walkthrough.md`.
 
 ---
 
