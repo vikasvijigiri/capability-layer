@@ -7,8 +7,8 @@ injects the names of any skills that match.
 Why this file exists: the skill listing is truncated against a token budget, so
 a skill's `description:` — its only other trigger surface — can be absent on the
 exact turn it was needed. This file is the routing signal that survives that
-truncation. It is currently cheap to satisfy (two skills), and the budget is a
-constraint on what gets added back, not a problem to solve later.
+truncation. It is currently cheap to satisfy (eleven skills), and the budget is
+a constraint on what gets added back, not a problem to solve later.
 
 **Format contract.** One `## <skill-name>` heading per entry, matching a
 directory under `.claude/skills/` exactly. Exactly one `Keywords:` line beneath
@@ -20,6 +20,10 @@ claim, so entries lean on multi-word phrases lifted from each skill's own
 `description:` trigger list rather than bare words that fire on anything.
 
 ---
+
+## research
+
+Keywords: use github, using github, see github, check github, from github, connect to github, a better version, see how people do it, how do people usually handle, is there a better version, fetching the best version, fetch some standard repos, whats the prior art, what is the prior art, standard approach, check whether this exists, look this up, investigate this, find evidence for, compare the options, what do other repos do
 
 ## systematic-debugging
 
@@ -44,3 +48,19 @@ Keywords: brainstorm, spitball, bounce ideas, any ideas, what could we do, throw
 ## writing-plans
 
 Keywords: implementation plan, write the implementation plan, turn the spec into tasks, plan the tasks, break the spec into steps, bite-sized tasks, task by task plan, hand this to a subagent
+
+## executing-plans
+
+Keywords: execute the plan, run the plan, work through the tasks, work through the plan, start building, start implementing, go ahead and implement, carry this out, continue the plan, pick up where we left off, do task, build it, implement this, implement the plan, start the experiment loop
+
+## verifying-work
+
+Keywords: is this done, are we finished, are we done, did we solve it, did it actually work, does this meet the brief, check this works, confirm it works, prove it works, verify this, validate this, is it working, did that fix it
+
+## delivering
+
+Keywords: ship it, ship this, deliver this, land this, merge this, open a pr, raise the pr, create the pr, push this up, wrap this up, finish the branch, finish this branch, how do we land this, what do we do with this branch
+
+## releasing
+
+Keywords: deploy this, deploy it, deploy to prod, deploy to production, deploy to staging, run the deploy, push it live, put it live, go live, is it live, roll this out, roll it out, release it, release to staging, promote to production, promote to prod, publish the package, publish it, cut a release, ship to prod, roll it back, roll back the deploy, revert the deploy, the deploy failed

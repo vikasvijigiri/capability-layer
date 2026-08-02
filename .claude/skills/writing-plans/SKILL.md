@@ -229,12 +229,20 @@ digraph writing_plans {
 }
 ```
 
+## Next step — you MUST take it
+
+**The terminal state is invoking `executing-plans`**, once gate 3 is answered.
+Pass it the plan path and the execution mode the user chose. Gate 3 chooses the
+mode, not the successor.
+
 ## Routing
 
 - Mandatory validator: none — this produces a plan document, not a change to
   running code. The self-review and the three gates are the gates.
 - Preceded by `brainstormer`, which produces the spec this consumes.
-- Terminal handoff: the execution path chosen at gate 3.
+- Terminal handoff, and you MUST take it once gate 3 is answered: invoke
+  `executing-plans`, telling it which execution mode the user chose. Gate 3
+  picks the *mode*; the successor skill is the same either way.
 - Before any task that pushes, merges, deploys or is otherwise irreversible,
   stop and get explicit approval in the conversation. There is no approval
   skill — the plan names the step and you ask.

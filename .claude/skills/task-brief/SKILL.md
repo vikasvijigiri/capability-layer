@@ -110,10 +110,27 @@ was too big — say so and go to `brainstormer`.
 | Presenting the brief inside `AskUserQuestion` | Six fields cannot be read in a dialogue box — print them first |
 | Treating a blank Outputs as "decide later" | It is the signal to stop and go to `brainstormer`, not a gap to fill |
 
+## Next step — you MUST take it
+
+The brief is not the deliverable; the work is. When `TASK.md` is approved, say
+which successor you are invoking and invoke it in the same turn:
+`brainstormer` (approach open) · `writing-plans` (settled, needs sequencing) ·
+straight to the change (smaller than a plan).
+
+Stopping here is the chain's most common break: nothing watches for a finished
+brief, so an un-handed-off brief is simply forgotten.
+
 ## Routing
 
 - Mandatory validator: none. The approval gate in step 5 is the gate.
-- Terminal handoff: direct execution. Nothing else.
+- Terminal handoff, and you MUST take it once the brief is approved — one of
+  three, decided by what the brief says:
+  1. The approach is still open → invoke `brainstormer`.
+  2. The approach is settled and the work needs sequencing → invoke
+     `writing-plans`.
+  3. The change is smaller than a plan → do it, then `verifying-work`.
+  Name which one you are taking. Stopping after writing `TASK.md` leaves the
+  chain broken — nothing else will pick it up.
 - **Alternative to `brainstormer`, never a predecessor.** Brainstormer exists
   because the first idea becomes an anchor; a finished brief *is* that anchor,
   since Goal and Outputs commit to a solution shape.

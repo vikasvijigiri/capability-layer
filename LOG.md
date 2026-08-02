@@ -3,6 +3,23 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-02 19:40
+Backlog landing, commits 1-3. `92376d0` — the archive reorganisation, 51 files,
+all `R100`, `0 insertions(+), 0 deletions(-)`. `4ff5ab2` — the hook layer, 22
+files, `2449 insertions(+), 182 deletions(-)`: four new hooks and three new
+suites. This commit — the skill layer, including
+**`.claude/agents/` and five skill directories that were untracked entirely**, so
+git held six of eleven skills and zero agents in a repo whose product is
+`.claude/`. That is the single most valuable thing in this landing.
+
+Seven suites pass, quoted in `4ff5ab2`'s message. Reviewed in full this session:
+`06-artifact-autocommit.py`, `03-index-baseline.py`, `03-review-gate.py`,
+`06-index-scope-guard.py`, `05-docs-required.py`, `.claude/workflow.md`,
+`CLAUDE.md`. **Not read: `_hooklib.py` (+295), `01-context-budget.py`, the three
+new test suites, and the six modified `SKILL.md` diffs.** They pass their
+mechanical checks, which is not the same as having been read — a real review of
+those is still owed.
+
 ## 2026-08-02 19:26
 Landing the 91-file backlog in four commits, after a GitHub comparison settled that
 the gate layer is the problem and not the skill layer. Five repos read:

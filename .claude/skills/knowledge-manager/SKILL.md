@@ -52,9 +52,12 @@ The reader has none of your context, memory, or machine. `~/.claude` memory and
 a CI agent, or another workstation. These files are the only thing that does —
 which is the entire reason they are committed rather than cached.
 
-Since `session-start/02-bootstrap-docs.py` was unregistered on 2026-08-01,
-nothing loads these automatically either. Assume the reader opened the file
-deliberately and knows nothing else.
+`session-start/02-bootstrap-docs.py` re-injects `HANDOFF.md`'s
+`<!-- session-context -->` block and the last `LOG.md` entries at session start —
+it was registered on 2026-08-02, having sat on disk unwired since 2026-08-01.
+So the next session sees what you write here, but a teammate or a CI agent only
+sees the file. Write for the one who opened it deliberately and knows nothing
+else.
 
 ## Route first, then read one format section
 

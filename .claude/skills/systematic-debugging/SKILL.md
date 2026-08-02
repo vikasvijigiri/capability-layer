@@ -76,7 +76,7 @@ Complete this before anything else.
 3. **Verify:** the test passes, nothing else broke, the original symptom is gone.
    Quote the real output.
 4. **Record it in `ISSUES.md`** — symptom, diagnosis, every attempt with its
-   outcome, fix, status. Format is in `knowledge-manager`'s `formats.md`. The
+   outcome, fix, status. Format is in `.claude/skills/knowledge-manager/formats.md`. The
    failed attempts are the valuable part; they stop the next person re-running
    them.
 
@@ -133,6 +133,22 @@ From the user: *"is that not happening?"* means you assumed without verifying.
 | 2 Pattern | Find a working twin, read it fully, list differences | The difference is named |
 | 3 Hypothesis | One theory, smallest test, one variable | Confirmed, or replaced |
 | 4 Fix | Failing test, one fix, verify, record | Symptom gone, `ISSUES.md` written |
+
+## Parallel work — `failure-investigator`
+
+When several *independent* failures land at once — different files, different
+subsystems, no shared cause — dispatch one **`failure-investigator`** per
+failure, all in the same message. Each reproduces its own failure, finds the
+root cause, and returns the cause plus the command that proves it. None of them
+fixes anything, so they cannot collide.
+
+Independence is the gate, and it is a judgement you make first: if fixing one
+might fix another, they are one investigation, not three. Shared state, or a
+suspicion of a common cause, means do it here.
+
+You still own the fix, the four-phase loop, and the `ISSUES.md` entry.
+
+**Only when the user has asked for subagents.**
 
 ## Routing
 

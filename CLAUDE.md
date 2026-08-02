@@ -25,12 +25,40 @@ owns the work rather than restating it. History belongs in `LOG.md` and git.
 In `.claude/skills/<name>/SKILL.md`. Each states its own triggers, gates and
 handoffs — read the skill, don't infer an order from this list.
 
-- `task-brief` — rough ask → six-field brief (Goal / Constraints / Inputs /
-  Outputs / Done-check / Out-of-scope), approved, written to `TASK.md`.
-- `brainstormer` — open question → design spec at
-  `docs/specs/YYYY-MM-DD-<topic>-design.md`.
-- `writing-plans` — approved spec → task-by-task plan at
-  `docs/plans/YYYY-MM-DD-<feature>.md`.
+**`.claude/workflow.md` owns the order**: which skill owns which stage, what each
+consumes and produces, and the two shapes (linear and loop). Read it before
+adding a skill or wondering what comes next.
+
+| Skill | Stage | Produces |
+|---|---|---|
+| `task-brief` | 1 frame | `TASK.md` — six fields, approved |
+| `brainstormer` | 2 design | `docs/specs/YYYY-MM-DD-<topic>-design.md` |
+| `writing-plans` | 3 plan | `docs/plans/YYYY-MM-DD-<feature>.md` |
+| `executing-plans` | 4 execute | the thing itself; ticked plan checkboxes |
+| `verifying-work` | 5 validate | coverage verdict + the unbacked set |
+| `code-review` | 6 review | findings + a sign-off receipt |
+| `delivering` | 7 deliver | merged / pushed / PR opened |
+| `releasing` | 8 release | the change serving at a named target + a quoted smoke check |
+| `knowledge-manager` | 9 record | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `decisions/` |
+| `research` | — entered from any stage | `docs/research/YYYY-MM-DD-<topic>.md` |
+| `systematic-debugging` | — entered on any failure | root cause + `ISSUES.md` entry |
+
+### Subagents
+
+Four, in `.claude/agents/<name>.md`. Each is dispatched by the skill that owns
+the stage, only when the user has asked for subagents:
+
+| Agent | Dispatched by | For | Parallel? |
+|---|---|---|---|
+| `source-digger` | `research` | one external source → a digest file | yes, 3-5 |
+| `failure-investigator` | `systematic-debugging` | one independent failure → root cause | yes, one per failure |
+| `diff-reviewer` | `code-review` | one review angle over one diff | yes, one per angle |
+| `task-implementer` | `executing-plans` | one plan task | **no — never two at once** |
+
+They exist to keep bulk out of the main context and to run independent work
+concurrently. `tools/test_process_router.py` asserts each has a description
+saying when *not* to use it, an explicit `tools:` allowlist (no line means it
+inherits `Write`), a pinned model, and at least one skill that names it.
 
 Every skill **must** also have a `## <name>` entry in
 `.claude/routing/process-skills.md`; the skill listing is truncated against a
@@ -42,7 +70,7 @@ token budget, so that file is the only routing signal that always survives.
 
 ## Commands
 
-    /verify         all four test suites + env check + hook registration + frontmatter parse
+    /verify         all seven test suites + env check + hook registration + frontmatter parse
     /save           stage, describe and commit (local only)
     /wip            branch, uncommitted work, which knowledge docs went stale
     /skills-doctor  skill layer health — description budget, YAML, name mismatches
@@ -51,8 +79,11 @@ Raw equivalents, run from the repo root:
 
     python tools/test_hooks.py
     python tools/test_process_router.py
+    python tools/test_hook_registration.py
     python tools/test_docs_gates.py
     python tools/test_docs_staleness.py
+    python tools/test_artifact_autocommit.py
+    python tools/test_index_scope_guard.py
     python tools/run_hook.py <event> '<json-payload>'   # fire one hook manually
 
 Run `/verify` before declaring any work done.
@@ -63,14 +94,16 @@ Run `/verify` before declaring any work done.
 
 | Path | What it is |
 |---|---|
-| `.claude/skills/` | `task-brief`, `brainstormer`, `writing-plans` |
+| `.claude/skills/` | the eleven skills above, one directory each |
+| `.claude/agents/` | four subagents; dispatched by skills for parallel work, one file each |
+| `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
 | `.claude/routing/process-skills.md` | keyword → skill-name routing (mandatory per skill) |
 | `.claude/hooks/<event>/` | lifecycle hooks; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-*` |
 | `.claude/settings.json` | what actually fires; `hooks_registry.json` only documents intent |
 | `.claude/commands/` | the four slash commands above |
-| `tools/` | `run_hook.py` + four test suites |
-| `docs/specs/`, `docs/plans/` | skill outputs |
-| `docs/00-*.md … 17-*.md` | design notes for the *pre-2026-08-01* layer — stale, read with suspicion |
+| `tools/` | `run_hook.py` + seven test suites |
+| `docs/specs/`, `docs/plans/`, `docs/research/` | skill outputs, one dated file each |
+| `docs/archive/` | the pre-2026-08-01 design layer; superseded, see `docs/archive/ARCHIVE.md` |
 | `decisions/` | dated ADRs |
 | `.mcp.json`, `.vscode/mcp.json` | MCP servers, kept in sync by hand |
 
@@ -86,13 +119,21 @@ them, so they are code, not commentary:
 `TASK.md` (active task) · `PLAN.md` · `HANDOFF.md` (current work, pending, next)
 · `LOG.md` (history) · `ISSUES.md` · `MEMORY.md`
 
-Three hooks watch them at three moments: `pre-run/04-docs-staleness.py` warns
-when they drift from the diff, `post-run/05-docs-gate.py` tries to block the
-turn from ending (`Stop` blocking is unproven in this build), and
-`pre-commit/05-docs-required.py` denies a multi-file commit that touches neither
-`LOG.md` nor `HANDOFF.md` — `PreToolUse` deny is the mechanism that demonstrably
-works. Override with `ALLOW_UNLOGGED_COMMIT=1` when a commit genuinely warrants
-no log entry.
+Four hooks watch them at four moments: `pre-run/04-docs-staleness.py` warns when
+they drift from the diff, `post-run/05-docs-gate.py` blocks the turn from ending
+(observed working 2026-08-02 — it had been documented as unproven since the build
+began), `pre-commit/05-docs-required.py` denies a commit of 10+ files touching
+neither `LOG.md` nor `HANDOFF.md`, and `post-run/06-artifact-autocommit.py`
+commits them — the only hook here that acts rather than asks, scoped to `.md`
+prose so it can never sweep code past the other three. Override the docs-required
+gate with `ALLOW_UNLOGGED_COMMIT=1` when a commit genuinely warrants no log entry
+— note it must be set in Claude Code's own environment, not inline in a Bash
+command, where it never reaches the hook.
+
+Staging is guarded by `session-start/03-index-baseline.py` plus
+`pre-commit/06-index-scope-guard.py`: the first records what was already staged
+when the session began, the second asks before a blanket `git add` or before a
+commit spends files this session never staged. `ALLOW_WIDE_STAGE=1` skips it.
 
 ---
 

@@ -110,11 +110,35 @@ Then stop. Do not commit, push, or open the PR yourself unless separately asked.
 | Fixing findings inside the review | The receipt then covers content that no longer exists; the gate re-asks and the review is wasted |
 | Recording with `--record` when the delivery is a PR | Wrong fingerprint kind; the gate asks again and the sign-off is lost |
 
+## Next step — you MUST take it
+
+**The terminal state is invoking `delivering`**, once the user has signed off
+and the receipt is recorded. Do not commit, push or open the PR here; that skill
+owns the route and its own approval gate.
+
+## Parallel work — `diff-reviewer`
+
+For a change large enough that one pass blurs the angles together, write the
+diff to a file and dispatch a **`diff-reviewer`** per angle — `correctness`,
+`security`, `test-quality`, `scope` — in the same message. Each returns findings
+with `file:line`; you merge them, drop duplicates, and present one list.
+
+Hand over the diff as a **path**, never pasted: anything you paste into a
+dispatch stays in your context for the rest of the session.
+
+What does not delegate: assembling the surface, showing the user, asking for
+sign-off, and running `--record`. The receipt claims a human saw this change —
+no agent can make that claim on their behalf.
+
+**Only when the user has asked for subagents.**
+
 ## Routing
 
 - Mandatory validator: none. The sign-off in step 4 is the gate, and it is the
   only thing that may write a receipt.
-- Terminal handoff: none. This reports and records; it does not deliver.
+- Terminal handoff: `delivering`, once the user has signed off. This skill
+  records the receipt; it does not push, merge or open the PR itself — that is
+  `delivering`'s job, and it has its own approval gate.
 - Triggered by `03-review-gate.py` returning `ask` on `git commit`, `git push`
   or `gh pr create`, or invoked directly before any of those.
 - Findings that need real work become their own task via `task-brief`. Do not

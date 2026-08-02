@@ -146,6 +146,13 @@ digraph brainstorming {
 | Adding "other / none of these" | The tool appends one — yours crowds out a real position |
 | Refining details across several subsystems | Decompose first, or the questions are wasted |
 
+## Next step — you MUST take it
+
+**The terminal state is invoking `writing-plans`.** Once the user has approved
+the written spec, invoke it in the same turn. Do not invoke any other skill, and
+do not start implementing — the spec says what to build, never in what order or
+how each piece is proved.
+
 ## Routing
 
 - Mandatory validator: none — this produces a spec, not a change to running
