@@ -3,6 +3,39 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-02 19:26
+Landing the 91-file backlog in four commits, after a GitHub comparison settled that
+the gate layer is the problem and not the skill layer. Five repos read:
+stripe/stripe-ios (1 hook), rstudio/rstudio (2), linuxfoundation/crowd.dev (1),
+carlrannaberg/claudekit (19), obra/superpowers (1 hook, 14 skills).
+
+**Every hook in all five verifies an artefact — types, lint, tests, generated
+files. Not one enforces process.** We have 28 that gate process compliance, which
+is unfalsifiable and unbounded, and that is why they grew to contradict each
+other. superpowers is the sharpest comparison: more skills than us, 1/28th the
+hooks, and its chain completes.
+
+Decisions taken: delete the review receipt outright rather than scope its
+fingerprint; delete the dead `on-*` observability hooks; land the backlog as
+several commits rather than one.
+
+**Phase 1 is blocked on a permission, not on a decision.** Unregistering the
+three hooks needs an edit to `.claude/settings.json`, which the auto-mode
+classifier denies; a chat approval does not satisfy it. The files cannot be
+deleted first — a registered hook missing from disk makes `python` exit 2, and
+PreToolUse exit 2 means deny, so every Bash call in the session would fail.
+Target shape is 28 hooks → 8: keep only those that deny something irreversible
+(secret-scan, branch-guard, forbidden-change-guard, spend-guard) or that act
+(checkpoint, artifact-autocommit), plus two that only inform.
+
+Three of the hooks slated for deletion duplicate slash commands that already
+exist: `04-docs-staleness` → `/wip`, `06-index-scope-guard` → `/git-state`,
+`01-env-check` → `/verify`. Same information, pulled instead of pushed.
+
+Commit 1 of 4 is the archive reorganisation: 50 paths, `git diff --cached --stat`
+reports `50 files changed, 0 insertions(+), 0 deletions(-)` and every entry is
+`R100`. Content-identical, so it reviews as one decision rather than fifty.
+
 ## 2026-08-02 18:08
 Ran the git chain live against a one-line file (`dummy.py`, `import os`) and wrote
 `docs/2026-08-02-git-flow-walkthrough.md` — every quote in it is from the run, not
