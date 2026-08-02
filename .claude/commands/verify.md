@@ -53,7 +53,7 @@ Run these in order and report each one's real output line, not a paraphrase:
 
 Then report:
 
-- One line per check with its actual output (`All hook tests passed`, `2 skills;
+- One line per check with its actual output (`All hook tests passed`, `11 skills;
   problems: none`), never a summary that replaces the evidence.
 - **PASS only if every check passed.** If any failed, lead with the failure, quote
   the real error, and say what would fix it.

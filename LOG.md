@@ -3,6 +3,30 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-03 02:20
+**Gap 3 closed as far as it mechanically can be.** `test_referenced_paths.py` now
+checks four classes of claim, not just paths: slash commands resolve to a file,
+`ALLOW_*`/`UAIOS_*` env vars are read by some live `.py`, `` `_hooklib.X` ``
+symbols exist as attributes, and **numeric counts match reality** — "nine hooks",
+"eleven skills", "six suites".
+
+The count check is the novel one and it found two genuinely stale claims
+immediately: `systematic-debugging` and `verifying-work` both told the reader
+`/verify` runs "the four suites" when there are six, and `verifying-work` also
+still named the deleted env check. Proven to bite: editing `CLAUDE.md` to say
+"five hooks" produces `FAIL: CLAUDE.md:131 claims five hooks, but there are 9`.
+
+Fenced code blocks are stripped before checking — examples live there. Two
+genuinely historical phrasings needed the tombstone regex widened (`deleting`,
+and `until <date>`), which is a real if small weakening; the alternative was
+rewording accurate history to satisfy a regex.
+
+**What remains unguarded, stated plainly rather than papered over:** a claim about
+*behaviour* — "`code-review` records the receipt" — names nothing checkable. That
+needs a reader. Building a regex that pretends otherwise would be the third
+false-confidence gate this repo has had to delete, so it is documented in the
+suite's own header instead.
+
 ## 2026-08-03 01:45
 **Audited agent ↔ skill referencing. Forward direction was clean; the back
 reference was not.** Every agent had exactly one owner, `CLAUDE.md` and

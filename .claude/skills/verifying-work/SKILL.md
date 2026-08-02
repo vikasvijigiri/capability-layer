@@ -73,8 +73,9 @@ in the evidence column is unbacked, however obviously true it looks.
 
 ## In this repo
 
-- `/verify` runs the four suites, env check, hook registration and a frontmatter
-  parse. It is the mechanical half — run it, quote it.
+- `/verify` runs the project's own lint, test and typecheck commands plus a
+  frontmatter parse — six suites, `ruff` and `mypy` here. It is the mechanical
+  half: run it, quote it.
 - `PYTHONIOENCODING=utf-8` first, or `→` and `—` raise `UnicodeEncodeError` and
   a passing run reports as a failure.
 - A check that cannot fail is not evidence. Before trusting a green check you
