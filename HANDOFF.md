@@ -45,9 +45,22 @@ deletion by hand — then phases 3 and 4 proceed unattended. Phase 2 (writing
 `permissions`) is permanently the user's: the classifier will not let me widen my
 own boundary, correctly.
 
-**One recommendation against the approved plan:** keep
-`on-artifact-create/02-hook-self-test-nudge.py`. It is on the deletion list, and
-it is what forced the run that found both bugs above. Target becomes 9, not 8.
+**Target is 9 hooks, not 8** — agreed 2026-08-02.
+`on-artifact-create/02-hook-self-test-nudge.py` comes off the deletion list: it
+forced the run that found both auto-commit bugs, and neither was visible in the
+diff. The kept set is now:
+
+    pre-commit/01-secret-scan          deny — a leaked key is unrecoverable
+    pre-commit/02-branch-guard         deny — push leaves the machine
+    pre-edit/01-forbidden-change-guard deny — generated/vendored targets
+    pre-deploy/01-spend-guard          deny — money
+    post-run/03-checkpoint             acts — free safety net
+    post-run/06-artifact-autocommit    acts — the commit loop
+    on-artifact-create/02-hook-self-test-nudge  informs — earns its place
+    session-start/02-bootstrap-docs    informs
+    pre-run/05-process-skill-router    informs
+
+Everything else in `.claude/hooks/` is deleted in phase 3 (16 files, not 17).
 
 **Next: phases 2-4.** (2) move static rules into `permissions.allow`/`deny`.
 (3) prune the remaining 17 to 8 — keep only what denies something irreversible
