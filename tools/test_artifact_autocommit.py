@@ -301,6 +301,22 @@ with tempfile.TemporaryDirectory() as d2:
     check('...until `"test": false` states it deliberately',
           commit_count(tmp2) == base2 + 2)
 
+    # --- gate 2b: a schema migration is never auto-committed
+    #
+    # The least reversible thing a product contains. `git revert` restores code;
+    # nothing restores a dropped column, and no suite proves an ALTER TABLE was
+    # the right idea.
+    at2 = commit_count(tmp2)
+    write(tmp2, "prisma/migrations/001_init/migration.sql",
+          "ALTER TABLE users DROP COLUMN email;\n")
+    write(tmp2, "src/unrelated.py", "q = 1\n")
+    result = emit(mod)
+    check("a schema migration is REFUSED",
+          "REFUSED" in json.dumps(result) and "migration" in json.dumps(result),
+          json.dumps(result)[:180])
+    check("...and nothing else in the turn slips through with it",
+          commit_count(tmp2) == at2)
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

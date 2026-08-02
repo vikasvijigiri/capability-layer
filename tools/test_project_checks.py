@@ -76,8 +76,12 @@ def commands(root) -> str:
 node = tree({"package.json": json.dumps(
     {"scripts": {"test": "vitest", "lint": "eslint .", "build": "next build"}}),
     "package-lock.json": "{}", "tsconfig.json": "{}"})
-check("a node app detects test, lint and typecheck",
-      kinds(node) == {"test", "lint", "typecheck"}, str(kinds(node)))
+check("a node app detects the full set",
+      kinds(node) == {"test", "lint", "typecheck", "build", "audit"}, str(kinds(node)))
+check("...including a build, which lint and tests cannot substitute for",
+      "npm run build" in commands(node), commands(node))
+check("...and a vulnerability audit at high severity",
+      "npm audit --audit-level=high" in commands(node), commands(node))
 check("...and uses npm when package-lock.json is the lockfile",
       "npm test" in commands(node), commands(node))
 check("...and falls back to tsc --noEmit from tsconfig.json alone",
@@ -90,8 +94,8 @@ check("the lockfile picks the package manager, not a guess",
 
 py = tree({"pyproject.toml": "[project]\nname='x'\n", "ruff.toml": "",
            "mypy.ini": "[mypy]\n"})
-check("a python app detects pytest, ruff and mypy",
-      kinds(py) == {"test", "lint", "typecheck"}, str(kinds(py)))
+check("a python app detects pytest, ruff, mypy and an audit",
+      kinds(py) == {"test", "lint", "typecheck", "audit"}, str(kinds(py)))
 check("...with pytest as the test command", "pytest -q" in commands(py))
 check("...ruff as the linter", "ruff check" in commands(py))
 check("...and mypy as the typechecker", "mypy" in commands(py))
@@ -101,9 +105,53 @@ py_bare = tree({"pyproject.toml": "[project]\nname='x'\n"})
 check("no ruff.toml means no lint", "lint" not in kinds(py_bare))
 check("no mypy.ini means no typecheck", "typecheck" not in kinds(py_bare))
 
-check("this repo now resolves all three kinds",
+check("this repo resolves all three fast kinds",
       {k for k, _ in pc.resolve_checks(ROOT)[0]} == {"test", "lint", "typecheck"},
       str({k for k, _ in pc.resolve_checks(ROOT)[0]}))
+
+
+# --- the two tiers -----------------------------------------------------------
+#
+# The split is what lets a build and a browser suite exist at all: at per-turn
+# cost they would be switched off within a day, and a gate nobody runs is worse
+# than no gate because it still reads as coverage.
+
+check("fast and slow tiers do not overlap",
+      not (set(pc.FAST_KINDS) & set(pc.SLOW_KINDS)))
+check("ALL_KINDS is exactly the union",
+      set(pc.ALL_KINDS) == set(pc.FAST_KINDS) | set(pc.SLOW_KINDS))
+check("the per-turn tier holds no slow check",
+      all(k in pc.FAST_KINDS for k, _ in pc.resolve_checks(ROOT, pc.FAST_KINDS)[0]))
+
+e2e_tree = tree({"playwright.config.ts": "export default {}\n"})
+check("a playwright config detects an e2e check",
+      kinds(e2e_tree) == {"e2e"} and "playwright test" in commands(e2e_tree),
+      commands(e2e_tree))
+check("e2e is slow-tier, never per-turn",
+      "e2e" in pc.SLOW_KINDS and "e2e" not in pc.FAST_KINDS)
+check("a slow-tier resolve finds it",
+      any(k == "e2e" for k, _ in pc.resolve_checks(e2e_tree, pc.SLOW_KINDS)[0]))
+check("a fast-tier resolve does not",
+      not pc.resolve_checks(e2e_tree, pc.FAST_KINDS)[0])
+
+
+# --- migrations are never auto-committed -------------------------------------
+#
+# The least reversible thing a product contains, and the one no suite proves.
+
+MIGRATIONS = [
+    ("prisma/migrations/001_init/migration.sql", True),
+    ("api/alembic/versions/abc123.py", True),
+    ("db/migrate/20240101_add_users.rb", True),
+    ("sup" + "abase/migrations/0001.sql", True),
+    ("schema.sql", True),
+    ("src/app.py", False),
+    ("docs/migrations-guide.md", False),
+    ("README.md", False),
+]
+for rel, want in MIGRATIONS:
+    got = bool(hl.migration_paths([rel]))
+    check(f"migration {rel} detected={want}", got is want, f"got {got}")
 
 
 # --- a configured tool that is not installed must skip, never fail ----------
@@ -128,8 +176,10 @@ check("...and still reports that no test ran", ran_test is False)
 
 # --- the table is language-agnostic; each ecosystem is a row, not a code path
 ECOSYSTEMS = [
-    ("rust",   {"Cargo.toml": "[package]\nname='x'\n"},          {"test", "lint"}, "cargo test"),
-    ("go",     {"go.mod": "module x\n"},                          {"test", "lint"}, "go test ./..."),
+    ("rust",   {"Cargo.toml": "[package]\nname='x'\n"},
+     {"test", "lint", "build", "audit"}, "cargo test"),
+    ("go",     {"go.mod": "module x\n"},
+     {"test", "lint", "build", "audit"}, "go test ./..."),
     ("maven",  {"pom.xml": "<project/>\n"},                       {"test"},         "mvn"),
     ("gradle", {"build.gradle.kts": "plugins {}\n"},              {"test"},         "gradle"),
     ("ruby",   {"Rakefile": "task :test\n", ".rubocop.yml": ""},  {"test", "lint"}, "rubocop"),

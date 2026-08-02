@@ -3,6 +3,53 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-03 03:00
+**All seven production gaps closed.** I recommended against doing these
+speculatively — the user reaffirmed, so they were built generically rather than
+for a hypothetical product.
+
+**The organising idea is a two-tier split**, and it is what makes the rest
+possible. A build, a vulnerability audit, a browser suite and a real server boot
+cannot run at per-turn cost; at that cost they get switched off within a day, and
+a gate nobody runs still reads as coverage.
+
+    fast   lint · typecheck · test          every turn, seconds   -> gates the auto-commit
+    slow   build · audit · e2e · smoke      before delivery, mins -> gates push/PR and CI
+
+| Gap | Closed by |
+|---|---|
+| 1 nothing ran the app | `tools/smoke.py` — starts it, polls, probes, kills the tree |
+| 2 no e2e | `e2e` kind; playwright/cypress configs are markers |
+| 3 no build check | `build` kind; npm/cargo/go |
+| 4 no CI | `.github/workflows/checks.yml`, two jobs matching the two tiers |
+| 5 no migration story | `MIGRATION_PATH_PATTERNS` + gate 2b: the auto-commit **refuses** them |
+| 6 no supply chain | `audit` kind: `npm audit --audit-level=high`, `pip-audit`, `cargo audit`, `govulncheck` |
+| 7 no platform pack | `.claude/skills/releasing/references/PLATFORMS.md` |
+
+**`tools/run_checks.py` is the single entry point.** The hook, `/verify`,
+`delivering` and CI all call it. Three of those four previously worked out
+"green" separately, which is how a passing local run starts coexisting with a
+refusing gate and a red pipeline. The CI workflow deliberately does **not** list
+the checks — it calls the resolver.
+
+`smoke.py` was tested against a real server on all four paths: happy, server
+exits before answering, wrong status, wrong body text — and the port is verifiably
+released afterwards, which is where naive implementations leak. `npm run dev` is a
+shell that spawns node; killing the shell orphans the server and the next run
+fails to bind blaming the wrong thing, so teardown is `taskkill /T` on Windows and
+a process-group kill on POSIX.
+
+**Migrations are refused, not gated.** Not a judgement about the migration —
+a refusal to let the least reversible thing in a product land while nobody is
+looking. Proven: a turn containing `prisma/migrations/001_init/migration.sql`
+commits nothing at all, including the unrelated file beside it.
+
+One bug worth keeping: `smoke.py` used `os.name != "nt"` to guard POSIX-only
+calls. mypy does not narrow `os.name` and produced six errors; it *does* narrow
+`sys.platform`. The naive fix — six `type: ignore`s — would then fire as
+**unused** on Linux CI, where `warn_unused_ignores` is on. Switching to
+`sys.platform` is clean on both.
+
 ## 2026-08-03 02:20
 **Gap 3 closed as far as it mechanically can be.** `test_referenced_paths.py` now
 checks four classes of claim, not just paths: slash commands resolve to a file,

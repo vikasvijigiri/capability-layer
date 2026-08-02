@@ -66,6 +66,7 @@ from _hooklib import (  # noqa: E402
     changed_paths,
     current_branch,
     load_payload,
+    migration_paths,
     scan_for_secrets,
 )
 from _projectchecks import (  # noqa: E402
@@ -191,6 +192,20 @@ def main():
               f"max_files={max_files} and is a unit of work, not a checkpoint. "
               f"Review it and commit deliberately, or raise `max_files` in "
               f"{CONFIG_NAME} if this project scaffolds in bulk.")
+        return
+
+    # --- gate 2b: schema migrations
+    #
+    # The least reversible thing a product contains, and the one no test proves.
+    # Refusing is not a judgement about the migration -- it is a refusal to let
+    # one land while nobody is looking.
+    migrations = migration_paths(paths)
+    if migrations:
+        speak(f"Auto-commit REFUSED: this turn touches {len(migrations)} schema "
+              f"migration(s) -- {', '.join(migrations[:3])}"
+              f"{' …' if len(migrations) > 3 else ''}. A migration is the least "
+              f"reversible thing here and no suite proves it is right. Review it "
+              f"and commit deliberately. {len(paths)} file(s) left uncommitted.")
         return
 
     # --- gate 3: secrets. This hook's commits never reach 01-secret-scan.py,

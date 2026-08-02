@@ -57,6 +57,21 @@ REPO_ROOT = HOOKS_DIR.parents[1]
 CONFIG_NAME = ".claude/project-checks.json"
 DEFAULT_TIMEOUT = 300
 
+# Two tiers, because cost differs by an order of magnitude and a gate nobody can
+# afford to run is a gate that gets disabled.
+#
+#   FAST  runs at the end of every turn, gating the auto-commit. Seconds.
+#   SLOW  runs once before delivery, gating push/PR. Minutes: a production build,
+#         a vulnerability audit, a browser suite, a real server started and probed.
+#
+# Splitting them is the difference between "verified the source" and "verified the
+# running system" -- the category of check this repo had none of until 2026-08-03.
+# Running the slow tier per turn would add minutes to every reply; never running it
+# is how an agent ships code that compiles, tests green, and does not boot.
+FAST_KINDS = ("lint", "typecheck", "test")
+SLOW_KINDS = ("build", "audit", "e2e", "smoke")
+ALL_KINDS = FAST_KINDS + SLOW_KINDS
+
 # Extensions that mean "this turn changed behaviour", so a green test run is
 # load-bearing rather than a formality. Prose, config and lockfiles are excluded
 # deliberately: gating a README edit on a test suite is how a gate becomes noise.
@@ -114,9 +129,17 @@ def _package_json(root: Path) -> dict:
 # a Rust repo on a machine without cargo is skipped-and-named, never blocked.
 MARKER_CHECKS: dict[str, list[tuple[str, str]]] = {
     # --- Rust
-    "Cargo.toml": [("test", "cargo test"), ("lint", "cargo clippy -- -D warnings")],
+    "Cargo.toml": [("test", "cargo test"), ("lint", "cargo clippy -- -D warnings"),
+                   ("build", "cargo build --release"), ("audit", "cargo audit")],
     # --- Go
-    "go.mod": [("test", "go test ./..."), ("lint", "go vet ./...")],
+    "go.mod": [("test", "go test ./..."), ("lint", "go vet ./..."),
+               ("build", "go build ./..."), ("audit", "govulncheck ./...")],
+    # --- browser end-to-end. The config file is the marker; the runner is the
+    # tool it configures. Nothing here assumes a language.
+    "playwright.config.ts": [("e2e", "npx playwright test")],
+    "playwright.config.js": [("e2e", "npx playwright test")],
+    "cypress.config.ts": [("e2e", "npx cypress run")],
+    "cypress.config.js": [("e2e", "npx cypress run")],
     # --- Java / Kotlin / JVM
     "pom.xml": [("test", "mvn -q -B test")],
     "build.gradle": [("test", "gradle --quiet test")],
@@ -134,7 +157,7 @@ MARKER_CHECKS: dict[str, list[tuple[str, str]]] = {
                   ("typecheck", "deno check .")],
     "deno.jsonc": [("test", "deno test -A"), ("lint", "deno lint")],
     # --- Python
-    "pyproject.toml": [("test", "pytest -q")],
+    "pyproject.toml": [("test", "pytest -q"), ("audit", "{py} -m pip_audit")],
     "pytest.ini": [("test", "pytest -q")],
     "ruff.toml": [("lint", "{py} -m ruff check .")],
     ".ruff.toml": [("lint", "{py} -m ruff check .")],
@@ -174,6 +197,19 @@ def _node_checks(root: Path):
         found.append(("typecheck", f"{exec_prefix} tsc --noEmit"))
     if "lint" in scripts:
         found.append(("lint", f"{runner} lint"))
+    # A project can lint, typecheck and test green and still fail to build --
+    # a bundler config, a missing env var at build time, a bad import path that
+    # only the production compiler rejects. This is the cheapest of the slow
+    # checks and catches the most embarrassing failure.
+    if "build" in scripts:
+        found.append(("build", f"{runner} build"))
+    if "e2e" in scripts:
+        found.append(("e2e", f"{runner} e2e"))
+    # `--audit-level=high` and not the default: a transitive `low` on a dev
+    # dependency should not block delivery, and if it does, the gate gets turned
+    # off within a week.
+    if _package_manager(root) == "npm":
+        found.append(("audit", "npm audit --audit-level=high"))
     return found
 
 
@@ -236,8 +272,8 @@ def detect_checks(root=None):
     return unique
 
 
-def resolve_checks(root=None):
-    """(checks, disabled) after the config has had its say.
+def resolve_checks(root=None, kinds=FAST_KINDS):
+    """(checks, disabled) after the config has had its say, for one tier.
 
     A configured command replaces every detected one of that kind -- naming
     `npm run test:fast` means that command *is* the test suite, not one more of
@@ -249,7 +285,7 @@ def resolve_checks(root=None):
     checks: list[tuple[str, str]] = []
     disabled: list[str] = []
 
-    for kind in ("test", "typecheck", "lint"):
+    for kind in kinds:
         override = config.get(kind)
         if override is False:
             disabled.append(kind)
@@ -291,16 +327,23 @@ def tool_missing(command: str) -> bool:
     return shutil.which(exe) is None and not Path(exe).exists()
 
 
-def run_checks(root=None, extra_env=None):
-    """(ok, detail, ran_test). Never raises.
+def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
+    """(ok, detail, ran_test) for one tier. Never raises.
 
     `ran_test` is separate from `ok` on purpose. "Everything passed" and "there
     was nothing to run" are the same boolean and completely different facts, and
     conflating them is how an unattended commit gate quietly stops guarding.
+
+    `kinds` selects the tier: FAST_KINDS for the per-turn commit gate, SLOW_KINDS
+    or ALL_KINDS before delivery. The slow tier gets its own, longer timeout --
+    a production build legitimately takes longer than a unit suite.
     """
     root = Path(root) if root else REPO_ROOT
-    checks, disabled = resolve_checks(root)
-    timeout = load_config(root).get("timeout", DEFAULT_TIMEOUT)
+    checks, disabled = resolve_checks(root, kinds)
+    config = load_config(root)
+    timeout = config.get("timeout", DEFAULT_TIMEOUT)
+    if any(k in SLOW_KINDS for k, _ in checks):
+        timeout = config.get("slow_timeout", max(timeout, 900))
 
     if not checks:
         note = f" ({', '.join(disabled)} disabled by config)" if disabled else ""

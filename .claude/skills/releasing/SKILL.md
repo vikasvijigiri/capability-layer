@@ -106,6 +106,28 @@ binds harder here, because the thing you are asserting about is live.
 If the target has no way to prove the change is serving, that is a finding worth
 recording, not a reason to skip the check.
 
+**The mechanism**, since 2026-08-03 — this skill mandated a smoke check for
+months and had nothing to perform one with:
+
+```bash
+python tools/smoke.py --url https://<target>/ --expect-status 200 --expect-text '<something real>'
+```
+
+It optionally starts the app (`--start "npm run dev"`), waits for it to answer,
+probes, and tears the whole process tree down afterwards. `--expect-text` is what
+makes it a check rather than a ping: a 200 from an error page is still a 200.
+
+## Platform commands live in a pack, not here
+
+Read **one** section of [`references/PLATFORMS.md`](references/PLATFORMS.md) — the
+one matching the target you detected. It carries deploy, smoke and rollback for
+Vercel, Render, Fly, Heroku and Kubernetes, the detection table that decides which
+applies, and the migration rules that hold on all of them.
+
+Loading all of them to deploy to one is the waste that file exists to prevent,
+and an `if vercel: … elif render: …` branch in this file is the failure mode the
+pack exists to avoid.
+
 ## When it goes red — roll back first, diagnose second
 
 In this order, no exceptions:

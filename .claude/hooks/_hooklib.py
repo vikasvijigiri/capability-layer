@@ -114,6 +114,36 @@ AI_ATTRIBUTION_PATTERNS = [
 
 PROTECTED_BRANCHES = {"main", "master", "develop", "release"}
 
+# Database migrations are the least reversible thing a product contains: a
+# dropped column is gone in a way a bad deploy is not, and no test suite in the
+# world proves an `ALTER TABLE` was the right idea. The cited failure mode for
+# coding agents is exactly this -- a syntactically valid migration written with
+# no database to run it against.
+#
+# So they are never auto-committed. Not because writing one is wrong, but because
+# it is the class of change that must not land while nobody is looking.
+# Framework-agnostic: these are the conventional locations, not one ORM's.
+MIGRATION_PATH_PATTERNS = [
+    "migrations/*", "*/migrations/*", "**/migrations/*",
+    "alembic/versions/*", "**/alembic/versions/*",
+    "prisma/migrations/*", "**/prisma/migrations/*",
+    "supabase/migrations/*", "db/migrate/*", "**/db/migrate/*",
+    "**/*.migration.sql", "schema.sql", "**/schema.prisma",
+]
+
+
+def migration_paths(paths):
+    """Those of `paths` that look like a schema migration."""
+    import fnmatch
+    hits = []
+    for rel in paths:
+        norm = str(rel).replace("\\", "/")
+        while norm.startswith("./"):
+            norm = norm[2:]
+        if any(fnmatch.fnmatch(norm, pat) for pat in MIGRATION_PATH_PATTERNS):
+            hits.append(rel)
+    return hits
+
 
 def current_branch(repo_root=None):
     """The checked-out branch name, or None when git cannot answer.

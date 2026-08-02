@@ -114,6 +114,8 @@ Raw equivalents, run from the repo root:
     python tools/test_referenced_paths.py
     python tools/check_config_json.py
     python -m ruff check .
+    python tools/run_checks.py --tier all --require-test   # both tiers
+    python tools/smoke.py --url <url> --expect-status 200   # is it actually serving
     python tools/run_hook.py <event> '<json-payload>'   # fire one hook manually
 
 Run `/verify` before declaring any work done.
@@ -131,10 +133,12 @@ Run `/verify` before declaring any work done.
 | `.claude/hooks/<event>/` | nine hooks over seven events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |
 | `.claude/settings.json` | what actually fires; `hooks_registry.json` only documents intent |
 | `.claude/commands/` | the four slash commands above |
-| `tools/` | `run_hook.py`, six test suites, `check_config_json.py` |
+| `tools/` | `run_checks.py` (one entry point for green), `smoke.py`, `run_hook.py`, six test suites, `check_config_json.py` |
 | `docs/specs/`, `docs/plans/`, `docs/research/` | skill outputs, one dated file each |
 | `docs/archive/` | the pre-2026-08-01 design layer; superseded, see `docs/archive/ARCHIVE.md` |
 | `decisions/` | dated ADRs |
+| `.claude/skills/releasing/references/` | platform packs — deploy/smoke/rollback per target |
+| `.github/workflows/checks.yml` | CI; calls the same resolver, so it cannot drift from local |
 | `.mcp.json`, `.vscode/mcp.json` | MCP servers, kept in sync by hand |
 
 There is no global layer — `~/.claude/` holds no skills, agents or hooks.
@@ -168,8 +172,9 @@ resolved over detection by `.claude/hooks/_projectchecks.py` — the same code
 | branch | on `main`/`master`/`develop`/`release` |
 | size | more than `MAX_FILES = 25` changed — that is a unit of work, not a checkpoint |
 | secrets | any changed file matches `_hooklib.SECRET_PATTERNS` |
-| checks | any command from `.claude/project-checks.json` exits non-zero — currently six suites, `ruff`, and the config-JSON validator |
+| checks | any **fast-tier** command exits non-zero — lint, typecheck, test |
 | unverified code | the change contains code and **no test check ran** — passing and having nothing to run are different facts |
+| migration | the change touches `_hooklib.MIGRATION_PATH_PATTERNS` — the least reversible thing here, and no suite proves it |
 | message | the generated subject matches `_hooklib.AI_ATTRIBUTION_PATTERNS` |
 
 Every clause is a fact about the artefact, never about process. A refusal is
@@ -189,6 +194,32 @@ Two things this depends on, both easy to break:
 Nineteen hooks were deleted on 2026-08-02, including every process-compliance
 gate and the staging guards. Why, and the deadlock that proved it: `LOG.md`
 2026-08-02 19:26 / 21:30, and `docs/2026-08-02-git-flow-walkthrough.md`.
+
+## Two check tiers
+
+Cost differs by an order of magnitude, and a gate nobody can afford to run is a
+gate that gets switched off. `.claude/hooks/_projectchecks.py` owns both; every
+caller goes through `tools/run_checks.py` so local, the hook and CI cannot
+disagree about what green means.
+
+| Tier | Kinds | Runs | Gates |
+|---|---|---|---|
+| fast | lint · typecheck · test | end of every turn, seconds | the auto-commit |
+| slow | build · audit · e2e · smoke | once before delivery, minutes | push / PR, and CI on pull requests |
+
+    python tools/run_checks.py --tier all --require-test
+
+**The slow tier is the only thing that verifies the running system.** Everything
+else reads the source. A repo can lint, typecheck and unit-test green and still
+fail to build or fail to boot — `tools/smoke.py` starts the app, waits, probes and
+tears the process tree down, which is what `releasing` had mandated for months
+with no mechanism behind it.
+
+Detection is a data table (`MARKER_CHECKS`) covering Node, Deno, Python, Rust, Go,
+Java, Kotlin, Ruby, PHP, Elixir, .NET and `make`; a new ecosystem is a row.
+`.claude/project-checks.json` overrides any of it, `false` disables a kind as a
+stated decision, and a configured tool that is not installed is **skipped and
+named**, never failed.
 
 ---
 

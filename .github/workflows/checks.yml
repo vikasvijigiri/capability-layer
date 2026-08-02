@@ -1,0 +1,76 @@
+# Runs the same checks the local commit gate runs, on a machine that is not yours.
+#
+# The single property that matters here: this workflow does NOT list the checks.
+# It calls `.claude/hooks/_projectchecks.py`, the same resolver the auto-commit
+# and `/verify` call, so CI and local cannot disagree about what "the checks
+# pass" means. A workflow with its own copy of the command list is how a green
+# local run starts coexisting with a red pipeline.
+#
+# Two jobs, matching the two tiers: `fast` on every push, `slow` only on pull
+# requests, because a production build and a browser suite cost minutes.
+
+name: checks
+
+on:
+  push:
+    branches-ignore: []
+  pull_request:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fast:
+    name: lint · typecheck · test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The suites read `git log` and `git diff` against the base, which an
+          # unfetched shallow clone cannot answer.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Best-effort: a repo with no package.json simply skips this, and
+      # `tool_missing` skips any command whose executable is absent.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+        continue-on-error: true
+
+      - name: Install this repo's own tooling
+        run: python -m pip install --quiet ruff mypy
+
+      - name: Run the fast tier
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python tools/run_checks.py --tier fast
+
+  slow:
+    name: build · audit · e2e · smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+        continue-on-error: true
+
+      - name: Run the slow tier
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python tools/run_checks.py --tier slow

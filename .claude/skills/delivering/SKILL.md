@@ -34,9 +34,19 @@ is.
 Do not present the menu until all three hold. Each is a question with a command
 behind it, not a judgement.
 
-1. **The checks pass, on this tree.** Run `/verify` now and quote it. A run from
-   earlier proves the tree it ran on. If anything fails, report the failures and
-   stop — the menu comes after a green suite.
+1. **Both tiers pass, on this tree.** The per-turn gate only ever runs the fast
+   tier — lint, typecheck, test. Delivery is the moment the slow one runs:
+
+   ```bash
+   python tools/run_checks.py --tier all --require-test
+   ```
+
+   That is a production build, a vulnerability audit, the browser suite and a
+   real server started and probed. A run from earlier proves the tree it ran on.
+   If anything fails, report it and stop — the menu comes after green.
+
+   **This is the first point anything verifies the running system** rather than
+   the source. A repo can lint, typecheck and unit-test green and still not boot.
 2. **The work was verified against what was asked.** `verifying-work` produced a
    coverage verdict, and its gaps are closed or explicitly accepted. Green
    suites are not that verdict.
