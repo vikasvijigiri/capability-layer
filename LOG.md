@@ -3,6 +3,35 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-02 20:05
+**Phase 1 done: the three process-compliance gates are gone.** Deleted
+`pre-commit/03-review-gate.py`, `pre-commit/05-docs-required.py`,
+`post-run/05-docs-gate.py` and `tools/test_docs_gates.py`. 28 hooks → 25;
+`All hook-registration tests passed (25 hooks, 13 events)`. Six suites pass, env
+check silent, `compileall` clean.
+
+The unregister-then-delete order was forced: a hook registered in `settings.json`
+but missing from disk makes `python` exit 2, and PreToolUse exit 2 means deny, so
+deleting first would have failed every Bash call in the session.
+
+**The deletion broke four skills and nothing would have caught it.** `code-review`
+and `delivering` both instructed running
+`python .claude/hooks/pre-commit/03-review-gate.py --record`, a script that no
+longer exists; `executing-plans` and `knowledge-manager` described gates that no
+longer fire. No suite asserts that a skill's shell commands resolve —
+`test_process_router.py` checks routing entries and frontmatter, not claims. All
+four rewritten by hand after a `grep`. **That gap is the most useful thing this
+phase found**: prose in a skill is executable instruction, and nothing type-checks it.
+
+Also corrected: `_hooklib.py` and `04-docs-staleness.py` comments naming
+`05-docs-gate.py` as the live consumer of the turn marker (it is now
+`06-artifact-autocommit.py`), and `06-artifact-autocommit.py`'s list of gates it
+bypasses, two of which no longer existed.
+
+Review is now `code-review` plus the user, with nothing mechanical behind it.
+That is the deliberate trade: it can no longer be satisfied by a file on disk,
+and skipping it is now silent.
+
 ## 2026-08-02 19:40
 Backlog landing, commits 1-3. `92376d0` — the archive reorganisation, 51 files,
 all `R100`, `0 insertions(+), 0 deletions(-)`. `4ff5ab2` — the hook layer, 22

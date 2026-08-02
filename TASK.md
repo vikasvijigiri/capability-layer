@@ -10,6 +10,24 @@
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
 
+### 2026-08-02 — Delete the process-compliance gates
+
+- **Goal**: Cut the three hooks that gate process compliance rather than artefact
+  correctness, because they had deadlocked against each other and blocked their
+  own maintenance work for five sessions.
+- **Output**: `pre-commit/03-review-gate.py`, `pre-commit/05-docs-required.py`,
+  `post-run/05-docs-gate.py` and `tools/test_docs_gates.py` deleted;
+  `settings.json` and `hooks_registry.json` down to 25 hooks; `test_hooks.py`
+  sections 4-5 removed; `code-review`, `delivering`, `executing-plans` and
+  `knowledge-manager` rewritten to stop instructing a script that no longer
+  exists; `/verify`, `CLAUDE.md`, `.claude/workflow.md`, `tools/README.md`
+  corrected from seven suites to six.
+- **Status**: Done — supersedes the 2026-08-01 entry below, which was accurate
+  when written. The deadlock it could not see: `03-review-gate.py` fingerprinted
+  the whole working tree, so writing the log entry `05-docs-required.py` demanded
+  invalidated the receipt `03-review-gate.py` demanded. Measured, not inferred.
+  Five comparable GitHub repos gate artefacts, none gates process.
+
 ### 2026-08-01 — Review gate that always asks before a commit or PR
 
 - **Goal**: A `code-review` skill that reviews the pending diff or PR, reports

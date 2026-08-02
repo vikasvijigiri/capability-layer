@@ -25,12 +25,26 @@ contradict each other. `obra/superpowers` is the sharpest comparison — 14 skil
 Decided: delete the review receipt outright; delete the dead `on-*` observability
 hooks; land the backlog as several commits.
 
-**Phase 1 is blocked on a permission, not a decision.** Unregistering the three
-hooks requires editing `.claude/settings.json`, which the auto-mode classifier
-denies — and a chat approval does not satisfy it. The files cannot be deleted
-first: a registered hook missing from disk exits 2, and PreToolUse exit 2 means
-deny, so every Bash call would fail. Needs a permission rule or the user's own
-edit. Everything else in phase 1 is done or in flight.
+**Phase 1 is done.** The 91-file backlog landed in four commits (`92376d0`,
+`4ff5ab2`, `3c383f9`, `071070b`) and the three process-compliance gates are
+deleted. 28 hooks → 25. Six suites pass; `/verify` and `tools/README.md` now say
+six, not seven.
+
+Unblocked by `.claude/settings.local.json`, which the user added: the auto-mode
+classifier refuses to let me edit `settings.json` or widen my own permissions,
+and refuses `git rm` on repo source. Both are correct. Expect to hand the user a
+command for either.
+
+**Next: phases 2-4.** (2) move static rules into `permissions.allow`/`deny`.
+(3) prune the remaining 17 to 8 — keep only what denies something irreversible
+(`01-secret-scan`, `02-branch-guard`, `01-forbidden-change-guard`,
+`01-spend-guard`) or acts (`03-checkpoint`, `06-artifact-autocommit`), plus
+`02-bootstrap-docs` and `05-process-skill-router` which only inform. (4) one
+dispatcher plus a config table, claudekit's shape. Phase 3 deletes
+`04-docs-staleness`, `04-docs-sync`, `01-audit`, `02-slack`, `01-log`,
+`01-context-budget`, `01-register`, `02-hook-self-test-nudge`, `02-git-tag`,
+`01-rollback-notify`, `on-error/01-log`, `01-email-sim`, `01-notify`,
+`06-index-scope-guard`, `03-index-baseline`, `01-env-check`.
 
 **The git chain was run live for the first time, against a one-line file.**
 `docs/2026-08-02-git-flow-walkthrough.md` records it. Subject: `dummy.py`
@@ -155,10 +169,13 @@ and straight to 9 when it does not. Stages 7 and 8 take separate approvals, and
 - **`changed_files()` is duplicated** across `pre-run/04-docs-staleness.py` and
   `post-run/05-docs-gate.py`, with a third near-copy in
   `pre-commit/05-docs-required.py`. `_hooklib.py` is where it belongs.
-- **`knowledge-manager`'s own text is stale**: it says
-  `session-start/02-bootstrap-docs.py` "was unregistered on 2026-08-01", which
-  was fixed this session. Nothing asserts a skill's claims about the repo stay
-  true — the guard added this session covers names, not claims.
+- **Nothing asserts that a skill's shell commands resolve.** Deleting
+  `03-review-gate.py` broke `code-review` and `delivering`, both of which
+  instructed running it by path, and `test_process_router.py` stayed green —
+  it checks routing entries and frontmatter, not claims. Found by `grep`, fixed
+  by hand. A suite that extracts every ``` block from `.claude/skills/**` and
+  asserts each named path exists would have caught it, and is the highest-value
+  test this repo does not have.
 
 - **`04-delivery-guard.py` false-positives on `git merge-base`** — a read-only
   query — because it matches the verb anywhere in the command. It can `deny`, and
