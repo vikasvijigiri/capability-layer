@@ -1,16 +1,14 @@
-"""Tests for post-run/06-artifact-autocommit.py.
+"""Tests for post-run/06-artifact-autocommit.py -- the only hook that commits.
 
-The hook commits. So every case here runs against a throwaway git repo built in a
-temp directory -- never this one -- and asserts on real `git log` / `git status`
-output rather than on the hook's own report.
+Its commits are made from a subprocess, so they never pass through `PreToolUse`
+and get none of the gates a model-issued `git commit` gets. The checks it runs
+inline are therefore the only checks those commits ever receive, and every one is
+asserted here.
 
-Two properties matter more than the rest, because they are the ones that make an
-unreviewed automatic commit acceptable at all:
-
-  1. It commits ONLY prose artefacts, and never anything under `.claude/`.
-  2. It cannot sweep. Files already staged by someone else must survive the commit
-     still staged and uncommitted -- this is the `git add .` failure in
-     imehr/book-writer-plugin that put 49 files in this repo's index.
+Behaviour cases run against a throwaway git repo in a temp directory -- never
+this one -- and assert on real `git log` / `git status` output rather than on the
+hook's own report. A hook that reports success having done nothing is precisely
+the failure this file exists to catch.
 
 Run: python tools/test_artifact_autocommit.py
 """
@@ -18,6 +16,7 @@ Run: python tools/test_artifact_autocommit.py
 import importlib.util
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -25,6 +24,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+HOOK = ROOT / ".claude" / "hooks" / "post-run" / "06-artifact-autocommit.py"
 failures: list[str] = []
 
 
@@ -37,8 +37,7 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 
 def load():
-    spec = importlib.util.spec_from_file_location(
-        "autocommit", ROOT / ".claude/hooks/post-run/06-artifact-autocommit.py")
+    spec = importlib.util.spec_from_file_location("autocommit", HOOK)
     mod = importlib.util.module_from_spec(spec)
     sys.modules["autocommit"] = mod
     spec.loader.exec_module(mod)
@@ -60,7 +59,7 @@ def run(tmp: Path, *args) -> str:
 
 
 def new_repo(tmp: Path) -> None:
-    run(tmp, "init", "-q")
+    run(tmp, "init", "-q", "-b", "work")
     run(tmp, "config", "user.email", "t@example.com")
     run(tmp, "config", "user.name", "T")
     run(tmp, "commit", "-q", "--allow-empty", "-m", "base")
@@ -72,151 +71,190 @@ def write(tmp: Path, rel: str, body: str) -> None:
     p.write_text(body, encoding="utf-8")
 
 
+def commit_count(tmp: Path) -> int:
+    out = run(tmp, "log", "--oneline")
+    return len([ln for ln in out.splitlines() if ln.strip()])
+
+
+os.environ.setdefault("HOOK_PAYLOAD", "{}")
 mod = load()
 
-# ------------------------------------------------------------------ is_artefact
-# Pure classifier -- the whole safety boundary lives here, so it is tested alone.
-for path, want, why in [
-    ("LOG.md", True, "root knowledge doc"),
-    ("HANDOFF.md", True, "root knowledge doc"),
-    ("docs/specs/2026-01-01-x-design.md", True, "spec artefact"),
-    ("docs/research/2026-01-01-x.md", True, "research artefact"),
-    ("docs/plans/2026-01-01-x.md", True, "plan artefact"),
-    ("decisions/2026-01-01-x.md", True, "decision record"),
-    ("docs\\specs\\win-path.md", True, "backslash path normalises"),
-    (".claude/skills/brainstormer/SKILL.md", False, ".claude is excluded outright"),
-    (".claude/hooks/README.md", False, ".claude is excluded outright"),
-    ("tools/test_hooks.py", False, "not .md"),
-    ("docs/specs/data.json", False, "not .md"),
-    ("CLAUDE.md", False, "root .md that is not a knowledge doc"),
-    ("README.md", False, "root .md that is not a knowledge doc"),
-    ("docs/archive/ARCHIVE.md", False, "archive is not an artefact root"),
-    ("src/main.py", False, "code"),
-]:
-    check(f"is_artefact({path!r}) is {want} -- {why}", mod.is_artefact(path) is want)
+# ---------------------------------------------------------------- re-entry guard
+#
+# The bug this prevents was found by a two-minute timeout, not by an error:
+# test_hooks.py fires the whole post-run event -> this hook -> run_suites() ->
+# test_hooks.py, unbounded. A hang and a pass look identical from outside, which
+# is the exact failure mode CLAUDE.md warns about for hooks.
+
+check("a re-entry flag exists", bool(getattr(mod, "REENTRY_FLAG", "")))
+check("run_suites propagates the flag to every suite it runs",
+      'REENTRY_FLAG: "1"' in HOOK.read_text(encoding="utf-8"),
+      "suites would re-enter this hook and recurse")
+
+# With the flag set, main() must do nothing at all.
+os.environ[mod.REENTRY_FLAG] = "1"
+_before = mod.changed_paths
+mod.changed_paths = lambda *_a, **_k: (_ for _ in ()).throw(
+    AssertionError("main() reached changed_paths() under the re-entry flag"))
+try:
+    mod.main()
+    check("main() no-ops under the re-entry flag", True)
+except AssertionError as exc:
+    check("main() no-ops under the re-entry flag", False, str(exc))
+finally:
+    mod.changed_paths = _before
+
+# Everything below drives main() against a TEMP repo, so the production guard is
+# lifted deliberately. Leaving it set made this suite fail 10 assertions, which
+# made the suite gate red, which meant the hook could never commit -- the guard
+# disabling the thing under test is a real failure mode, found on 2026-08-02.
+os.environ.pop(mod.REENTRY_FLAG, None)
+
+# ------------------------------------------------------- pure gates, no git needed
+
+_probe = ROOT / "_autocommit_secret_probe.txt"
+# Assembled at runtime: 01-secret-scan.py scans this file too, and a literal
+# AKIA + 16 chars here would make the repo permanently uncommittable.
+_probe.write_text('aws_key = "' + "AKIA" + 'ABCDEFGHIJKLMNOP"\n', encoding="utf-8")
+try:
+    check("a planted credential is caught",
+          _probe.name in mod.scan_for_secrets([_probe.name], ROOT))
+finally:
+    _probe.unlink(missing_ok=True)
+
+check("ordinary source is not flagged",
+      mod.scan_for_secrets(["tools/run_hook.py"], ROOT) == [])
+check("an unreadable path is skipped rather than crashed on",
+      mod.scan_for_secrets(["does/not/exist.py"], ROOT) == [])
+
+check("main and master are protected",
+      {"main", "master"} <= mod.PROTECTED_BRANCHES)
+check("MAX_FILES is a real ceiling",
+      isinstance(mod.MAX_FILES, int) and 0 < mod.MAX_FILES <= 100)
+check("settings.json is never auto-committed",
+      ".claude/settings.json" in mod.NEVER_AUTO)
+check("settings.local.json is never auto-committed",
+      ".claude/settings.local.json" in mod.NEVER_AUTO)
+
+_msg = mod.build_message(["a/b.py", "a/c.py", "tools/d.py"], "6 suite(s) green")
+_subject = _msg.splitlines()[0]
+check("message is marked as a checkpoint", _subject.startswith("wip:"), _subject)
+check("subject stays within 72 chars", len(_subject) <= 72, f"{len(_subject)}")
+check("message carries the verification evidence", "6 suite(s) green" in _msg)
+check("message lists every path",
+      all(f"- {p}" in _msg for p in ("a/b.py", "a/c.py", "tools/d.py")))
+check("many areas still yield a short subject",
+      len(mod.build_message([f"a{i}/f.py" for i in range(20)], "g").splitlines()[0]) <= 72)
+# CLAUDE.md forbids AI attribution in git history, and nobody reads this message
+# before it lands.
+check("generated message carries no AI attribution",
+      not any(p.search(_msg) for p in mod.AI_ATTRIBUTION_PATTERNS))
+check("attribution patterns would catch a planted trailer",
+      any(p.search(_msg + "\nCo-authored-by: Claude <n@a>")
+          for p in mod.AI_ATTRIBUTION_PATTERNS))
+
+_real_dir = mod.SUITE_DIR
+try:
+    mod.SUITE_DIR = ROOT / "_no_such_tools_dir"
+    _ok, _detail = mod.run_suites()
+    check("a repo with no suites still commits", _ok)
+    check("...but says there was nothing to verify", "nothing to verify" in _detail,
+          _detail)
+finally:
+    mod.SUITE_DIR = _real_dir
 
 # ------------------------------------------------------------- behaviour, on git
+
 with tempfile.TemporaryDirectory() as d:
     tmp = Path(d)
     new_repo(tmp)
     mod.REPO_ROOT = tmp
-
-    marker = {"LOG.md": "old", "HANDOFF.md": "old"}
+    mod.SUITE_DIR = tmp / "tools"          # absent -> "nothing to verify", fast
     mod.load_payload = lambda: {"stop_hook_active": False}
-    mod.load_turn_marker = lambda: marker
-    mod.doc_digests = lambda: {d: (tmp / d).read_text(encoding="utf-8")
-                               if (tmp / d).exists() else ""
-                               for d in ("LOG.md", "HANDOFF.md")}
 
-    # --- does not fire when the boundary was not crossed
-    write(tmp, "LOG.md", "old")
-    write(tmp, "HANDOFF.md", "old")
-    write(tmp, "docs/specs/s.md", "spec")
-    check("silent when neither trigger doc changed this turn", emit(mod) == {})
-    check("...and nothing was committed",
-          run(tmp, "log", "--oneline") .count("\n") == 0)
+    base = commit_count(tmp)
 
-    # --- fires once LOG.md moves, and commits the artefacts
-    write(tmp, "LOG.md", "NEW")
+    # --- nothing changed: silent, no commit
+    check("silent with a clean tree", emit(mod) == {})
+    check("...and no commit was made", commit_count(tmp) == base)
+
+    # --- the happy path: code IS committed now, unlike the prose-only version
+    write(tmp, "src/app.py", "print(1)\n")
+    write(tmp, "LOG.md", "entry\n")
     result = emit(mod)
-    check("fires when LOG.md changed this turn", "hookSpecificOutput" in result)
-    committed = run(tmp, "show", "--name-only", "--format=", "HEAD").split()
-    # HANDOFF.md belongs here too: it is an uncommitted knowledge doc, and the unit
-    # of work is the commit's subject, not the single file that tripped the trigger.
-    check("commits every prose artefact, not just the one that fired the trigger",
-          sorted(committed) == ["HANDOFF.md", "LOG.md", "docs/specs/s.md"],
+    check("fires on ordinary changed files", "hookSpecificOutput" in result)
+    check("...and actually commits", commit_count(tmp) == base + 1)
+    committed = sorted(run(tmp, "show", "--name-only", "--format=", "HEAD").split())
+    check("commits code as well as prose", committed == ["LOG.md", "src/app.py"],
           f"got {committed}")
-    check("commit message names the boundary, not a tool",
-          "knowledge-manager boundary" in run(tmp, "log", "-1", "--format=%B"))
+    check("subject marks it as an unreviewed checkpoint",
+          run(tmp, "log", "-1", "--format=%s").startswith("wip:"))
+    check("working tree is clean afterwards", run(tmp, "status", "--porcelain") == "")
 
-    # --- the sweep test: someone else's staged file must survive untouched
-    write(tmp, "HANDOFF.md", "NEW2")
-    write(tmp, "src/unrelated.py", "print(1)")
-    write(tmp, "other.txt", "x")
-    run(tmp, "add", "src/unrelated.py", "other.txt")
-    before_staged = sorted(run(tmp, "diff", "--cached", "--name-only").split())
+    # --- a protected branch is refused
+    run(tmp, "checkout", "-q", "-b", "main")
+    write(tmp, "src/app.py", "print(2)\n")
+    result = emit(mod)
+    at = commit_count(tmp)
+    check("refuses on a protected branch",
+          "protected branch" in json.dumps(result), json.dumps(result)[:120])
+    check("...and commits nothing there", commit_count(tmp) == at)
+    run(tmp, "checkout", "-q", "work")
+    run(tmp, "checkout", "-q", "--", ".")
+
+    # --- a credential blocks the whole commit, not just that file
+    at = commit_count(tmp)
+    write(tmp, "src/ok.py", "x = 1\n")
+    write(tmp, "src/leak.py", 'token = "' + "AKIA" + 'ABCDEFGHIJKLMNOP"\n')
+    result = emit(mod)
+    check("refuses when a credential is present",
+          "REFUSED" in json.dumps(result), json.dumps(result)[:160])
+    check("...and commits nothing at all, not even the clean file",
+          commit_count(tmp) == at)
+    check("...and leaves the index untouched",
+          run(tmp, "diff", "--cached", "--name-only") == "")
+    (tmp / "src" / "leak.py").unlink()
+
+    # --- too large to be a checkpoint
+    at = commit_count(tmp)
+    for i in range(mod.MAX_FILES + 2):
+        write(tmp, f"bulk/f{i}.py", f"n = {i}\n")
+    result = emit(mod)
+    check("refuses a change too large to be a checkpoint",
+          "MAX_FILES" in json.dumps(result), json.dumps(result)[:160])
+    check("...and commits nothing", commit_count(tmp) == at)
+    for i in range(mod.MAX_FILES + 2):
+        (tmp / "bulk" / f"f{i}.py").unlink()
+
+    # --- red suites stop the commit
+    at = commit_count(tmp)
+    write(tmp, "src/ok2.py", "y = 2\n")
+    _saved = mod.run_suites
+    try:
+        mod.run_suites = lambda: (False, "test_x.py: 1 failed")
+        result = emit(mod)
+        check("refuses while the suites are red",
+              "red" in json.dumps(result), json.dumps(result)[:160])
+        check("...and commits nothing", commit_count(tmp) == at)
+    finally:
+        mod.run_suites = _saved
+
+    # --- settings.json is held out even when it changed
+    at = commit_count(tmp)
+    write(tmp, ".claude/settings.json", '{"hooks": {}}\n')
+    write(tmp, "src/ok3.py", "z = 3\n")
     emit(mod)
-    after_staged = sorted(run(tmp, "diff", "--cached", "--name-only").split())
-    check("does not sweep files staged by someone else",
-          before_staged == after_staged == ["other.txt", "src/unrelated.py"],
-          f"before={before_staged} after={after_staged}")
-    check("...and they are still uncommitted",
-          "src/unrelated.py" not in run(tmp, "log", "--name-only", "--format="))
+    committed = run(tmp, "show", "--name-only", "--format=", "HEAD").split()
+    check("commits the rest of the turn", "src/ok3.py" in committed)
+    check("...but never settings.json", ".claude/settings.json" not in committed)
+    # -uall, not the default: git collapses an untracked directory to `.claude/`
+    # and the assertion would pass or fail on that formatting rather than on the
+    # file. `_hooklib.changed_paths` documents the same trap.
+    check("...which is left uncommitted in the tree",
+          ".claude/settings.json" in run(tmp, "status", "--porcelain", "-uall"))
 
-    # --- never touches code even when code changed in the same turn
-    write(tmp, "LOG.md", "NEW3")
-    write(tmp, "tools/x.py", "y = 1")
-    emit(mod)
-    check("never commits code alongside the artefacts",
-          "tools/x.py" not in run(tmp, "show", "--name-only", "--format=", "HEAD"))
-
-    # --- never touches .claude/, which holds executable hooks
-    write(tmp, "LOG.md", "NEW4")
-    write(tmp, ".claude/hooks/post-run/evil.md", "prose in an executable dir")
-    emit(mod)
-    check("never commits anything under .claude/",
-          ".claude" not in run(tmp, "show", "--name-only", "--format=", "HEAD"))
-
-    # --- loop guard
-    mod.load_payload = lambda: {"stop_hook_active": True}
-    write(tmp, "LOG.md", "NEW5")
-    check("honours stop_hook_active", emit(mod) == {})
-    mod.load_payload = lambda: {"stop_hook_active": False}
-
-    # --- no marker means no boundary can be detected
-    mod.load_turn_marker = lambda: None
-    check("silent with no turn marker", emit(mod) == {})
-    mod.load_turn_marker = lambda: marker
-
-    # --- a doc-only turn with no artefacts still commits the doc
-    write(tmp, "LOG.md", "NEW6")
-    emit(mod)
-    check("commits the knowledge doc on a turn with no other artefact",
-          "LOG.md" in run(tmp, "show", "--name-only", "--format=", "HEAD"))
-
-    # --- both failure paths are surfaced, never silent. Stubbing every git call
-    # only ever exercises the first one, so `add` and `commit` are failed separately.
-    real_git = mod.git
-
-    mod.load_turn_marker = lambda: {"LOG.md": "x", "HANDOFF.md": "x"}
-    write(tmp, "LOG.md", "NEW7")
-    mod.git = lambda *a: (1, "", "simulated add failure")
-    ctx = emit(mod).get("hookSpecificOutput", {}).get("additionalContext", "")
-    check("reports a failed stage instead of failing silently",
-          "could not stage" in ctx and "simulated add failure" in ctx,
-          f"got {ctx[:120]}")
-
-    mod.load_turn_marker = lambda: {"LOG.md": "y", "HANDOFF.md": "y"}
-    write(tmp, "LOG.md", "NEW8")
-
-    def fail_commit_only(*a):
-        if a and a[0] == "commit":
-            return 1, "", "simulated commit failure"
-        return real_git(*a)
-
-    mod.git = fail_commit_only
-    ctx = emit(mod).get("hookSpecificOutput", {}).get("additionalContext", "")
-    check("reports a failed commit instead of failing silently",
-          "FAILED" in ctx and "simulated commit failure" in ctx, f"got {ctx[:120]}")
-
-    # A failed commit must leave the index as it found it. Otherwise the artefacts
-    # stay staged, session-start/03-index-baseline.py records them as "inherited"
-    # next session, and pre-commit/06-index-scope-guard.py asks the user about files
-    # this hook staged itself -- two new hooks false-positiving each other.
-    check("...and says the index was restored, so the state is recoverable",
-          "index was left as it was found" in ctx, f"got {ctx[:200]}")
-    # The restore must be surgical, not a blanket reset: its own artefacts come back
-    # out of the index, and the files staged by someone else earlier in this test stay
-    # exactly where they were.
-    staged_after = sorted(run(tmp, "diff", "--cached", "--name-only").split())
-    check("...and its own artefact really is out of the index, not just claimed to be",
-          "LOG.md" not in staged_after, f"still staged: {staged_after}")
-    check("...while the files staged by someone else are untouched by the restore",
-          staged_after == ["other.txt", "src/unrelated.py"], f"got {staged_after}")
-    mod.git = real_git
-
-# ------------------------------------------------------------------------ result
+print()
 if failures:
-    print(f"\n{len(failures)} failed: " + ", ".join(failures))
+    print(f"{len(failures)} failed: {', '.join(failures)}")
     sys.exit(1)
-print("\nAll artifact-autocommit tests passed")
+print("All artifact-autocommit tests passed")

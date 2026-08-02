@@ -27,6 +27,73 @@ from pathlib import Path
 HOOKS_DIR = Path(__file__).resolve().parent
 
 
+# --- shared refusal rules ---------------------------------------------------
+#
+# One definition each, because two hooks now enforce them at different moments.
+# `pre-commit/01-secret-scan.py` catches a commit the model is about to run;
+# `post-run/06-artifact-autocommit.py` catches one it makes itself from a
+# subprocess, which never passes through PreToolUse and so sees no gate at all.
+# Two copies of these patterns would diverge, and the copy that diverged would
+# be the one guarding the unattended path.
+
+SECRET_PATTERNS = [
+    re.compile(r"AKIA[0-9A-Z]{16}"),                        # AWS access key
+    re.compile(r"-----BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY-----"),
+    re.compile(r"ghp_[A-Za-z0-9]{36}"),                     # GitHub PAT
+    re.compile(r"(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*[\"'][^\"']{8,}[\"']"),
+]
+
+# CLAUDE.md: "Never put AI attribution in git history." Enforced on the message
+# an auto-commit generates, since no human reads it before it lands.
+AI_ATTRIBUTION_PATTERNS = [
+    re.compile(r"(?i)co-authored-by:\s*(claude|anthropic|gpt|copilot)"),
+    re.compile(r"(?i)generated with \[?claude"),
+    re.compile(r"(?i)\bwritten by (claude|an? ai\b)"),
+    re.compile(r"(?i)🤖"),
+]
+
+PROTECTED_BRANCHES = {"main", "master", "develop", "release"}
+
+
+def current_branch(repo_root=None):
+    """The checked-out branch name, or None when git cannot answer.
+
+    None means "cannot tell", never "not protected" -- callers must treat it as
+    a refusal, not a pass. A detached HEAD returns 'HEAD', which is not in
+    PROTECTED_BRANCHES and is correctly allowed: you cannot damage a branch you
+    are not on.
+    """
+    root = Path(repo_root) if repo_root else HOOKS_DIR.parents[1]
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=str(root), capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return proc.stdout.strip() or None if proc.returncode == 0 else None
+
+
+def scan_for_secrets(paths, repo_root=None):
+    """Paths whose content matches a credential pattern. Unreadable files are skipped.
+
+    Skipping unreadable files is safe here only because the caller refuses on any
+    finding: a file that cannot be read cannot be shown to match, and the commit
+    it belongs to is a local checkpoint that has not left the machine.
+    """
+    root = Path(repo_root) if repo_root else HOOKS_DIR.parents[1]
+    findings = []
+    for rel in paths:
+        target = root / rel
+        try:
+            text = target.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if any(p.search(text) for p in SECRET_PATTERNS):
+            findings.append(rel)
+    return findings
+
+
 def load_payload() -> dict:
     """Return the hook payload from HOOK_PAYLOAD or stdin, whichever is present.
 

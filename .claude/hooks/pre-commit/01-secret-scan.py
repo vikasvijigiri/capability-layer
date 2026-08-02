@@ -20,14 +20,15 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from _hooklib import command_of, deny, load_payload, write_log  # noqa: E402
+from _hooklib import (  # noqa: E402
+    SECRET_PATTERNS, command_of, deny, load_payload, write_log,
+)
 
-SECRET_PATTERNS = [
-    re.compile(r"AKIA[0-9A-Z]{16}"),                        # AWS access key
-    re.compile(r"-----BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY-----"),
-    re.compile(r"ghp_[A-Za-z0-9]{36}"),                     # GitHub PAT
-    re.compile(r"(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*[\"'][^\"']{8,}[\"']"),
-]
+# SECRET_PATTERNS moved to _hooklib on 2026-08-02 so that
+# post-run/06-artifact-autocommit.py enforces the identical rule. Its commits
+# are made from a subprocess and never reach PreToolUse, so this hook cannot see
+# them -- and a second copy of these patterns would eventually diverge from the
+# one guarding the unattended path.
 
 COMMIT_RE = re.compile(r"\bgit\s+(?:-[^\s]+\s+)*commit\b")
 DRY_RUN_RE = re.compile(r"--dry-run\b")

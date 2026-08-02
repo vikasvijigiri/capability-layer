@@ -1,88 +1,98 @@
-"""post-run -- commits the prose artefacts of a finished unit of work, automatically.
+"""post-run -- commits this turn's work automatically, as a small local checkpoint.
 
-Authorised by the user on 2026-08-02 after the trade-off below was stated
-explicitly. Do not widen its scope without asking again.
+Authorised by the user on 2026-08-02, widened from prose-only to all changed
+files on the same day after the trade below was stated explicitly. Do not widen
+it further -- to pushing, to protected branches -- without asking again.
 
 Why this exists
 ---------------
-`docs/research/2026-08-02-automating-the-git-chain.md` found that nobody gates on
-backlog size, because the two repos that solved it commit at a *boundary* so the
-backlog never grows. `FengZhiHen1/Campfire-AI` commits on a state transition (a
-stage flipping to DONE); `imehr/book-writer-plugin` proves a hook can run git at
-all. This repo had 84 files uncommitted across five sessions while 24 hooks fired
-correctly, because every gate asked the model to act instead of acting.
+This repo accumulated 91 uncommitted files across five sessions while 28 hooks
+fired correctly, because every gate asked the model to act instead of acting.
+The fix is not a bigger gate; it is a commit boundary that arrives on its own.
 
-The state transition here is **`knowledge-manager` writing LOG.md or HANDOFF.md**.
-That is this repo's own definition of a unit of work finishing, so it is the
-correct commit boundary -- and it is already detectable, because
-`save_turn_marker` snapshots those two digests at UserPromptSubmit.
+`pre-commit/03-review-gate.py` was the opposite approach -- ask a human on every
+commit -- and it deadlocked and was deleted. Its replacement is this: commits are
+cheap local checkpoints that nobody reviews, and **the review moves to the push
+or the PR**, which is the boundary the user actually cares about. A commit that
+needs a human is not a small commit; it is an expensive one, and expensive
+commits are why the backlog grew.
 
-What it will and will not touch
--------------------------------
-Only `.md` files, only the root knowledge docs and ARTEFACT_ROOTS, always by
-**explicit pathspec**. `git add` is never called in any form.
-`imehr/book-writer-plugin`'s version runs `git add .`, which is exactly how this
-repo accumulated 49 files staged across sessions waiting to be swept into an
-unrelated commit. A pathspec commit cannot do that and leaves the index untouched.
+What gates a checkpoint
+-----------------------
+Artefact facts, never process compliance -- the principle five comparable repos
+converge on (stripe, rstudio, crowd.dev, claudekit, superpowers: every hook in
+all of them verifies an artefact; not one enforces process).
 
-Deliberately bypassed gates, and why that is acceptable here
-------------------------------------------------------------
+  1. Something changed.
+  2. The branch is not protected.
+  3. No changed file matches a credential pattern.
+  4. The repo's own suites pass.
+  5. The change is small enough to still be a checkpoint.
+
+Every clause is falsifiable. A failure refuses the commit and says so; nothing
+is ever committed silently on a red suite.
+
+Deliberately bypassed gates, and how that is covered
+----------------------------------------------------
 A commit made from this subprocess does not pass through `PreToolUse`, so
-`01-secret-scan.py`, `02-branch-guard.py`, `04-delivery-guard.py` and
-`06-index-scope-guard.py` never see it. That is a real hole, and it is the whole
-reason the scope is this narrow:
+`01-secret-scan.py`, `02-branch-guard.py` and `01-forbidden-change-guard.py`
+never see it. When the scope was prose that was tolerable. It is not tolerable
+for code, so the two load-bearing checks are enforced *inline* here, from the
+same `_hooklib` definitions those hooks use -- one rule, two enforcement points,
+no second copy to drift.
 
-- **Never code.** `.md` only, under fixed roots. No tests, no hooks, no
-  `settings.json`, nothing executable, nothing under `.claude/`.
-- **Never a review subject.** The review gate exists for code; prose artefacts
-  are reviewed by being read, which is what happens next anyway.
-- **The docs gate is satisfied by construction** -- this only fires on a turn
-  where the docs were just written.
-- **Blast radius is the lowest band** in `decisions/2026-08-02-gate-on-blast-radius.md`:
-  a local commit on the current branch. It never pushes.
+Never pushes. Never `git add .`; always an explicit pathspec, so it cannot sweep
+files somebody else staged. Never raises, never blocks the turn.
 
-Anything wider than prose artefacts stays behind the human gates.
-
-Never raises and never blocks the turn. A failed commit is reported in the Stop
-output and the files are left exactly as they were.
+Message shape
+-------------
+`wip:` prefixed, deliberately. These are checkpoints, not curated history: the
+hook can count files but cannot know why they changed. Squash-merging the branch
+at PR time collapses them into the one message a human writes, so the noise has
+a defined end. A checkpoint that pretended to be a real commit message would be
+worse -- it would look reviewed.
 """
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from _hooklib import (  # noqa: E402
-    KNOWLEDGE_DOCS,
+    AI_ATTRIBUTION_PATTERNS,
+    PROTECTED_BRANCHES,
     changed_paths,
-    doc_digests,
+    current_branch,
     load_payload,
-    load_turn_marker,
+    scan_for_secrets,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
-# Prose deliverables only -- directories whose contents are committed .md files
-# written by a skill.
-ARTEFACT_ROOTS = ("docs/specs/", "docs/research/", "docs/plans/", "decisions/")
+# Above this, the turn stopped being a checkpoint and became a unit of work
+# somebody should look at before it is written down as one commit. Refusing is
+# the safe direction: the files stay in the working tree and `03-checkpoint.py`
+# has already snapshotted them, so nothing is at risk either way.
+MAX_FILES = 25
 
-# Writing either of these is the boundary that makes this hook fire.
-TRIGGER_DOCS = ("LOG.md", "HANDOFF.md")
+# Paths never committed automatically, whatever else is true. `settings.json`
+# decides what fires; committing a change to it unattended means the mechanism
+# that governs this hook was altered without anyone reading the diff.
+NEVER_AUTO = (".claude/settings.json", ".claude/settings.local.json")
 
+SUITE_GLOB = "test_*.py"
+SUITE_DIR = REPO_ROOT / "tools"
 
-def is_artefact(path: str) -> bool:
-    """True only for prose this hook is authorised to commit."""
-    norm = path.replace("\\", "/")
-    if not norm.endswith(".md"):
-        return False
-    if norm.startswith(".claude/"):
-        # `.claude/` holds executable hooks and skill definitions alongside prose.
-        # The directory does not predict blast radius, so it is excluded outright.
-        return False
-    if norm in KNOWLEDGE_DOCS:
-        return True
-    return any(norm.startswith(root) for root in ARTEFACT_ROOTS)
+# Re-entry guard. `tools/test_hooks.py` fires the whole `post-run` event, which
+# reaches this hook, which runs the suites, which runs `test_hooks.py` -- an
+# unbounded recursion that presents as a hang, not an error. Found on 2026-08-02
+# by the run timing out at two minutes.
+#
+# It does double duty: a suite run must never produce a real commit either, and
+# any invocation carrying this flag is by definition running underneath one.
+REENTRY_FLAG = "UAIOS_AUTOCOMMIT_RUNNING"
 
 
 def git(*args):
@@ -90,7 +100,8 @@ def git(*args):
     try:
         proc = subprocess.run(
             ["git", *args], cwd=str(REPO_ROOT),
-            capture_output=True, text=True, timeout=20,
+            capture_output=True, text=True, encoding="utf-8",
+            errors="replace", timeout=60,
         )
         return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
     except Exception as exc:  # noqa: BLE001 -- reported below, never swallowed
@@ -104,97 +115,160 @@ def speak(text: str) -> None:
     }}))
 
 
+def run_suites():
+    """(ok, detail). ok is False only when a suite actually ran and failed.
+
+    A repo with no suites is not a failing repo -- it commits, and the caller
+    says so, because "verified" and "nothing to verify" must not read alike.
+    """
+    if not SUITE_DIR.is_dir():
+        return True, "no tools/ directory -- nothing to verify"
+    suites = sorted(SUITE_DIR.glob(SUITE_GLOB))
+    if not suites:
+        return True, "no test suites found -- nothing to verify"
+
+    failed = []
+    for suite in suites:
+        try:
+            proc = subprocess.run(
+                [sys.executable, str(suite)], cwd=str(REPO_ROOT),
+                capture_output=True, text=True, encoding="utf-8",
+                errors="replace", timeout=300,
+                env={**os.environ, "PYTHONIOENCODING": "utf-8",
+                     REENTRY_FLAG: "1"},
+            )
+        except Exception as exc:  # noqa: BLE001
+            failed.append(f"{suite.name} ({exc})")
+            continue
+        if proc.returncode != 0:
+            tail = (proc.stdout or proc.stderr or "").strip().splitlines()
+            failed.append(f"{suite.name}: {tail[-1] if tail else 'exit ' + str(proc.returncode)}")
+    if failed:
+        return False, "; ".join(failed)
+    return True, f"{len(suites)} suite(s) green"
+
+
+def build_message(paths, suite_detail):
+    """A checkpoint subject the hook can actually justify, plus the evidence."""
+    groups = {}
+    for p in paths:
+        head = p.split("/")[0] if "/" in p else "(root)"
+        groups[head] = groups.get(head, 0) + 1
+    summary = ", ".join(f"{k} ({v})" for k, v in sorted(groups.items()))
+    subject = f"wip: checkpoint {len(paths)} file(s) -- {summary}"
+    if len(subject) > 72:
+        subject = f"wip: checkpoint {len(paths)} file(s) across {len(groups)} area(s)"
+
+    listing = "\n".join(f"- {p}" for p in paths)
+    return (
+        f"{subject}\n\n"
+        f"Automatic checkpoint from post-run/06-artifact-autocommit.py. Not a\n"
+        f"reviewed commit: squashed at PR time, when a human reads the branch.\n\n"
+        f"Verified before committing: {suite_detail}; no credential pattern in\n"
+        f"the changed files; branch is not protected.\n\n"
+        f"{listing}\n"
+    )
+
+
 def main():
+    # Running underneath our own suite run: never recurse, never commit.
+    if os.environ.get(REENTRY_FLAG):
+        return
+
     payload = load_payload()
     if payload.get("stop_hook_active"):
-        return
-
-    before = load_turn_marker()
-    if before is None:
-        return
-
-    # The boundary: did this turn write LOG.md or HANDOFF.md? Anything else is
-    # mid-flight, and mid-flight work is not a unit of work.
-    now = doc_digests()
-    if not any(now.get(doc) != before.get(doc) for doc in TRIGGER_DOCS):
         return
 
     paths = changed_paths(REPO_ROOT)
     if not paths:
         return
 
-    artefacts = sorted({p for p in paths if is_artefact(p)})
-    if not artefacts:
+    paths = sorted(p for p in paths if p not in NEVER_AUTO)
+    if not paths:
         return
 
-    subject = (
-        f"Record {artefacts[0]}" if len(artefacts) == 1
-        else f"Record {len(artefacts)} artefacts from one unit of work"
-    )
-    listing = "\n".join(f"- {p}" for p in artefacts)
-    message = (
-        f"{subject}\n\n"
-        f"Committed automatically at the knowledge-manager boundary by\n"
-        f"post-run/06-artifact-autocommit.py. Prose artefacts only, by explicit\n"
-        f"pathspec; the index and the rest of the working tree are untouched.\n\n"
-        f"{listing}\n"
-    )
+    # --- gate 1: the branch
+    branch = current_branch(REPO_ROOT)
+    if branch is None:
+        speak("Auto-commit skipped: could not read the current branch, so it "
+              "cannot rule out a protected one. Commit by hand.")
+        return
+    if branch in PROTECTED_BRANCHES:
+        speak(f"Auto-commit skipped: `{branch}` is a protected branch. Branch "
+              f"first, then the checkpoint resumes on its own.")
+        return
 
-    # -F, not -m: the message is multi-line and contains paths. book-writer-plugin
-    # interpolates its message into a shell string, which breaks on the first quote.
+    # --- gate 2: size
+    if len(paths) > MAX_FILES:
+        speak(f"Auto-commit skipped: {len(paths)} changed files is past "
+              f"MAX_FILES={MAX_FILES} and is a unit of work, not a checkpoint. "
+              f"Review it and commit deliberately.")
+        return
+
+    # --- gate 3: secrets. This hook's commits never reach 01-secret-scan.py,
+    # so the identical rule is enforced here from the same _hooklib patterns.
+    findings = scan_for_secrets(paths, REPO_ROOT)
+    if findings:
+        speak("Auto-commit REFUSED: a credential pattern matched in "
+              f"{', '.join(findings)}. Nothing was committed. Remove the secret "
+              f"-- do not override; a committed key is unrecoverable once pushed.")
+        return
+
+    # --- gate 4: the suites
+    ok, suite_detail = run_suites()
+    if not ok:
+        speak(f"Auto-commit skipped: suites are red ({suite_detail}). "
+              f"{len(paths)} file(s) left uncommitted -- a red checkpoint is "
+              f"worse than none. `03-checkpoint.py` has already snapshotted them.")
+        return
+
+    message = build_message(paths, suite_detail)
+
+    # --- gate 5: the message itself. CLAUDE.md forbids AI attribution in git
+    # history, and no human reads this message before it lands.
+    if any(p.search(message) for p in AI_ATTRIBUTION_PATTERNS):
+        speak("Auto-commit skipped: the generated message matched an "
+              "AI-attribution pattern, which CLAUDE.md forbids in git history. "
+              "This is a bug in build_message() -- report it.")
+        return
+
     msg_file = REPO_ROOT / ".claude" / "hooks" / "state" / "autocommit-msg.txt"
     try:
         msg_file.parent.mkdir(parents=True, exist_ok=True)
         msg_file.write_text(message, encoding="utf-8")
     except OSError as exc:
-        speak(f"Artefact auto-commit could not write its message file ({exc}); "
-              f"{len(artefacts)} artefact file(s) left uncommitted.")
+        speak(f"Auto-commit could not write its message file ({exc}); "
+              f"{len(paths)} file(s) left uncommitted.")
         return
 
-    # A pathspec commit alone cannot commit an untracked file -- git errors with
-    # "did not match any file(s) known to git" -- and a NEW spec, research doc or
-    # decision record is exactly that. So the paths are staged first, still by
-    # explicit pathspec. `git add -- <paths>` is not `git add .`: it can only ever
-    # touch the artefacts computed above, so the sweep this hook exists to avoid
-    # remains impossible, and anything staged by someone else is left alone.
-    rc, _, stderr = git("add", "--", *artefacts)
+    # A pathspec commit alone cannot commit an untracked file, and a new file is
+    # exactly what a turn most often produces. So stage first, still by explicit
+    # pathspec: `git add -- <paths>` can only ever touch the set computed above,
+    # so the sweep this hook exists to avoid remains impossible.
+    rc, _, stderr = git("add", "--", *paths)
     if rc != 0:
         msg_file.unlink(missing_ok=True)
-        speak(
-            f"Artefact auto-commit could not stage its own paths ({stderr[:200]}); "
-            f"nothing was committed and the index is unchanged."
-        )
+        speak(f"Auto-commit could not stage its own paths ({stderr[:200]}); "
+              f"nothing was committed and the index is unchanged.")
         return
 
-    rc, _, stderr = git("commit", "-F", str(msg_file), "--", *artefacts)
+    rc, _, stderr = git("commit", "-F", str(msg_file), "--", *paths)
     msg_file.unlink(missing_ok=True)
 
     if rc != 0:
-        # Leave the index as it was found. Without this, a failed commit strands the
-        # artefacts staged, `session-start/03-index-baseline.py` snapshots them next
-        # session as "inherited", and `pre-commit/06-index-scope-guard.py` then asks
-        # the user about files this automation staged itself -- two new hooks
-        # manufacturing false positives for each other.
-        rc_undo, _, undo_err = git("restore", "--staged", "--", *artefacts)
-        index_state = (
-            "the index was left as it was found"
-            if rc_undo == 0 else
-            f"WARNING: they are also still staged and could not be unstaged ({undo_err[:120]})"
-        )
-        # Surfaced, never silent -- CLAUDE.md forbids a silent degraded path.
-        speak(
-            f"Artefact auto-commit FAILED and nothing was committed: {stderr[:300]} "
-            f"-- the {len(artefacts)} artefact file(s) are still uncommitted and "
-            f"{index_state}. Commit them by hand or investigate the hook."
-        )
+        # Leave the index as it was found, or a failed commit strands the paths
+        # staged and the next session inherits them as somebody else's work.
+        rc_undo, _, undo_err = git("restore", "--staged", "--", *paths)
+        index_state = ("the index was left as it was found" if rc_undo == 0
+                       else f"WARNING: still staged, could not unstage ({undo_err[:120]})")
+        speak(f"Auto-commit FAILED and nothing was committed: {stderr[:300]} -- "
+              f"{len(paths)} file(s) still uncommitted and {index_state}.")
         return
 
     rc_sha, sha, _ = git("rev-parse", "--short", "HEAD")
-    speak(
-        f"Auto-committed {len(artefacts)} prose artefact(s) as "
-        f"{sha if rc_sha == 0 else 'HEAD'}: {', '.join(artefacts)}. "
-        f"Nothing was staged and nothing was pushed."
-    )
+    speak(f"Checkpoint {sha if rc_sha == 0 else 'HEAD'}: {len(paths)} file(s), "
+          f"{suite_detail}. Local only -- nothing pushed. Review happens at the "
+          f"PR, over the whole branch.")
 
 
 if __name__ == "__main__":
