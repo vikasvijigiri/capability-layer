@@ -1,5 +1,5 @@
 ---
-description: Granular git accounting — exact counts for committed, staged, unstaged, untracked, inherited and recoverable, with the command behind every number
+description: Granular git accounting — exact counts for committed, staged, unstaged, untracked, recoverable and branch scope (how many concerns one branch is carrying), with the command behind every number
 ---
 
 Measure the repository. Report numbers with the command that produced them, never
@@ -99,7 +99,49 @@ has been refusing, and its reason is in the Stop output.
 large uncommitted pile is a reviewability problem, not a safety one — say that
 explicitly, because the size of the number invites the opposite conclusion.
 
-## 8. Surprises worth surfacing
+## 8. Branch scope — how many concerns are on this branch
+
+    git rev-list --count <base>..HEAD                     # commits it adds
+    git diff --name-only <base>..HEAD | wc -l             # files it touches
+    git diff --name-only <base>..HEAD | awk -F/ '{print $1}' | sort | uniq -c | sort -rn
+    git log --reverse --format='%ar' <base>..HEAD | head -1   # how old it is
+
+Name coherence — do the changed paths have anything to do with what the branch is
+called? Tokens from the name, counted against the paths:
+
+    git rev-parse --abbrev-ref HEAD | tr '_/-' '\n' | grep -v '^$' | \
+      while read t; do \
+        printf '%-22s %s\n' "$t" "$(git diff --name-only <base>..HEAD | grep -ic "$t")"; \
+      done
+
+The dash goes **last** in `tr`'s first argument. Leading, it parses as an option
+flag and the command dies with `tr: unknown option -- _`.
+
+A token matching **zero** paths is the signal worth reporting. It means the branch
+is no longer doing the thing it is named after — either it drifted, or it grew a
+second concern that deserves its own branch.
+
+Report the four numbers and any zero-match tokens. **Do not judge and do not
+gate.** There is no file count that means "too many": a wide rename is 300 files
+and one concern, while two unrelated bug fixes are four files and two. The
+question that decides it is *could half of this have merged separately and still
+made sense* — and that is `code-review`'s to ask, not this command's.
+
+Measured on 2026-08-03, this repo's own branch — 26 commits, 337 files, 3 days,
+11 top-level areas — the name check reads:
+
+    collapse          0 paths
+    capabilities     37 paths
+    into              0 paths
+    routing           1 paths
+
+Three of four tokens match essentially nothing. The branch is named after a
+capability-layer collapse and now carries the hook layer, the skill layer, the
+gate deletion, the commit loop, the model policy, the context budget and the
+project-check layer. That is the case this section exists to make visible, and it
+took four numbers to see.
+
+## 9. Surprises worth surfacing
 
     git ls-files -i -c --exclude-standard          # tracked but ignored -- contradiction
     git ls-files -v | grep '^[a-z]'                 # assume-unchanged / skip-worktree

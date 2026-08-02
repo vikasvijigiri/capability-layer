@@ -37,6 +37,35 @@ it is now silent. Do not skip it.
 
 ## Steps
 
+**0. Before reading anything: is this one change or several?**
+
+Only when the surface is a branch or a PR — skip it for a working-tree review.
+Four numbers, quoted:
+
+```bash
+git rev-list --count <base>..HEAD
+git diff --name-only <base>..HEAD | wc -l
+git diff --name-only <base>..HEAD | awk -F/ '{print $1}' | sort | uniq -c | sort -rn
+git log --reverse --format='%ar' <base>..HEAD | head -1
+```
+
+Then ask the one question that decides it: **could half of this have merged
+separately and still made sense?** If yes, say so now and ask whether to split
+before you read a line. Splitting after a review throws the review away; the
+decision is nearly free before it and expensive after.
+
+There is deliberately **no threshold**. A wide rename is 300 files and one
+concern; two unrelated bug fixes are four files and two concerns. File count is a
+proxy that fires on the wrong things — it is why Danger.js's large-PR warning
+gets talked past. Judge coherence, not size.
+
+The strongest single signal is cheap: a token in the branch *name* that matches
+zero changed paths means the branch stopped doing what it is called. `/git-state`
+section 8 prints it.
+
+State the verdict in one line either way — "one concern" is a finding too, and
+saying it is what stops this becoming a step people skip.
+
 **1. Get the change.** Pick the surface from what is being delivered:
 
 | Delivering | Read |
@@ -93,6 +122,10 @@ Then stop. Do not commit, push, or open the PR yourself unless separately asked.
   asserts they already did.
 - "The suites pass, so it is reviewed." Passing is not reading.
 - Reviewing `git diff` for a PR. That is today's edit, not the branch.
+- "It is a big branch but I will just review it all." Step 0 exists because that
+  is the expensive order. Ask first.
+- "Splitting is the user's call, I will mention it in the findings." By then the
+  review is spent — mentioning it costs them the work twice.
 
 **Each of these means: ask.**
 
@@ -105,6 +138,8 @@ Then stop. Do not commit, push, or open the PR yourself unless separately asked.
 | Reviewing only tracked changes | A brand-new untracked file has no diff and is the likeliest place for a defect |
 | Fixing findings inside the review | The sign-off then covers content that no longer exists, and nobody can tell which version was accepted |
 | Reviewing the working tree when the delivery is a PR | A PR delivers every commit the base lacks, not today's edit |
+| Reading the diff before asking whether it is one change | A split decision after the review discards it; before, it costs nothing |
+| Treating a file count as the split signal | A 300-file rename is one concern; two four-file fixes are two |
 
 ## Next step — you MUST take it
 

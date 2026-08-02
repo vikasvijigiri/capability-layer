@@ -3,6 +3,78 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-03 00:20
+**Branch scope is now visible, as facts in a command and a question in a skill.**
+Nothing asked whether a branch had accumulated more than one concern.
+`diff-reviewer` has a `scope` angle but it is per-diff and only runs if subagents
+were requested; `02-branch-guard` knows only protected-vs-not; `delivering` picks
+the *base* branch. The gap was real and this repo is the evidence:
+
+    branch  collapse-capabilities-into-routing
+    25 commits · 334 files · 3 days · 11 top-level areas
+
+carrying at least six separable concerns under a name describing the first.
+
+`/git-state` gained section 8: commits, files, top-level spread, age, and **branch
+name tokens matched against changed paths** — a token matching zero paths means
+the branch stopped doing what it is called, which is the cheapest strong signal
+available. `code-review` gained **step 0**, before reading anything: state the
+shape, ask *could half of this have merged separately and still made sense*.
+
+Two deliberate non-choices, both against the obvious design:
+
+- **No threshold, and no hook.** Danger.js — the standard prior art — warns on PR
+  size, and size is a proxy that fires on the wrong things: a wide rename is 300
+  files and one concern, two unrelated fixes are four files and two. A numeric
+  gate here would repeat the process-gate mistake this repo spent 2026-08-02
+  undoing.
+- **Step 0 runs before the diff is read, not after.** Splitting after a review
+  discards the review. The decision is nearly free before and expensive after.
+
+## 2026-08-03 00:05
+**The five app-code blockers are closed**, so the autonomy story holds for real
+code and not only for this repo's own prose.
+
+`.claude/hooks/_projectchecks.py` is new: detection by marker file for `npm test`,
+`tsc --noEmit`, `pytest`, `cargo test`, `go test ./...`, lockfile-aware package
+manager, plus this repo's `tools/test_*.py`. `.claude/project-checks.json`
+overrides any of it; `false` disables a check as a stated decision. Shape taken
+from carlrannaberg/claudekit's `test-project.ts` — config overrides detection, a
+check that does not apply is skipped, a timeout reports rather than blocks.
+
+**The one place we deliberately differ from claudekit**: it returns 0 when no test
+script exists. Here that silence would be the entire safety story evaporating, so
+`run_checks` returns `ran_test` separately from `ok`, and **gate 4b refuses to
+commit code when no test ran**. Prose still commits freely. `"test": false` opens
+the hatch, and — caught by its own test — the hatch did not actually open until
+the gate was taught to read it.
+
+Secrets now scan **two axes**: 17 content patterns (provider prefixes, JWTs, DSNs
+with inline credentials) and path patterns from claudekit's `sensitive-patterns.ts`
+(`.env`, `*.pem`, `id_rsa*`, `.npmrc`, `*.tfstate`, …) with `.env.example` and
+friends allowlisted. A `.env` whose values a teammate already redacted matches no
+regex and still must never be committed.
+
+Three bugs, all found by running it:
+
+1. `lstrip("./")` strips a *character set*, so `".env"` became `"env"` and the
+   single most important path pattern silently never matched. **Identical to the
+   bug fixed hours earlier in `test_referenced_paths.py`** — this one deserves a
+   lint rule, not another comment.
+2. `shlex.quote` emits single quotes; `shell=True` on Windows is `cmd.exe`, which
+   does not treat them as quoting, so every detected Python suite failed with a
+   syntax error from the shell.
+3. **The credential patterns matched their own definitions** — a DSN example in a
+   `_hooklib.py` comment and three literal fixtures in the new suite — which
+   refused every commit until split. `test_hooks.py` documents this exact trap for
+   `AKIA`; it recurred anyway, so `test_project_checks.py` now asserts the repo
+   does not trip its own scanner.
+
+Also: the re-entry recursion returned by a new route. The suite pops the guard so
+it can drive `main()`, then a probe called `run_suites()` against the *real* repo
+— which runs the suite, which pops the guard. Two-minute timeout, no error. The
+guard protects the hook's path; it cannot protect a test that steps around it.
+
 ## 2026-08-02 22:40
 **Context cost measured, then cut where it recurs.** Four costs, measured rather
 than guessed:
