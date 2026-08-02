@@ -39,8 +39,9 @@ Every character a tool returns stays resident and is re-sent on every later
 turn. On 2026-08-02 this skill's own research ingested ~135,000 chars to
 produce 24,000 of report: four SKILL.md files read whole, a 71k-char file
 sliced three times, six local files read whole. `post-tool/01-context-budget.py`
-now meters this and speaks when a single result passes 12k chars or the session
-passes 150k — it reports, it cannot stop you.
+metered this until it was deleted on 2026-08-02, so **nothing measures it now** —
+the 12k-per-result and 150k-per-session figures below are a discipline you keep,
+not a warning you will receive.
 
 Climb this ladder and stop at the first rung that answers the question:
 

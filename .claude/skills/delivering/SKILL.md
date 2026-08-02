@@ -101,12 +101,12 @@ missing thing.
 |---|---|---|
 | `01-secret-scan.py` | A staged file matches a credential pattern | Remove the secret. Never override |
 | `02-branch-guard.py` | The commit is destined for a protected branch | Branch first |
-| `04-delivery-guard.py` | AI attribution in the commit message | Remove it — git history carries no AI attribution here |
-| `06-index-scope-guard.py` | A blanket `git add`, or a commit spending files staged before this session | Name the paths: `git commit -- <paths>` |
 
-`03-review-gate.py` and `05-docs-required.py` were deleted on 2026-08-02, so
-review and recording are no longer enforced here at all — they are steps 2 and 3
-of the checklist above and nothing will stop you skipping them.
+Only two remain. `03-review-gate.py`, `05-docs-required.py`,
+`04-delivery-guard.py` and `06-index-scope-guard.py` were deleted on 2026-08-02:
+review, recording, attribution and staging scope are steps 2 and 3 of the
+checklist above, and **nothing will stop you skipping them**. The AI-attribution
+rule survives only inside the auto-commit, over messages it generates itself.
 
 ## Before anything irreversible
 
@@ -138,7 +138,7 @@ explicit request for it.
 |---|---|
 | Presenting the menu before the three preconditions | The user chooses under a false premise |
 | Deleting the branch before verifying the merged result | The recoverable state is gone |
-| `--record` where `--pr` was needed | Wrong fingerprint kind; the sign-off is lost |
+| Reviewing the working tree when the delivery is a PR | A PR carries every commit the base lacks, including `wip:` checkpoints nobody read |
 | Overriding a gate to make it quiet | The noise was the feature; the next person inherits a disarmed gate |
 | Treating "keep as-is" as failure | It is one of the three legitimate outcomes |
 | Delivering, then logging | The log entry is part of delivery, not an afterthought |

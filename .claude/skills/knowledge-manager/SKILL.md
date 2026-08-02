@@ -10,9 +10,10 @@ model: opus
 # Knowledge Manager
 
 Owns exactly seven things: `TASK.md`, `PLAN.md`, `MEMORY.md`, `HANDOFF.md`,
-`LOG.md`, `ISSUES.md`, `decisions/`. Nothing else. One hook warns about these
-files and none can write them — a hook is a subprocess with no tool access, so
-it can refuse a turn but cannot compose an entry. That is the gap this fills.
+`LOG.md`, `ISSUES.md`, `decisions/`. Nothing else. **No hook watches these files
+any more** — a hook is a subprocess with no tool access, so it could refuse a
+turn but never compose an entry, and every hook that tried was deleted on
+2026-08-02. That is the gap this fills, and nothing now reminds you it is open.
 
 Cap visible output at ~500 tokens. The written entries are the deliverable; do
 not also narrate them back.
@@ -120,11 +121,11 @@ visible in `git show`.
 
 ## Routing
 
-- Mandatory validator: none. The gates that fire when these files go stale are
-  `pre-run/04-docs-staleness.py`, which warns and nothing more.
-  `post-run/05-docs-gate.py` (blocked the turn) and
-  `pre-commit/05-docs-required.py` (denied the commit) were deleted on
-  2026-08-02 — so recording is now entirely on you.
+- Mandatory validator: none, and **nothing warns either.** `05-docs-gate.py`
+  (blocked the turn), `05-docs-required.py` (denied the commit) and
+  `04-docs-staleness.py` (warned each turn) were all deleted on 2026-08-02.
+  Recording is entirely on you now — and the auto-commit will happily checkpoint
+  a turn's work with no log entry behind it.
 - Terminal handoff: none. This records and stops.
 - Invoked at the end of a unit of work, not at the end of a session — a session
   that ran four units owes four log entries, written as each finished.

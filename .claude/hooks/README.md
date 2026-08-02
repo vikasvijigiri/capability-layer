@@ -7,7 +7,7 @@ JSON payload via the `HOOK_PAYLOAD` environment variable.
 Location
 
 - Place hooks under `.claude/hooks/<event>/` as numbered scripts, e.g.
-  `.claude/hooks/pre-run/01-log.py`.
+  `.claude/hooks/pre-commit/01-secret-scan.py`.
 
 Hook events — implemented
 

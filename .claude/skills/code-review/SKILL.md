@@ -27,7 +27,8 @@ A hook fires once, mechanically, and cannot read a diff or hold a conversation.
 `pre-commit/03-review-gate.py` tried to enforce this and was deleted on
 2026-08-02: it could only ask *whether* a review happened, never perform one, and
 its receipt fingerprinted the whole working tree — so writing the log entry that
-`05-docs-required.py` demanded invalidated the receipt, a measured deadlock.
+`05-docs-required.py` demanded (deleted the same day) invalidated the receipt,
+a measured deadlock.
 Five comparable repos were read and not one gates review this way.
 
 So the enforcement is this skill plus the user, not a mechanism. The upside is

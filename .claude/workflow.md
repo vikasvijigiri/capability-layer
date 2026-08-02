@@ -185,9 +185,8 @@ intentions:
 | Never deliver an unreviewed change | `code-review` over the branch at the push/PR boundary. Commits below that are unreviewed `wip:` checkpoints by design |
 | Never auto-commit a secret, a red suite, or onto a protected branch | `post-run/06-artifact-autocommit.py`, enforced inline — its commits never reach `PreToolUse` |
 | Never commit secrets | `pre-commit/01-secret-scan.py` |
-| Never leave a unit of work unrecorded | `knowledge-manager`, prompted by `pre-run/04-docs-staleness.py` |
-| Never put AI attribution in git history | `pre-commit/04-delivery-guard.py` |
-| Watch what the context costs | `post-tool/01-context-budget.py` |
+| Never leave a unit of work unrecorded | `knowledge-manager`. No hook prompts for it since 2026-08-02 |
+| Never put AI attribution in git history | `_hooklib.AI_ATTRIBUTION_PATTERNS`, checked inline by the auto-commit |
 
 ## Where state lives between stages
 

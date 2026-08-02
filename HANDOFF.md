@@ -39,11 +39,18 @@ command for either.
 a `wip:` checkpoint if five artefact gates pass; review moved to the push/PR.
 First self-made commit: `45267c7`.
 
-**Phase 3 is blocked on one command.** 17 `git rm`s, which the classifier refuses.
-Either add `"Bash(git rm:*)"` to `.claude/settings.local.json` allow, or run the
-deletion by hand — then phases 3 and 4 proceed unattended. Phase 2 (writing
-`permissions`) is permanently the user's: the classifier will not let me widen my
-own boundary, correctly.
+**Phases 1 and 3 are done. 28 hooks → 9.** See LOG 2026-08-02 21:30. Five suites,
+all green; `tools/test_referenced_paths.py` is new and closes the gap that had
+been the top item here.
+
+**Phase 2 is permanently the user's**: the classifier will not let me widen my own
+permission boundary, correctly. `.claude/settings.local.json` now carries
+`Bash(git rm:*)` in allow, which was what unblocked phase 3.
+
+**Phase 4 is not built, and I recommend dropping it.** A single dispatcher earns
+its keep at claudekit's 19 hooks with shared config; at 9 hooks in 7 directories,
+one file each and no shared config, it adds indirection and removes nothing. The
+plan marked it optional pending 1-3. Say if you want it anyway.
 
 **Target is 9 hooks, not 8** — agreed 2026-08-02.
 `on-artifact-create/02-hook-self-test-nudge.py` comes off the deletion list: it

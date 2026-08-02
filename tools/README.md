@@ -6,16 +6,17 @@ Helper scripts and the repo's test suites.
   Passes the payload via `HOOK_PAYLOAD`; scripts read it through
   `_hooklib.load_payload()`, which handles both that and stdin.
 
-Test suites — all six run by `/verify`:
+Test suites — all five run by `/verify`:
 
 - `test_hooks.py` — every hook script against realistic payloads.
 - `test_process_router.py` — skill routing: matching, fail-open, and that every
   heading names a real skill and every skill has an entry.
 - `test_hook_registration.py` — disk, `settings.json` and `hooks_registry.json`
   agree, in all three directions.
-- `test_docs_staleness.py` — the `UserPromptSubmit` staleness nudge.
 - `test_artifact_autocommit.py` — what the `Stop` auto-commit will and will not take.
-- `test_index_scope_guard.py` — blanket `git add`, and commits spending inherited files.
+- `test_referenced_paths.py` — every hook or tool path named in prose exists, or
+  is marked gone on the same line. Added after deleting three hooks broke four
+  skills and a slash command with every suite still green.
 
 `test_docs_gates.py` was deleted on 2026-08-02 with the two hooks it covered
 (`post-run/05-docs-gate.py`, `pre-commit/05-docs-required.py`).

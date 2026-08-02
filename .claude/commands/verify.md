@@ -1,5 +1,5 @@
 ---
-description: Run every repo check — six test suites, the env check, hook registration and a skill frontmatter parse — and report real output
+description: Run every repo check — five test suites, hook registration and a skill frontmatter parse — and report real output
 ---
 
 Run the full check set for this repo. Fixed procedure, no judgement about which
@@ -12,22 +12,18 @@ already turned a passing run into a fake failure once.
 
 Run these in order and report each one's real output line, not a paraphrase:
 
-1. **Test suites** — all six, and do not stop at the first failure:
+1. **Test suites** — all five, and do not stop at the first failure:
    - `python tools/test_hooks.py`
    - `python tools/test_process_router.py`
    - `python tools/test_hook_registration.py`
-   - `python tools/test_docs_staleness.py`
    - `python tools/test_artifact_autocommit.py`
-   - `python tools/test_index_scope_guard.py`
+   - `python tools/test_referenced_paths.py`
 
-2. **Environment check** — `01-env-check.py` is the only thing asserting that
-   every skill has a `SKILL.md` and a routing entry, and it reports rather than
-   blocks, so its output has to be read deliberately:
-   - `echo '{"hook_event_name":"SessionStart"}' | python .claude/hooks/session-start/01-env-check.py`
-   - Since 2026-08-02 it prints its findings as `additionalContext` and stays
-     silent when clean, so **no output is the pass**. It also appends to
-     `.claude/hooks/session-start.log`; `{"issues": []}` there is the same pass.
-     Any entry is a real finding.
+2. **Every hook imports** — `01-env-check.py` did this until it was deleted on
+   2026-08-02, and `test_process_router.py` now covers the skill/routing half of
+   what it checked. What nothing else covers is that a hook script still loads:
+   - `for h in .claude/hooks/*/*.py; do python -c "import importlib.util as u,os;os.environ['HOOK_PAYLOAD']='{}';s=u.spec_from_file_location('h','$h');m=u.module_from_spec(s);s.loader.exec_module(m)" || echo "FAIL $h"; done`
+   - A hook that fails to import is silent in production, not loud.
 
 3. **Skill frontmatter** — parse every `.claude/skills/*/SKILL.md` and report
    the count plus any problems. A skill is a problem if it has no frontmatter,

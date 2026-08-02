@@ -63,14 +63,13 @@ inherits `Write`), a pinned model, and at least one skill that names it.
 Every skill **must** also have a `## <name>` entry in
 `.claude/routing/process-skills.md`; the skill listing is truncated against a
 token budget, so that file is the only routing signal that always survives.
-`session-start/01-env-check.py` reports any skill that lacks one, and
 `tools/test_process_router.py` fails the build.
 
 ---
 
 ## Commands
 
-    /verify         all six test suites + env check + hook registration + frontmatter parse
+    /verify         all five test suites + hook registration + frontmatter parse
     /save           stage, describe and commit (local only)
     /wip            branch, uncommitted work, which knowledge docs went stale
     /skills-doctor  skill layer health — description budget, YAML, name mismatches
@@ -80,9 +79,8 @@ Raw equivalents, run from the repo root:
     python tools/test_hooks.py
     python tools/test_process_router.py
     python tools/test_hook_registration.py
-    python tools/test_docs_staleness.py
     python tools/test_artifact_autocommit.py
-    python tools/test_index_scope_guard.py
+    python tools/test_referenced_paths.py
     python tools/run_hook.py <event> '<json-payload>'   # fire one hook manually
 
 Run `/verify` before declaring any work done.
@@ -97,10 +95,10 @@ Run `/verify` before declaring any work done.
 | `.claude/agents/` | four subagents; dispatched by skills for parallel work, one file each |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
 | `.claude/routing/process-skills.md` | keyword → skill-name routing (mandatory per skill) |
-| `.claude/hooks/<event>/` | lifecycle hooks; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-*` |
+| `.claude/hooks/<event>/` | nine hooks over seven events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |
 | `.claude/settings.json` | what actually fires; `hooks_registry.json` only documents intent |
 | `.claude/commands/` | the four slash commands above |
-| `tools/` | `run_hook.py` + six test suites |
+| `tools/` | `run_hook.py` + five test suites |
 | `docs/specs/`, `docs/plans/`, `docs/research/` | skill outputs, one dated file each |
 | `docs/archive/` | the pre-2026-08-01 design layer; superseded, see `docs/archive/ARCHIVE.md` |
 | `decisions/` | dated ADRs |
@@ -118,9 +116,11 @@ them, so they are code, not commentary:
 `TASK.md` (active task) · `PLAN.md` · `HANDOFF.md` (current work, pending, next)
 · `LOG.md` (history) · `ISSUES.md` · `MEMORY.md`
 
-Two hooks watch them now: `pre-run/04-docs-staleness.py` warns when they drift
-from the diff, and `post-run/06-artifact-autocommit.py` commits them along with
-everything else the turn changed — the only hook here that acts rather than asks.
+**Nothing watches them any more.** `post-run/06-artifact-autocommit.py` commits
+them along with everything else the turn changed, but it never checks whether
+they were written — so a turn can be checkpointed with no log entry behind it.
+The staleness warner, the Stop gate and the commit gate were all deleted on
+2026-08-02. Invoking `knowledge-manager` is now a habit, not a prompted one.
 
 ## The commit loop
 
@@ -161,10 +161,12 @@ invalidated the receipt `03-review-gate` demanded, a deadlock proven by
 measurement. Five comparable repos were read and not one enforces process this
 way; see `LOG.md` 2026-08-02 19:26 and `docs/2026-08-02-git-flow-walkthrough.md`.
 
-Staging is guarded by `session-start/03-index-baseline.py` plus
-`pre-commit/06-index-scope-guard.py`: the first records what was already staged
-when the session began, the second asks before a blanket `git add` or before a
-commit spends files this session never staged. `ALLOW_WIDE_STAGE=1` skips it.
+Staging is no longer guarded. `session-start/03-index-baseline.py` and
+`pre-commit/06-index-scope-guard.py` were deleted on 2026-08-02 with the rest of
+the process gates — the condition they existed for (50 files inherited in the
+index across sessions) cannot recur while the auto-commit empties the tree every
+turn. If a large staged set ever appears, the auto-commit has been refusing and
+its reason is in the Stop output.
 
 ---
 
@@ -195,5 +197,6 @@ commit spends files this session never staged. `ALLOW_WIDE_STAGE=1` skips it.
 - Commit secrets or credentials.
 - Push, merge, publish or deploy without explicit user approval.
 - Create a duplicate implementation of something that already exists.
-- Put AI attribution in git history — `pre-commit/04-delivery-guard.py` denies
-  the commit.
+- Put AI attribution in git history. `04-delivery-guard.py` denied this and was
+  deleted on 2026-08-02; now only `_hooklib.AI_ATTRIBUTION_PATTERNS` checks it,
+  and only over messages the auto-commit generates. Yours are unchecked.

@@ -67,16 +67,20 @@ across 50 files means pure renames.
 
 ## 5. Inherited work — what an earlier session left staged
 
-    python -c "import sys; sys.path.insert(0,'.claude/hooks'); \
-    from _hooklib import load_index_baseline, staged_paths; \
-    b=set(load_index_baseline() or []); s=set(staged_paths() or []); \
-    print(f'inherited_still_staged={len(b&s)} this_session={len(s-b)}')"
+    git diff --cached --name-only | wc -l            # staged right now
+    git log -1 --format='%h %ar %s'                  # when the last commit landed
 
-`session-start/03-index-baseline.py` records what was already staged when the
-session began, because git cannot tell "staged a moment ago" from "staged on
-Tuesday". Anything in the intersection would land under your commit message
-without being your work — `pre-commit/06-index-scope-guard.py` asks about exactly
-this. A `None` baseline means unknown, not zero; report it as unknown.
+**No longer tracked automatically.** `session-start/03-index-baseline.py` and
+`pre-commit/06-index-scope-guard.py` recorded and guarded this until they were
+deleted on 2026-08-02, along with the `_hooklib` helpers this section used to
+call. Git itself cannot tell "staged a moment ago" from "staged on Tuesday", so
+if the index is non-empty and the last commit is old, say the staged set is of
+**unknown provenance** rather than guessing.
+
+The condition that made this valuable is gone: `post-run/06-artifact-autocommit.py`
+commits every turn, so the index does not accumulate across sessions any more. If
+you find a large staged set here, that is itself the finding — the auto-commit
+has been refusing, and its reason is in the Stop output.
 
 ## 6. Commit history, counted
 

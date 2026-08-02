@@ -3,6 +3,43 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-02 21:30
+**Phase 3 done: 25 hooks → 9, across 7 events.** Deleted 16 hooks, 6 now-empty
+event directories, 2 orphaned suites (`test_docs_staleness`,
+`test_index_scope_guard`), 12 dead `_hooklib` helpers and 2 orphaned constants.
+`_hooklib.py` 498 → 249 lines, 13 exports, all live. `All hook-registration tests
+passed (9 hooks, 7 events)`.
+
+Kept only hooks that **deny something irreversible** (`01-secret-scan`,
+`02-branch-guard`, `01-forbidden-change-guard`, `01-spend-guard`), **act**
+(`03-checkpoint`, `06-artifact-autocommit`), or are a one-line **inform**
+(`02-bootstrap-docs`, `05-process-skill-router`, `02-hook-self-test-nudge`).
+
+**The predicted failure happened and is worth recording.** Deleting a hook that
+`settings.json` still registers makes `python` exit 2, and on `PostToolUse` that
+surfaces as a blocking error on every subsequent tool call. `settings.json` had
+to be rewritten via `Write` because Bash was the thing erroring. Order is
+unregister-then-delete, always — and even then the session keeps the config it
+captured at startup, so the noise persists until restart.
+
+**`tools/test_referenced_paths.py` is new, and is the real deliverable here.**
+It asserts every hook or tool path named anywhere in `.claude/**/*.md`,
+`CLAUDE.md` or `tools/README.md` either exists or is marked gone on the same
+line. This was the top HANDOFF item, and it bit again during this very phase:
+`/git-state` called `load_index_baseline` and `staged_paths`, both deleted
+minutes earlier, with all suites green. The suite found 8 dangling references on
+first run — 5 real, 3 my own bugs in it (`lstrip("./")` eats the leading dot of
+`.claude/`; tombstones wrap onto the next line, so it needs a 5-line window).
+
+The rule it enforces is deliberately not "never name a dead hook" but "say it is
+dead where you name it". A tombstone costs one clause and is what the reader
+actually needs.
+
+**Phase 4 (single dispatcher) is not built, and I am arguing against it.**
+claudekit needs one at 19 hooks sharing config; at 9 hooks across 7 directories,
+one file each with no shared config, a dispatcher adds indirection and removes
+nothing. The plan itself marked it optional pending 1-3. Recommend dropping it.
+
 ## 2026-08-02 20:50
 **The git flow is autonomous.** `post-run/06-artifact-autocommit.py` widened from
 prose-only to everything a turn changes, and `45267c7` is the first commit it made
