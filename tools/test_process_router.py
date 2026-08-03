@@ -481,6 +481,14 @@ TASK_SHAPE_CASES = [
     ("can we have a hook, where if the time clicks 2:00AM the laptop sleeps", True),
     ("I want to make this entire git flow autonomous except me at review", True),
     ("implement all", True),
+    # The four the first version missed, verbatim. Every one is phrased as a
+    # REQUIREMENT or opens with filler -- neither of which the original
+    # imperative-or-framing rule could see.
+    ("no slop check skill file should be generic and not target this repo", True),
+    ("all the skills should be repo agnostic and work on any repo", True),
+    ("yes fix them. Also is our .claude folder ready to port?", True),
+    ("have that no-slop-check not only .claude, it should be repo level", True),
+    ("it should autotrigger and start working", True),
     # Questions about existing state. Answering one is not building anything.
     ("Are we ready and safe yet to transfer the ./claude folder to any repo?", False),
     ("What about the physrun project? is that finished end to end?", False),

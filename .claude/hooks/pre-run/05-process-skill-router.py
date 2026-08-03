@@ -127,9 +127,27 @@ TASK_VERBS = (
     "introduce|expose|handle|cover|document|design|plan"
 )
 
-# Bare imperative: the prompt opens with the verb.
-IMPERATIVE_RE = re.compile(rf"^\s*(?:please\s+|now\s+|also\s+)*(?:{TASK_VERBS})\b",
-                           re.IGNORECASE)
+# Bare imperative: the prompt opens with the verb, possibly after filler.
+# The filler list is not decoration -- "yes fix them" is a task and was missed
+# because the prompt did not START with the verb.
+IMPERATIVE_RE = re.compile(
+    rf"^\s*(?:(?:please|now|also|then|and|so|ok|okay|sure|yes|yeah|next|"
+    rf"first|finally)[\s,]+)*"
+    rf"(?:{TASK_VERBS}|have|ensure|make sure|let us|let's)\b",
+    re.IGNORECASE,
+)
+
+# A REQUIREMENT. This is the shape the first version missed entirely, and it is
+# the most common way a person states work: not "add X" but "X should be Y".
+# Four of six real prompts in one session were phrased this way --
+# "all the skills should be repo agnostic", "it should be repo level".
+#
+# Safe because the question guard runs first: "should we split this?" is
+# already excluded before this is consulted.
+REQUIREMENT_RE = re.compile(
+    r"\b(?:should|must|needs? to|has to|have to|ought to|supposed to)\b",
+    re.IGNORECASE,
+)
 
 # Polite or first-person framing, with the verb close behind. The verb is
 # required: "can you check the tests" is a question about state, "can you add a
@@ -159,14 +177,36 @@ QUESTION_RE = re.compile(
 )
 
 
+# Acknowledgements. Short enough to be caught by length alone in most cases,
+# but "approved all" and "sounds good" are not, and neither asks for anything.
+ACK_RE = re.compile(
+    r"^\s*(?:yes|yeah|yep|ok|okay|sure|approved?|approve all|approved all|"
+    r"continue|go ahead|done|thanks|thank you|good|sounds good|proceed|"
+    r"looks good|lgtm)\b[\s.!]*$",
+    re.IGNORECASE,
+)
+
+
 def looks_like_a_task(prompt: str) -> bool:
-    """True when the prompt is asking for work rather than for an answer."""
+    """True when the prompt is asking for work rather than for an answer.
+
+    Biased towards recall on purpose. A false positive costs one injected line
+    that the model can ignore; a false negative costs the whole chain, because
+    nothing else will suggest framing the work. The first version was tuned the
+    other way and missed four of six real prompts in a single session.
+    """
     text = prompt.strip()
-    if len(text) < 8:
-        return False                      # "continue", "yes", "ok", "done"
+    if len(text) < 8 or ACK_RE.match(text):
+        return False
+    # A question about existing state. Checked before everything else, so
+    # "should we split this file?" never reaches the requirement rule.
     if QUESTION_RE.match(text) and text.rstrip().endswith("?"):
         return False
-    return bool(IMPERATIVE_RE.match(text) or FRAMED_RE.search(text))
+    return bool(
+        IMPERATIVE_RE.match(text)
+        or FRAMED_RE.search(text)
+        or REQUIREMENT_RE.search(text)
+    )
 
 
 def main():
