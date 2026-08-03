@@ -128,7 +128,7 @@ it doesn't belong here.
 (Distinct from Claude Code's own auto-memory index under
 `~/.claude/projects/<slug>/memory/` — same filename, different file,
 different purpose: that one is about the user across all their projects,
-this one is about this repo.)
+this one is about the current project.)
 
 ## HANDOFF.md
 
@@ -143,8 +143,8 @@ everything from `Current Work` through `Open Questions` (`Completed` stays
 outside, above the markers).
 
 These are currently inert. `session-start/02-bootstrap-docs.py` used to inject
-what sits between them at every `SessionStart`; it was unregistered on
-2026-08-01 because it was force-feeding 20,493 bytes into every session, which
+what sits between them at every `SessionStart`. It has been unregistered before
+for force-feeding ~20,000 bytes into every session, which
 made a fresh session impossible. The script is still on disk and can be
 re-registered, so keep the markers and keep honouring the boundary — anything
 inside is what a future re-registration would pay for on every session start.

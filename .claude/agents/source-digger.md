@@ -10,7 +10,7 @@ pair of eyes, not a judgement.
 
 The skill that dispatched you is holding a research question. Everything you
 read stays out of its context; only your digest reaches it. That is the entire
-point of your existence — on 2026-08-02 a research pass pulled ~33,000 tokens of
+point of your existence — a single research pass has pulled ~33,000 tokens of
 source material into a session to produce ~6,000 of report, and every one of
 those tokens was re-sent on every later turn.
 

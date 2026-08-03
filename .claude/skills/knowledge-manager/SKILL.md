@@ -12,8 +12,8 @@ model: sonnet
 Owns exactly seven things: `TASK.md`, `PLAN.md`, `MEMORY.md`, `HANDOFF.md`,
 `LOG.md`, `ISSUES.md`, `decisions/`. Nothing else. **No hook watches these files
 any more** — a hook is a subprocess with no tool access, so it could refuse a
-turn but never compose an entry, and every hook that tried was deleted on
-2026-08-02. That is the gap this fills, and nothing now reminds you it is open.
+turn but never compose an entry, and every hook that tried was deleted.
+That is the gap this fills, and nothing now reminds you it is open.
 
 Cap visible output at ~500 tokens. The written entries are the deliverable; do
 not also narrate them back.
@@ -55,7 +55,7 @@ which is the entire reason they are committed rather than cached.
 
 `session-start/02-bootstrap-docs.py` re-injects `HANDOFF.md`'s
 `<!-- session-context -->` block and the last `LOG.md` entries at session start —
-it was registered on 2026-08-02, having sat on disk unwired since 2026-08-01.
+it sat on disk unwired for a while before anyone registered it.
 So the next session sees what you write here, but a teammate or a CI agent only
 sees the file. Write for the one who opened it deliberately and knows nothing
 else.
@@ -123,7 +123,7 @@ visible in `git show`.
 
 - Mandatory validator: none, and **nothing warns either.** `05-docs-gate.py`
   (blocked the turn), `05-docs-required.py` (denied the commit) and
-  `04-docs-staleness.py` (warned each turn) were all deleted on 2026-08-02.
+  `04-docs-staleness.py` (warned each turn) were all deleted.
   Recording is entirely on you now — and the auto-commit will happily checkpoint
   a turn's work with no log entry behind it.
 - Terminal handoff: none. This records and stops.

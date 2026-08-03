@@ -53,7 +53,7 @@ never been red may be incapable of going red.
 Match the surrounding code: its naming, its idiom, its comment density. Do not
 restructure code you were not asked to touch.
 
-## In this repo
+## Conventions worth checking
 
 - **`PYTHONIOENCODING=utf-8` before any tool script**, or `→` and `—` raise
   `UnicodeEncodeError` and a passing run reports as a failure.

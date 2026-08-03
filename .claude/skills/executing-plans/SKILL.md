@@ -18,7 +18,7 @@ cannot quote.
 
 Exit 0 is not proof the effect occurred. Read the result back: query the setting
 you changed, count the rows, call the tool you registered, fire the hook you
-edited. This repo's recurring failure is *prose declaring a capability the
+edited. The recurring failure in agent-written work is *prose declaring a capability the
 wiring does not implement* — seven instances — and every one of them was a step
 marked complete on a command that returned successfully.
 </HARD-GATE>
@@ -48,9 +48,9 @@ expressly for tracking, and `post-run/03-checkpoint.py` snapshots the tree every
 turn.
 
 **Do not create a ledger file.** The need is real — context resets lose your
-place — but this repo already has three owners of durable state (the plan,
+place — but this layer already has three owners of durable state (the plan,
 `HANDOFF.md`, the checkpoint), and adding a fourth creates exactly the duplicate
-owner this repo keeps having to delete. After a reset, trust the plan file's
+owner that has to be deleted again later. After a reset, trust the plan file's
 checkboxes and `git log` over your own recollection.
 
 ## The task loop
@@ -90,8 +90,8 @@ doing before Task 1:
 2. **Execute the run, commit once** — one review over the whole change. Cheaper,
    and the plan's per-task commit steps get ticked as batched.
 
-Choose deliberately. Until 2026-08-02 `pre-commit/03-review-gate.py` forced the
-question by interrupting every commit; it was deleted, so nothing asks now and
+Choose deliberately. A `pre-commit` review gate used to force the question by
+interrupting every commit; it was deleted, so nothing asks now and
 option 2 is what happens by default if you say nothing.
 
 ## Open-ended work: the loop mode

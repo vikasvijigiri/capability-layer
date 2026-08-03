@@ -42,7 +42,7 @@ cause is worse than an honest dead end.
 3. **Change one thing at a time**, and only to test a hypothesis. Revert it.
 4. **Prove the cause is causal** — make it go away, then bring it back.
 
-## In this repo
+## Conventions worth checking
 
 - **Set `PYTHONIOENCODING=utf-8` before any tool script.** Several print `→` and
   `—`; the Windows console default raises `UnicodeEncodeError` and turns a

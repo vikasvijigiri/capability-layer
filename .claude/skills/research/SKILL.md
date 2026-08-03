@@ -25,7 +25,7 @@ is not a source. Read the file.
 
 `.claude/workflow.md` makes research a stage entered from anywhere, and orders
 its sources internal knowledge, repository, memory,
-*then* web — and that order is load-bearing. On 2026-08-02 a whole feature was
+*then* web — and that order is load-bearing. A whole feature has been
 proposed to guard against losing uncommitted work; `post-run/03-checkpoint.py`
 had been snapshotting the tree every turn for two days. One `ls` of the hooks
 directory would have replaced the design.
@@ -36,10 +36,10 @@ Before any web search: `ls` the relevant directory, grep for the concept, read
 ## Context budget — read the least that settles the question
 
 Every character a tool returns stays resident and is re-sent on every later
-turn. On 2026-08-02 this skill's own research ingested ~135,000 chars to
+turn. One pass of this skill's own research ingested ~135,000 chars to
 produce 24,000 of report: four SKILL.md files read whole, a 71k-char file
 sliced three times, six local files read whole. `post-tool/01-context-budget.py`
-metered this until it was deleted on 2026-08-02, so **nothing measures it now** —
+metered this until it was deleted, so **nothing measures it now** —
 the 12k-per-result and 150k-per-session figures below are a discipline you keep,
 not a warning you will receive.
 
@@ -80,7 +80,7 @@ block exists — unfocused evidence cannot be synthesised.
 | Prior art here | `Grep`, `Glob`, `git log`, `ISSUES.md`, `decisions/` |
 
 - **Open the actual file.** A search result's summary is a claim about a source,
-  not the source. Two of five searches on 2026-08-02 leaned on a blog's summary
+    not the source. Two of five searches in one pass leaned on a blog's summary
   and had to be redone against primaries.
 - **Hit count is not quality.** The single most useful find that day came from a
   search returning exactly one result; a 508-hit search needed heavy filtering.
@@ -151,7 +151,7 @@ asked for it.
 |---|---|
 | Synthesising while still searching | Confirmation bias — the first source frames every later one |
 | Reporting the survey instead of the implication | "Repo X does Y" is not a decision input until mapped to something here |
-| Leaving the findings in chat | The most valuable find of 2026-08-02 was deferred in prose and is now buried under 400 log lines |
+| Leaving the findings in chat | The most valuable find of a session was deferred in prose and is now buried under 400 log lines |
 | Skipping "Not adopted" | The next person re-runs the same search and reaches the same dead end |
 | Treating hit count as signal | The best source that day was the only hit; the 508-hit query was mostly noise |
 

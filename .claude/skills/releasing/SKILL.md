@@ -106,8 +106,8 @@ binds harder here, because the thing you are asserting about is live.
 If the target has no way to prove the change is serving, that is a finding worth
 recording, not a reason to skip the check.
 
-**The mechanism**, since 2026-08-03 — this skill mandated a smoke check for
-months and had nothing to perform one with:
+**The mechanism.** This skill mandated a smoke check long before anything could
+perform one:
 
 ```bash
 python tools/smoke.py --url https://<target>/ --expect-status 200 --expect-text '<something real>'

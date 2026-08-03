@@ -81,7 +81,7 @@ of it.
 **4. Orchestration leakage.** A skill deciding what comes next rather than
 producing an artefact and letting the caller decide.
 
-**This repo breaks that rule deliberately, so read carefully.** Every skill
+**This layer breaks that rule deliberately, so read carefully.** Every skill
 states a terminal handoff and `.claude/workflow.md` owns the chain — considered,
 because a stage with no named successor gets skipped. The finding is therefore
 **not** "this skill names a successor". It is one naming a successor that

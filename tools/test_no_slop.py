@@ -130,7 +130,12 @@ def is_instruction_doc(path: Path) -> bool:
 # installing the layer somewhere, which is the only moment it matters.
 
 DATE_RE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
-THIS_REPO_RE = re.compile(r"\b(?:this|in this|here in this) repo(?:'s)?\b", re.I)
+# Possessive ("this repo's base was master") and locative ("happened in this
+# repo") are claims about ONE specific repository, and they are false anywhere
+# else. Bare "this repo" is deixis -- "does this repo have a deploy target?" is
+# true wherever it is read. Flagging six such sentences was this check's own
+# false-positive rate, and a check that cries wolf gets switched off.
+THIS_REPO_RE = re.compile(r"\bthis repo's\b|\bin this repo\b", re.IGNORECASE)
 # Names of repositories this layer has lived in. A skill naming one is asserting
 # something about a tree the reader may not have.
 SIBLING_RE = re.compile(r"\b(?:physrun|UAIOS)\b")

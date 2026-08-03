@@ -31,8 +31,8 @@ Run these in order and report each one's real output line, not a paraphrase:
    deliberately not written out here -- a hardcoded suite list is true in exactly
    one repo, and this file is copied into others.
 
-2. **Every hook imports** — `01-env-check.py` did this until it was deleted on
-   2026-08-02, and `test_process_router.py` now covers the skill/routing half of
+2. **Every hook imports** — a dedicated env-check hook used to do this before it
+   was deleted, and `test_process_router.py` now covers the skill/routing half of
    what it checked. What nothing else covers is that a hook script still loads:
    - `for h in .claude/hooks/*/*.py; do python -c "import importlib.util as u,os;os.environ['HOOK_PAYLOAD']='{}';s=u.spec_from_file_location('h','$h');m=u.module_from_spec(s);s.loader.exec_module(m)" || echo "FAIL $h"; done`
    - A hook that fails to import is silent in production, not loud.

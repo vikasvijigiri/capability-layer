@@ -71,7 +71,7 @@ in the evidence column is unbacked, however obviously true it looks.
 | A subagent did it | The diff, read | The agent reported success |
 | Nothing else broke | The full suite on this tree | The touched file's test |
 
-## In this repo
+## Local conventions
 
 - `/verify` runs the project's own lint, test and typecheck commands plus a
   frontmatter parse, whatever this project declares. It is the mechanical
@@ -81,9 +81,9 @@ in the evidence column is unbacked, however obviously true it looks.
 - A check that cannot fail is not evidence. Before trusting a green check you
   wrote, break the thing on purpose and confirm it goes red. A probe returning
   the same answer when the system is broken verifies nothing.
-- A criterion that names a command **is** its own check — run that command. On
-  2026-08-02 a success criterion naming a one-second `grep` shipped unrun, past
-  clean suites.
+- A criterion that names a command **is** its own check — run that command:
+  a success criterion naming a one-second `grep` has shipped unrun, past clean
+  suites.
 
 ## Deciding the verdict
 

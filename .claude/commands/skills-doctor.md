@@ -3,7 +3,7 @@ description: Measure the skill layer — description budget and truncation, YAML
 ---
 
 Diagnose the skill layer. Every check here corresponds to a failure that has
-actually happened in this repo, not a hypothetical one. Measure; never estimate.
+actually happened somewhere, not a hypothetical one. Measure; never estimate.
 
 Set `PYTHONIOENCODING=utf-8` before running anything that prints skill text.
 
@@ -22,7 +22,7 @@ Report, in this order:
    that fail, and any where the result is not a mapping. Specifically flag `: "`
    anywhere in a `description` — colon-space-quote makes an unquoted scalar parse
    as a mapping and the description silently vanishes, leaving the skill listed but
-   untriggerable. This has silently broken a skill in this repo once already.
+   untriggerable. This has silently broken a real skill more than once.
 
 3. **Discovery shape.** Claude Code only finds `.claude/skills/<name>/SKILL.md`
    where the frontmatter `name:` equals the directory name. Report any mismatch,
@@ -41,9 +41,9 @@ Report, in this order:
    any turn its description is truncated away.
 
 6. **Dangling references.** Names a skill's body hands off to — other skills,
-   agents, commands, file paths it writes to — that do not exist. The 2026-08-01
-   teardown deleted 85 skills and 12 agents; a handoff naming one of them is dead
-   text that reads as a working path.
+   agents, commands, file paths it writes to — that do not exist. A teardown that
+   removes skills or agents leaves handoffs naming them behind, and that is dead
+   text which reads as a working path.
 
 Report findings most-actionable first, each with a `file:line` where one applies,
 what is wrong, and a one-line fix. A byte count on its own is not a finding — say

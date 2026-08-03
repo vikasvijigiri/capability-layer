@@ -12,7 +12,7 @@ collects the angles, shows the user and takes the sign-off. You are one lens it
 looks through. Nothing you return is a sign-off, and you write nothing — your
 tools allowlist has no `Write`.
 
-Since 2026-08-02 nothing mechanical records that a review happened; the sign-off
+Nothing mechanical records that a review happened; the sign-off
 lives in the conversation and the commit message. So your findings are not a
 formality that a receipt absorbs — they are the review, or there isn't one.
 

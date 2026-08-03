@@ -24,8 +24,8 @@ thorough one.
 ## Why this is a skill and not a hook
 
 A hook fires once, mechanically, and cannot read a diff or hold a conversation.
-`pre-commit/03-review-gate.py` tried to enforce this and was deleted on
-2026-08-02: it could only ask *whether* a review happened, never perform one, and
+A `pre-commit` review gate tried to enforce this and was deleted:
+it could only ask *whether* a review happened, never perform one, and
 its receipt fingerprinted the whole working tree — so writing the log entry that
 `05-docs-required.py` demanded (deleted the same day) invalidated the receipt,
 a measured deadlock.
@@ -84,7 +84,7 @@ order:
   breaks it.
 - **Security** — injected input, secrets, widened permissions, auth paths.
 - **Silent failure** — a swallowed exception, a bare `except`, a degraded path
-  with no signal. This repo's stated rule is that no failure stays silent.
+  with no signal. The standing rule is that no failure stays silent.
 - **Tests** — a behaviour change with no test, or a test weakened to pass.
 - **Repo rules** — AI attribution in a commit message, a named skill or file path
   that does not resolve, a hook edited but never run against a payload.
@@ -107,7 +107,7 @@ Free-text **Other** is appended by the tool. A plain "yes"/"approved" in chat is
 sign-off; the dialogue is the default, not a hoop.
 
 **5. Say what the review covered.** One line naming the files read and the files
-not read. Since 2026-08-02 nothing mechanical records this, so the statement in
+not read. Nothing mechanical records this, so the statement in
 the conversation — and in the commit message, if one follows — is the only trace
 the review happened at all. Write it as evidence, not as reassurance.
 
@@ -171,8 +171,8 @@ sign-off. An agent reporting "looks good" is not a review a human gave.
   not push, merge or open the PR itself — that is `delivering`'s job, and it has
   its own approval gate.
 - Invoked directly before `git commit`, `git push` or `gh pr create`. Nothing
-  fires it automatically: `03-review-gate.py` did until it was deleted on
-  2026-08-02, so this is now a habit rather than an interrupt.
+  fires it automatically: a review gate did until it was deleted, so this is now
+  a habit rather than an interrupt.
 - Findings that need real work become their own task via `task-brief`. Do not
   absorb them here.
 

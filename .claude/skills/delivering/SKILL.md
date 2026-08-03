@@ -54,7 +54,7 @@ behind it, not a judgement.
    `git diff <merge-base> HEAD` — the branch, not the working tree — the user
    answered explicitly, and the answer is written down.
 
-   This is *the* review boundary. Since 2026-08-02 commits are automatic `wip:`
+   This is *the* review boundary. Commits are automatic `wip:`
    checkpoints made by `post-run/06-artifact-autocommit.py`; none of them was
    reviewed and none was meant to be. Everything they contain is reviewed here,
    once, or not at all. Squash-merge so the checkpoints collapse into the message
@@ -113,7 +113,7 @@ missing thing.
 | `02-branch-guard.py` | The commit is destined for a protected branch | Branch first |
 
 Only two remain. `03-review-gate.py`, `05-docs-required.py`,
-`04-delivery-guard.py` and `06-index-scope-guard.py` were deleted on 2026-08-02:
+`04-delivery-guard.py` and `06-index-scope-guard.py` were all deleted:
 review, recording, attribution and staging scope are steps 2 and 3 of the
 checklist above, and **nothing will stop you skipping them**. The AI-attribution
 rule survives only inside the auto-commit, over messages it generates itself.

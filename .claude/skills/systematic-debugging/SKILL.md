@@ -20,9 +20,9 @@ If you have not completed Phase 1, you may not propose a fix. Violating the
 letter of this is violating the spirit of it.
 </HARD-GATE>
 
-## In this repo, silence is the symptom
+## Silence is the usual symptom
 
-Most failures here do not throw. A hook that fails open, a gate that never
+In a repo wired with this layer, most failures do not throw. A hook that fails open, a gate that never
 fires, a skill whose description silently vanished — each looks exactly like
 "no problem". Two consequences:
 
@@ -88,9 +88,9 @@ a fourth.
 
 ## Test the test before you trust it
 
-A test that fails can be wrong about the code. On 2026-08-01 a gate test
-reported two false failures and three rounds went into theorising about CRLF
-round-tripping; the harness was reading and rewriting files through text mode.
+A test that fails can be wrong about the code. A gate test once reported two
+false failures and three rounds went into theorising about CRLF round-tripping;
+the harness was reading and rewriting files through text mode.
 Rewritten to snapshot bytes, all six cases passed and the code had been correct
 throughout.
 
@@ -123,7 +123,7 @@ From the user: *"is that not happening?"* means you assumed without verifying.
 | Two changes in one test cycle | You cannot tell which one worked, and one may have added a bug |
 | Trusting a failing test over the code | The harness is code too, and it is usually the newer, less-exercised code |
 | Skipping `ISSUES.md` because it's fixed | The attempts that failed are what save the next person an hour |
-| Debugging by reasoning alone | Run the thing. This repo's bugs do not announce themselves |
+| Debugging by reasoning alone | Run the thing. These bugs do not announce themselves |
 
 ## Quick Reference
 

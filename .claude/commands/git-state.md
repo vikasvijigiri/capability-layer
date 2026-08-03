@@ -19,7 +19,7 @@ command fails, say so and report the number as unknown rather than guessing.
     git branch --format='%(refname:short)'   # what branches exist AT ALL
     git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null
 
-**Detect the base branch, never assume it.** On 2026-08-02 this repo's base was
+**Detect the base branch, never assume it.** A repository's base has been
 `master` while the session banner claimed `main`; `git merge-base HEAD main`
 returned `fatal: Not a valid object name main`. Take the first that resolves:
 
@@ -72,7 +72,7 @@ across 50 files means pure renames.
 
 **No longer tracked automatically.** `session-start/03-index-baseline.py` and
 `pre-commit/06-index-scope-guard.py` recorded and guarded this until they were
-deleted on 2026-08-02, along with the `_hooklib` helpers this section used to
+deleted, along with the `_hooklib` helpers this section used to
 call. Git itself cannot tell "staged a moment ago" from "staged on Tuesday", so
 if the index is non-empty and the last commit is old, say the staged set is of
 **unknown provenance** rather than guessing.
@@ -127,8 +127,8 @@ and one concern, while two unrelated bug fixes are four files and two. The
 question that decides it is *could half of this have merged separately and still
 made sense* — and that is `code-review`'s to ask, not this command's.
 
-Measured on 2026-08-03, this repo's own branch — 26 commits, 337 files, 3 days,
-11 top-level areas — the name check reads:
+Measured on a real branch — 26 commits, 337 files, 3 days, 11 top-level areas —
+the name check reads:
 
     collapse          0 paths
     capabilities     37 paths
