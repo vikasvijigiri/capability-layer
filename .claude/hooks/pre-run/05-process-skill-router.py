@@ -49,8 +49,13 @@ ROUTING = REPO_ROOT / ".claude" / "routing" / "process-skills.md"
 MIN_HITS_TO_REPORT = 1
 
 # Beyond this the match is too diffuse to be a useful pointer, and listing more
-# skills than the model will read is just injected noise.
+# skills than the model will read is just injected noise. Caps keyword rows only
+# -- the task-shape row below is added on top.
 MAX_SKILLS = 3
+
+# The skill the shape rule names. Not inlined, because the test suite asserts
+# against this exact value and a typo would make every shape assertion vacuous.
+TASK_SHAPE_SKILL = "task-brief"
 
 
 def load_process_skills():
@@ -105,17 +110,32 @@ def hits_in(prompt_lower, words):
     return [w for w in words if re.search(keyword_pattern(w), prompt_lower)]
 
 
-# --- the task-shape fallback -------------------------------------------------
+# --- the task-shape rule -----------------------------------------------------
 #
 # Keywords cannot express "this prompt is asking for work". `task-brief` owns
 # stage 1, but its keyword list can only name phrasings someone thought of, and
 # real requests are phrased in ways nobody enumerates -- "Build an AI platform
 # that assists scientists" hit nothing at all.
 #
-# So when NO skill matched, shape decides. An imperative, or a request framing
-# followed by a verb, is a task; a question about existing state is not. This
-# fires only on the empty case, so a prompt that already routed somewhere
-# specific is never second-guessed.
+# So shape is consulted on EVERY turn: an imperative, or a request framing
+# followed by a verb, is a task; a question about existing state is not.
+#
+# It was a FALLBACK until 2026-08-03 -- consulted only when no keyword matched --
+# and that is why `task-brief` effectively never fired. One incidental phrase
+# from any other skill's list suppressed it entirely, and the lists that compete
+# on work requests are the long ones (`no-slop` 35 entries, `releasing` 27,
+# `research` 23). Measured on real prompts: "Add a retry to the fetch call, the
+# test fails without it" named `systematic-debugging` alone; "Add a healthcheck
+# route so we can deploy this" named `releasing` alone. Both are stage-1
+# requests carrying a stage-5+ phrase.
+#
+# The suite could not see it: `TASK_SHAPE_CASES` called `looks_like_a_task()`
+# directly and never `main()`, so two of its own twelve task prompts routed to
+# `no-slop` with every check green. It now asserts the injected output.
+#
+# Naming it ALONGSIDE rather than instead is the stated bias of this module,
+# applied consistently: a false positive costs one line the model can ignore, a
+# false negative costs the whole chain.
 
 # Verbs that begin a work request. Present tense only -- "added support" is a
 # report, "add support" is an ask.
@@ -227,27 +247,31 @@ def main():
         if len(matched) >= MIN_HITS_TO_REPORT:
             scored.append((len(matched), skill, matched))
 
-    if not scored:
-        # Nothing matched. If the prompt is shaped like work, stage 1 owns it.
-        if looks_like_a_task(prompt):
-            print(json.dumps({"hookSpecificOutput": {
-                "hookEventName": "UserPromptSubmit",
-                "additionalContext": (
-                    "No keyword matched, but this reads as a request for work "
-                    "rather than a question. `task-brief` owns stage 1 — frame "
-                    "it before building, or say why the chain does not apply."
-                ),
-            }}))
-        return
-
     scored.sort(key=lambda row: (-row[0], row[1]))
     scored = scored[:MAX_SKILLS]
+
+    # Shape is consulted whether or not keywords matched, and adds a line rather
+    # than replacing one. `MAX_SKILLS` caps the keyword rows only, so the worst
+    # case is four lines, not three.
+    named = {name for _count, name, _matched in scored}
+    add_brief = TASK_SHAPE_SKILL not in named and looks_like_a_task(prompt)
+
+    if not scored and not add_brief:
+        return
 
     # Deliberately terse. This fires on every matching turn, so every word here
     # is a recurring cost; the rationale for the mechanism belongs in this
     # module's docstring, which is never injected. One header, one line per
     # skill, no footer.
-    lines = ["Process-skill keyword match (not a judgment — ignore if incidental):"]
+    lines = ["Process-skill match (not a judgment — ignore if incidental):"]
+    if add_brief:
+        # First, because when it fires the others are usually incidental phrases
+        # inside a request for work -- which is the whole finding.
+        # Kept to one short line. The old wording was three clauses because it
+        # fired only on the empty case; it now fires on most work turns, so its
+        # length is a recurring cost rather than an occasional one.
+        lines.append(f"- `{TASK_SHAPE_SKILL}` — shape, not keyword: this asks "
+                     f"for work, and stage 1 owns it")
     for _count, name, matched in scored:
         lines.append(f"- `{name}` — matched {', '.join(sorted(matched)[:2])}")
 

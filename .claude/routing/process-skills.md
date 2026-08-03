@@ -39,7 +39,7 @@ Keywords: code review, review the diff, review this change, review my code, revi
 
 ## task-brief
 
-Keywords: task brief, six line brief, 6 line brief, scope this, scope the task, break this into a brief, structure this task, turn this into a task, write the brief, what is out of scope, add support for, can we support, i want users to be able to, it would be nice if, new feature request, fix the thing where
+Keywords: task brief, six line brief, 6 line brief, scope this, scope the task, break this into a brief, structure this task, turn this into a task, write the brief, what is out of scope, add support for, can we support, i want users to be able to, it would be nice if, new feature request, fix the thing where, users should be able to, should be able to, make it so that, i have a task, here is the task, the task is, i need a way to, we need a way to, can we add, can we make it, would be nice if, would be good if, would be great if, new requirement, i want to be able to, add a feature, add the ability to
 
 ## brainstormer
 

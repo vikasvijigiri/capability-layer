@@ -1,6 +1,6 @@
 ---
 name: task-brief
-description: Use when a request names work but leaves the goal, constraints or scope unstated, and the approach is already settled. Triggers include "add X", "can we support Y", "users should be able to", "make it so that", or a bug report worth tracking. Do NOT use for a direct question, work already scoped, a change smaller than the brief itself, or an unsettled approach (brainstormer).
+description: Use when a request names work but leaves the goal, constraints or scope unstated, and the approach is already settled. Triggers include "add X", "can we support Y", "users should be able to", "make it so that", or a bug report worth tracking. Do NOT use for a direct question, work already scoped, a one-file change whose goal is already stated, or an unsettled approach (brainstormer).
 effort: medium
 model: sonnet
 ---

@@ -6,6 +6,48 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-03 17:05 — the layer installer is written twice, and it has already drifted once
+- **Phase/Context**: no-slop sweep at `--scope layer`, fired by
+  `07-layer-drift.py` after `global-session-start/` was added. Script green
+  (`All no-slop tests passed`, 45 tracked files); both findings are judgement.
+- **Symptom**: two hooks now shell out to `.claude/install.py` with near-identical
+  supporting code — `git()` at
+  `on-repo-create/01-layer-import.py:63` and `global-session-start/01-layer-bootstrap.py:73`,
+  `install()` at `:150` and `:123`, and the same `GUARD` constant at `:60`/`:62`.
+  The refusal sets are the same rules stated in different words.
+- **Evidence it is not theoretical**: the UTF-8 encoding bug found while testing
+  the new hook (installer stdout decoded as cp1252, reaching the session as
+  `stage 5 â€" 4 uncommitted`) had to be fixed **in both files**, and
+  `01-layer-import.py:154` now carries a "see the other file" comment. That
+  pointer is the paraphrase-drift smell starting, one session in.
+- **Blast radius of a change**: a refusal-rule edit needs six files — both hooks,
+  both `hooks_registry.json` descriptions, and both `CLAUDE.md`s.
+- **Checked and rejected as separate findings**: the two hooks never fire for the
+  same target (different events; the second sees `.claude/skills/` and goes
+  silent — verified against a throwaway git repo). `~50 files` in the docstrings
+  is accurate; `56` measured.
+- **Status**: **Open, deliberately not fixed.** Reported at stage 6 and the user
+  chose report-only. The shape of the fix is a shared `_layerinstall.py` with the
+  two hooks as thin event adapters; the cost is that both must then be re-fired
+  against realistic payloads, because a hook's failure symptom is silence.
+
+## 2026-08-03 17:05 — every install target receives a hook that can never fire there
+- **Phase/Context**: same sweep. `install.py:57` — `LAYER` copies `hooks/`
+  wholesale, so `global-session-start/01-layer-bootstrap.py` lands in every
+  target repo.
+- **Symptom**: it is wired only in `~/.claude/settings.json`, by absolute path
+  into this repo. In a target it is on disk, declared in the copied registry, and
+  fires nowhere. Inert today.
+- **Why it is worth an entry anyway**: if anyone later wires it in a target, that
+  target silently becomes a second global install source competing with this one,
+  and both would act on the same session.
+- **The argument for leaving it**: `install.py` already copies *itself* into
+  targets, deliberately — `install.py:52` states that a layer which cannot
+  propagate itself is copied once rather than portable. Excluding the deployer
+  while including the installer would contradict that.
+- **Status**: **Open, unresolved by design.** Needs a policy call about what a
+  target should receive, not an edit inside a sweep.
+
 ## 2026-08-03 14:20 — the branch guard reads the wrong repository
 - **Phase/Context**: building `../physrun/` from a Claude Code session rooted in
   this repo. Eight commits were made with `cd ../physrun && git commit …`.

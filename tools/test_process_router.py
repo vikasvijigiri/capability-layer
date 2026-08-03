@@ -15,10 +15,13 @@ Run: python tools/test_process_router.py
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
+import os
 import re
 import subprocess
 import sys
+from contextlib import redirect_stdout
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -541,6 +544,73 @@ for _prompt, _want in TASK_SHAPE_CASES:
     check(f"task-shape {'fires' if _want else 'stays quiet'}: {_prompt[:44]!r}",
           _got == _want,
           "missed a request for work" if _want else "fired on a question")
+
+
+# --- what the hook actually INJECTS -----------------------------------------
+#
+# Everything above asserts `looks_like_a_task()`, a pure function. That is not
+# the routing decision -- `main()` is, and until 2026-08-03 it consulted shape
+# only when no keyword matched. So a prompt could be shaped like work, be
+# asserted as such right above, and still route somewhere else entirely.
+#
+# It was not hypothetical: two of the twelve task prompts in this very corpus
+# ("no slop check skill file should be generic…", "yes fix them. Also is our
+# .claude folder ready to port?") injected `no-slop` and never named
+# `task-brief`, with every check on this page green. A suite that cannot fail on
+# the bug it was written for is coverage in name only.
+
+def injected_for(prompt: str) -> str:
+    """Run the hook's main() in-process and return the context it injects."""
+    buf = io.StringIO()
+    old = os.environ.get("HOOK_PAYLOAD")
+    os.environ["HOOK_PAYLOAD"] = json.dumps({"prompt": prompt})
+    try:
+        with redirect_stdout(buf):
+            _router.main()
+    finally:
+        if old is None:
+            os.environ.pop("HOOK_PAYLOAD", None)
+        else:
+            os.environ["HOOK_PAYLOAD"] = old
+    out = buf.getvalue().strip()
+    if not out:
+        return ""
+    return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+
+
+for _prompt, _want in TASK_SHAPE_CASES:
+    _ctx = injected_for(_prompt)
+    _named = f"`{_router.TASK_SHAPE_SKILL}`" in _ctx
+    check(f"injects task-brief: {_prompt[:44]!r}" if _want
+          else f"does not force task-brief: {_prompt[:44]!r}",
+          _named == _want,
+          "shape said work but the injected context never named it -- a keyword "
+          "match suppressed it" if _want else "named task-brief for a question")
+
+# A keyword match must not be LOST when the shape rule also fires. The fix adds
+# a line; replacing the matches would trade one silent misroute for another.
+COEXIST_CASES = [
+    ("Add a retry to the fetch call, the test fails without it",
+     "systematic-debugging"),
+    ("Add a healthcheck route so we can deploy this", "releasing"),
+    ("Add a rate limiter to the upload endpoint and review the diff after",
+     "code-review"),
+]
+for _prompt, _also in COEXIST_CASES:
+    _ctx = injected_for(_prompt)
+    check(f"keeps `{_also}` alongside task-brief: {_prompt[:34]!r}",
+          f"`{_also}`" in _ctx and f"`{_router.TASK_SHAPE_SKILL}`" in _ctx,
+          f"got: {_ctx.splitlines()[1:] or 'nothing'}")
+
+# Genuine non-task prompts that DO match a keyword must stay single-skill.
+for _prompt, _only in [("review the diff on this branch", "code-review"),
+                       ("why is this failing on windows only",
+                        "systematic-debugging"),
+                       ("deploy this to staging", "releasing")]:
+    _ctx = injected_for(_prompt)
+    check(f"`{_only}` alone for: {_prompt[:34]!r}",
+          f"`{_only}`" in _ctx and f"`{_router.TASK_SHAPE_SKILL}`" not in _ctx,
+          f"task-brief leaked in: {_ctx.splitlines()[1:]}")
 
 print()
 if failures:
