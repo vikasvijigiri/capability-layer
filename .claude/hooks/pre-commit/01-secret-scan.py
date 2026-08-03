@@ -20,7 +20,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from _hooklib import (  # noqa: E402
-    SECRET_PATTERNS, command_of, deny, load_payload, write_log,
+    SECRET_PATTERNS,
+    command_of,
+    deny,
+    is_git_commit,
+    load_payload,
+    write_log,
 )
 
 # SECRET_PATTERNS moved to _hooklib on 2026-08-02 so that
@@ -29,7 +34,9 @@ from _hooklib import (  # noqa: E402
 # them -- and a second copy of these patterns would eventually diverge from the
 # one guarding the unattended path.
 
-COMMIT_RE = re.compile(r"\bgit\s+(?:-[^\s]+\s+)*commit\b")
+# `is_git_commit` from _hooklib, not a regex: `-C` takes a value and no
+# repetition can consume it, so the old pattern silently skipped the scan on
+# every `git -C <dir> commit`.
 DRY_RUN_RE = re.compile(r"--dry-run\b")
 
 
@@ -54,7 +61,7 @@ def main():
     # Registered on every shell call, so confirm this is really a commit.
     # A payload with no command came from run_hook.py, which only invokes this
     # hook when a commit is genuinely happening -- so let that through.
-    if command and (not COMMIT_RE.search(command) or DRY_RUN_RE.search(command)):
+    if command and (not is_git_commit(command) or DRY_RUN_RE.search(command)):
         return
 
     files = staged_files(payload)

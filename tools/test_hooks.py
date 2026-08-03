@@ -88,6 +88,67 @@ try:
 finally:
     secret_file.unlink(missing_ok=True)
 
+# 4. `is_git_commit` and the branch guard's target resolution.
+#
+# Both fixed 2026-08-03 after the guard allowed eight commits onto another
+# repo's protected `main`. Two independent bugs stacked:
+#   - the old COMMIT_RE could not match `git -C <dir> commit`, because `-C`
+#     takes a value and no repetition consumes it;
+#   - the guard resolved the branch from the SESSION's cwd, not the command's.
+# Either alone makes the guard silently useless for a cross-repo commit.
+import importlib.util as _u  # noqa: E402
+
+
+def _load(path, name):
+    spec = _u.spec_from_file_location(name, path)
+    # Real asserts, not type-checker appeasement: a mistyped path returns None
+    # and fails later as `NoneType has no attribute loader`, which reads like a
+    # bug in the module under test.
+    assert spec is not None, f'no import spec for {path}'
+    assert spec.loader is not None, f'no loader for {path}'
+    mod = _u.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+os.environ.setdefault('HOOK_PAYLOAD', '{}')
+_hl = _load(ROOT / '.claude' / 'hooks' / '_hooklib.py', '_hooklib')
+_bg = _load(ROOT / '.claude' / 'hooks' / 'pre-commit' / '02-branch-guard.py',
+            'branch_guard')
+
+COMMIT_CASES = [
+    ('git commit -m x', True, 'plain'),
+    ('git -C /repo commit -m x', True, 'value-taking global flag'),
+    ('git -c user.name=T commit', True, '-c with a value'),
+    ('cd /repo && git commit', True, 'after a cd'),
+    ('git commit-tree abc', False, 'commit-tree is not commit'),
+    ('git status', False, 'not a commit'),
+    ('echo git commit', True, 'substring match is deliberate -- one extra ask'),
+]
+for _cmd, _want, _label in COMMIT_CASES:
+    if _hl.is_git_commit(_cmd) != _want:
+        print(f'FAIL: is_git_commit({_cmd!r}) -> {not _want}, want {_want} ({_label})')
+        fail = True
+    else:
+        print(f'OK: is_git_commit {_label}')
+
+_here = str(ROOT)
+TARGET_CASES = [
+    ('git commit -m x', _here, 'no redirection'),
+    ('cd .. && git commit', str(ROOT.parent), 'cd wins'),
+    ('git -C .. commit', str(ROOT.parent), 'git -C wins'),
+    ('cd /definitely-not-a-dir && git commit', _here, 'nonexistent falls back'),
+]
+# Distinct names from the block above: mypy types a variable once per scope,
+# and _want is a bool there and a path here.
+for _tcmd, _tdir, _tlabel in TARGET_CASES:
+    _got = os.path.normcase(os.path.abspath(_bg.target_dir(_tcmd, _here)))
+    if _got != os.path.normcase(os.path.abspath(_tdir)):
+        print(f'FAIL: target_dir({_tcmd!r}) -> {_got}, want {_tdir} ({_tlabel})')
+        fail = True
+    else:
+        print(f'OK: target_dir {_tlabel}')
+
 if fail:
     sys.exit(1)
 print('All hook tests passed')

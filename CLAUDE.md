@@ -143,6 +143,13 @@ Run `/verify` before declaring any work done.
 
 There is no global layer — `~/.claude/` holds no skills, agents or hooks.
 
+**`../physrun/` is a sibling repo, not part of this one** — the first product
+built with this layer, and the first test of whether the layer ports. It carries
+a *subset* — 6 of these 9 hooks, its own `CLAUDE.md`, its own docs. Copying this
+file wholesale would be wrong; it asserts "there is no application code here"
+and a hook count, both false there. Porting found three bugs in a day, none of
+them findable from inside this repo. See `LOG.md` 2026-08-03 14:30.
+
 ---
 
 ## Knowledge docs
@@ -180,6 +187,16 @@ resolved over detection by `.claude/hooks/_projectchecks.py` — the same code
 Every clause is a fact about the artefact, never about process. A refusal is
 always spoken. It **never pushes**, never `git add .`.
 
+Checks come in **two tiers**, because cost differs by an order of magnitude and a
+gate nobody can afford to run gets switched off:
+
+| Tier | Kinds | Runs | Gates |
+|---|---|---|---|
+| fast | lint · typecheck · test | every turn, seconds | the auto-commit |
+| slow | build · audit · e2e · smoke | before delivery, minutes | push / PR, and CI |
+
+    python tools/run_checks.py --tier all --require-test
+
 **Review moves to the push/PR**, over the whole branch — a commit that needs a
 human is not a checkpoint. `wip:` is deliberate: squash-merge collapses them.
 
@@ -191,25 +208,18 @@ Two things this depends on, both easy to break:
 - Its commits **bypass `PreToolUse`**, so the secret and attribution checks run
   *inline* from `_hooklib`; `pre-commit/01-secret-scan.py` never sees them.
 
+**`pre-commit/02-branch-guard.py` resolves the command's target repo, not the
+session's.** `cd ../other && git commit` and `git -C ../other commit` both commit
+somewhere else, and until 2026-08-03 the guard read *this* repo's branch and let
+eight commits onto a sibling's protected `main` — silently. Both hooks now use
+`_hooklib.is_git_commit`, a tokeniser rather than a regex, because `-C` takes a
+value and no regex repetition can consume it. See `ISSUES.md` 2026-08-03 14:20.
+
 Nineteen hooks were deleted on 2026-08-02, including every process-compliance
 gate and the staging guards. Why, and the deadlock that proved it: `LOG.md`
 2026-08-02 19:26 / 21:30, and `docs/2026-08-02-git-flow-walkthrough.md`.
 
-## Two check tiers
-
-Cost differs by an order of magnitude, and a gate nobody can afford to run is a
-gate that gets switched off. `.claude/hooks/_projectchecks.py` owns both; every
-caller goes through `tools/run_checks.py` so local, the hook and CI cannot
-disagree about what green means.
-
-| Tier | Kinds | Runs | Gates |
-|---|---|---|---|
-| fast | lint · typecheck · test | end of every turn, seconds | the auto-commit |
-| slow | build · audit · e2e · smoke | once before delivery, minutes | push / PR, and CI on pull requests |
-
-    python tools/run_checks.py --tier all --require-test
-
-### When the checks go red
+## When the checks go red
 
 The refusal is not the end of the message. `06-artifact-autocommit.py` writes
 the failing output to `.claude/hooks/state/check-failure-report.md`, counts

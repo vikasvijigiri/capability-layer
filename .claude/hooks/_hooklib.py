@@ -145,6 +145,40 @@ def migration_paths(paths):
     return hits
 
 
+# Recovered from `05-docs-required.py` (deleted 2026-08-02, see `350dec2^`) and
+# promoted here, because deleting that hook deleted the only correct
+# implementation and the bug it documented came straight back: on 2026-08-03
+# both surviving pre-commit hooks still used
+#
+#     re.compile(r"\bgit\s+(?:-[^\s]+\s+)*commit\b")
+#
+# which cannot match `git -C /repo commit` -- `-C` takes a value, and the
+# repetition has no way to consume it. The branch guard therefore ignored every
+# cross-repo commit, silently.
+#
+# The original docstring's reasoning, kept: a regex was tried first and got this
+# wrong in both directions -- it missed `git -C /repo commit` and matched
+# `git commit-tree`, because `\b` matches before a hyphen. Tokenising is clearer
+# than the regex that would handle both.
+VALUE_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
+
+
+def is_git_commit(command: str) -> bool:
+    """True for a real `git commit` invocation, false for lookalikes."""
+    toks = command.split()
+    for i, tok in enumerate(toks):
+        if tok != "git" and not tok.endswith("/git"):
+            continue
+        j = i + 1
+        while j < len(toks) and toks[j].startswith("-"):
+            if toks[j] in VALUE_FLAGS:
+                j += 1  # skip its value too
+            j += 1
+        if j < len(toks) and toks[j] == "commit":
+            return True
+    return False
+
+
 def current_branch(repo_root=None):
     """The checked-out branch name, or None when git cannot answer.
 
