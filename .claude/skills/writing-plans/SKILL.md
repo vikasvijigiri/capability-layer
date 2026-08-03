@@ -246,3 +246,14 @@ mode, not the successor.
 - Before any task that pushes, merges, deploys or is otherwise irreversible,
   stop and get explicit approval in the conversation. There is no approval
   skill — the plan names the step and you ask.
+
+## Success
+
+A fresh engineer with no context for this codebase can execute the plan
+top-to-bottom without asking a question: every task names the exact files, the
+interfaces its neighbours rely on, real code, and a command whose real output
+says whether it worked.
+
+The three gates were answered by the user rather than inferred, and every
+deviation from the spec is written into the plan with its reason -- including
+the ones deliberately not built.

@@ -7,7 +7,7 @@ injects the names of any skills that match.
 Why this file exists: the skill listing is truncated against a token budget, so
 a skill's `description:` — its only other trigger surface — can be absent on the
 exact turn it was needed. This file is the routing signal that survives that
-truncation. It is currently cheap to satisfy (eleven skills), and the budget is
+truncation. It is currently cheap to satisfy (twelve skills), and the budget is
 a constraint on what gets added back, not a problem to solve later.
 
 **Format contract.** One `## <skill-name>` heading per entry, matching a
@@ -64,3 +64,7 @@ Keywords: ship it, ship this, deliver this, land this, merge this, open a pr, ra
 ## releasing
 
 Keywords: deploy this, deploy it, deploy to prod, deploy to production, deploy to staging, run the deploy, push it live, put it live, go live, is it live, roll this out, roll it out, release it, release to staging, promote to production, promote to prod, publish the package, publish it, cut a release, ship to prod, roll it back, roll back the deploy, revert the deploy, the deploy failed, deploy to render, put it on vercel, deploy to vercel
+
+## no-slop
+
+Keywords: no slop, no-slop check, audit the capability layer, audit the skill layer, review the .claude folder, review the claude folder, is the skill layer bloated, are the skills clean, are the skills overlapping, is the layer rotting, did the layer rot, check for slop, clean up the skills, skill layer health, layer decay, architectural decay

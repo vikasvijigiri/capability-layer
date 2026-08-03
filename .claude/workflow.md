@@ -12,7 +12,7 @@ git history.
 
 ## The chain
 
-Nine stages on the line, two entered from anywhere. One skill each — a stage
+Nine stages on the line, three entered from anywhere. One skill each — a stage
 with no owner is not a stage, and a skill owning two stages means the boundary
 between them never actually occurs.
 
@@ -44,6 +44,7 @@ need arises and return to the stage that called them:
 |---|---|---|---|
 | Research | `research` | any stage needs evidence from outside your own knowledge | whatever asked |
 | Diagnose | `systematic-debugging` | anything fails or behaves unexplainably, at any stage | the stage that hit the failure |
+| Layer review | `no-slop` | the `.claude/` layer itself is suspected of decay — never a code diff | nothing; it reports and stops |
 
 ### What this replaced, and why
 
@@ -92,6 +93,7 @@ where a problem enters. Route on the shape of what the user said:
 | A named change with unstated scope ("add X", "support Y") | 1 `task-brief` | The approach is settled; the risk is scope, not direction |
 | A question needing outside evidence | `research` | Neither design nor scope can be decided on a guess |
 | Something broken | `systematic-debugging` | Diagnosis precedes everything, including the brief |
+| The capability layer itself | `no-slop` | Decay accumulates across sessions, so no diff review sees it |
 | An approved spec | 3 `writing-plans` | Design is done |
 | An approved plan | 4 `executing-plans` | — |
 | A finished change | 5 `verifying-work` | — |
@@ -160,6 +162,7 @@ criterion before the first pass.
    entered from any stage, returning to it:
      research               — needs outside evidence
      systematic-debugging   — something failed, incl. a red smoke check
+     no-slop                — the .claude/ layer itself, not a diff
                               (stage 8 rolls back first, then enters here)
 ```
 

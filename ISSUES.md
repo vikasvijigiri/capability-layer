@@ -23,13 +23,27 @@ of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on
   said nothing, which is indistinguishable from having checked and approved. Every
   hook here fails this way; it is why the repo's own rule is that a hook's failure
   symptom is silence.
-- **Status**: **Open.** Not fixed in this session. The guard is correct for the
-  single-repo case it was written for, and the multi-repo case did not exist until
-  today.
-- **Candidate fixes**: parse a leading `cd`/`git -C` out of the command and resolve
-  the branch from *that* directory; or resolve from `git rev-parse --show-toplevel`
-  run in the same shape as the command. Both are guesses about intent, which is why
-  neither was applied blind.
+- **Status**: **Resolved 2026-08-03 15:40.** Two independent bugs had to stack for
+  those eight commits to land, and either alone was sufficient:
+  - `target_dir()` now resolves the branch from the command's actual target —
+    the last `cd`, then any `git -C`, falling back to the session cwd when the
+    path does not exist.
+  - The `COMMIT_RE` regex **never matched `git -C <dir> commit` at all**, because
+    `-C` takes a value and `(?:-[^\s]+\s+)*` cannot consume it. So the guard was
+    skipping the check entirely, not merely checking the wrong repo.
+- **The second bug was a regression of a solved problem.** `05-docs-required.py`
+  had a tokenising `is_git_commit()` with a docstring explaining this exact
+  failure — and deleting that hook on 2026-08-02 deleted the only correct
+  implementation. Recovered from `350dec2^` and promoted to
+  `_hooklib.is_git_commit`, now shared by both surviving pre-commit hooks rather
+  than copied into each.
+- **Verified**: with the session on an unprotected branch and the target repo on
+  `main`, `cd <dir> && git commit` and `git -C <dir> commit` both deny; a
+  same-repo commit and `--dry-run` both pass. Regression tests in
+  `tools/test_hooks.py` cover seven `is_git_commit` shapes and four
+  `target_dir` cases.
+- **Not fixed**: the eight commits already on physrun's `main`. Local and
+  unpushed, so still cheap to rewrite.
 - **Blast radius**: any repo edited from a session rooted elsewhere. In this case:
   eight commits on a protected branch that should have been refused. Recoverable —
   physrun is local, unpushed, and now on `capability-layer`.

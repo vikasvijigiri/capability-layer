@@ -4,8 +4,14 @@ A Claude Code capability layer: skills, lifecycle hooks and slash commands that
 enforce a spec → plan → build → verify workflow, plus the knowledge docs that
 carry state between sessions. There is no application code here.
 
-This file is a bootloader. Keep it under ~150 lines and point at the thing that
-owns the work rather than restating it. History belongs in `LOG.md` and git.
+This file is a bootloader: point at the thing that owns the work rather than
+restating it. History belongs in `LOG.md` and git.
+
+**Max 300 lines, and `tools/test_referenced_paths.py` enforces it** by reading
+that number from this sentence. It said 150 for two weeks while the file grew to
+282 — an unchecked limit is a wish. 300 is set just above the current size on
+purpose: growth now has to be paid for by cutting something, and the suite says
+so rather than a reviewer noticing.
 
 ---
 
@@ -41,6 +47,7 @@ adding a skill or wondering what comes next.
 | `releasing` | 8 release | the change serving at a named target + a quoted smoke check |
 | `knowledge-manager` | 9 record | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `decisions/` |
 | `research` | — entered from any stage | `docs/research/YYYY-MM-DD-<topic>.md` |
+| `no-slop` | — entered from any stage | `.claude/` decay findings, `file:line` |
 | `systematic-debugging` | — entered on any failure | root cause + `ISSUES.md` entry |
 
 ### Subagents
@@ -48,17 +55,11 @@ adding a skill or wondering what comes next.
 Four, in `.claude/agents/<name>.md`. Each is dispatched by the skill that owns
 the stage, only when the user has asked for subagents:
 
-| Agent | Dispatched by | For | Parallel? |
-|---|---|---|---|
-| `source-digger` | `research` | one external source → a digest file | yes, 3-5 |
-| `failure-investigator` | `systematic-debugging` | one independent failure → root cause | yes, one per failure |
-| `diff-reviewer` | `code-review` | one review angle over one diff | yes, one per angle |
-| `task-implementer` | `executing-plans` | one plan task | **no — never two at once** |
-
-They exist to keep bulk out of the main context and to run independent work
-concurrently. `tools/test_process_router.py` asserts each has a description
-saying when *not* to use it, an explicit `tools:` allowlist (no line means it
-inherits `Write`), a pinned model, and at least one skill that names it.
+`source-digger` (research), `failure-investigator` (debugging),
+`diff-reviewer` (review) fan out; `task-implementer` **never runs two at once**.
+`.claude/workflow.md` carries the table. `tools/test_process_router.py` asserts
+each has a "do NOT use" clause, a `tools:` allowlist, a pinned model, and a
+dispatcher that names it — and that it names its dispatcher back.
 
 Every skill **must** also have a `## <name>` entry in
 `.claude/routing/process-skills.md`; the skill listing is truncated against a
@@ -73,16 +74,11 @@ Every skill declared `model: opus` + `effort: high` until 2026-08-02 — a defau
 nobody revisited, and `pre-run/05-process-skill-router.py` suggests a skill on
 most turns, so it applied constantly. The policy now:
 
-| Model | Skills | Why |
-|---|---|---|
-| `opus` | `brainstormer`, `writing-plans`, `research`, `systematic-debugging` | planning and diagnosis — open-ended, and a wrong answer is expensive |
-| `sonnet` | `code-review`, `executing-plans`, `task-brief`, `verifying-work`, `delivering`, `releasing`, `knowledge-manager` | coding, checking, and fixed-shape procedure |
-| `haiku` | agent `source-digger` | pure extraction, no judgement |
-
-`effort` tracks the same axis: `high` for a judgement, `medium` for structured
-work, `low` for a fixed-shape checklist. `systematic-debugging` keeps `opus`
-though diagnosis is not planning — three 2026-08-02 bugs were caught in reasoning
-alone and were invisible in the diff.
+`opus` for planning and diagnosis, `sonnet` for coding and procedure, `haiku`
+for pure extraction — the per-skill values are in each `SKILL.md` frontmatter,
+which is the source of truth. `effort` tracks the same axis.
+`systematic-debugging` keeps `opus` though diagnosis is not planning: three
+2026-08-02 bugs were caught in reasoning alone and were invisible in the diff.
 
 Two other levers: **`/fast`** (same Opus 5, less extended thinking — right for
 doc sweeps and bulk edits, wrong for debugging), and **request shape**, which is
@@ -110,6 +106,8 @@ Raw equivalents, run from the repo root:
     python tools/test_process_router.py
     python tools/test_hook_registration.py
     python tools/test_artifact_autocommit.py
+    python tools/test_no_slop.py
+    python tools/test_referenced_paths.py
     python tools/test_project_checks.py
     python tools/test_referenced_paths.py
     python tools/check_config_json.py
@@ -126,14 +124,14 @@ Run `/verify` before declaring any work done.
 
 | Path | What it is |
 |---|---|
-| `.claude/skills/` | the eleven skills above, one directory each |
+| `.claude/skills/` | the twelve skills above, one directory each |
 | `.claude/agents/` | four subagents; dispatched by skills for parallel work, one file each |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
 | `.claude/routing/process-skills.md` | keyword → skill-name routing (mandatory per skill) |
 | `.claude/hooks/<event>/` | nine hooks over seven events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |
 | `.claude/settings.json` | what actually fires; `hooks_registry.json` only documents intent |
 | `.claude/commands/` | the four slash commands above |
-| `tools/` | `run_checks.py` (one entry point for green), `smoke.py`, `run_hook.py`, six test suites, `check_config_json.py` |
+| `tools/` | `run_checks.py` (one entry point for green), `smoke.py`, `run_hook.py`, the test suites, `check_config_json.py` |
 | `docs/specs/`, `docs/plans/`, `docs/research/` | skill outputs, one dated file each |
 | `docs/archive/` | the pre-2026-08-01 design layer; superseded, see `docs/archive/ARCHIVE.md` |
 | `decisions/` | dated ADRs |

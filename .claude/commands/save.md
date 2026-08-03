@@ -11,7 +11,7 @@ Run these in order:
    commit, say so and stop.
 
 2. Check the branch with `git rev-parse --abbrev-ref HEAD`. If it is `main`,
-   `master`, `develop` or `release`, do **not** try to commit — the branch guard
+   `master`, `develop` or `release`, do **not** commit — the branch guard
    will deny it. Propose a short branch name derived from the actual change and
    ask before running `git checkout -b <name>`.
 
@@ -31,7 +31,7 @@ Rules:
 - **Never push.** Not part of this command. If I want that I will ask.
 - Never use `--no-verify`, and never bypass a hook that denies the commit —
   report what it said instead.
-- If the secret scan denies the commit, do not try to work around it. Show me
+- If the secret scan denies the commit, do not work around it. Show me
   the flagged file.
 - If I passed an argument, treat it as the intended commit message or as
   guidance for writing one: $ARGUMENTS

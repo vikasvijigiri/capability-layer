@@ -135,6 +135,11 @@ WORD_NUMBERS = {
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
     "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13,
 }
+# Known false-positive class: this matches any "<n> skills", including a
+# descriptive quantity ("two different skills would both claim it") rather than
+# an inventory claim ("the twelve skills above"). Left deliberately wide -- the
+# run that first hit the false positive also caught two genuinely stale counts,
+# so narrowing it costs more than rewording the odd sentence.
 COUNT_RE = re.compile(
     r"\b(" + "|".join(WORD_NUMBERS) + r"|\d{1,3})\s+(hooks|skills|suites|agents|events)\b",
     re.IGNORECASE)
@@ -234,6 +239,31 @@ for source in sorted(seen):
 
 print(f"{len(seen)} prose files scanned against {len(live)} hooks on disk")
 print(f"live counts: {counts}")
+# --- CLAUDE.md obeys its own stated line limit --------------------------------
+#
+# The limit is parsed FROM the file, so the file stays its own source of truth
+# and this check cannot drift from it. It read "~150 lines" for two weeks while
+# the file grew to 282: a limit nothing enforces is a wish, and this is the one
+# file every session loads in full.
+#
+# A ported repo whose CLAUDE.md states no limit is a skip, not a failure --
+# nothing here should impose a ceiling on a repo that never asked for one.
+_claude_md = ROOT / "CLAUDE.md"
+if _claude_md.is_file():
+    _text = _claude_md.read_text(encoding="utf-8")
+    _stated = re.search("(?i)max +([0-9]{2,4}) +lines", _text)
+    if _stated:
+        _limit = int(_stated.group(1))
+        _actual = len(_text.splitlines())
+        if _actual > _limit:
+            failures.append(
+                f"CLAUDE.md:1 states a max of {_limit} lines but is {_actual}. "
+                f"Cut something, or change the stated limit deliberately.")
+        else:
+            print(f"OK: CLAUDE.md is {_actual} lines, under its stated {_limit}")
+    else:
+        print("OK: CLAUDE.md states no line limit -- nothing to enforce")
+
 print()
 
 if failures:
