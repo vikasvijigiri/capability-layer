@@ -283,18 +283,28 @@ def load_payload() -> dict:
     return data if isinstance(data, dict) else {"raw": data}
 
 
-def write_log(filename: str, prefix: str, payload) -> None:
-    """Append one line to a log beside this module.
-
-    The path is absolute. The original versions of these hooks wrote to
-    './.claude/hooks/*.log', which silently scattered logs into whatever
-    directory the caller happened to be in.
-    """
-    try:
-        with (HOOKS_DIR / filename).open("a", encoding="utf-8") as handle:
-            handle.write(f"{prefix}: {json.dumps(payload)}\n")
-    except Exception:
-        pass
+# `write_log(filename, prefix, payload)` lived here until 2026-08-03. It appended
+# a JSON line to `HOOKS_DIR / filename` -- runtime output written into the source
+# directory. Removed, and the hooks are stateless now, for three reasons:
+#
+#   1. Nothing ever read any of them. Twelve `.log` files had accumulated and
+#      exactly two still had a writer; the other ten were residue of the 19 hooks
+#      deleted 2026-08-02, indistinguishable from live files.
+#   2. Claude Code already logs hooks properly. `claude --debug-file <path>`, or
+#      `/debug` mid-session, records which hooks matched, their exit codes,
+#      stdout and stderr. `error.log`, `pre-run.log`, `post-run.log` and
+#      `session-start.log` were hand-rolling a worse version of that.
+#   3. The payloads were session transcripts. They captured prompt text and tool
+#      input verbatim, which is why `.gitignore` had to promise they would never
+#      be committed -- and why `install.py` was copying 3.5 MB of one repo's
+#      prompts into every target it touched.
+#
+# A GitHub code search for `write_log` under `path:.claude/hooks` returns zero
+# results. The two published hook collections either keep the directory
+# scripts-only with logs elsewhere, or are stateless like this.
+#
+# If a hook ever needs to persist something, `state/` is the place: it is
+# gitignored wholesale and already excluded by the installer.
 
 
 def command_of(payload: dict) -> str:

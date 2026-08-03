@@ -1,49 +1,58 @@
 # Hooks — .claude/hooks/
 
-Purpose: lightweight, capability-agnostic hooks for lifecycle events. Hooks are
-small scripts (prefer Python) that run in a sandboxed manner and receive a
-JSON payload via the `HOOK_PAYLOAD` environment variable.
+**`hooks_registry.json` is the list of events and their scripts, and
+`../settings.json` is the only thing that actually fires them.** This file does
+not restate either; it says what a hook author needs that is not in those two.
 
-Location
+Until 2026-08-03 this README carried its own event list. It named six events with
+no directory on disk (`on-validate-fail`, `on-blueprint-promote`,
+`on-human-approval-request`, `on-deploy-failure`, `on-error`, plus a
+"not yet implemented" set in a `blueprint`/`provision` vocabulary this repo
+dropped long ago), omitted the two that do exist (`pre-edit`, `pre-deploy`), and
+described `session-start` as validating registries when it loads knowledge docs.
+`test_referenced_paths.py` never caught it because it checks paths, not event
+names — a second list is a second thing to keep true, so there is now one.
 
-- Place hooks under `.claude/hooks/<event>/` as numbered scripts, e.g.
-  `.claude/hooks/pre-commit/01-secret-scan.py`.
+## Layout
 
-Hook events — implemented
+`.claude/hooks/<event>/NN-name.py`, e.g. `pre-commit/01-secret-scan.py`. The
+number orders scripts within an event; gaps are expected, since nineteen hooks
+were deleted on 2026-08-02 and the survivors kept their numbers.
 
-- `pre-run`: before any workflow or skill run
-- `post-run`: after successful completion
-- `on-validate-fail`: when validators fail
-- `on-blueprint-promote`: when a blueprint is promoted
-- `on-human-approval-request`: when a human approval is requested
-- `on-deploy-failure`: when an automated deploy fails
-- `on-artifact-create`: when a new blueprint, playbook or artifact is created
-- `on-error`: when an uncaught error occurs
-- `pre-commit`: before a git commit finalizes; scans staged files for secrets
-- `session-start`: at session start; validates `.claude/` structure and registries
+## Writing one
 
-Hook events — documented, not yet implemented (add a folder+script when a real need arises)
+- **Read the payload with `_hooklib.load_payload()`**, never `os.environ`
+  directly. Claude Code delivers it on **stdin**; `tools/run_hook.py` sets
+  `HOOK_PAYLOAD`. `load_payload` accepts both, so one script works under each.
+- **End in `except Exception: pass`.** A hook that raises can wedge a session.
+  Every script here does this, and `ruff.toml` silences `S110`/`S112` for the
+  directory because of it.
+- **Never reorder the imports.** Each script does `sys.path.insert(...)` and
+  *then* `from _hooklib import ...`. isort wants to hoist that above the line
+  that makes it resolvable, which breaks every hook at once, silently — hence
+  `I001` in the same ignore list.
+- **Hooks are stateless.** `_hooklib.write_log` was removed on 2026-08-03:
+  nothing read any log, Claude Code's own `--debug-file` does it properly, and
+  the entries were verbatim prompt text. If you must persist something, write to
+  `state/` — gitignored wholesale and excluded by `install.py`.
+- **A hook cannot invoke a skill.** It can only *name* one in its output.
+- Exit `2` from a `PreToolUse` hook to deny the call. Any other non-zero exit
+  lets the action proceed and shows a hook-error notice.
 
-- `on-blueprint-demote`, `on-human-approval-response`, `pre-provision`,
-  `post-provision`, `on-memory-store`, `on-memory-retrieve`
+## Testing one
 
-Runner
+    python tools/run_hook.py <event> '<json-payload>'
+    python tools/run_hook.py <event> --file payload.json
 
-Use `tools/run_hook.py <event> '<json-payload>'` to run all scripts registered
-for an event, or `tools/run_hook.py <event> --file payload.json` to avoid
-shell-quoting issues. The runner sets `HOOK_PAYLOAD` in the environment for
-each script.
+**A hook bug's symptom is silence, which is identical to "no problem".** A clean
+diff proves nothing; fire the script against a realistic payload. On Windows,
+PowerShell strips inner double quotes from a single-quoted argument before the
+child process sees them — escape them, or use `--file`.
 
-Windows PowerShell note: passing JSON with double quotes as a single-quoted
-argument gets its quotes stripped before reaching the child process. Escape
-inner quotes with a backslash, or use `--file`.
+## Security
 
-Security
-
-- Hooks should not store secrets in plain text.
-- Hooks run with the repository user's permissions; treat them as code with
-  the same review requirements as other scripts.
-
-Examples
-
-See the sample hooks in this directory for logging, auditing, and notifications.
+- Hooks run with the repository user's permissions. They are code, and get the
+  same review as code.
+- No secrets in plain text. `01-secret-scan.py` and the auto-commit both gate on
+  `_hooklib.SECRET_PATTERNS`; the auto-commit checks inline because its own
+  commits bypass `PreToolUse` and this hook never sees them.

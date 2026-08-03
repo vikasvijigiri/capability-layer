@@ -3,8 +3,12 @@
 # lived here until 2026-07-31 and silently excluded every one of them; do not
 # reintroduce it. Ignore individual machine-local paths below instead.
 
-# Hook run logs: append-only local side effects, and they capture prompt text
-# and transcript paths, so they must never be committed.
+# Hook run logs. The hooks are stateless as of 2026-08-03 and nothing writes one
+# any more -- `_hooklib.write_log` is gone, and twelve files had accumulated of
+# which ten had no writer at all. This rule is kept as a standing guard, not as
+# live bookkeeping: the entries captured prompt text and transcript paths
+# verbatim, and that reaching git history is not something you undo. One line to
+# keep, so keeping it is cheaper than the failure it prevents.
 .claude/hooks/*.log
 
 # Machine-local: which project MCP servers this machine has approved.

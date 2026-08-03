@@ -25,7 +25,6 @@ from _hooklib import (  # noqa: E402
     deny,
     is_git_commit,
     load_payload,
-    write_log,
 )
 
 # SECRET_PATTERNS moved to _hooklib on 2026-08-02 so that
@@ -75,9 +74,6 @@ def main():
             continue
         if any(p.search(text) for p in SECRET_PATTERNS):
             findings.append(path)
-
-    write_log("pre-commit-scan.log", "SCAN",
-              {"files_checked": files, "findings": findings})
 
     if findings:
         deny(

@@ -71,11 +71,18 @@ TOOLS = ["run_checks.py", "run_hook.py", "test_referenced_paths.py",
 # excluded only by their absence from LAYER, which is a coincidence of that
 # list rather than a stated rule.
 #
-# `*.log` is the one that mattered. `_hooklib.write_log` records tool payloads
-# and prompt text verbatim, which is why `.gitignore` says they must never be
-# committed -- and the installer was copying 3.5 MB of the SOURCE session's
+# `*.log` is the one that mattered, and it is kept as a guard even though the
+# hooks are stateless as of 2026-08-03 and nothing writes a log any more.
+#
+# The history: `_hooklib.write_log` recorded tool payloads and prompt text
+# verbatim, and the installer was copying 3.5 MB of the SOURCE session's
 # transcripts into every target. The target's `.gitignore` then hid them, so
 # nothing ever reported it.
+#
+# Retained deliberately rather than deleted with the feature. The pattern costs
+# one tuple entry; the failure it prevents is a session transcript reaching
+# another repo's git history, which is not something you undo. If a future hook
+# reintroduces logging, this already holds.
 NEVER_IN_HOOKS = ("state", "__pycache__", "*.log")
 
 # Never copied at the top level of `.claude/`. Both carry decisions that a fresh
@@ -87,13 +94,14 @@ GITIGNORE_BLOCK = """
 # rewritten constantly and meaningless outside the session that wrote it.
 .claude/hooks/state/
 
-# Hook logs. `_hooklib.write_log` appends here and the entries capture tool
-# payloads verbatim, so they contain whatever the session contained.
+# Hook logs. Nothing writes one as of 2026-08-03 -- the hooks are stateless and
+# `_hooklib.write_log` is gone -- but this stays as a standing guard, because the
+# entries captured tool payloads verbatim and a leak into git history is not
+# reversible.
 #
-# This line is why the block exists. The source repo has ignored these since
-# day one, so nothing here ever noticed -- but the installer only wrote the
-# state/ line, and a fresh target committed `artifact-create.log` on its first
-# `git add -A`. The layer's own suite then went red on the layer's own log,
+# The history is why it is not merely theoretical. The installer once wrote only
+# the state/ line, and a fresh target committed `artifact-create.log` on its
+# first `git add -A`. The layer's own suite then went red on the layer's own log,
 # reporting a credential pattern and two `TBD` markers inside the payloads.
 # Found by installing into a virgin repo and using it, not by reading.
 .claude/hooks/*.log
