@@ -44,7 +44,7 @@ need arises and return to the stage that called them:
 |---|---|---|---|
 | Research | `research` | any stage needs evidence from outside your own knowledge | whatever asked |
 | Diagnose | `systematic-debugging` | anything fails or behaves unexplainably, at any stage | the stage that hit the failure |
-| Layer review | `no-slop` | the `.claude/` layer itself is suspected of decay — never a code diff | nothing; it reports and stops |
+| Layer clean-up | `no-slop` | the `.claude/` layer itself is suspected of decay — never a code diff | nothing; it reports, repairs on approval, stops |
 
 ### What this replaced, and why
 
@@ -162,8 +162,9 @@ criterion before the first pass.
    entered from any stage, returning to it:
      research               — needs outside evidence
      systematic-debugging   — something failed, incl. a red smoke check
-     no-slop                — the .claude/ layer itself, not a diff
                               (stage 8 rolls back first, then enters here)
+     no-slop                — the .claude/ layer itself, not a diff
+                              (reports, then rectifies on approval; does not return)
 ```
 
 `task-brief` branches: to `brainstormer` when the approach is open, to

@@ -67,4 +67,4 @@ Keywords: deploy this, deploy it, deploy to prod, deploy to production, deploy t
 
 ## no-slop
 
-Keywords: no slop, no-slop check, audit the capability layer, audit the skill layer, review the .claude folder, review the claude folder, is the skill layer bloated, are the skills clean, are the skills overlapping, is the layer rotting, did the layer rot, check for slop, clean up the skills, skill layer health, layer decay, architectural decay
+Keywords: no slop, no-slop check, audit the capability layer, audit the skill layer, review the .claude folder, review the claude folder, is the skill layer bloated, are the skills clean, are the skills overlapping, is the layer rotting, did the layer rot, check for slop, fix the slop, clean up the skills, clean up the claude folder, tidy the claude folder, skill layer health, layer decay, architectural decay

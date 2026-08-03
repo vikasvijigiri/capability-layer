@@ -47,7 +47,7 @@ adding a skill or wondering what comes next.
 | `releasing` | 8 release | the change serving at a named target + a quoted smoke check |
 | `knowledge-manager` | 9 record | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `decisions/` |
 | `research` | — entered from any stage | `docs/research/YYYY-MM-DD-<topic>.md` |
-| `no-slop` | — entered from any stage | `.claude/` decay findings, `file:line` |
+| `no-slop` | — entered from any stage | `.claude/` decay findings, then approved repairs |
 | `systematic-debugging` | — entered on any failure | root cause + `ISSUES.md` entry |
 
 ### Subagents
