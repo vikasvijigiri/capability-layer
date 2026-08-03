@@ -18,8 +18,8 @@ cannot quote.
 
 Exit 0 is not proof the effect occurred. Read the result back: query the setting
 you changed, count the rows, call the tool you registered, fire the hook you
-edited. The recurring failure in agent-written work is *prose declaring a capability the
-wiring does not implement* — seven instances — and every one of them was a step
+edited. The recurring failure in agent-written work is *prose declaring a
+capability the wiring does not implement*, and every instance of it was a step
 marked complete on a command that returned successfully.
 </HARD-GATE>
 

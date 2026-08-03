@@ -88,6 +88,12 @@ because a stage with no named successor gets skipped. The finding is therefore
 contradicts `workflow.md`, or naming one conditionally where the workflow
 describes no condition.
 
+**Counted provenance** is the one portability smell the script cannot see. It
+catches dates and possessive references to the source repository, but a phrase
+like "seven instances of this" or "five comparable repos were read" is equally
+false elsewhere — and no pattern separates those from the legitimate numbers
+sitting beside them ("2-5 minutes", "~500 tokens"). Read for it yourself.
+
 At `--scope repo`, also read for dead weight the script cannot judge: a document
 superseded by a newer one and never marked, a `tools/` script nothing calls, a
 config key no code reads.

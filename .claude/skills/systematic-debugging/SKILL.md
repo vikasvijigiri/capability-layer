@@ -22,8 +22,8 @@ letter of this is violating the spirit of it.
 
 ## Silence is the usual symptom
 
-In a repo wired with this layer, most failures do not throw. A hook that fails open, a gate that never
-fires, a skill whose description silently vanished — each looks exactly like
+In a repo wired with this layer, most failures do not throw. A hook that fails
+open, a gate that never fires, a skill whose description silently vanished — each looks exactly like
 "no problem". Two consequences:
 
 - **Absence of output is data, not reassurance.** Prove the thing ran.
