@@ -59,6 +59,14 @@
       "subscribers": [
         ".claude/hooks/on-repo-create/01-layer-import.py"
       ]
+    },
+    "global-session-start": {
+      "description": "At session start in ANY repo; installs this layer into the session's directory if and only if it is a git repo root, outside this repo, with no .claude/skills/ and no foreign .claude/agents/ or .claude/hooks/. ACTS, and speaks when it acts, when it fails, and on the two near misses a user can act on.",
+      "claude_code_event": null,
+      "_note": "Deliberately absent from this repo's .claude/settings.json and therefore exempt from the on-disk-must-be-wired check. It is wired in ~/.claude/settings.json by absolute path, because a project hook only fires inside its own project -- which is the opposite of what this one is for. `tools/test_hook_registration.py` checks the global wiring separately, and skips with a spoken reason where ~/.claude/settings.json does not exist (CI).",
+      "subscribers": [
+        ".claude/hooks/global-session-start/01-layer-bootstrap.py"
+      ]
     }
   }
 }

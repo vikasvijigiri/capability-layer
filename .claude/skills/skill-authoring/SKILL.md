@@ -84,7 +84,7 @@ enforced, with the number and what enforces it:
 | `description:` states triggers **and** a "Do NOT use" clause | ~380 chars | injected every turn, so it is a recurring cost; breadth belongs in the routing file |
 | Whole frontmatter | ≤ 1024 chars | hard spec limit |
 | `model:` and `effort:` present | — | `opus` planning/diagnosis · `sonnet` coding/procedure · `haiku` extraction |
-| Every skill named in backticks resolves | — | 22 dead references were cleared by hand once; six hooks shipped naming deleted skills past a green suite |
+| Every skill named in backticks resolves | — | `test_process_router.py`. A name in prose resolving to nothing is this layer's most-repeated defect, and it has shipped past a green suite before |
 
 **Write the "Do NOT use" clause first.** It is what stops the router naming this
 skill and its neighbour together, and it is the half people skip.
@@ -153,14 +153,20 @@ repo's working agreement forbids.
 ## Routing
 
 - Mandatory validator: `tools/new_skill_check.py <name>`, green and quoted.
-- Entered from anywhere the layer itself needs changing; returns to whatever
-  asked. Off-chain, like `research` — authoring a capability is not a stage of
+- Entered from anywhere the layer itself needs changing.
+- Terminal handoff: **whatever asked** — the same contract `research` states, and
+  the one `.claude/workflow.md`'s off-chain table gives this skill. Off-chain, so
+  there is no next stage to name; authoring a capability is not a stage of
   delivering a product.
-- Terminal handoff: `no-slop` when the layer has been edited enough to be worth
-  sweeping, then `knowledge-manager` — a new skill is a hard-to-reverse
-  structural decision and earns a `decisions/` record.
-- Deleting a skill is the same five files in reverse, and `test_referenced_paths.py`
-  is what finds the prose left naming it.
+- A new skill is a hard-to-reverse structural decision and earns a `decisions/`
+  record via `knowledge-manager`. That is a consequence of the change, not a
+  handoff this skill performs.
+- `07-layer-drift.py` fires on a skill being added and names `no-slop`. The sweep
+  is that hook's doing, not this skill's — naming it here as a conditional
+  successor contradicted the off-chain contract two bullets above, which is the
+  orchestration-leakage smell `no-slop` exists to catch.
+- **Retiring a skill is not covered here.** Whether that is mechanical or needs a
+  human gate is unresolved — `no-slop` classes it structural. See `TASK.md`.
 - To install the layer into another repo, that is `/install-layer`, not this.
 
 ## Success

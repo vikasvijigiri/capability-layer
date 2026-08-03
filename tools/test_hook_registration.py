@@ -126,6 +126,46 @@ empty_events = sorted(k for k, v in registry.items() if not v.get("subscribers")
 check("no registry event has an empty subscriber list", not empty_events,
       f"empty: {', '.join(empty_events)}")
 
+# --- direction 5: globally wired, but is it actually wired? -----------------
+#
+# `global-session-start/01-layer-bootstrap.py` is deliberately absent from this
+# repo's settings.json -- a project hook only fires inside its own project, and
+# this one exists to reach every OTHER repo. So directions 1 and 2 cannot see it
+# at all, and it would sit on disk firing nowhere with every check green. That is
+# the "silently invisible" failure this suite was written for, one level up.
+#
+# Skipped with a spoken reason where there is no ~/.claude/settings.json, which
+# is CI. Locally it is the only thing asserting the wiring exists.
+
+GLOBALLY_WIRED = {"global-session-start/01-layer-bootstrap.py"}
+
+global_settings = Path.home() / ".claude" / "settings.json"
+if not global_settings.is_file():
+    print(f"SKIP: no {global_settings} -- global hook wiring unchecked "
+          f"({', '.join(sorted(GLOBALLY_WIRED))})")
+else:
+    try:
+        gs = json.loads(global_settings.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        gs = {}
+        check("~/.claude/settings.json parses", False, str(exc))
+    global_wired = {
+        rel(hook.get("command", "").split()[-1])
+        for blocks in gs.get("hooks", {}).values()
+        for block in blocks
+        for hook in block.get("hooks", [])
+        if ".claude/hooks/" in hook.get("command", "")
+    }
+    for name in sorted(GLOBALLY_WIRED):
+        check(f"'{name}' is wired in ~/.claude/settings.json",
+              name in global_wired,
+              "on disk and declared, but fires in no session anywhere")
+        check(f"'{name}' is not ALSO wired in this repo's settings.json",
+              name not in wired,
+              "wired both globally and per-project -- it would run twice here")
+        check(f"'{name}' exists on disk", name in on_disk,
+              "~/.claude/settings.json names a file that is not here")
+
 # --- the manual-only exemption must be deliberate, not a typo ---------------
 
 for name, entry in sorted(registry.items()):

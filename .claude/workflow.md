@@ -263,32 +263,21 @@ the platforms it does not use.
 
 ## Adding to the chain
 
-**`skill-authoring` owns this, and it is the procedure — not this section.** What
-stays here is the invariant, because it is a fact about the chain rather than
-about how to author one.
+**`skill-authoring` owns the procedure. Read it, not this section** — it carries
+the file list, the template and the constraints, and `tools/new_skill_check.py <name>`
+adjudicates.
 
-A new skill needs **five** files or it is invisible, and nothing errors when one
-is missing:
+What stays here is the one fact that belongs to the chain rather than to
+authoring: **a new skill is invisible until five files know about it, and nothing
+errors when one is missing.** This section said "three things" and listed only
+three of the five until 2026-08-03 — which is how a skill could satisfy the
+documented requirement and still be reachable by nothing. Listing them here again
+would make it four files to edit when the wiring changes; that is the duplication
+the count above exists to avoid.
 
-1. `.claude/skills/<name>/SKILL.md`, with frontmatter `name:` matching the
-   directory. A flat `<name>.md` never appears.
-2. A `## <name>` entry with a `Keywords:` line in
-   `.claude/routing/process-skills.md`. `tools/test_process_router.py` fails
-   the build without it.
-3. A row in this file — the chain table if numbered, the off-chain table if not.
-4. A row in `CLAUDE.md`'s Skills table.
-5. The predecessor's `## Next step`, if the skill is numbered. A stage nobody
-   hands off to is a stage the chain stops before.
-
-This said "three things" until 2026-08-03 and listed only 1-3, which is how a
-skill could satisfy the documented requirement and still be unreachable.
-`tools/new_skill_check.py <name>` checks all five for one skill and then fires the
-router at its own keywords, because structure being green says nothing about
-reachability.
-
-Before adding one, check whether the stage is genuinely unowned. Twelve process
-skills is at the ceiling every comparable repo converges on; growth belongs in
-pack files. See `docs/research/2026-08-02-generic-pipeline-skillset.md`.
+Before adding one, check whether the stage is genuinely unowned. This chain is at
+the skill ceiling every comparable repo converges on; growth belongs in pack
+files. See `docs/research/2026-08-02-generic-pipeline-skillset.md`.
 
 `releasing` was added on 2026-08-02 as the eleventh, and it passed that test:
 `delivering`'s menu offered merge, PR and keep, none of which is a deploy, while

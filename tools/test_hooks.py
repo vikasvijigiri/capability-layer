@@ -47,6 +47,13 @@ BENIGN_EVENTS = [
     ('post-run', {'workflow': 'oauth-workflow', 'status': 'success'}),
     ('on-artifact-create', {'event': 'test', 'capabilities_written': 7}),
     ('session-start', {}),
+    # Fired from cwd=ROOT, so the source-repo refusal holds and nothing is
+    # installed. This asserts only that it imports and exits clean -- the
+    # install/refuse behaviour is exercised by firing it with a `cwd` payload
+    # against a throwaway git repo, which is not something a suite should leave
+    # on disk. Worth having anyway: this hook is wired in ~/.claude/settings.json
+    # and a syntax error in it would break session start in every repo at once.
+    ('global-session-start', {}),
 ]
 
 os.environ['UAIOS_AUTOCOMMIT_RUNNING'] = '1'

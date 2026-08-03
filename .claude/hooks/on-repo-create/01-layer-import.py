@@ -76,7 +76,14 @@ def candidates(payload):
     ti = payload.get("tool_input") or {}
     found: list[str] = []
 
-    if tool in ("Bash", "PowerShell"):
+    # Whether the directory was ASKED for matters, not just whether it is new.
+    # A `mkdir`/`git init` is an intent to create; a `Write`'s parent directory is
+    # incidental to writing a file. Only the first kind earns a spoken refusal --
+    # otherwise every Write into any subdirectory of any other repo emits a line,
+    # which it did, one per file, while this was being used.
+    explicit = tool in ("Bash", "PowerShell")
+
+    if explicit:
         cmd = ti.get("command") or ""
         # `mkdir [-p] a b c`, stopping at a shell separator or redirection.
         for m in re.finditer(r"\bmkdir\b((?:\s+-{1,2}\S+)*)((?:\s+[^\s;&|<>]+)+)", cmd):
@@ -91,7 +98,8 @@ def candidates(payload):
             found.append(str(Path(fp).parent))
 
     cwd = payload.get("cwd") or os.getcwd()
-    out, seen = [], set()
+    out: list[tuple[Path, bool]] = []
+    seen = set()
     for raw in found:
         raw = raw.strip().strip("'\"")
         if not raw:
@@ -102,7 +110,7 @@ def candidates(payload):
             continue
         if p not in seen:
             seen.add(p)
-            out.append(p)
+            out.append((p, explicit))
     return out
 
 
@@ -128,8 +136,12 @@ def verdict(d):
     if not top:
         return False, "is not a git repository"
     try:
-        if Path(top).resolve() != d:
-            return False, f"is not a repo root (its root is {Path(top).name})"
+        root = Path(top).resolve()
+        if root != d:
+            # The full root path, not its basename. `src/physrun` inside the
+            # `physrun` repo rendered as "physrun is not a repo root (its root is
+            # physrun)", which reads as a contradiction.
+            return False, f"is a subdirectory of the repo at {root}"
     except (OSError, ValueError):
         return False, "has an unresolvable git root"
     return True, "fresh git repo root with no .claude/"
@@ -138,9 +150,14 @@ def verdict(d):
 def install(d):
     env = dict(os.environ)
     env[GUARD] = "1"
+    # See global-session-start/01-layer-bootstrap.py: the installer prints `—`
+    # and `→`, and on Windows the child raises UnicodeEncodeError without the
+    # first line while the parent mojibakes without the second.
+    env["PYTHONIOENCODING"] = "utf-8"
     try:
         p = subprocess.run([sys.executable, str(INSTALLER), "--into", str(d)],
-                           capture_output=True, text=True, timeout=300, env=env)
+                           capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=300, env=env)
     except (OSError, subprocess.SubprocessError) as exc:
         return False, f"installer could not run: {exc}"
     if p.returncode != 0:
@@ -161,12 +178,15 @@ def main():
         return
 
     lines = []
-    for d in candidates(payload):
+    for d, explicit in candidates(payload):
         ok, why = verdict(d)
         if not ok:
-            # Only worth saying for something that plausibly looked like a repo.
-            if "already has" in why or "not a repo root" in why:
-                lines.append(f"- skipped `{d.name}` — {why}")
+            # Spoken only when the directory was explicitly asked for AND the
+            # refusal is a near miss. An incidental Write parent is never spoken,
+            # and neither is anything about this repo.
+            near_miss = "already has" in why or "subdirectory of the repo" in why
+            if explicit and near_miss:
+                lines.append(f"- skipped `{d}` — {why}")
             continue
         done, detail = install(d)
         if done:

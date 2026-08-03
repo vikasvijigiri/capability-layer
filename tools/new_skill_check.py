@@ -225,8 +225,19 @@ def check(name: str) -> int:
         # one. Making it required here would impose a policy the repo has not
         # adopted, on a checker whose job is to report the layer's rules rather
         # than invent them. It is worth seeing, so it prints.
+        # The "how many carry one" figure is computed, never written into the
+        # label. Hardcoding it made the string wrong the moment anyone added the
+        # line, and wrong in any repo whose layer differs from this one.
+        carriers = sum(
+            1 for _n, _t, s in re.findall(r"^\|\s*(\d+)\s*\|([^|]+)\|\s*`([a-z-]+)`", wf, re.M)
+            if (SKILLS / s / "SKILL.md").is_file()
+            and re.search(r"Workflow stage \d+",
+                          (SKILLS / s / "SKILL.md").read_text(encoding="utf-8", errors="ignore"))
+        )
+        on_chain = len(re.findall(r"^\|\s*\d+\s*\|[^|]+\|\s*`[a-z-]+`", wf, re.M))
         stated = re.search(r"Workflow stage (\d+)", text)
-        r.note("states its own 'Workflow stage N' (optional; 5 of 10 do not)",
+        r.note(f"states its own 'Workflow stage N' (optional; {carriers} of "
+               f"{on_chain} on-chain skills do)",
                bool(stated), "absent" if not stated else f"stage {stated.group(1)}")
         if stated:
             r.need("that number matches workflow.md",

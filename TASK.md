@@ -25,6 +25,37 @@
   static checks removed and a pointer to the suites that own them.
 - **Out of scope:** changing what the suites check. They are green and correct.
 
+### Decide which skill owns retiring a skill
+
+- **Status:** Not started — raised by a `no-slop` sweep on 2026-08-03, at the
+  sweep `07-layer-drift.py` triggered after `skill-authoring` was added.
+- **Goal:** One skill owns deleting a skill, and the other says so.
+- **The conflict, both sides quoted:** `.claude/routing/process-skills.md:74`
+  gives `skill-authoring` the keywords `delete a skill` and `remove a skill`, and
+  its Routing section described deletion as "the same five files in reverse" — a
+  mechanical procedure with no human gate. `.claude/skills/no-slop/SKILL.md:114`
+  classes "retiring one" as **structural**, disposition "`task-brief`, not an
+  edit", on the argument that routing decides which skill fires and re-cutting it
+  mid-sweep ships a layer nobody reviewed.
+- **Why it is not a keyword collision:** the router names exactly one skill for
+  "remove a skill we no longer need" — verified. Both skills are individually
+  self-consistent. The disagreement is the *disposition*, which no check can see,
+  and which surfaces only when the two files are read together.
+- **Why now:** `skill-authoring` currently declines the case entirely, so the act
+  has no owner. That is honest but temporary — an unowned act is what motivated
+  adding `releasing`.
+- **The two candidate resolutions:**
+  1. Deletion is mechanical. Keep the keywords, give `skill-authoring` a deletion
+     procedure, and narrow `no-slop:114` so "retiring one" no longer routes to
+     `task-brief`. Cost: weakens a human gate that exists for a reason.
+  2. Deletion is structural. Drop both keywords from `skill-authoring`, leave
+     `no-slop` as the discoverer and `task-brief` as the gate. Cost: no skill
+     explains *how*, so the five-files-in-reverse knowledge stays unwritten.
+- **Done check:** one skill's text claims the act, the other's text points at it,
+  `tools/new_skill_check.py --all` still exits 0, and a prompt of
+  "remove a skill we no longer need" routes to whichever won.
+- **Out of scope:** any other trigger boundary. This is one act, two files.
+
 ## Completed
 
 <!-- Append-only, newest entry at the top. Never delete or rewrite an

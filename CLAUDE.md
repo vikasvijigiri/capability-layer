@@ -144,8 +144,8 @@ Run `/verify` before declaring any work done.
 | `.claude/agents/` | four subagents; dispatched by skills for parallel work, one file each |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
 | `.claude/routing/process-skills.md` | keyword → skill-name routing (mandatory per skill) |
-| `.claude/hooks/<event>/` | eleven hooks over eight events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create`, `on-repo-create` |
-| `.claude/settings.json` | what actually fires; `hooks_registry.json` only documents intent |
+| `.claude/hooks/<event>/` | twelve hooks over nine events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create`, `on-repo-create`, `global-session-start` |
+| `.claude/settings.json` | what actually fires — every hook but `global-session-start/`, which is wired in `~/.claude/settings.json`; `hooks_registry.json` only documents intent |
 | `.claude/commands/` | the six slash commands above |
 | `.claude/install.py` | ports the layer into another repo; `/install-layer` wraps it |
 | `tools/` | `run_checks.py` (one entry point for green), `smoke.py`, `run_hook.py`, the test suites, `check_config_json.py` |
@@ -156,7 +156,10 @@ Run `/verify` before declaring any work done.
 | `.github/workflows/checks.yml` | CI; calls the same resolver, so it cannot drift from local |
 | `.mcp.json`, `.vscode/mcp.json` | MCP servers, kept in sync by hand |
 
-There is no global layer — `~/.claude/` holds no skills, agents or hooks.
+`~/.claude/` holds no skills or agents — only `SessionStart` →
+`global-session-start/01-layer-bootstrap.py`, **by absolute path into this repo**.
+It installs the layer into any repo a session opens in that is a git root with no
+`.claude/skills/` and no foreign `.claude/`. Moving this repo silently breaks it.
 
 **`../physrun/` is a sibling repo, not part of this one** — the first product
 built with this layer, and the first test of whether the layer ports. It carries
