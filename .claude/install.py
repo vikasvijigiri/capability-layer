@@ -106,6 +106,18 @@ GITIGNORE_BLOCK = """
 # reporting a credential pattern and two `TBD` markers inside the payloads.
 # Found by installing into a virgin repo and using it, not by reading.
 .claude/hooks/*.log
+
+# Bytecode. Every hook is a Python file, so the FIRST turn in a target imports
+# one and `__pycache__/` appears -- then the auto-commit commits `.pyc` files,
+# because it commits whatever the turn changed.
+#
+# This was missing until 2026-08-04 and was invisible from inside the source
+# repo, whose own `.gitignore` has covered `__pycache__/` since long before the
+# installer existed. The docstring above warns that an installer correct only on
+# a virgin target is not an installer; this was the mirror image -- correct only
+# on the source. Found the same way, by installing into a virgin repo.
+__pycache__/
+*.pyc
 """
 
 RUFF_BLOCK = '''

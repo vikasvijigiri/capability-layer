@@ -109,9 +109,9 @@ REENTRY_FLAG = "UAIOS_AUTOCOMMIT_RUNNING"
 #
 # So: write the failing output to a file, count consecutive failures of the SAME
 # failure, and name the skill whose stated trigger this is. A hook cannot invoke
-# a skill -- confirmed in the official docs, see
-# docs/research/2026-08-02-automating-the-git-chain.md -- so this is a signal,
-# never a trigger.
+# a skill -- the official hooks reference lists command/http/mcp_tool/prompt/agent
+# as the handler types and no skill among them -- so this is a signal, never a
+# trigger.
 #
 # It deliberately does NOT block. `post-run/05-docs-gate.py` blocked a turn until
 # a skill ran, deadlocked, and was deleted on 2026-08-02. Write, suggest, get out

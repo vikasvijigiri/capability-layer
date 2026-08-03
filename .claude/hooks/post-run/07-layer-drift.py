@@ -25,8 +25,9 @@ Two triggers, and the second is the important one
              skill's keywords are the one thing guaranteed to collide with an
              existing skill's, and no amount of editing one skill can cause it.
 
-It suggests and never blocks. A hook cannot invoke a skill (confirmed in the
-official docs, see `docs/research/2026-08-02-automating-the-git-chain.md`), and
+It suggests and never blocks. A hook cannot invoke a skill -- the official hooks
+reference lists command/http/mcp_tool/prompt/agent as the handler types, and no
+skill among them -- and
 `post-run/05-docs-gate.py` blocked a turn until a skill ran, deadlocked, and was
 deleted on 2026-08-02.
 
