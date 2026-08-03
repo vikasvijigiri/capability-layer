@@ -350,6 +350,42 @@ for skill, num in stage_of.items():
     check(f"{skill} claims the stage number workflow.md gives it ({num})",
           int(m.group(1)) == num, f"skill says {m.group(1)}, table says {num}")
 
+# Every stage number written in workflow.md's PROSE agrees with the table.
+#
+# The chain table was right the whole time; four references *around* it drifted
+# by one when `no-slop` was inserted at stage 6 on 2026-08-02. The Parallelism
+# table said "6 Review" (Review is 7), "the sign-off in stage 6, the approval in
+# stage 7" was off by one twice, and "Where state lives" filed `decisions/` under
+# 9 (`knowledge-manager` is 10). Nothing caught any of it: the assertions above
+# only parse the table and confirm its owners exist, so the table cannot disagree
+# with itself -- but it never had to agree with the paragraphs.
+#
+# This is checkable only because the prose names the owner beside the number.
+# A bare "stage 6" is unverifiable, so the convention is `N \`owner\`` or
+# `N StageName`, and that convention is what this asserts.
+stage_name_of = {name.strip().lower(): int(num) for num, name, _s in table}
+
+prose_refs = []  # (written_number, what, expected_number)
+for m in re.finditer(r"(?<!\d)(\d{1,2})\s+`([a-z-]+)`", wf):
+    written, name = int(m.group(1)), m.group(2)
+    if name in stage_of:
+        prose_refs.append((written, f"`{name}`", stage_of[name]))
+for m in re.finditer(r"(?<!\d)(\d{1,2})\s+([A-Z][a-z]+)\b", wf):
+    written, name = int(m.group(1)), m.group(2).lower()
+    if name in stage_name_of:
+        prose_refs.append((written, name.title(), stage_name_of[name]))
+
+wrong = [f"{what} written as {written}, table says {expected}"
+         for written, what, expected in prose_refs if written != expected]
+check(f"every stage number in workflow.md prose matches the table "
+      f"({len(prose_refs)} reference(s))", not wrong, "; ".join(wrong[:6]))
+
+# The convention only helps if it is actually used, so a floor on how many
+# references are checkable. Rewriting `N \`owner\`` back into a bare "stage N"
+# would otherwise silently reduce coverage to zero and still pass.
+check("workflow.md prose keeps its stage references checkable",
+      len(prose_refs) >= 12, f"only {len(prose_refs)} checkable reference(s)")
+
 # --- agents resolve, and are reachable -------------------------------------
 #
 # Subagents have the same invisibility failure as skills: the lead agent picks

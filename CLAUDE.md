@@ -49,6 +49,7 @@ adding a skill or wondering what comes next.
 | `knowledge-manager` | 10 record | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `decisions/` |
 | `research` | — entered from any stage | `docs/research/YYYY-MM-DD-<topic>.md` |
 | `systematic-debugging` | — entered on any failure | root cause + `ISSUES.md` entry |
+| `skill-authoring` | — entered to change this layer | a wired skill + a green `new_skill_check.py` |
 
 `pre-run/05-process-skill-router.py` falls back to **prompt shape** when no
 keyword matches: an imperative, or a framing plus a verb, names `task-brief`.
@@ -98,7 +99,7 @@ doc sweeps and bulk edits, wrong for debugging), and **request shape**, which is
 the biggest and is the user's. Deliberation goes on resolving ambiguity, not
 solving problems; one goal per request cuts it directly.
 
-Descriptions are injected **every turn** (~1,000 tokens for twelve) while
+Descriptions are injected **every turn** (~1,100 tokens for thirteen) while
 `.claude/routing/process-skills.md` is read by a hook and costs nothing — so
 trigger breadth belongs in the routing file and descriptions stay ~380 chars.
 `session-start/02-bootstrap-docs.py` is budgeted for the same reason: it injected
@@ -124,9 +125,9 @@ Raw equivalents, run from the repo root:
     python tools/test_no_slop.py
     python tools/test_referenced_paths.py
     python tools/test_project_checks.py
-    python tools/test_referenced_paths.py
     python tools/check_config_json.py
     python -m ruff check .
+    python tools/new_skill_check.py <name>|--all   # is one skill actually reachable
     python tools/run_checks.py --tier all --require-test   # both tiers
     python tools/smoke.py --url <url> --expect-status 200   # is it actually serving
     python tools/run_hook.py <event> '<json-payload>'   # fire one hook manually
@@ -139,11 +140,11 @@ Run `/verify` before declaring any work done.
 
 | Path | What it is |
 |---|---|
-| `.claude/skills/` | the twelve skills above, one directory each |
+| `.claude/skills/` | the thirteen skills above, one directory each |
 | `.claude/agents/` | four subagents; dispatched by skills for parallel work, one file each |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
 | `.claude/routing/process-skills.md` | keyword → skill-name routing (mandatory per skill) |
-| `.claude/hooks/<event>/` | ten hooks over seven events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |
+| `.claude/hooks/<event>/` | eleven hooks over eight events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create`, `on-repo-create` |
 | `.claude/settings.json` | what actually fires; `hooks_registry.json` only documents intent |
 | `.claude/commands/` | the six slash commands above |
 | `.claude/install.py` | ports the layer into another repo; `/install-layer` wraps it |
@@ -159,7 +160,7 @@ There is no global layer — `~/.claude/` holds no skills, agents or hooks.
 
 **`../physrun/` is a sibling repo, not part of this one** — the first product
 built with this layer, and the first test of whether the layer ports. It carries
-a *subset* — 6 of these 10 hooks, its own `CLAUDE.md`, its own docs. Copying this
+the whole layer as of 2026-08-03, plus its own `CLAUDE.md` and docs. Copying this
 file wholesale would be wrong; it asserts "there is no application code here"
 and a hook count, both false there. Porting found three bugs in a day, none of
 them findable from inside this repo. See `LOG.md` 2026-08-03 14:30.

@@ -38,13 +38,20 @@ hands straight to 10. Stages 8 and 9 are two acts, not one — merging changes a
 repository, releasing changes what users are looking at right now, and an
 approval for one is not an approval for the other.
 
-Two stages are not positions on the line. They are entered from wherever the
+Three stages are not positions on the line. They are entered from wherever the
 need arises and return to the stage that called them:
 
 | Stage | Owner | Entered when | Returns to |
 |---|---|---|---|
 | Research | `research` | any stage needs evidence from outside your own knowledge | whatever asked |
 | Diagnose | `systematic-debugging` | anything fails or behaves unexplainably, at any stage | the stage that hit the failure |
+| Author | `skill-authoring` | this layer itself needs a new skill, or needs to decide it should not have one | whatever asked |
+
+`skill-authoring` is off the line on purpose. Authoring a capability is not a
+stage of delivering a product, and a numbered thirteenth stage describing how to
+add stages is the kind of self-reference that makes the chain unreadable. It is
+also the only stage whose refusal is a success: most requests for a new skill are
+better served by a `references/` pack file, a command, or a hook.
 
 ### What this replaced, and why
 
@@ -196,13 +203,16 @@ intentions:
 
 ## Where state lives between stages
 
-`TASK.md` (1) · `docs/specs/` (2) · `docs/plans/` (3, ticked through 4) ·
-`docs/research/` (`research`, any stage) · `ISSUES.md` (`systematic-debugging`,
-and 8 when a rollback fired) · `LOG.md`, `HANDOFF.md`, `MEMORY.md` and
-`decisions/` (9).
+`TASK.md` (1 `task-brief`) · `docs/specs/` (2 `brainstormer`) · `docs/plans/`
+(3 `writing-plans`, ticked through 4 `executing-plans`) · `docs/research/`
+(`research`, any stage) · `ISSUES.md` (`systematic-debugging`, and
+9 `releasing` when a rollback fired) · `LOG.md`, `HANDOFF.md`, `MEMORY.md` and
+`decisions/` (10 `knowledge-manager`).
 
 `HANDOFF.md` is the only place a rollback command survives the session that
-deployed. Stage 9 writing it down is what makes stage 8 reversible tomorrow.
+deployed. 9 `releasing` produces the rollback command and
+10 `knowledge-manager` writes it down — which is what makes the release
+reversible tomorrow rather than only for the rest of this session.
 
 Chat is not the storage layer. A finding that stays in the conversation is lost
 at the next context reset.
@@ -217,7 +227,7 @@ for subagents** — otherwise the stage does the work itself.
 |---|---|---|
 | Research (any) | `source-digger` | one per source; 3-5 at once |
 | Diagnose (any) | `failure-investigator` | one per *independent* failure |
-| 6 Review | `diff-reviewer` | one per angle: correctness, security, test-quality, scope |
+| 7 Review | `diff-reviewer` | one per angle: correctness, security, test-quality, scope |
 | 4 Execute | `task-implementer` | one task at a time — never two |
 
 Two rules hold across all four. **Dispatch in one message to run concurrently**;
@@ -225,9 +235,15 @@ one per message is sequential. And **hand artifacts over as file paths, never
 pasted** — anything pasted into a dispatch stays in the dispatcher's context for
 the rest of the session.
 
-What never delegates: the sign-off in stage 6, the approval in stage 7, and any
-judgement about whether the work is done. An agent reporting success is not
-evidence; the diff is.
+What never delegates: the sign-off in 7 `code-review`, the approval in
+8 `delivering`, and any judgement about whether the work is done. An agent
+reporting success is not evidence; the diff is.
+
+Stage numbers in this file's prose are written as `N \`owner\`` on purpose, not as
+a bare "stage N". `tools/test_process_router.py` checks every one of them against
+the chain table, and it only can when the owner is named beside the number. Four
+bare references drifted by one when `no-slop` took stage 6 and nothing noticed
+until 2026-08-03.
 
 ## Domain genericity
 
@@ -247,16 +263,30 @@ the platforms it does not use.
 
 ## Adding to the chain
 
-A new skill needs three things or it is invisible:
+**`skill-authoring` owns this, and it is the procedure — not this section.** What
+stays here is the invariant, because it is a fact about the chain rather than
+about how to author one.
+
+A new skill needs **five** files or it is invisible, and nothing errors when one
+is missing:
 
 1. `.claude/skills/<name>/SKILL.md`, with frontmatter `name:` matching the
-   directory.
+   directory. A flat `<name>.md` never appears.
 2. A `## <name>` entry with a `Keywords:` line in
    `.claude/routing/process-skills.md`. `tools/test_process_router.py` fails
    the build without it.
-3. A row in this file, naming what it consumes and produces.
+3. A row in this file — the chain table if numbered, the off-chain table if not.
+4. A row in `CLAUDE.md`'s Skills table.
+5. The predecessor's `## Next step`, if the skill is numbered. A stage nobody
+   hands off to is a stage the chain stops before.
 
-Before adding one, check whether the stage is genuinely unowned. Eleven process
+This said "three things" until 2026-08-03 and listed only 1-3, which is how a
+skill could satisfy the documented requirement and still be unreachable.
+`tools/new_skill_check.py <name>` checks all five for one skill and then fires the
+router at its own keywords, because structure being green says nothing about
+reachability.
+
+Before adding one, check whether the stage is genuinely unowned. Twelve process
 skills is at the ceiling every comparable repo converges on; growth belongs in
 pack files. See `docs/research/2026-08-02-generic-pipeline-skillset.md`.
 

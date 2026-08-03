@@ -52,6 +52,13 @@
       "subscribers": [
         ".claude/hooks/on-artifact-create/02-hook-self-test-nudge.py"
       ]
+    },
+    "on-repo-create": {
+      "description": "After a tool call that could have created a directory; installs this layer into it if and only if it is a fresh git repo root outside this repo with no .claude/ yet. ACTS rather than reminds, and speaks its decision either way. Cannot see folders created outside a tool call -- Claude Code emits events for its own calls, not for the filesystem.",
+      "claude_code_event": "PostToolUse (Bash|PowerShell|Write)",
+      "subscribers": [
+        ".claude/hooks/on-repo-create/01-layer-import.py"
+      ]
     }
   }
 }

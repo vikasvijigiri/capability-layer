@@ -61,7 +61,8 @@ LAYER = ["skills", "agents", "routing", "commands", "hooks", "workflow.md",
 # `_projectchecks.detect_checks` looks for `tools/test_*.py`, and moving it
 # would mean the layer could not check itself.
 TOOLS = ["run_checks.py", "run_hook.py", "test_referenced_paths.py",
-         "test_process_router.py", "test_no_slop.py", "check_config_json.py"]
+         "test_process_router.py", "test_no_slop.py", "check_config_json.py",
+         "new_skill_check.py"]
 
 # Never copied out of `hooks/`, and each for a different reason. Passed to
 # `shutil.ignore_patterns`, so these are glob patterns, not names.

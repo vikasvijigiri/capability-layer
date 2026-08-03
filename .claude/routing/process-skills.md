@@ -7,7 +7,7 @@ injects the names of any skills that match.
 Why this file exists: the skill listing is truncated against a token budget, so
 a skill's `description:` — its only other trigger surface — can be absent on the
 exact turn it was needed. This file is the routing signal that survives that
-truncation. It is currently cheap to satisfy (twelve skills), and the budget is
+truncation. It is currently cheap to satisfy (thirteen skills), and the budget is
 a constraint on what gets added back, not a problem to solve later.
 
 **Format contract.** One `## <skill-name>` heading per entry, matching a
@@ -68,3 +68,7 @@ Keywords: deploy this, deploy it, deploy to prod, deploy to production, deploy t
 ## no-slop
 
 Keywords: no slop, no-slop check, sweep the repo, clean up the repo, tidy the repo, clean before shipping, check for slop, fix the slop, audit the capability layer, audit the skill layer, review the .claude folder, is the skill layer bloated, are the skills clean, are the skills overlapping, did the layer rot, clean up the skills, clean up the claude folder, skill layer health, layer decay, architectural decay, stray todos, leftover placeholders, folder is clean, layer is clean, is the layer clean, stale file, stale reference, stale files and references, duplicate rule, duplicate skill, overlapping trigger, collisions and duplicates, clean and importable, ready to port, ready to import
+
+## skill-authoring
+
+Keywords: create a skill, create a new skill, add a skill, add a new skill, another skill, scaffold a skill, author a skill, write a skill, skill that creates, skill template, skill frontmatter, should this be a skill, does this need a skill, register a skill, wire up a skill, where does the skill go, delete a skill, remove a skill
