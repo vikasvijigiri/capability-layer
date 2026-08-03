@@ -33,7 +33,7 @@ fires, a skill whose description silently vanished — each looks exactly like
 
 Useful levers: `tools/run_hook.py <event> '<json>'` fires one hook against a real
 payload; `PYTHONIOENCODING=utf-8` first, or `→`/`—` raise `UnicodeEncodeError` and
-a passing run reads as a failure; the six suites in `tools/`.
+a passing run reads as a failure; the suites in `tools/`.
 
 ## Phase 1 — Root cause
 

@@ -3,6 +3,43 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-03 16:10
+**The whole `.claude/` layer is now ported, and the checker adjudicated instead
+of me guessing.** Copied `skills/` (11), `agents/` (4), `routing/`, `commands/`
+(5), `workflow.md` and the skill-router hook into `../physrun/`, then ran
+`test_referenced_paths.py` and `test_process_router.py` there.
+
+**`test_process_router.py` passed first time** — 11 routing entries, every skill's
+frontmatter, every agent's model/tools/back-reference. The skill layer is
+structurally portable; nothing about it is repo-specific by construction.
+
+**`test_referenced_paths.py` found 7, in three classes**, all of them prose
+naming things that exist only here:
+
+- 4 × a path that does not exist there (`tools/test_hooks.py`,
+  `test_hook_registration.py`, `run_hook.py` × 2)
+- 2 × a hardcoded count ("six suites" — physrun has 2)
+- 1 × **a stray `_hooklib.py` sitting in `pre-commit/`**, from a sloppy `cp` of
+  mine. `run_hook.py` executes *every* file in an event directory, so it would
+  have been run as a hook — and `_hooklib.py`'s own docstring warns about exactly
+  that. The count check caught it, for the second time today.
+
+**The fix made the layer more portable rather than patching physrun.** A
+hardcoded suite list or suite count is true in exactly one repo, so `verify.md`,
+`systematic-debugging` and `verifying-work` no longer state either — they name
+`tools/test_*.py` and let detection resolve it. That change was made *here* and
+copied across, not the other way round.
+
+**Verdict on drop-in portability: close, but not `cp -r`.** Four adaptations are
+required and now known exactly: merge `settings.json` (never copy — a hook on
+disk that it does not name never runs and nothing errors), rewrite `CLAUDE.md`,
+add `.claude/hooks/**` to ruff's per-file-ignores, add `.claude/hooks/state/` to
+`.gitignore`. Three behaviours a new repo inherits and should be told about: all
+hooks require Python on PATH, the auto-commit *commits*, and a repo with no tests
+cannot commit code until `"test": false` is stated.
+
+That is a script nobody has written yet, not a judgement call.
+
 ## 2026-08-03 14:30
 **A product exists, and the capability layer was ported into it for the first
 time.** `../physrun/` — a content-addressed run store for computational

@@ -26,10 +26,10 @@ Run these in order and report each one's real output line, not a paraphrase:
    its real line. `ran_test: False` on a change containing code is a failure
    even when `ok` is True — that is the distinction the gate turns on.
 
-   To see which suite failed rather than the summary, run them individually:
-   `tools/test_hooks.py`, `test_process_router.py`, `test_hook_registration.py`,
-   `test_artifact_autocommit.py`, `test_project_checks.py`,
-   `test_referenced_paths.py`. Do not stop at the first failure.
+   To see which suite failed rather than the summary, run each of
+   `tools/test_*.py` individually. Do not stop at the first failure. The list is
+   deliberately not written out here -- a hardcoded suite list is true in exactly
+   one repo, and this file is copied into others.
 
 2. **Every hook imports** — `01-env-check.py` did this until it was deleted on
    2026-08-02, and `test_process_router.py` now covers the skill/routing half of
@@ -42,9 +42,9 @@ Run these in order and report each one's real output line, not a paraphrase:
    the frontmatter is not a YAML mapping, or `description` or `model` is missing
    or empty. Report the model split.
 
-4. **Hook registration** — `tools/test_hook_registration.py` in step 1 now
-   asserts this in all three directions (disk / `settings.json` /
-   `hooks_registry.json`). It exists because this step was prose for two weeks
+4. **Hook registration** — where a `hooks_registry.json` exists, step 1's
+   registration suite asserts this in all three directions (disk /
+   `settings.json` / registry). It exists because this step was prose for two weeks
    and the drift accumulated anyway: `02-bootstrap-docs.py` sat on disk and in
    the registry but not in `settings.json`, so it never fired in a real session.
    Report that suite's count line; no manual cross-check is needed.
