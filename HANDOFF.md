@@ -15,141 +15,36 @@ section. Read the file directly when full history is actually needed. -->
 <!-- session-context:start -->
 ## Current Work
 
-**The backlog is landing, and the gate layer is being cut from 28 hooks to 8.**
-Five GitHub repos were read and they agree: every hook in all of them verifies an
-*artefact* (types, lint, tests, generated files); not one enforces process. Ours
-gate process compliance, which is unfalsifiable, which is why they grew to
-contradict each other. `obra/superpowers` is the sharpest comparison — 14 skills,
-1 hook, and its chain completes. See LOG 2026-08-02 19:26.
+**Two repos now.** This one is the capability layer; `../physrun/` is the first
+product built with it.
 
-Decided: delete the review receipt outright; delete the dead `on-*` observability
-hooks; land the backlog as several commits.
+| Repo | Branch | Commits | State |
+|---|---|---|---|
+| `Notes` (UAIOS) | `collapse-capabilities-into-routing` | 26 | clean; 6 suites, ruff, mypy green |
+| `../physrun/` | `capability-layer` | 10 | clean; 50 tests, lint/typecheck green |
 
-**Phase 1 is done.** The 91-file backlog landed in four commits (`92376d0`,
-`4ff5ab2`, `3c383f9`, `071070b`) and the three process-compliance gates are
-deleted. 28 hooks → 25. Six suites pass; `/verify` and `tools/README.md` now say
-six, not seven.
+Neither has been pushed. physrun has no remote at all.
 
-Unblocked by `.claude/settings.local.json`, which the user added: the auto-mode
-classifier refuses to let me edit `settings.json` or widen my own permissions,
-and refuses `git rm` on repo source. Both are correct. Expect to hand the user a
-command for either.
+**physrun** is a content-addressed run store for computational theoretical
+physics: an identical calculation is a cache hit, every result is re-executable
+from its id. Spec and plan are in `docs/specs/` and `docs/plans/` here, both
+dated 2026-08-03, all 40 plan steps ticked. It has its own `CLAUDE.md`, six
+hooks and knowledge docs — a *deliberate subset*, because UAIOS's `CLAUDE.md`
+asserts things ("no application code here", a hook count) that are false there.
 
-**The autonomous commit loop is live** (LOG 2026-08-02 20:50). Every turn ends in
-a `wip:` checkpoint if five artefact gates pass; review moved to the push/PR.
-First self-made commit: `45267c7`.
+**The chain ran end to end for the first time.** `brainstormer` →
+`writing-plans` → `executing-plans` → `verifying-work`, producing a real
+product. That was the top item in Next Steps for two sessions and it is done.
 
-**Phases 1 and 3 are done. 28 hooks → 9.** See LOG 2026-08-02 21:30. Five suites,
-all green; `tools/test_referenced_paths.py` is new and closes the gap that had
-been the top item here.
+**The gate layer is 9 hooks and stable.** Phases 1 and 3 of the prune landed
+2026-08-02; phase 2 is permanently the user's (the classifier will not let me
+widen my own permissions); phase 4 was dropped on the argument that a dispatcher
+earns nothing at 9 hooks in 7 directories.
 
-**Phase 2 is permanently the user's**: the classifier will not let me widen my own
-permission boundary, correctly. `.claude/settings.local.json` now carries
-`Bash(git rm:*)` in allow, which was what unblocked phase 3.
-
-**Phase 4 is not built, and I recommend dropping it.** A single dispatcher earns
-its keep at claudekit's 19 hooks with shared config; at 9 hooks in 7 directories,
-one file each and no shared config, it adds indirection and removes nothing. The
-plan marked it optional pending 1-3. Say if you want it anyway.
-
-**Target is 9 hooks, not 8** — agreed 2026-08-02.
-`on-artifact-create/02-hook-self-test-nudge.py` comes off the deletion list: it
-forced the run that found both auto-commit bugs, and neither was visible in the
-diff. The kept set is now:
-
-    pre-commit/01-secret-scan          deny — a leaked key is unrecoverable
-    pre-commit/02-branch-guard         deny — push leaves the machine
-    pre-edit/01-forbidden-change-guard deny — generated/vendored targets
-    pre-deploy/01-spend-guard          deny — money
-    post-run/03-checkpoint             acts — free safety net
-    post-run/06-artifact-autocommit    acts — the commit loop
-    on-artifact-create/02-hook-self-test-nudge  informs — earns its place
-    session-start/02-bootstrap-docs    informs
-    pre-run/05-process-skill-router    informs
-
-Everything else in `.claude/hooks/` is deleted in phase 3 (16 files, not 17).
-
-**Next: phases 2-4.** (2) move static rules into `permissions.allow`/`deny`.
-(3) prune the remaining 17 to 8 — keep only what denies something irreversible
-(`01-secret-scan`, `02-branch-guard`, `01-forbidden-change-guard`,
-`01-spend-guard`) or acts (`03-checkpoint`, `06-artifact-autocommit`), plus
-`02-bootstrap-docs` and `05-process-skill-router` which only inform. (4) one
-dispatcher plus a config table, claudekit's shape. Phase 3 deletes
-`04-docs-staleness`, `04-docs-sync`, `01-audit`, `02-slack`, `01-log`,
-`01-context-budget`, `01-register`, `02-hook-self-test-nudge`, `02-git-tag`,
-`01-rollback-notify`, `on-error/01-log`, `01-email-sim`, `01-notify`,
-`06-index-scope-guard`, `03-index-baseline`, `01-env-check`.
-
-**The git chain was run live for the first time, against a one-line file.**
-`docs/2026-08-02-git-flow-walkthrough.md` records it. Subject: `dummy.py`
-(`import os`), still staged and uncommitted. `Write` and `git add -- dummy.py`
-passed; `git commit -m "…" -- dummy.py` was denied for real by
-`pre-commit/05-docs-required.py`. That is the first end-to-end exercise of the
-gates against a real change rather than a synthetic payload, and it found two
-defects (both in Pending below). It is **not** the "first real end-to-end run"
-Next Steps asks for — stages 1-6 were skipped, only 7's gates were exercised.
-
-**The automation question is settled and three of its four recommendations are
-done.** `docs/research/2026-08-02-automating-the-git-chain.md`: **hooks cannot
-invoke skills** (official docs, fetched), so no new skill automates anything — but a
-hook *can* run git, and the backlog is a missing commit boundary, not a
-missing threshold.
-
-Landed this session:
-
-- **`post-run/05-docs-gate.py` fixed.** It had a standing trigger (the whole
-  uncommitted backlog) against a per-turn satisfaction condition (doc digests vs a
-  UserPromptSubmit snapshot), so above `MIN_FILES = 10` every turn demanded both docs
-  be rewritten. Five blocks in one session, three talked past with its own escape
-  hatch. `save_turn_marker` now records the work set too. `ISSUES.md` 2026-08-02 17:30
-  carries the incident **including a wrong first diagnosis that got published** —
-  read that before trusting any hook's own error text again.
-- **`post-run/06-artifact-autocommit.py` written, wired and tested.** Commits prose
-  artefacts (`.md` under `docs/specs|research|plans/`, `decisions/`, and the root
-  knowledge docs) at the `knowledge-manager` boundary, by explicit pathspec.
-  Never `git add .`, never `.claude/`, never code, never pushes.
-- **`decisions/2026-08-02-gate-on-blast-radius.md`** — the three-band rule, with the
-  file-count threshold explicitly rejected on evidence.
-- **The staging hole is closed.** `session-start/03-index-baseline.py` records what
-  an earlier session left staged (git cannot tell "staged now" from "staged
-  Tuesday"), and `pre-commit/06-index-scope-guard.py` asks before a blanket
-  `git add` or before a commit spends inherited files. A pathspec commit is exempt
-  by design and by test — without that, the auto-commit hook would deadlock against
-  it. `ALLOW_WIDE_STAGE=1` overrides.
-- **`/git-state`** — granular git accounting, eight sections, every command verified
-  against this repo before shipping. Counts only; judging is `/wip`'s job.
-- **Two new suites**: `test_artifact_autocommit.py`, `test_index_scope_guard.py`.
-  `CLAUDE.md`, `/verify` and `hooks_registry.json` updated to say seven.
-
-Seven suites pass: `All hook tests passed`, `All process-router tests passed (11
-entries routed)`, `All hook-registration tests passed (28 hooks, 13 events)`,
-`All docs-gate tests passed`, `All docs-staleness tests passed`,
-`All artifact-autocommit tests passed`, `All index-scope-guard tests passed`. Not
-re-run this session: env-check, the broken-path-reference sweep. `compileall` was
-clean at 17:30, before the last six file edits.
-
-**In flight**: `docs/specs/2026-08-02-brainstormer-grounding-design.md` is
-written and approved section-by-section, **not implemented and not committed**.
-Adds two bounded evidence phases to `brainstormer` (seed before the clarifying
-questions, kill after approaches), a mandatory `## Prior art` spec section, and
-five mechanical rules in `tools/test_docs_gates.py`. Next step for it is
-`writing-plans`; nothing has been handed off yet.
-
-**Uncommitted and unreviewed**: 89 paths — 50 staged (49 `docs/archive/` renames
-plus `.claude/workflow.md`, all rename-only: `0 insertions(+), 0 deletions(-)`),
-22 modified, 17 untracked. The three buckets overlap; `/git-state` breaks it down.
-
-Eleven skills, `11 entries routed`, every workflow stage owned. The chain is
-1 `task-brief` → 2 `brainstormer` → 3 `writing-plans` → 4 `executing-plans` →
-5 `verifying-work` → 6 `code-review` → 7 `delivering` → 8 `releasing` →
-9 `knowledge-manager`, with `research` and `systematic-debugging` entered from
-any stage and returning to it. `.claude/workflow.md` owns that ordering and
-`tools/test_process_router.py` asserts the skills agree with it.
-
-Stage 8 is new this session and is the only stage **skipped by absence rather
-than judgement**: `delivering` branches to it when the repo has a deploy target
-and straight to 9 when it does not. Stages 7 and 8 take separate approvals, and
-8's is per target.
+**The diagnose loop is live in both repos.** Red writes a report and names
+`systematic-debugging`, three strikes on one failure escalates, green closes
+forward into `verifying-work` → `code-review` → `delivering`. It suggests and
+never blocks, because the hook that blocked deadlocked and was deleted.
 
 ## Pending
 
@@ -252,41 +147,38 @@ and straight to 9 when it does not. Stages 7 and 8 take separate approvals, and
 
 ## Next Steps
 
-From `docs/research/2026-08-02-automating-the-git-chain.md`, in order:
+The chain has now run end to end once — `task-brief` was skipped by design,
+`brainstormer` → `writing-plans` → `executing-plans` → `verifying-work` all ran,
+and a real product came out. That was the highest-value open item and it is done.
 
-1. **Fix `post-run/05-docs-gate.py`** before adding any mechanism. A gate that
-   cannot be satisfied by obeying it trains its own bypass, and did.
-2. **Let one hook commit rather than ask.** Narrowest version: on `Stop`, when the
-   *only* changed files are the knowledge docs, commit them with a generated
-   message. Zero blast radius, not code, no review receipt needed, and it removes
-   the most frequent block. `git commit -F` with an explicit pathspec — **never
-   `git add .`**.
-3. **Record the blast-radius decision** in `decisions/` — gate on blast radius,
-   not on phase. Three independent supports, still only a bullet here.
-4. **Do not add a twelfth skill**, and defer the external runner until one plan
-   has run end to end.
-
-Then **decide the index question above** and `writing-plans` on the brainstormer
-grounding spec — approved and waiting, and the first spec here that would
-exercise stages 2→3 as a pair.
-
-Then `code-review` over the non-archive entries, then commit — **and get
-`.claude/agents/` and the five untracked skill directories into git in that
-commit**, since they are the ones a teammate currently cannot see at all. The
-archive move is 50 more entries and reviews as one decision, not fifty.
-
-After that, the highest-value work is a **first real end-to-end run**: take one
-small real change from `task-brief` through to `delivering` and record where the
-chain actually breaks. Everything else here is speculation until that happens.
+1. **Fix the branch guard** (`ISSUES.md` 2026-08-03 14:20). It reads the
+   session's repo, not the command's target, and let eight commits onto a
+   protected branch. Highest-value fix here because it is a guard that reports
+   nothing while failing.
+2. **Task 9 — physrun has no skills or agents.** Its hooks fire; a session opened
+   there has no `code-review`, no `writing-plans`. Decide whether the eleven
+   skills are portable as-is or need a physrun-specific cut; UAIOS's `CLAUDE.md`
+   proved not portable, and the skills may not be either.
+3. **The slow tier has never run against anything.** `--tier slow` returns
+   `no checks detected` in both repos. physrun will exercise `build` and `audit`
+   as soon as it has a package to build; `e2e` and `smoke` need a UI or server,
+   which the run substrate does not have.
+4. **Decide physrun's `main`.** Eight commits sit on it that the guard should
+   have refused. Local and unpushed, so rewriting is still cheap if wanted.
+5. **Nothing has been pushed from either repo.** No remote exists for physrun.
 
 ## Open Questions
 
+- **Are the eleven skills portable?** `CLAUDE.md` was not — it asserts "there is
+  no application code here" and a hook count, both false elsewhere. Skills may
+  carry fewer repo-specific claims, but `test_referenced_paths.py` would be the
+  way to find out rather than assumption.
+- **Should the diagnose loop's three-strike budget be per-signature or per-day?**
+  Currently per-signature and reset by any different failure, which is right for
+  a converging fix and wrong for a flaky test that alternates.
 - Does the `agent:` frontmatter field actually dispatch a subagent? Supported and
-  parses, but no skill uses it.
-- `post-run/05-docs-gate.py` blocked a turn on 2026-08-02 — the first observed
-  `Stop` block in this build. CLAUDE.md still documents `Stop` blocking as
-  "unproven"; that line needs correcting, and it is worth knowing whether the
-  block is reliable or was a one-off.
+  parses, no skill uses it, and **zero subagents have been dispatched** in this
+  repo's history.
 - Several claude.ai connectors (Asana, Atlassian, Box, Canva, HubSpot, Intercom,
   monday.com) need OAuth and cannot be authorised from a non-interactive session.
 <!-- session-context:end -->

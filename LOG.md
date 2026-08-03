@@ -3,6 +3,56 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-03 14:30
+**A product exists, and the capability layer was ported into it for the first
+time.** `../physrun/` — a content-addressed run store for computational
+theoretical physics — is 10 commits on branch `capability-layer`, 50 tests, tree
+clean. Spec `docs/specs/2026-08-03-research-run-substrate-design.md`, plan
+`docs/plans/2026-08-03-physrun-run-substrate.md`, all 40 steps ticked.
+
+**Porting is what tested the layer, and it failed three times.** None of these
+was findable inside this repo, because this repo has no `pyproject.toml`, no
+application code and no second git root:
+
+1. `MARKER_CHECKS` emitted a bare `pytest -q`. A fresh repo reported `pytest`
+   not installed seconds after `python -m pytest` ran a passing suite —
+   importable, no console script. The silent version is worse: a bare name can
+   resolve to a *different interpreter's* tool than the one running the checks.
+   Every Python tool now runs as `{py} -m`, asserted by a test.
+2. **The branch guard checks the session's repo, not the command's target
+   repo.** Eight physrun commits landed on its protected `main` because
+   `git commit` was issued from a Notes-rooted session and the guard read
+   *Notes'* branch. Recorded in `ISSUES.md`; not yet fixed.
+3. Two Task 1 decisions were invalidated by Task 8 within the same sitting —
+   ruff's `.claude/hooks/**` ignores and `.gitignore`'s state directory, both
+   stripped because physrun had no hooks, both wrong the moment it had six. The
+   auto-commit committed its own scratch report once before the second was
+   fixed. Both caught by the commit gate, neither by review.
+
+**The diagnose loop is built and fired for real in both repos.** On red,
+`06-artifact-autocommit.py` writes
+`.claude/hooks/state/check-failure-report.md`, counts consecutive failures of
+the same failure (digits normalised, so a partial fix does not reset the
+budget), and names `systematic-debugging`. Three strikes on one signature and it
+stops suggesting and escalates — a fix that has not converged in three passes is
+not converging. Green clears the state and closes the loop **forward**, naming
+`verifying-work` → `code-review` → `delivering`, because "no longer failing" and
+"finished" are the pair stage 5 exists to keep apart.
+
+It **suggests and never blocks**: a hook cannot invoke a skill, and the hook that
+blocked until one ran deadlocked and was deleted yesterday.
+
+Two bugs of mine in that work, both caught by running it: the state paths were
+absolute and baked at import, so a test run would have written its failure report
+into the real repository; and the escalation said "the 3th time".
+
+**Verification verdict was gaps, not verified.** Three of the spec's four success
+criteria measure the Binder and Agent, which this plan deliberately excluded — so
+only one quarter of the spec is testable by it, and that quarter passed. Both
+load-bearing invariants were falsified on purpose and confirmed capable of
+failing: sabotaging `run_id` purity gave `5 failed`; disabling the cache gave
+`2 failed`.
+
 ## 2026-08-03 03:00
 **All seven production gaps closed.** I recommended against doing these
 speculatively — the user reaffirmed, so they were built generically rather than

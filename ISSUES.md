@@ -6,6 +6,34 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-03 14:20 — the branch guard reads the wrong repository
+- **Phase/Context**: building `../physrun/` from a Claude Code session rooted in
+  this repo. Eight commits were made with `cd ../physrun && git commit …`.
+- **Symptom**: all eight landed on physrun's `main`, which is in
+  `PROTECTED_BRANCHES`. `pre-commit/02-branch-guard.py` was registered and firing
+  the whole time and denied none of them. Discovered only when physrun's own copy
+  of the auto-commit refused with "`main` is a protected branch" — the guard
+  working correctly, from inside the right repo, on the ninth attempt.
+- **Diagnosis**: the guard resolves the branch from `payload["cwd"]`, which is the
+  **session's** working directory, not the directory the command actually runs in.
+  A `cd` inside the command string is invisible to it. So it read *this* repo's
+  branch (`collapse-capabilities-into-routing`, unprotected) and allowed a commit
+  onto a different repo's `main`.
+- **Why it was invisible**: the guard did exactly what it was written to do and
+  said nothing, which is indistinguishable from having checked and approved. Every
+  hook here fails this way; it is why the repo's own rule is that a hook's failure
+  symptom is silence.
+- **Status**: **Open.** Not fixed in this session. The guard is correct for the
+  single-repo case it was written for, and the multi-repo case did not exist until
+  today.
+- **Candidate fixes**: parse a leading `cd`/`git -C` out of the command and resolve
+  the branch from *that* directory; or resolve from `git rev-parse --show-toplevel`
+  run in the same shape as the command. Both are guesses about intent, which is why
+  neither was applied blind.
+- **Blast radius**: any repo edited from a session rooted elsewhere. In this case:
+  eight commits on a protected branch that should have been refused. Recoverable —
+  physrun is local, unpushed, and now on `capability-layer`.
+
 ## 2026-08-02 18:10 — the new auto-commit hook committed nothing, and said it succeeded
 - **Phase/Context**: first test run of `post-run/06-artifact-autocommit.py`, before it
   had ever fired for real.
