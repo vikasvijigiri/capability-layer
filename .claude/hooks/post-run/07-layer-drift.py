@@ -127,10 +127,11 @@ def swept() -> int:
     the checkpoint permanently switched off, and the untracked file that caused it
     can never get committed. The loop is self-sustaining.
 
-    So the swept paths are recorded BY NAME, structural and volume alike. They
-    stay suppressed whether they later show up as `?` (still untracked) or `A`
-    (now committed) -- a capability is announced once, and a file that was read
-    during the sweep has been read. A later `D` is new news and still fires.
+    So the swept paths are recorded BY NAME, structural and volume alike, and
+    matched through `is_swept()` rather than by equality -- an untracked
+    directory and the files that later replace it are the same capability under
+    two different strings. A capability is announced once, and a file read during
+    the sweep has been read. A later `D` is new news and still fires.
 
     Recording only the structural ones was the first attempt and it moved the
     loop rather than closing it: `touched` reset to `[]` and rebuilt from the
@@ -169,6 +170,23 @@ def swept() -> int:
           + (f", {len(seen)} structural and {len(swept_touched)} touched "
              f"path(s) suppressed" if seen or swept_touched else ""))
     return 0
+
+
+def is_swept(path: str, swept: set[str]) -> bool:
+    """Was `path` already reported by a completed sweep?
+
+    Exact match is not enough, and assuming it was is a bug this hook shipped.
+    `git status --porcelain` reports an untracked DIRECTORY as one entry with a
+    trailing slash (`.claude/hooks/pre-compact/`); the commit that later adds it
+    reports each FILE inside it (`.claude/hooks/pre-compact/01-*.py`). Same
+    capability, two different strings, so the nudge returned the moment the
+    sweep's own files were committed.
+
+    So a swept entry ending in `/` suppresses everything beneath it.
+    """
+    if path in swept:
+        return True
+    return any(d.endswith("/") and path.startswith(d) for d in swept)
 
 
 def changed_layer_files(since: str = "") -> list[tuple[str, str]]:
@@ -228,17 +246,35 @@ def main() -> int:
     raw_st = state.get("swept_touched", [])
     swept_touched = set(raw_st) if isinstance(raw_st, list) else set()
 
+    # Re-filter what was already RECORDED, not just what is newly observed.
+    # `structural` and `touched` are loaded from state and only ever appended to,
+    # so an entry written before a suppression rule existed outlives it forever.
+    # That is not hypothetical: the entry that survived the directory-vs-file fix
+    # kept nudging with the corrected code in place, because the check only ran
+    # on new observations. State written by an older version has to heal itself.
+    structural = {p: s for p, s in structural.items()
+                  if not (is_swept(p, swept_structural) and s != "D")}
+    touched = {p for p in touched if not is_swept(p, swept_touched)}
+
+    # A recorded ADDITION whose path no longer exists is not a capability, it is
+    # a file that came and went inside one sweep window. Without this, creating
+    # and deleting anything under `.claude/` leaves a permanent nudge for a file
+    # nobody can go and read. `D` is exempt: a deletion is *about* absence.
+    structural = {p: s for p, s in structural.items()
+                  if s == "D" or (REPO_ROOT / p).exists()}
+    touched = {p for p in touched if (REPO_ROOT / p).exists()}
+
     for status, path in changed_layer_files(since):
         # Counted during the last sweep. Without this the volume counter rebuilds
         # from the same uncommitted files every turn and nudges forever.
-        if path not in swept_touched:
+        if not is_swept(path, swept_touched):
             touched.add(path)
         # A/D in `git show`, ??/!! in `git status`. Renames count as both.
         if status[:1] in ("A", "D", "R", "?") and path.startswith(STRUCTURAL_DIRS):
             # Announced once. A path stays suppressed as it moves from `?` to
             # `A`, because that is the same capability being committed, not a
             # new one. Deletion is new news and is never suppressed.
-            if path in swept_structural and status[:1] != "D":
+            if is_swept(path, swept_structural) and status[:1] != "D":
                 continue
             structural.setdefault(path, status[:1])
 
