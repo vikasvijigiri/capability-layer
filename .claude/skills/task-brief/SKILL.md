@@ -113,9 +113,16 @@ was too big — say so and go to `brainstormer`.
 ## Next step — you MUST take it
 
 The brief is not the deliverable; the work is. When `TASK.md` is approved, say
-which successor you are invoking and invoke it in the same turn:
-`brainstormer` (approach open) · `writing-plans` (settled, needs sequencing) ·
-straight to the change (smaller than a plan).
+which successor you are invoking and invoke it in the same turn: **straight to
+the change** (the normal case — a brief concrete enough to approve is concrete
+enough to build), or **`brainstormer`** when a blank field showed the approach is
+still open.
+
+**Never `writing-plans`.** It consumes an approved spec and six lines is not one
+— its own description refuses a brief by name, and `workflow.md`'s Consumes
+column says the same. Work that turns out to need real sequencing means the
+brief was too big: say so and go to `brainstormer`, which produces the spec
+`writing-plans` requires.
 
 Stopping here is the chain's most common break: nothing watches for a finished
 brief, so an un-handed-off brief is simply forgotten.
@@ -124,13 +131,17 @@ brief, so an un-handed-off brief is simply forgotten.
 
 - Mandatory validator: none. The approval gate in step 5 is the gate.
 - Terminal handoff, and you MUST take it once the brief is approved — one of
-  three, decided by what the brief says:
-  1. The approach is still open → invoke `brainstormer`.
-  2. The approach is settled and the work needs sequencing → invoke
-     `writing-plans`.
-  3. The change is smaller than a plan → do it, then `verifying-work`.
+  **two**, decided by what the brief says:
+  1. The six fields are filled → do the change, then `verifying-work`.
+  2. A field could not be filled because the approach is undecided → invoke
+     `brainstormer`.
   Name which one you are taking. Stopping after writing `TASK.md` leaves the
   chain broken — nothing else will pick it up.
+- **`writing-plans` is not among them**, and this listed it as a third branch
+  until 2026-08-03 while step 6, `writing-plans`' own description and
+  `workflow.md`'s Consumes column all said the opposite. Stage 3 takes an
+  approved spec; sequencing work reaches it through `brainstormer`, never
+  directly from here.
 - **Alternative to `brainstormer`, never a predecessor.** Brainstormer exists
   because the first idea becomes an anchor; a finished brief *is* that anchor,
   since Goal and Outputs commit to a solution shape.

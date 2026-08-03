@@ -344,6 +344,60 @@ check("handoff chain visits the table's stages in table order",
       walk[1:] == expected_tail[:len(walk) - 1] or walk == expected_tail,
       f"table={linear}  walk={walk}")
 
+# --- successors a skill must NOT hand to ------------------------------------
+#
+# `CHAIN_SUCCESSOR` asserts the POSITIVE successor and has no `task-brief` entry
+# at all, because it branches -- so nothing checked its successors in either
+# direction. `task-brief` listed `writing-plans` as a third branch in two places
+# while FOUR others said a brief is not a spec: its own step 6, `writing-plans`'
+# description ("Do NOT use ... for a six-line brief"), workflow.md's Consumes
+# column ("an approved spec"), and workflow.md's diagram, which draws no arrow
+# between them. Six statements, two of them wrong, every check green.
+#
+# A mention is allowed only where it is NEGATED -- the skills here explain what
+# they refuse, so a bare ban on the name would be unmaintainable.
+
+FORBIDDEN_SUCCESSOR = {
+    "task-brief": ("writing-plans",
+                   "stage 3 consumes an approved spec, not a six-line brief"),
+}
+_NEGATED = re.compile(r"\b(never|not|no|nor)\b", re.I)
+
+# The marker must sit IMMEDIATELY before the name. Sentence-level matching was
+# tried first and flagged "which produces the spec `writing-plans` requires" --
+# a description of what the skill consumes, not a handoff to it. A rule that
+# fires on correct prose gets the check deleted rather than the prose fixed.
+_HANDOFF_NEAR = (r"(?:invoke|go to|hand (?:it |this |off )?to|proceed to|"
+                 r"→|->|·|\bto)\s*\**`{}`")
+
+
+def positive_mentions(chunk: str, name: str) -> list[str]:
+    """Sentences that hand off to `name` rather than merely mentioning it."""
+    near = re.compile(_HANDOFF_NEAR.format(re.escape(name)), re.I)
+    return [s.strip() for s in re.split(r"(?<=[.!?])\s+|\n(?=\s*[-*\d])", chunk)
+            if near.search(s) and not _NEGATED.search(s)]
+
+
+for _skill, (_bad, _why) in FORBIDDEN_SUCCESSOR.items():
+    _body = (SKILLS / _skill / "SKILL.md").read_text(encoding="utf-8")
+    for _section in ("## Next step", "## Routing"):
+        if _section not in _body:
+            continue
+        _chunk = _body.split(_section, 1)[1].split("\n## ", 1)[0]
+        _bad_lines = positive_mentions(_chunk, _bad)
+        check(f"{_skill}'s '{_section}' does not hand off to `{_bad}`",
+              not _bad_lines, f"{_why}; found: {_bad_lines[:1]}")
+
+# The same invariant in the file that OWNS the chain. Asserted on the whole
+# paragraph, since the branch list wraps across lines.
+_wf_text = WORKFLOW.read_text(encoding="utf-8")
+_paras = [p for p in _wf_text.split("\n\n") if "task-brief` branches" in p]
+check("workflow.md still describes how task-brief branches", bool(_paras))
+if _paras:
+    check("workflow.md does not branch task-brief to `writing-plans`",
+          not positive_mentions(_paras[0], "writing-plans"),
+          "the chain owner contradicts both skills' own text")
+
 # Each skill states its own stage number, and it must be the table's number.
 for skill, num in stage_of.items():
     body = (SKILLS / skill / "SKILL.md").read_text(encoding="utf-8")

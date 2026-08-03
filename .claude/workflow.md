@@ -176,9 +176,12 @@ criterion before the first pass.
                               (stage 9 rolls back first, then enters here)
 ```
 
-`task-brief` branches: to `brainstormer` when the approach is open, to
-`writing-plans` when it is settled, straight to the change when it is smaller
-than a plan.
+`task-brief` branches two ways: straight to the change when the six fields are
+filled, or to `brainstormer` when one could not be. **Never to `writing-plans`** —
+stage 3 consumes an approved spec (see the Consumes column) and six lines is not
+one, which is why the diagram above draws no arrow between them. This sentence
+listed a third branch, naming stage 3 directly, until 2026-08-03 — contradicting
+that column, the diagram, and both skills' own text.
 
 Every skill states its own mandatory validator and terminal handoff in its
 `## Routing` section. Where this diagram and a skill disagree, the skill wins —
