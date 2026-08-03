@@ -27,6 +27,7 @@ Run: python tools/test_hook_registration.py
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -196,6 +197,29 @@ for _path in sorted(HOOKS.rglob("*.py")):
     named = sorted({s for s in SKILL_NAMES if any(s in e for e in emitted)})
     check(f"{_path.parent.name}/{_path.name} names no skill in what it emits",
           not named, f"names {named} -- workflow.md decides, the hook measures")
+
+# --- every state the report hook can emit has a workflow.md block -----------
+#
+# The hook renders `[state:<key>]` blocks out of workflow.md and deliberately
+# keeps no fallback text, so a key with no block degrades to a generic line. That
+# is the right failure, but it should not be discovered in a live session.
+#
+# An unclosed tag is worse: the regex simply does not match, so the block is
+# present, looks correct, and is never emitted.
+
+_report = HOOKS / "session-start" / "03-state-report.py"
+_wf = ROOT / ".claude" / "workflow.md"
+if _report.is_file() and _wf.is_file():
+    _src = _report.read_text(encoding="utf-8")
+    _wf_text = _wf.read_text(encoding="utf-8")
+    # The keys the hook can append, read from its own source rather than repeated
+    # here -- a list in this file would be the second copy the whole design avoids.
+    _keys = set(re.findall(r'states\.append\("([a-z-]+)"\)', _src))
+    check("the report hook declares at least one state", bool(_keys))
+    for _key in sorted(_keys):
+        check(f"workflow.md has a closed [state:{_key}] block",
+              f"[state:{_key}]" in _wf_text and f"[/state:{_key}]" in _wf_text,
+              "missing or unclosed -- an unclosed tag never matches and is silent")
 
 # --- the manual-only exemption must be deliberate, not a typo ---------------
 

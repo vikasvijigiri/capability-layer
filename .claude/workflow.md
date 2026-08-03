@@ -175,7 +175,7 @@ intentions:
 | Never deliver an unreviewed change | `code-review` over the branch at the push/PR boundary. Commits below that are unreviewed `wip:` checkpoints by design |
 | Never auto-commit a secret, a red suite, or onto a protected branch | `post-run/06-artifact-autocommit.py`, enforced inline — its commits never reach `PreToolUse` |
 | Never commit secrets | `pre-commit/01-secret-scan.py` |
-| Never leave a unit of work unrecorded | `knowledge-manager`, invoked deliberately — no hook prompts for it |
+| Never leave a unit of work unrecorded | `knowledge-manager`; `session-start/03-state-report.py` measures how far behind the history docs are |
 | Never put AI attribution in git history | `_hooklib.AI_ATTRIBUTION_PATTERNS`, checked inline by the auto-commit |
 
 ## Where state lives between stages
@@ -261,30 +261,21 @@ that already owns the stage.
 ## What a state means
 
 `session-start/03-state-report.py` measures the repo and renders whichever block
-below matches. **This section is the only place that text lives** — the hook
-keeps no copy, so a missing tag prints a visibly generic line instead of quietly
-substituting something plausible. That is deliberate: hooks measure, this file
-decides, and a second copy of a routing decision is what coupled the hooks to
-the skills before.
+below matches. **This section is the only place that text lives** — the hook keeps
+no copy, so a deleted tag prints a visibly generic line instead of quietly
+substituting something plausible. Hooks measure; this file decides.
 
-Add a `[state:<key>]` block to teach the hook a new state. Delete one and the
-hook says so rather than going silent.
+Blocks are pointers, not restatements. Everything they would explain is already
+above, and a rule stated twice drifts.
 
 [state:docs-stale]
-**Commits have landed with no entry in the history docs.** `10 knowledge-manager`
-owns `LOG.md`, `HANDOFF.md` and `ISSUES.md`; nothing else writes them, and
-`git log` is not a substitute — it records what changed, never why.
-
-Unrecorded work is indistinguishable from work that never happened, which is the
-standing invariant above. Write the entry before adding to the pile.
+Commits have landed with no entry in the history docs. **10 `knowledge-manager`**
+owns them — see the standing invariant on unrecorded work, and "Where state lives
+between stages".
 [/state:docs-stale]
 
 [state:layer-unreviewed]
-**This branch has changed a lot of `.claude/` and no review has seen it.** Two
-stages own that, in order: `6 no-slop` sweeps standing artefacts for the decay
-that accumulates between individually-green turns, then `7 code-review` reads the
-branch. Sweeping after review would ship the repairs unreviewed.
-
-Counted against the branch point, so landing the branch resets it — there is no
-counter to clear.
+This branch has changed a lot of `.claude/` and no review has read it.
+**6 `no-slop`** then **7 `code-review`**, in that order — the chain table says why
+the sweep precedes the review.
 [/state:layer-unreviewed]
