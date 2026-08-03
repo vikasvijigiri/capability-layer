@@ -33,13 +33,19 @@ deleted on 2026-08-02.
 Resetting is the skill's job, not this hook's
 ---------------------------------------------
 A hook cannot tell that `no-slop` ran -- it sees tool calls, not skills. So the
-skill clears the counter itself as its last step:
+skill records the sweep itself as its last step:
 
     python .claude/hooks/post-run/07-layer-drift.py --swept
 
 Same shape as `systematic-debugging` owning its own `ISSUES.md` write. If the
-skill runs and forgets, the worst case is that it gets suggested again -- the
-failure mode is a repeated nudge, never a missed one.
+skill runs and forgets, it gets suggested again -- a repeated nudge, never a
+missed one.
+
+**The marker is a commit SHA, not an empty file.** Deleting the state was the
+first implementation and it did not work: the next turn re-read `git show HEAD`,
+found the same commit's additions, and rebuilt the counter, so the nudge
+repeated every turn until some later commit happened not to touch `.claude/`.
+Drift is measured from the recorded SHA to HEAD, plus the worktree.
 """
 
 from __future__ import annotations
@@ -100,25 +106,43 @@ def save_state(state: dict) -> None:
 
 
 def swept() -> int:
-    """Clear the counter. Called by the skill once a sweep has actually run."""
-    try:
-        _state_path().unlink(missing_ok=True)
-    except OSError:
-        pass
-    print("layer-drift counter cleared")
+    """Record that a sweep happened, at the commit it happened on.
+
+    Deleting the state file is NOT enough, and shipping that was a real bug: the
+    next turn re-read `git show HEAD`, which still reported the same commit's
+    additions, so the counter rebuilt itself and the nudge repeated every turn
+    until some later commit happened not to touch `.claude/`. A suggestion that
+    fires every turn is one nobody reads.
+
+    So the marker is a commit SHA, and drift is measured FROM it.
+    """
+    rc, head = git("rev-parse", "HEAD")
+    save_state({"since": head if rc == 0 else "", "touched": [], "structural": {}})
+    print(f"layer-drift counter cleared at {head[:8] if rc == 0 else 'unknown'}")
     return 0
 
 
-def changed_layer_files() -> list[tuple[str, str]]:
-    """(status, path) for `.claude/` files in the last commit and the worktree.
+def changed_layer_files(since: str = "") -> list[tuple[str, str]]:
+    """(status, path) for `.claude/` files changed since the last sweep.
 
-    Both, because the auto-commit runs immediately before this hook: by the time
-    we look, the turn's edits are usually committed rather than pending, and
-    reading only the worktree would see nothing on exactly the turns that matter.
+    The worktree is always read, because the auto-commit runs immediately before
+    this hook: by the time we look, the turn's edits are usually committed rather
+    than pending, and reading only one of the two would miss exactly the turns
+    that matter.
+
+    History is read from `since..HEAD` when a sweep has recorded a SHA, and from
+    the last commit alone when none has. `since` that no longer resolves -- a
+    rebase, a fresh clone -- falls back rather than failing: this hook must never
+    be the reason a turn breaks.
     """
+    history: tuple[str, ...]
+    if since and git("cat-file", "-e", f"{since}^{{commit}}")[0] == 0:
+        history = ("diff", "--name-status", f"{since}..HEAD")
+    else:
+        history = ("show", "--name-status", "--format=", "HEAD")
+
     out: list[tuple[str, str]] = []
-    for args in (("show", "--name-status", "--format=", "HEAD"),
-                 ("status", "--porcelain")):
+    for args in (history, ("status", "--porcelain")):
         rc, text = git(*args)
         if rc != 0:
             continue
@@ -140,20 +164,29 @@ def main() -> int:
 
     state = load_state()
     touched = set(state.get("touched", []))
-    structural = set(state.get("structural", []))
+    # Keyed by PATH, not by status+path. `git show` reports a new file as `A`
+    # and `git status` reports the same file as `?`, so a set of "<status> <path>"
+    # strings held one file twice -- this hook's own first real firing listed
+    # 07-layer-drift.py on two lines and inflated the count it reported.
+    # isinstance guards the old list format: a stale state file degrades to
+    # empty rather than raising inside a hook, where the symptom is silence.
+    raw = state.get("structural", {})
+    structural: dict[str, str] = dict(raw) if isinstance(raw, dict) else {}
+    since = state.get("since", "")
 
-    for status, path in changed_layer_files():
+    for status, path in changed_layer_files(since):
         touched.add(path)
         # A/D in `git show`, ??/!! in `git status`. Renames count as both.
         if status[:1] in ("A", "D", "R", "?") and path.startswith(STRUCTURAL_DIRS):
-            structural.add(f"{status[:1]} {path}")
+            structural.setdefault(path, status[:1])
 
-    save_state({"touched": sorted(touched), "structural": sorted(structural)})
+    save_state({"since": since, "touched": sorted(touched), "structural": structural})
 
     if structural:
         speak(
             "`.claude/` gained or lost a skill, agent or hook since the last "
-            "no-slop sweep:\n" + "".join(f"  {s}\n" for s in sorted(structural))
+            "no-slop sweep:\n"
+            + "".join(f"  {v} {k}\n" for k, v in sorted(structural.items()))
             + f"\n{len(touched)} layer file(s) touched in total.\n\n"
             "**Run the `no-slop` skill.** A new or removed capability is when "
             "trigger overlap appears, and no single edit can reveal it -- the "

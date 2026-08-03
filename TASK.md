@@ -4,6 +4,27 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Decide whether `/skills-doctor` still has a job
+
+- **Status:** Not started — raised by a `no-slop` sweep on 2026-08-03
+- **Goal:** Decide whether `/skills-doctor` is retired, narrowed, or kept as is.
+- **Why now:** `tools/test_no_slop.py` and `tools/test_process_router.py` between
+  them now cover the static half of what the command checks — description budget,
+  YAML parse, `name:`/directory mismatch, loose `.md` files. Three owners of one
+  question is the Duplicate Knowledge smell, and the routing keyword
+  "skill layer health" already points at `no-slop` rather than at the command
+  whose own description uses that exact phrase.
+- **The part that is NOT duplicated,** and the reason this is a decision rather
+  than a deletion: `/skills-doctor` compares the files on disk against what
+  **actually rendered in the live session's skill listing**, which is truncated
+  against a token budget. No file-reading script can see that. A skill can be
+  valid on disk and absent from the listing on the exact turn that needed it —
+  that has happened here.
+- **Done check:** either the command is deleted and `CLAUDE.md`'s command list
+  updated, or its text is narrowed to the live-listing measurement with the
+  static checks removed and a pointer to the suites that own them.
+- **Out of scope:** changing what the suites check. They are green and correct.
+
 ## Completed
 
 <!-- Append-only, newest entry at the top. Never delete or rewrite an
