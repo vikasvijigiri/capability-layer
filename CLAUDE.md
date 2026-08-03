@@ -66,8 +66,8 @@ line, never in `TASK_VERBS`.
 
 ### Subagents
 
-Four, in `.claude/agents/<name>.md`. Each is dispatched by the skill that owns
-the stage, only when the user has asked for subagents:
+Dispatched by the skill that owns the stage, only when the user has asked for
+subagents. `Explore.md` is different: it overrides the built-in to pin haiku.
 
 `source-digger` (research), `failure-investigator` (debugging),
 `diff-reviewer` (review) fan out; `task-implementer` **never runs two at once**.
@@ -141,10 +141,10 @@ Run `/verify` before declaring any work done.
 | Path | What it is |
 |---|---|
 | `.claude/skills/` | the thirteen skills above, one directory each |
-| `.claude/agents/` | four subagents; dispatched by skills for parallel work, one file each |
+| `.claude/agents/` | five agents: the fan-out set dispatched by skills, plus `Explore` overriding the built-in onto haiku |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
 | `.claude/routing/process-skills.md` | keyword → skill-name routing (mandatory per skill) |
-| `.claude/hooks/<event>/` | twelve hooks over nine events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create`, `on-repo-create`, `global-session-start` |
+| `.claude/hooks/<event>/` | thirteen hooks over ten events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `pre-compact`, `on-artifact-create`, `on-repo-create`, `global-session-start` |
 | `.claude/settings.json` | what actually fires — every hook but `global-session-start/`, which is wired in `~/.claude/settings.json`; `hooks_registry.json` only documents intent |
 | `.claude/commands/` | the six slash commands above |
 | `.claude/install.py` | ports the layer into another repo; `/install-layer` wraps it |
@@ -178,11 +178,11 @@ them, so they are code, not commentary:
 `TASK.md` (active task) · `PLAN.md` · `HANDOFF.md` (current work, pending, next)
 · `LOG.md` (history) · `ISSUES.md` · `MEMORY.md`
 
-**Nothing watches them any more.** `post-run/06-artifact-autocommit.py` commits
-them along with everything else the turn changed, but it never checks whether
-they were written — so a turn can be checkpointed with no log entry behind it.
-The staleness warner, the Stop gate and the commit gate were all deleted on
-2026-08-02. Invoking `knowledge-manager` is now a habit, not a prompted one.
+**One thing watches them: `pre-compact/01-knowledge-staleness.py`.** It counts
+commits since the last write to `LOG.md`/`HANDOFF.md`/`ISSUES.md` and names
+`knowledge-manager` before the context is compacted — the boundary those files
+exist to survive. It speaks, never blocks (the Stop gate that blocked deadlocked
+and was deleted), and `06-artifact-autocommit.py` never checks they were written.
 
 ## The commit loop
 

@@ -106,8 +106,21 @@ def keyword_pattern(word):
 
 
 def hits_in(prompt_lower, words):
-    """Keywords present in the prompt, matched on word boundaries."""
-    return [w for w in words if re.search(keyword_pattern(w), prompt_lower)]
+    """Keywords present in the prompt, matched on word boundaries.
+
+    A keyword that is contained in another *matched* keyword for the same skill
+    is dropped, because the count is what `main()` sorts on and nesting inflates
+    it. `research` lists both "use github" and "use github and see how people do
+    it"; one phrase in the prompt scored 3 against two concepts, and with
+    MAX_SKILLS truncating, a skill with more nested entries outranked one with
+    more genuine matches. 19 such pairs exist across 11 of the 13 skills.
+
+    The longer keyword is the one kept — it is the more specific claim, and it is
+    what gets shown in the injected line.
+    """
+    found = [w for w in words if re.search(keyword_pattern(w), prompt_lower)]
+    return [w for w in found
+            if not any(other != w and w in other for other in found)]
 
 
 # --- the task-shape rule -----------------------------------------------------

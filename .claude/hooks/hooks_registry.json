@@ -60,6 +60,13 @@
         ".claude/hooks/on-repo-create/01-layer-import.py"
       ]
     },
+    "pre-compact": {
+      "description": "Before the context window is compacted; counts commits since the last knowledge-doc write and names knowledge-manager if the session is about to forget what it did. Speaks only, never blocks -- PreCompact supports decision:block and a refused compaction is a wedged session.",
+      "claude_code_event": "PreCompact",
+      "subscribers": [
+        ".claude/hooks/pre-compact/01-knowledge-staleness.py"
+      ]
+    },
     "global-session-start": {
       "description": "At session start in ANY repo; installs this layer into the session's directory if and only if it is a git repo root, outside this repo, with no .claude/skills/ and no foreign .claude/agents/ or .claude/hooks/. ACTS, and speaks when it acts, when it fails, and on the two near misses a user can act on.",
       "claude_code_event": null,

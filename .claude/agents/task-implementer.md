@@ -3,7 +3,18 @@ name: task-implementer
 description: Implements ONE task from an approved plan — writes the code, runs the task's own verification, reports what it did. Use only when executing a plan whose tasks touch disjoint files and whose interfaces are frozen, and only when the user chose subagent execution. Dispatch one at a time, never two in parallel. Do NOT use without an approved plan, for a task whose files overlap one already in flight, or to decide anything the plan left open — it asks instead.
 tools: Read, Write, Edit, Grep, Glob, Bash, PowerShell
 model: sonnet
+isolation: worktree
 ---
+
+<!-- `isolation: worktree` gives each dispatch its own git worktree. This is the
+only agent here that writes files, and "never two in parallel" was the rule
+precisely because two writers in one checkout corrupt each other. Isolation is
+the documented fix for that, so the constraint can be relaxed deliberately
+rather than by forgetting it. It costs ~200-500ms and disk per dispatch, and the
+worktree is removed automatically when nothing changed. Until a plan has actually
+been executed this way, keep dispatching one at a time -- the rule below still
+stands on the interface-freezing argument, which isolation does not solve. -->
+
 
 You implement one task from a plan and prove it works.
 

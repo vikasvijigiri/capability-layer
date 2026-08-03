@@ -496,9 +496,29 @@ if AGENTS.exists():
             if name in agent_names:
                 named_by_skills.add(name)
 
-    orphans = sorted(agent_names - named_by_skills)
+    # Agents that override a Claude Code BUILT-IN. The harness invokes these by
+    # name, so "no skill dispatches it" is not the unreachability bug this check
+    # exists to catch -- it is how they are meant to work. They exist only to
+    # change the built-in's frontmatter (`Explore` is here to pin `model: haiku`).
+    #
+    # Narrow on purpose: exempting by name, not by a pattern, so a genuinely
+    # orphaned fan-out agent can never slip through by being called something
+    # plausible.
+    BUILTIN_OVERRIDES = {"Explore"}
+
+    orphans = sorted(agent_names - named_by_skills - BUILTIN_OVERRIDES)
     check("every agent is named by at least one skill", not orphans,
           f"unreachable: {', '.join(orphans)}")
+
+    # The exemption must stay honest: an override has to actually override
+    # something, so its filename is its identity and the frontmatter `name:` has
+    # to match it exactly. A typo here is a new agent nobody dispatches.
+    for name in sorted(BUILTIN_OVERRIDES):
+        f = AGENTS / f"{name}.md"
+        check(f"built-in override {name} exists and pins a model",
+              f.is_file() and re.search(r"^model:\s*\S+", f.read_text(encoding="utf-8"),
+                                        re.M) is not None,
+              "an override with no model: field changes nothing")
 
     # ...and the reference points back. An agent runs in a fresh context with its
     # own file as the whole brief: if it does not name its dispatcher, it cannot
@@ -510,7 +530,7 @@ if AGENTS.exists():
     # it, which is the inconsistency worth failing on either way.
     dispatcher_names = sorted(p.name for p in SKILLS.iterdir() if p.is_dir())
     for f in sorted(AGENTS.glob("*.md")):
-        if f.stem not in agent_names:
+        if f.stem not in agent_names or f.stem in BUILTIN_OVERRIDES:
             continue
         body = f.read_text(encoding="utf-8")
         dispatchers = [
@@ -599,6 +619,35 @@ for _prompt, _want in TASK_SHAPE_CASES:
           _got == _want,
           "missed a request for work" if _want else "fired on a question")
 
+
+# --- nested keywords must not inflate the ranking count ---------------------
+#
+# `main()` sorts skills by how many keywords matched, so a keyword contained in
+# another matched keyword for the same skill counted twice. 19 such pairs exist
+# across 11 of the 13 skills -- "use github" inside "use github and see how
+# people do it", "should be able to" inside "users should be able to". One
+# phrase in the prompt scored `research` at 3 for two concepts, and MAX_SKILLS
+# truncates on that number.
+
+_INFLATION_CASES = [
+    ("it would be nice if we could use github and see how people do it",
+     {"research": 1, "task-brief": 1}),
+    ("users should be able to export a report", {"task-brief": 1}),
+]
+for _prompt, _counts in _INFLATION_CASES:
+    for _skill, _words in _router.load_process_skills():
+        _hits = _router.hits_in(_prompt.lower(), _words)
+        if _skill in _counts:
+            check(f"`{_skill}` counts {_counts[_skill]} concept(s) in {_prompt[:32]!r}",
+                  len(_hits) == _counts[_skill], f"got {_hits}")
+
+# No matched keyword may be a substring of another matched keyword.
+for _prompt, _ in _INFLATION_CASES:
+    for _skill, _words in _router.load_process_skills():
+        _hits = _router.hits_in(_prompt.lower(), _words)
+        _nested = [(a, b) for a in _hits for b in _hits if a != b and a in b]
+        check(f"`{_skill}` returns no nested hits for {_prompt[:28]!r}",
+              not _nested, f"{_nested}")
 
 # --- what the hook actually INJECTS -----------------------------------------
 #

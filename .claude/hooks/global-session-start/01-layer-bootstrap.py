@@ -189,10 +189,20 @@ def main():
         else:
             lines = [f"- **could not install the layer into `{target}`** — {detail}"]
 
-    print(json.dumps({"hookSpecificOutput": {
+    # Annotated because `reloadSkills` below is a bool: inferred from the two
+    # string literals alone this is dict[str, str] and mypy rejects the append.
+    out: dict[str, object] = {
         "hookEventName": "SessionStart",
         "additionalContext": "global-session-start:\n" + "\n".join(lines),
-    }}))
+    }
+    if action == "install":
+        # Without this the install half-works, and the half that fails is the
+        # point of it. Skills are loaded when the session starts; this hook runs
+        # at that moment and then writes thirteen more, so the session that
+        # installed the encyclopedia could not use it until a restart.
+        # `reloadSkills` is a documented SessionStart output field.
+        out["reloadSkills"] = True
+    print(json.dumps({"hookSpecificOutput": out}))
 
 
 if __name__ == "__main__":

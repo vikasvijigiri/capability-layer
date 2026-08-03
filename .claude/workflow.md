@@ -5,8 +5,10 @@ question, a decision — from a rough ask to a delivered result.
 
 Each stage names the skill that owns it. Read the skill, not this file, for how
 a stage works; this file exists to say **which** skill and **what it hands on**.
-An earlier ASCII sketch of this pipeline lived here until 2026-08-02 and is in
-git history.
+
+This file is copied into every repo the layer installs into, so it carries no
+dates, no history and nothing specific to the repo it was written in. Why a
+stage changed belongs in `LOG.md` and git.
 
 ---
 
@@ -53,41 +55,18 @@ add stages is the kind of self-reference that makes the chain unreadable. It is
 also the only stage whose refusal is a success: most requests for a new skill are
 better served by a `references/` pack file, a command, or a hook.
 
-### What this replaced, and why
+### Two rules that keep the stage list from growing
 
-Until 2026-08-02 this file listed **13 stages for 10 skills**, inherited from an
-ASCII pipeline sketch. Four things were wrong with it, and the file contradicted
-itself:
+**A stage exists only if some skill can be told "do that and stop".** Two stages
+one skill performs in a single pass are one stage. A stage whose owner is
+forbidden from performing it — review that also fixes, say — has no owner and is
+not a stage.
 
-1. **The table and the handoff graph disagreed.** The table put Document (10)
-   *before* Self-review (11) and Deliver (12); the graph below put
-   `knowledge-manager` last. The skills implement the graph — `delivering`'s
-   terminal handoff is `knowledge-manager` — so the table was simply wrong.
-2. **"Optimise" was assigned to `code-review`, which cannot do it.** That
-   skill's own text says "Do NOT use to fix what the review finds — report
-   first, fix as separate work". A stage whose owner is forbidden from
-   performing it has no owner. Simplification is work like any other: it gets a
-   brief and goes round the line, or it is `/simplify` on a diff.
-3. **Document (10) and Learn (13) were the same skill doing the same write.**
-   `knowledge-manager` writes `LOG.md`, `HANDOFF.md`, `ISSUES.md` and
-   `decisions/` in one pass, at the end. Two stages described one act.
-4. **Ideate (2) and Design (5) were one conversation.** `brainstormer` diverges
-   and converges and emits a single spec; nothing happens at the boundary
-   between them.
-
-The ordering here — plan → build → validate → review → deliver → record —
-is what every pipeline consulted converges on: superpowers
-(brainstorm → plan → execute → review → finish), spec-kit
-(specify → plan → tasks → analyze → implement), BMAD (`plan` module then `ship`
-module, retrospective last), and the agentic-SDLC literature, which places the
-retrospective after review rather than before it.
-
-One thing others do that this chain does **not** do as a stage: spec-kit runs
-`analyze` — a cross-artifact consistency check of spec vs plan vs tasks —
-*before* implementing, as well as verifying after. Here that check lives inside
-`executing-plans` ("Before Task 1: read the plan and argue with it") rather than
-as a stage of its own. If it ever needs to be its own gate, that is the argument
-for it.
+**The order is plan → build → validate → review → deliver → record**, which is
+where the established agent pipelines independently converge. A cross-artifact
+consistency check *before* implementing is the one thing some of them add as a
+stage; here it lives inside `executing-plans`, which reads the plan and argues
+with it before task 1.
 
 ## Entry — the first stage depends on the input, not on the numbering
 
@@ -107,13 +86,10 @@ where a problem enters. Route on the shape of what the user said:
 | Work that landed on a branch while the environment still serves the old version | 9 `releasing` | Delivery is done; only the release is outstanding |
 
 `brainstormer` before `task-brief` is the common case for open work, and both
-orders are correct for their own input. Superpowers has no brief stage at all
-and makes brainstorming mandatory before *any* creative work; spec-kit starts at
-framing instead. The disagreement is real, and it resolves by input shape rather
-than by picking a winner.
-
-Entering at 2 does not skip the brief so much as absorb it: the spec carries the
-scope a brief would have carried.
+orders are correct for their own input — established pipelines disagree about
+which comes first, and it resolves by input shape rather than by picking a
+winner. Entering at 2 does not skip the brief so much as absorb it: the spec
+carries the scope a brief would have carried.
 
 ## Not every stage every time
 
@@ -179,9 +155,7 @@ criterion before the first pass.
 `task-brief` branches two ways: straight to the change when the six fields are
 filled, or to `brainstormer` when one could not be. **Never to `writing-plans`** —
 stage 3 consumes an approved spec (see the Consumes column) and six lines is not
-one, which is why the diagram above draws no arrow between them. This sentence
-listed a third branch, naming stage 3 directly, until 2026-08-03 — contradicting
-that column, the diagram, and both skills' own text.
+one, which is why the diagram above draws no arrow between them.
 
 Every skill states its own mandatory validator and terminal handoff in its
 `## Routing` section. Where this diagram and a skill disagree, the skill wins —
@@ -201,7 +175,7 @@ intentions:
 | Never deliver an unreviewed change | `code-review` over the branch at the push/PR boundary. Commits below that are unreviewed `wip:` checkpoints by design |
 | Never auto-commit a secret, a red suite, or onto a protected branch | `post-run/06-artifact-autocommit.py`, enforced inline — its commits never reach `PreToolUse` |
 | Never commit secrets | `pre-commit/01-secret-scan.py` |
-| Never leave a unit of work unrecorded | `knowledge-manager`. No hook prompts for it since 2026-08-02 |
+| Never leave a unit of work unrecorded | `knowledge-manager`, named by `pre-compact/01-knowledge-staleness.py` before context is compacted |
 | Never put AI attribution in git history | `_hooklib.AI_ATTRIBUTION_PATTERNS`, checked inline by the auto-commit |
 
 ## Where state lives between stages
@@ -222,9 +196,13 @@ at the next context reset.
 
 ## Parallelism
 
-Four subagents in `.claude/agents/` let a stage fan out. They are dispatched by
+Subagents in `.claude/agents/` let a stage fan out. They are dispatched by
 the stage's own skill, never by this file, and **only when the user has asked
 for subagents** — otherwise the stage does the work itself.
+
+`Explore.md` sits alongside them but is not one of them: it overrides the
+built-in `Explore` agent so exploration runs on a cheaper model, and the harness
+invokes it directly rather than any skill dispatching it.
 
 | Stage | Agent | Fans out over |
 |---|---|---|
@@ -244,9 +222,8 @@ reporting success is not evidence; the diff is.
 
 Stage numbers in this file's prose are written as `N \`owner\`` on purpose, not as
 a bare "stage N". `tools/test_process_router.py` checks every one of them against
-the chain table, and it only can when the owner is named beside the number. Four
-bare references drifted by one when `no-slop` took stage 6 and nothing noticed
-until 2026-08-03.
+the chain table, and it only can when the owner is named beside the number. Bare
+references drift silently when a stage is inserted.
 
 ## Domain genericity
 
@@ -272,23 +249,11 @@ adjudicates.
 
 What stays here is the one fact that belongs to the chain rather than to
 authoring: **a new skill is invisible until five files know about it, and nothing
-errors when one is missing.** This section said "three things" and listed only
-three of the five until 2026-08-03 — which is how a skill could satisfy the
-documented requirement and still be reachable by nothing. Listing them here again
-would make it four files to edit when the wiring changes; that is the duplication
-the count above exists to avoid.
+errors when one is missing.** `new_skill_check.py` names all five; listing them
+here too would make it a sixth file to edit when the wiring changes.
 
-Before adding one, check whether the stage is genuinely unowned. This chain is at
-the skill ceiling every comparable repo converges on; growth belongs in pack
-files. See `docs/research/2026-08-02-generic-pipeline-skillset.md`.
-
-`releasing` was added on 2026-08-02 as the eleventh, and it passed that test:
-`delivering`'s menu offered merge, PR and keep, none of which is a deploy, while
-`pre-deploy/01-spend-guard.py` had been firing on cloud CLIs with no skill
-owning the act it guards. An unowned gate is the clearest evidence a stage is
-missing. Prior art agrees on the shape but not the genericity — 1,220 public
-repos ship a `.claude/skills/deploy*`, and the two representative ones are
-[deployment-patterns](https://github.com/affaan-m/everything-claude-code/blob/main/skills/deployment-patterns/SKILL.md)
-(a content pack: Dockerfiles and k8s probes — belongs in `references/`) and
-[deployment-sop](https://github.com/bybren-llc/safe-agentic-workflow/blob/main/.claude/skills/deployment-sop/SKILL.md)
-(the right process spine, hardcoded to one vendor stack).
+Before adding one, check whether the stage is genuinely unowned. **An unowned
+gate is the clearest evidence a stage is missing** — a hook that denies something
+no skill is responsible for, or an approval nobody's `## Routing` mentions.
+Everything short of that belongs in a `references/` pack file under the skill
+that already owns the stage.

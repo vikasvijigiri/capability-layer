@@ -137,11 +137,10 @@ brief, so an un-handed-off brief is simply forgotten.
      `brainstormer`.
   Name which one you are taking. Stopping after writing `TASK.md` leaves the
   chain broken — nothing else will pick it up.
-- **`writing-plans` is not among them**, and this listed it as a third branch
-  until 2026-08-03 while step 6, `writing-plans`' own description and
-  `workflow.md`'s Consumes column all said the opposite. Stage 3 takes an
-  approved spec; sequencing work reaches it through `brainstormer`, never
-  directly from here.
+- **`writing-plans` is not among them.** Stage 3 takes an approved spec, and six
+  lines is not one — its own description refuses a brief by name, and
+  `workflow.md`'s Consumes column agrees. Sequencing work reaches it through
+  `brainstormer`, never directly from here.
 - **Alternative to `brainstormer`, never a predecessor.** Brainstormer exists
   because the first idea becomes an anchor; a finished brief *is* that anchor,
   since Goal and Outputs commit to a solution shape.

@@ -47,7 +47,7 @@ evidence a stage is missing. Absent that, say so and stop — refusing is a
 success for this skill, not a failure.
 
 Thirteen process skills is already past the ceiling comparable repos converge on.
-See `docs/research/2026-08-02-generic-pipeline-skillset.md`.
+Growth belongs in a `references/` pack file under the skill that owns the stage.
 
 ## Phase 1 — ask where it goes
 

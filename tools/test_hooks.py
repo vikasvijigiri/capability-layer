@@ -54,6 +54,9 @@ BENIGN_EVENTS = [
     # on disk. Worth having anyway: this hook is wired in ~/.claude/settings.json
     # and a syntax error in it would break session start in every repo at once.
     ('global-session-start', {}),
+    # Reads git history only; the payload's `trigger` is optional and its
+    # absence is the auto-compaction case.
+    ('pre-compact', {'trigger': 'auto'}),
 ]
 
 os.environ['UAIOS_AUTOCOMMIT_RUNNING'] = '1'

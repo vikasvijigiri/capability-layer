@@ -140,8 +140,20 @@ WORD_NUMBERS = {
 # an inventory claim ("the twelve skills above"). Left deliberately wide -- the
 # run that first hit the false positive also caught two genuinely stale counts,
 # so narrowing it costs more than rewording the odd sentence.
+# Two holes this missed until 2026-08-04, both found by a count going stale with
+# the suite green:
+#
+#   "four subagents"      -- `\bagents\b` has no word boundary inside "subagents",
+#                            so the repo's most common phrasing was never checked.
+#   "four fan-out agents" -- the number has to sit next to the noun, and one
+#                            adjective between them was enough to slip through.
+#
+# The optional modifier must be HYPHENATED. That admits "fan-out agents" while
+# still rejecting "four of the five agents", where the number is not the claim.
 COUNT_RE = re.compile(
-    r"\b(" + "|".join(WORD_NUMBERS) + r"|\d{1,3})\s+(hooks|skills|suites|agents|events)\b",
+    r"\b(" + "|".join(WORD_NUMBERS) + r"|\d{1,3})\s+"
+    r"(?:[a-z]+-[a-z]+\s+)?"
+    r"(hooks|skills|suites|sub-?agents|agents|events)\b",
     re.IGNORECASE)
 
 # Built-in Claude Code commands, not files in this repo.
@@ -232,7 +244,9 @@ for source in sorted(seen):
                 if not raw.isdigit():
                     continue
                 claimed = int(raw)
-            actual = counts[noun.lower()]
+            # "subagents" and "sub-agents" are the same inventory as "agents".
+            noun_key = re.sub(r"^sub-?", "", noun.lower())
+            actual = counts[noun_key]
             if claimed != actual:
                 failures.append(
                     f"{rel}:{lineno} claims {raw} {noun}, but there are {actual}")

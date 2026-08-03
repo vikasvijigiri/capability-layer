@@ -115,10 +115,59 @@ def swept() -> int:
     fires every turn is one nobody reads.
 
     So the marker is a commit SHA, and drift is measured FROM it.
+
+    **A SHA alone is not enough either**, and that was the second bug. Drift is
+    read from the commit range AND the worktree, so a path that is UNTRACKED sits
+    in no commit and no SHA can mask it: `.claude/hooks/pre-compact/` re-armed the
+    structural trigger on the very next turn and nudged five turns running.
+
+    That is not merely noisy. `06-artifact-autocommit.py` runs immediately before
+    this hook and returns silently when `stop_hook_active` is set -- which it is
+    on the turn after any Stop hook speaks. So a nudge that repeats forever keeps
+    the checkpoint permanently switched off, and the untracked file that caused it
+    can never get committed. The loop is self-sustaining.
+
+    So the swept paths are recorded BY NAME, structural and volume alike. They
+    stay suppressed whether they later show up as `?` (still untracked) or `A`
+    (now committed) -- a capability is announced once, and a file that was read
+    during the sweep has been read. A later `D` is new news and still fires.
+
+    Recording only the structural ones was the first attempt and it moved the
+    loop rather than closing it: `touched` reset to `[]` and rebuilt from the
+    same uncommitted worktree on the very next run, so the VOLUME nudge then
+    repeated every turn instead. The reasoning that "volume genuinely
+    accumulates" is true for new edits and false for files that are simply still
+    uncommitted -- which is every file, on the turn a sweep finishes.
+
+    The cost is that re-editing an already-swept file does not re-arm the volume
+    counter until the next sweep. That is the honest reading of "swept", and it
+    is much cheaper than a nudge nobody reads.
     """
     rc, head = git("rev-parse", "HEAD")
-    save_state({"since": head if rc == 0 else "", "touched": [], "structural": {}})
-    print(f"layer-drift counter cleared at {head[:8] if rc == 0 else 'unknown'}")
+    state = load_state()
+    raw = state.get("structural", {})
+    already = state.get("swept_structural", [])
+    seen = set(already) if isinstance(already, list) else set()
+    if isinstance(raw, dict):
+        seen |= set(raw)
+
+    prev_touched = state.get("swept_touched", [])
+    swept_touched = set(prev_touched) if isinstance(prev_touched, list) else set()
+    swept_touched |= {p for _s, p in changed_layer_files(state.get("since", ""))}
+    raw_touched = state.get("touched", [])
+    if isinstance(raw_touched, list):
+        swept_touched |= set(raw_touched)
+
+    save_state({
+        "since": head if rc == 0 else "",
+        "touched": [],
+        "structural": {},
+        "swept_structural": sorted(seen),
+        "swept_touched": sorted(swept_touched),
+    })
+    print(f"layer-drift counter cleared at {head[:8] if rc == 0 else 'unknown'}"
+          + (f", {len(seen)} structural and {len(swept_touched)} touched "
+             f"path(s) suppressed" if seen or swept_touched else ""))
     return 0
 
 
@@ -173,11 +222,24 @@ def main() -> int:
     raw = state.get("structural", {})
     structural: dict[str, str] = dict(raw) if isinstance(raw, dict) else {}
     since = state.get("since", "")
+    # Structural paths a completed sweep already reported. See swept().
+    raw_swept = state.get("swept_structural", [])
+    swept_structural = set(raw_swept) if isinstance(raw_swept, list) else set()
+    raw_st = state.get("swept_touched", [])
+    swept_touched = set(raw_st) if isinstance(raw_st, list) else set()
 
     for status, path in changed_layer_files(since):
-        touched.add(path)
+        # Counted during the last sweep. Without this the volume counter rebuilds
+        # from the same uncommitted files every turn and nudges forever.
+        if path not in swept_touched:
+            touched.add(path)
         # A/D in `git show`, ??/!! in `git status`. Renames count as both.
         if status[:1] in ("A", "D", "R", "?") and path.startswith(STRUCTURAL_DIRS):
+            # Announced once. A path stays suppressed as it moves from `?` to
+            # `A`, because that is the same capability being committed, not a
+            # new one. Deletion is new news and is never suppressed.
+            if path in swept_structural and status[:1] != "D":
+                continue
             structural.setdefault(path, status[:1])
 
     # Anchor on first run, so an empty `since` is never sticky. Without this the
@@ -190,7 +252,10 @@ def main() -> int:
         rc, head = git("rev-parse", "HEAD")
         since = head if rc == 0 else ""
 
-    save_state({"since": since, "touched": sorted(touched), "structural": structural})
+    save_state({"since": since, "touched": sorted(touched),
+                "structural": structural,
+                "swept_structural": sorted(swept_structural),
+                "swept_touched": sorted(swept_touched)})
 
     if structural:
         speak(

@@ -33,6 +33,34 @@ SHAPE = {
     ".claude/hooks/hooks_registry.json": "events",
 }
 
+# Every hook event Claude Code actually emits, from the official hooks reference
+# (fetched 2026-08-04). A hook registered under a name that is not in this set is
+# never called, and NOTHING says so -- settings.json parses, the file is on disk,
+# `test_hook_registration.py` sees it wired, and the hook simply never runs. That
+# is this repo's worst failure mode and no check looked for it.
+#
+# `hooks_registry.json` is validated against the same set. It was the file this
+# audit flagged as a third source of truth with no schema; a generic JSON Schema
+# would have restated what `test_hook_registration.py` already asserts, whereas
+# a misspelt event name is the one error neither of them could catch.
+#
+# Keep this list in sync with the docs rather than with what we happen to use --
+# an event missing from here would fail a correct registration.
+CANONICAL_EVENTS = {
+    "SessionStart", "Setup", "SessionEnd",
+    "UserPromptSubmit", "UserPromptExpansion", "Stop", "StopFailure",
+    "PreToolUse", "PostToolUse", "PostToolUseFailure", "PostToolBatch",
+    "PermissionRequest", "PermissionDenied",
+    "SubagentStart", "SubagentStop", "TaskCreated", "TaskCompleted",
+    "TeammateIdle",
+    "FileChanged", "CwdChanged", "DirectoryAdded", "InstructionsLoaded",
+    "ConfigChange",
+    "WorktreeCreate", "WorktreeRemove",
+    "PreCompact", "PostCompact",
+    "Elicitation", "ElicitationResult",
+    "MessageDisplay", "Notification",
+}
+
 failures: list[str] = []
 
 
@@ -96,8 +124,40 @@ if settings.is_file():
                           f"-- python exits 2 and PreToolUse reads that as deny")
                     failures.append(rel)
 
+# --- every event name is one Claude Code actually emits ---------------------
+
+if settings.is_file():
+    try:
+        events = json.loads(settings.read_text(encoding="utf-8")).get("hooks", {})
+    except json.JSONDecodeError:
+        events = {}
+    for name in events:
+        if name not in CANONICAL_EVENTS:
+            print(f"FAIL: settings.json registers hooks under `{name}`, which is "
+                  f"not an event Claude Code emits -- they would never fire, "
+                  f"silently")
+            failures.append(f"settings.json:{name}")
+
+registry = ROOT / ".claude/hooks/hooks_registry.json"
+if registry.is_file():
+    try:
+        reg = json.loads(registry.read_text(encoding="utf-8")).get("events", {})
+    except json.JSONDecodeError:
+        reg = {}
+    for event, entry in reg.items():
+        declared = (entry or {}).get("claude_code_event")
+        if not declared:
+            continue  # manual-only; test_hook_registration.py demands a _note
+        # Entries read "PreToolUse (Bash|PowerShell)" -- the matcher is
+        # documentation, the event name is the part before it.
+        base = declared.split("(")[0].strip()
+        if base not in CANONICAL_EVENTS:
+            print(f"FAIL: hooks_registry.json event `{event}` claims "
+                  f"`{declared}`, which is not an event Claude Code emits")
+            failures.append(f"hooks_registry.json:{event}")
+
 print()
 if failures:
     print(f"{len(failures)} problem(s): {', '.join(failures)}")
     sys.exit(1)
-print(f"All {len(paths)} config JSON files valid")
+print(f"All {len(paths)} config JSON files valid, every event name canonical")
