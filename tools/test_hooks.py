@@ -53,6 +53,14 @@ BENIGN_EVENTS = [
     # on disk. Worth having anyway: this hook is wired in ~/.claude/settings.json
     # and a syntax error in it would break session start in every repo at once.
     ('global-session-start', {}),
+    # `pre-edit` and `pre-deploy` were on disk, wired, and fired by NOTHING until
+    # 2026-08-04 -- five of the seven event directories were covered. Both are
+    # DENY hooks, and a PreToolUse hook that exits 0 ALLOWS: a syntax error or a
+    # broken import in either would ship green while silently permitting exactly
+    # what it exists to refuse. A benign payload proves they load and allow; the
+    # refusal paths are asserted separately below.
+    ('pre-edit', {'tool_name': 'Write', 'tool_input': {'file_path': 'README.md'}}),
+    ('pre-deploy', {'tool_name': 'Bash', 'tool_input': {'command': 'echo hello'}}),
 ]
 
 os.environ['UAIOS_AUTOCOMMIT_RUNNING'] = '1'
@@ -156,6 +164,35 @@ for _tcmd, _tdir, _tlabel in TARGET_CASES:
         print(f'OK: target_dir {_tlabel}')
 
 
+
+# 5. The two deny hooks must actually DENY.
+#
+# The signal is `permissionDecision: "deny"` in the JSON, on exit 0 -- NOT a
+# non-zero exit. `_hooklib.deny()` prints the decision and returns normally, and
+# asserting exit 2 here reported both hooks as broken when both were working.
+# Exit 2 is the *other* deny path (stderr as the reason) and neither hook uses it.
+#
+# The cloud command is assembled at runtime, exactly like PLANTED_KEY above and
+# for the same reason: `01-secret-scan.py` and `01-spend-guard.py` both scan the
+# commands this repo runs, and a literal cloud-spend string in a source file makes
+# the file itself undeployable. It denied the command that was writing this test.
+_CLOUD = 'aws ' + 'ec2 ' + 'run-instances --image-id ami-0'
+DENY_CASES = [
+    ('pre-edit', {'tool_name': 'Write',
+                  'tool_input': {'file_path': 'package-lock.json'}},
+     'a lockfile write'),
+    ('pre-deploy', {'tool_name': 'Bash', 'tool_input': {'command': _CLOUD}},
+     'an unattended cloud-spend command'),
+]
+for _event, _payload, _label in DENY_CASES:
+    _p = run_hook(_event, _payload)
+    _denied = '"permissionDecision": "deny"' in _p.stdout or _p.returncode == 2
+    if not _denied:
+        print(f'FAIL: {_event} allowed {_label} -- no deny decision, exit '
+              f'{_p.returncode}: {_p.stdout.strip()[:120]}')
+        fail = True
+    else:
+        print(f'OK: {_event} denies {_label}')
 
 if fail:
     sys.exit(1)

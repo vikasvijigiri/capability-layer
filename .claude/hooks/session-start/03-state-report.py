@@ -95,27 +95,40 @@ def git(*args: str) -> str:
 
 
 def base_commit() -> str:
-    """Where this branch started.
+    """Where this branch started, or "" when there is no branch point.
 
-    Tried in order, because assuming `main` exists is wrong often enough to
-    matter -- this repo has only `master`, so a hardcoded `main` made
+    Refs are tried in order because assuming `main` exists is wrong often enough
+    to matter -- this repo has only `master`, so a hardcoded `main` made
     `merge-base` return empty and every count silently read 0.
+
+    **Returns "" on the default branch, and the fallback to the root commit is
+    gone.** That fallback was a real defect: on `master` every candidate ref is
+    skipped as self-comparison, execution reached the root commit, and the hook
+    reported the entire 66-commit history as "changed on this branch" -- so the
+    branch-scoped state fired permanently on the one branch where everything has
+    already landed. There is no branch point on the default branch; saying so is
+    the honest answer, and the caller drops the branch-scoped states.
     """
     head = git("rev-parse", "--abbrev-ref", "HEAD")
     for ref in ("origin/HEAD", "origin/main", "origin/master", "main", "master"):
-        if ref.endswith(head):
-            continue  # comparing a branch to itself measures nothing
+        # Compare the final path segment, not a suffix: `endswith` let a branch
+        # called `er` alias `master`.
+        if ref.rsplit("/", 1)[-1] == head:
+            continue
         if not git("rev-parse", "--verify", "--quiet", ref):
             continue
         mb = git("merge-base", ref, "HEAD")
         if mb:
             return mb
-    return git("rev-list", "--max-parents=0", "HEAD").split("\n")[0]
+    return ""
 
 
 def counts() -> dict:
+    # "" means HEAD *is* the default branch, so nothing is branch-scoped. The
+    # branch-scoped keys are then None rather than 0: absent and zero are
+    # different facts, and collapsing them is what made the old fallback report
+    # the whole history as if it were one branch's work.
     base = base_commit()
-    rng = f"{base}..HEAD" if base else "HEAD"
 
     last_doc = git("log", "-1", "--format=%H", "--", *HISTORY_DOCS)
     if last_doc:
@@ -123,23 +136,31 @@ def counts() -> dict:
     else:
         n = git("rev-list", "--count", "HEAD")
 
-    # Only paths that STILL EXIST. The raw branch diff counts every path ever
-    # touched, and on a branch that replaced the layer that is dominated by
-    # deletions -- 267 paths of which 45 survive reads as catastrophic drift when
-    # it means "this branch rewrote the layer, once". A deleted file needs no
-    # sweep; the actionable set is what a reader could still open.
-    layer = [ln for ln in git("diff", "--name-only", rng, "--", ".claude").splitlines()
-             if ln.strip() and (REPO_ROOT / ln.strip()).exists()]
     dirty_layer = [ln for ln in git("status", "--porcelain", "--", ".claude").splitlines()
                    if ln.strip()]
     dirty = [ln for ln in git("status", "--porcelain").splitlines() if ln.strip()]
 
+    layer_files = None
+    commits_on_branch = None
+    if base:
+        # Only paths that STILL EXIST. The raw branch diff counts every path ever
+        # touched, and on a branch that replaced the layer that is dominated by
+        # deletions -- 267 paths of which 45 survive reads as catastrophic drift
+        # when it means "this branch rewrote the layer, once". A deleted file
+        # needs no sweep; the actionable set is what a reader could still open.
+        rng = f"{base}..HEAD"
+        layer = [ln for ln in git("diff", "--name-only", rng, "--", ".claude").splitlines()
+                 if ln.strip() and (REPO_ROOT / ln.strip()).exists()]
+        layer_files = len({*layer, *(x[3:].strip() for x in dirty_layer)})
+        commits_on_branch = int(git("rev-list", "--count", rng) or 0)
+
     return {
         "branch": git("rev-parse", "--abbrev-ref", "HEAD"),
-        "commits_on_branch": int(git("rev-list", "--count", rng) or 0),
+        "on_default_branch": not base,
+        "commits_on_branch": commits_on_branch,
         "since_history_doc": int(n or 0),
         "last_doc_sha": last_doc[:8],
-        "layer_files": len({*layer, *(x[3:].strip() for x in dirty_layer)}),
+        "layer_files": layer_files,
         "uncommitted": len(dirty),
     }
 
@@ -171,9 +192,13 @@ def main() -> int:
     states = []
     if c["since_history_doc"] >= MIN_COMMITS:
         states.append("docs-stale")
-    if c["layer_files"] >= 8:
+    # `layer_files` is None on the default branch, where there is no branch point
+    # and so nothing is "unreviewed on this branch". `>= 8` against None raises
+    # under the module's own fail-open, which would have made the whole report
+    # vanish on `master` rather than merely be wrong.
+    if c["layer_files"] is not None and c["layer_files"] >= 8:
         # "unreviewed", not "drifted": this is branch-scoped, so it measures what
-        # `code-review` has not yet seen rather than decay since some marker.
+        # review has not yet seen rather than decay since some marker.
         states.append("layer-unreviewed")
     if not states:
         return 0
@@ -184,15 +209,21 @@ def main() -> int:
     if past:
         head = f"state report (session {past} -- its own memory of this work is gone):"
 
+    branch = c["branch"] + (" (default branch -- nothing is branch-scoped)"
+                            if c["on_default_branch"] else "")
     lines = [
         head,
-        f"  branch                        {c['branch']}",
-        f"  commits on this branch        {c['commits_on_branch']}",
+        f"  branch                        {branch}",
         f"  commits since {'/'.join(HISTORY_DOCS)} changed   {c['since_history_doc']}"
         + (f" (last at {c['last_doc_sha']})" if c["last_doc_sha"] else ""),
-        f"  .claude/ files changed, extant {c['layer_files']}",
         f"  uncommitted paths             {c['uncommitted']}",
     ]
+    # Branch-scoped rows only where a branch point exists.
+    if not c["on_default_branch"]:
+        lines[1:1] = [
+            f"  commits on this branch        {c['commits_on_branch']}",
+            f"  .claude/ files changed, extant {c['layer_files']}",
+        ]
     for key in states:
         block = workflow_block(key)
         lines.append("")
