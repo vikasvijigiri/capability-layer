@@ -2,10 +2,11 @@
   "_note": "Domain events and their subscriber scripts. Lifecycle wiring lives in .claude/settings.json; this file documents intent. Scripts read their payload via _hooklib.load_payload(), so both Claude Code (stdin) and tools/run_hook.py work. Every hook here ACTS or DENIES. Hooks whose only output was the name of a skill were deleted on 2026-08-04: hooks and skills are independent, a hook cannot invoke a skill, and a skill name written into hook source is an unvalidated second copy of a routing decision. Skills trigger from their own `description:` frontmatter.",
   "events": {
     "session-start": {
-      "description": "At session start; loads the knowledge docs into session context",
+      "description": "At session start; loads the knowledge docs into context, then measures the repo against the branch point and renders the matching [state:<key>] block from workflow.md. Names no skill -- workflow.md owns what a state means.",
       "claude_code_event": "SessionStart",
       "subscribers": [
-        ".claude/hooks/session-start/02-bootstrap-docs.py"
+        ".claude/hooks/session-start/02-bootstrap-docs.py",
+        ".claude/hooks/session-start/03-state-report.py"
       ]
     },
     "post-run": {

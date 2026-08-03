@@ -257,3 +257,34 @@ gate is the clearest evidence a stage is missing** — a hook that denies someth
 no skill is responsible for, or an approval nobody's `## Routing` mentions.
 Everything short of that belongs in a `references/` pack file under the skill
 that already owns the stage.
+
+## What a state means
+
+`session-start/03-state-report.py` measures the repo and renders whichever block
+below matches. **This section is the only place that text lives** — the hook
+keeps no copy, so a missing tag prints a visibly generic line instead of quietly
+substituting something plausible. That is deliberate: hooks measure, this file
+decides, and a second copy of a routing decision is what coupled the hooks to
+the skills before.
+
+Add a `[state:<key>]` block to teach the hook a new state. Delete one and the
+hook says so rather than going silent.
+
+[state:docs-stale]
+**Commits have landed with no entry in the history docs.** `10 knowledge-manager`
+owns `LOG.md`, `HANDOFF.md` and `ISSUES.md`; nothing else writes them, and
+`git log` is not a substitute — it records what changed, never why.
+
+Unrecorded work is indistinguishable from work that never happened, which is the
+standing invariant above. Write the entry before adding to the pile.
+[/state:docs-stale]
+
+[state:layer-unreviewed]
+**This branch has changed a lot of `.claude/` and no review has seen it.** Two
+stages own that, in order: `6 no-slop` sweeps standing artefacts for the decay
+that accumulates between individually-green turns, then `7 code-review` reads the
+branch. Sweeping after review would ship the repairs unreviewed.
+
+Counted against the branch point, so landing the branch resets it — there is no
+counter to clear.
+[/state:layer-unreviewed]

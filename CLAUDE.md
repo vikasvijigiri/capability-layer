@@ -135,7 +135,7 @@ Run `/verify` before declaring any work done.
 | `.claude/skills/` | the thirteen skills above, one directory each |
 | `.claude/agents/` | five agents: the fan-out set dispatched by skills, plus `Explore` overriding the built-in onto haiku |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
-| `.claude/hooks/<event>/` | nine hooks over seven events, every one of which acts or denies; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create`, `global-session-start` |
+| `.claude/hooks/<event>/` | ten hooks over seven events, every one of which acts, denies or measures; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create`, `global-session-start` |
 | `.claude/settings.json` | what actually fires — every hook but `global-session-start/`, which is wired in `~/.claude/settings.json`; `hooks_registry.json` only documents intent |
 | `.claude/commands/` | the six slash commands above |
 | `.claude/install.py` | ports the layer into another repo; `/install-layer` wraps it |
@@ -169,11 +169,12 @@ them, so they are code, not commentary:
 `TASK.md` (active task) · `PLAN.md` · `HANDOFF.md` (current work, pending, next)
 · `LOG.md` (history) · `ISSUES.md` · `MEMORY.md`
 
-**Nothing watches them.** The hook that did was deleted on 2026-08-04 with the
-other skill-naming hooks: a watcher whose only output is a skill name is the
-coupling this layer no longer has. `06-artifact-autocommit.py` commits these files
-along with everything else and never checks they were written, so invoking
-`knowledge-manager` is a habit, not a prompted one.
+**`session-start/03-state-report.py` measures them.** It counts commits since
+`LOG.md`/`HANDOFF.md`/`ISSUES.md` last changed, and `.claude/` files changed since
+the branch point, then renders the matching `[state:<key>]` block from
+`.claude/workflow.md`. It names no skill — workflow.md decides what a state means,
+and `tools/test_hook_registration.py` fails if any hook names one. Measured
+against git alone, so there is no counter to clear.
 
 ## The commit loop
 

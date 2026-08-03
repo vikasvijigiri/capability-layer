@@ -166,6 +166,37 @@ else:
         check(f"'{name}' exists on disk", name in on_disk,
               "~/.claude/settings.json names a file that is not here")
 
+# --- no hook may name a skill in anything it emits --------------------------
+#
+# Hooks measure and act; deciding which skill owns a fact is routing, and
+# `.claude/workflow.md` owns that. A skill name inside hook source is an
+# unvalidated second copy of that decision: three hooks carried one until
+# 2026-08-04, and pointing one at a fabricated skill passed every suite in the
+# repo. Those hooks are gone; this is what stops them coming back.
+#
+# Only EMITTED strings are checked, parsed out of the AST. Docstrings and
+# comments may still explain history -- they never reach a session.
+
+import ast  # noqa: E402, PLC0415
+
+SKILL_NAMES = {d.name for d in (ROOT / ".claude" / "skills").iterdir() if d.is_dir()}
+
+for _path in sorted(HOOKS.rglob("*.py")):
+    if "__pycache__" in _path.parts or _path.name.startswith("_"):
+        continue
+    try:
+        tree = ast.parse(_path.read_text(encoding="utf-8"))
+    except SyntaxError as exc:
+        check(f"{_path.name} parses", False, str(exc)[:80])
+        continue
+    doc = ast.get_docstring(tree) or ""
+    emitted = [n.value for n in ast.walk(tree)
+               if isinstance(n, ast.Constant) and isinstance(n.value, str)
+               and n.value != doc and len(n.value) < 4000]
+    named = sorted({s for s in SKILL_NAMES if any(s in e for e in emitted)})
+    check(f"{_path.parent.name}/{_path.name} names no skill in what it emits",
+          not named, f"names {named} -- workflow.md decides, the hook measures")
+
 # --- the manual-only exemption must be deliberate, not a typo ---------------
 
 for name, entry in sorted(registry.items()):
