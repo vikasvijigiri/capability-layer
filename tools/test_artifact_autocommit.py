@@ -317,6 +317,62 @@ with tempfile.TemporaryDirectory() as d2:
     check("...and nothing else in the turn slips through with it",
           commit_count(tmp2) == at2)
 
+# --- the diagnose loop -------------------------------------------------------
+#
+# Red writes a report and counts attempts; three of the SAME failure escalates
+# and stops suggesting; green clears the state and names the next workflow
+# stage. A hook cannot invoke a skill, so this is a signal -- and it must never
+# block, because the hook that blocked until a skill ran deadlocked and was
+# deleted on 2026-08-02.
+
+with tempfile.TemporaryDirectory() as d3:
+    tmp3 = Path(d3)
+    mod.REPO_ROOT = tmp3
+
+    # The bug this catches is worse than the crash that revealed it: the state
+    # paths were absolute, baked from REPO_ROOT at import. With REPO_ROOT
+    # overridden to a temp dir they still pointed at the real repository, so a
+    # test run wrote its failure report into the developer's own tree.
+    mod._record_failure("test_x.py: 3 failed", ["a.py"])
+    check("the report is written under the CURRENT REPO_ROOT",
+          (tmp3 / ".claude/hooks/state/check-failure-report.md").is_file())
+    check("...and not into the real repo",
+          not (ROOT / ".claude/hooks/state/check-failure-report.md").exists())
+
+    body = (tmp3 / ".claude/hooks/state/check-failure-report.md").read_text(
+        encoding="utf-8")
+    check("the report quotes the failing output", "test_x.py" in body)
+    check("the report names systematic-debugging", "systematic-debugging" in body)
+    check("the report says it is scratch, not a knowledge doc",
+          "not a" in body and "knowledge doc" in body)
+
+    # Digits are normalised: 3 failed -> 2 failed is the same failure getting
+    # closer, and must not reset the budget.
+    check("the same failure with a different count still counts up",
+          mod._record_failure("test_x.py: 2 failed", ["a.py"]) == 2)
+    check("...and again", mod._record_failure("test_x.py: 1 failed", ["a.py"]) == 3)
+    check("a genuinely different failure resets the budget",
+          mod._record_failure("ruff: E501 line too long", ["a.py"]) == 1)
+
+    mod._clear_failures()
+    check("clearing removes the state", mod._load_failures() == {})
+    check("...and the report file",
+          not (tmp3 / ".claude/hooks/state/check-failure-report.md").exists())
+
+    check("MAX_ATTEMPTS is a real ceiling",
+          isinstance(mod.MAX_ATTEMPTS, int) and 1 < mod.MAX_ATTEMPTS <= 10)
+
+# The escalation and forward-close wording, asserted on the source so a rewrite
+# cannot quietly drop either half.
+_src = HOOK.read_text(encoding="utf-8")
+check("the red path names the skill to invoke", "systematic-debugging" in _src)
+check("escalation stops suggesting rather than looping",
+      "Not suggesting another pass" in _src)
+check("green closes the loop forward into the workflow",
+      "verifying-work" in _src and "code-review" in _src and "delivering" in _src)
+check("the loop never blocks the turn",
+      '"decision"' not in _src and "block" not in _src.lower().split("deadlock")[0][-2000:])
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

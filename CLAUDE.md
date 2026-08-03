@@ -209,6 +209,23 @@ disagree about what green means.
 
     python tools/run_checks.py --tier all --require-test
 
+### When the checks go red
+
+The refusal is not the end of the message. `06-artifact-autocommit.py` writes
+the failing output to `.claude/hooks/state/check-failure-report.md`, counts
+consecutive failures of the *same* failure (digits normalised, so a partial fix
+does not reset the budget), and names `systematic-debugging` — whose stated
+trigger a failing check is.
+
+It **suggests**, never triggers: a hook cannot invoke a skill, confirmed in the
+official docs. And it never blocks — `post-run/05-docs-gate.py` blocked a turn
+until a skill ran, deadlocked, and was deleted on 2026-08-02.
+
+Three attempts at the same failure and it stops suggesting and escalates, because
+a fix that has not converged in three passes is not converging. Green clears the
+state and closes the loop **forward**: it names `verifying-work` → `code-review`
+→ `delivering`, so "no longer failing" is not mistaken for "finished".
+
 **The slow tier is the only thing that verifies the running system.** Everything
 else reads the source. A repo can lint, typecheck and unit-test green and still
 fail to build or fail to boot — `tools/smoke.py` starts the app, waits, probes and
