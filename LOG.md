@@ -3,6 +3,92 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-04 01:20
+**Hooks and skills are now independent, and five files were deleted to get
+there.** 30 commits today; `55 files changed, 3830 insertions(+), 1000
+deletions(-)`. Gone: `pre-run/05-process-skill-router.py`,
+`post-run/07-layer-drift.py`, `pre-compact/01-knowledge-staleness.py`,
+`on-repo-create/01-layer-import.py`, `routing/process-skills.md`. 13 hooks over
+10 events became 10 over 7.
+
+**The argument that settled it was the user's, and it beat mine.** I had built a
+decoupling layer — `routing/events.md` plus `_hooklib.nudge()`, hooks emitting an
+event key that a table mapped to a skill. The user's position was that a hook
+naming a skill *at all* is the defect, not the hardcoding of it. That is correct
+and cheaper: the couplers get deleted rather than indirected. My `events.md` work
+was reverted the same turn it was written.
+
+**What proved the coupling was real**: 11 of 13 skills were named inside hook
+source with nothing validating any of it. Pointed a hook at
+`skill-that-was-deleted` and ran everything — `test_referenced_paths`,
+`test_process_router`, `test_no_slop`, `test_hook_registration` all passed. Four
+suites, zero notice.
+
+**The replacement is `session-start/03-state-report.py`**, adopted from
+mindfold-ai/Trellis via a GitHub read: the hook measures state and renders
+`[state:<key>]` blocks out of `workflow.md`, keeping **no fallback text**, so a
+deleted tag prints a visibly generic line instead of substituting something
+plausible. Compact/resume detection and the fail-open exit are from
+pedrohcgs/claude-code-my-workflow. It uses **no state file** — counts come from
+`merge-base..HEAD` plus the worktree, so landing the branch resets them.
+
+**One nudge loop disabled the auto-commit for six turns, and the two symptoms had
+one cause.** `07-layer-drift.py` re-armed every turn on an untracked path;
+`06-artifact-autocommit.py` returns *silently* when `stop_hook_active` is set,
+which it is on the turn after any Stop hook speaks. So a nudge that never cleared
+kept the checkpoint permanently off, and the file causing it could never be
+committed — self-sustaining. Fixing the marker fixed both; the checkpoint landed
+15 files immediately.
+
+**Three defects in that marker, each found by the fix for the previous one:**
+1. `swept()` recorded a commit SHA; drift also reads the worktree, and an
+   untracked path sits in no commit.
+2. Suppressing by exact path failed across `? .claude/hooks/pre-compact/`
+   (git status reports untracked *directories*) → `A .../01-knowledge-staleness.py`
+   (the commit reports *files*). Same capability, two strings. My docstring had
+   claimed this case worked; it was never tested.
+3. `structural`/`touched` load from state and only ever append, so an entry
+   written before a suppression rule existed outlived it. `is_swept()` was
+   correct in isolation and the hook still fired.
+Then a fourth: a recorded addition whose file was later deleted nudged forever.
+
+**A latent auto-commit bug surfaced: it had never survived a turn that deleted a
+file.** `git add -- <path>` fails with "pathspec did not match any files" when the
+path is in neither worktree nor index — exactly what `git rm` leaves. Five
+deletions in one turn left the whole session uncommitted. `-A` alone does not fix
+it (I claimed it did, wrongly); the fix partitions on git status codes — `D `
+already staged, skip; ` D` needs `-A`; anything else a plain add.
+
+**`task-brief` contradicted itself about `writing-plans`, and I initially got the
+direction backwards.** Two places said hand off; four said a brief is not a spec —
+including `writing-plans`' own description and `workflow.md`'s Consumes column.
+The branch was deleted, not line 88. `test_process_router.py` now fails on a
+positive handoff mention in either file.
+
+**Two installer portability bugs, both invisible from inside this repo:**
+`GITIGNORE_BLOCK` omitted `__pycache__/` (every hook is Python, so a target
+commits `.pyc` on its first turn — this repo's own gitignore has covered it since
+before the installer existed), and two hook docstrings cited an uncopied
+`docs/research/` path. Also `workflow.md` and `skill-authoring/SKILL.md` each
+pointed at `docs/research/2026-08-02-generic-pipeline-skillset.md`, which
+`install.py` does not copy.
+
+**Also landed**: `Explore.md` overriding the built-in onto haiku;
+`isolation: worktree` on `task-implementer`; MCP narrowed to `github` only (13
+servers moved to `disabledMcpjsonServers` — every connected server's tool
+descriptions cost the main conversation on every turn); `workflow.md` de-dated
+from 294 to 281 lines; router keyword-nesting fix before it was deleted.
+
+**Verified**: 8/8 suites, `mypy` 24 files clean, `ruff` clean, and a virgin-repo
+install passing `test_referenced_paths`, `test_process_router`, `test_no_slop`
+inside the target — the first port that failed nothing. Anti-coupling check green
+across all 10 hooks, negative-tested by re-introducing a skill name (exit 1).
+
+**Not verified**: that `reloadSkills: true` actually reloads skills — the field is
+documented and we emit it, but only a real install-then-use session proves it; and
+that `03-state-report.py` fires in a real `SessionStart`, since this session had
+already started.
+
 ## 2026-08-03 16:10
 **The whole `.claude/` layer is now ported, and the checker adjudicated instead
 of me guessing.** Copied `skills/` (11), `agents/` (4), `routing/`, `commands/`
