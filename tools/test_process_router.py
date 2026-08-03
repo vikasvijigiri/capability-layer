@@ -460,6 +460,44 @@ check("no keyword contains another skill's keyword", not contained,
 uppercase = [w for w, _ in seen.items() if w != w.lower()]
 check("every keyword is lowercase", not uppercase, ", ".join(uppercase[:5]))
 
+# --- the task-shape fallback -------------------------------------------------
+#
+# `task-brief` owns stage 1, but a keyword list can only name phrasings someone
+# thought of. "Build an AI platform that assists scientists" -- a real request
+# in this repo's history -- matched nothing at all, so the chain never started.
+#
+# The router falls back to SHAPE when no keyword matches. Every prompt below is
+# verbatim from a real session, which is the point: invented prompts get written
+# to match the regex that is about to read them.
+_router = load_module(
+    ROOT / ".claude/hooks/pre-run/05-process-skill-router.py", "shape_router")
+
+TASK_SHAPE_CASES = [
+    # (prompt, is this a request for work?)
+    ("Build an AI platform that can autonomously assist scientists", True),
+    ("create a hook/skill or command to import this .claude/ folder", True),
+    ("fix all the gaps, update .claude and claude.md", True),
+    ("add this skill in the work flow md file and at appropriate place", True),
+    ("can we have a hook, where if the time clicks 2:00AM the laptop sleeps", True),
+    ("I want to make this entire git flow autonomous except me at review", True),
+    ("implement all", True),
+    # Questions about existing state. Answering one is not building anything.
+    ("Are we ready and safe yet to transfer the ./claude folder to any repo?", False),
+    ("What about the physrun project? is that finished end to end?", False),
+    ("why is the auto-commit refusing?", False),
+    ("should we split this file?", False),
+    # Acknowledgements, not asks.
+    ("continue", False),
+    ("approved all", False),
+    ("yes", False),
+]
+
+for _prompt, _want in TASK_SHAPE_CASES:
+    _got = _router.looks_like_a_task(_prompt)
+    check(f"task-shape {'fires' if _want else 'stays quiet'}: {_prompt[:44]!r}",
+          _got == _want,
+          "missed a request for work" if _want else "fired on a question")
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

@@ -38,6 +38,12 @@ adding a skill or wondering what comes next.
 | Skill | Stage | Produces |
 |---|---|---|
 | `task-brief` | 1 frame | `TASK.md` — six fields, approved |
+
+`pre-run/05-process-skill-router.py` falls back to **prompt shape** when no
+keyword matches: an imperative, or a framing plus a verb, names `task-brief`.
+"Build an AI platform that assists scientists" matched nothing and the chain
+never started. A question about existing state is left alone. The corpus in
+`tools/test_process_router.py` is real prompts, not invented ones.
 | `brainstormer` | 2 design | `docs/specs/YYYY-MM-DD-<topic>-design.md` |
 | `writing-plans` | 3 plan | `docs/plans/YYYY-MM-DD-<feature>.md` |
 | `executing-plans` | 4 execute | the thing itself; ticked plan checkboxes |

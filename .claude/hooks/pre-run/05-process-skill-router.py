@@ -105,6 +105,70 @@ def hits_in(prompt_lower, words):
     return [w for w in words if re.search(keyword_pattern(w), prompt_lower)]
 
 
+# --- the task-shape fallback -------------------------------------------------
+#
+# Keywords cannot express "this prompt is asking for work". `task-brief` owns
+# stage 1, but its keyword list can only name phrasings someone thought of, and
+# real requests are phrased in ways nobody enumerates -- "Build an AI platform
+# that assists scientists" hit nothing at all.
+#
+# So when NO skill matched, shape decides. An imperative, or a request framing
+# followed by a verb, is a task; a question about existing state is not. This
+# fires only on the empty case, so a prompt that already routed somewhere
+# specific is never second-guessed.
+
+# Verbs that begin a work request. Present tense only -- "added support" is a
+# report, "add support" is an ask.
+TASK_VERBS = (
+    "add|build|create|make|implement|write|fix|repair|refactor|rewrite|update|"
+    "change|modify|remove|delete|drop|rename|move|migrate|port|wire|hook|"
+    "integrate|generate|convert|extract|split|merge|enable|disable|support|"
+    "improve|optimise|optimize|clean|tidy|set up|setup|configure|replace|"
+    "introduce|expose|handle|cover|document|design|plan"
+)
+
+# Bare imperative: the prompt opens with the verb.
+IMPERATIVE_RE = re.compile(rf"^\s*(?:please\s+|now\s+|also\s+)*(?:{TASK_VERBS})\b",
+                           re.IGNORECASE)
+
+# Polite or first-person framing, with the verb close behind. The verb is
+# required: "can you check the tests" is a question about state, "can you add a
+# flag" is a task, and the verb list is what separates them.
+# `can we` and friends are included even though they read as questions: the
+# QUESTION_RE guard below already drops them when they actually end in `?`, so
+# what survives is "can we have a hook that ..." -- a proposal, which is a task.
+# That exact prompt was the heuristic's first miss.
+#
+# `have` and `get` earn a place only inside a framing, never as bare
+# imperatives, because "can we have X" means create X while "have a look" does
+# not.
+FRAMED_RE = re.compile(
+    rf"\b(?:can you|could you|would you|can we|could we|should we|shall we|"
+    rf"please|i want|i'd like|i would like|i need|we need|we should|we want|"
+    rf"let's|lets|help me|it should|there should be)"
+    rf"\b[^.?!]{{0,40}}?\b(?:{TASK_VERBS}|have|get)\b",
+    re.IGNORECASE,
+)
+
+# Asking about the world, not asking for a change. Checked first, because
+# "why did X break" contains no task verb but "should we rename this" does.
+QUESTION_RE = re.compile(
+    r"^\s*(?:what|why|when|who|where|which|how come|is|are|was|were|does|do|"
+    r"did|has|have|can we|should we|could we|would it)\b",
+    re.IGNORECASE,
+)
+
+
+def looks_like_a_task(prompt: str) -> bool:
+    """True when the prompt is asking for work rather than for an answer."""
+    text = prompt.strip()
+    if len(text) < 8:
+        return False                      # "continue", "yes", "ok", "done"
+    if QUESTION_RE.match(text) and text.rstrip().endswith("?"):
+        return False
+    return bool(IMPERATIVE_RE.match(text) or FRAMED_RE.search(text))
+
+
 def main():
     payload = load_payload()
     prompt = payload.get("prompt") or payload.get("user_input") or ""
@@ -124,6 +188,16 @@ def main():
             scored.append((len(matched), skill, matched))
 
     if not scored:
+        # Nothing matched. If the prompt is shaped like work, stage 1 owns it.
+        if looks_like_a_task(prompt):
+            print(json.dumps({"hookSpecificOutput": {
+                "hookEventName": "UserPromptSubmit",
+                "additionalContext": (
+                    "No keyword matched, but this reads as a request for work "
+                    "rather than a question. `task-brief` owns stage 1 — frame "
+                    "it before building, or say why the chain does not apply."
+                ),
+            }}))
         return
 
     scored.sort(key=lambda row: (-row[0], row[1]))
