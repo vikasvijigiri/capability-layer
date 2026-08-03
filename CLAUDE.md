@@ -42,12 +42,12 @@ adding a skill or wondering what comes next.
 | `writing-plans` | 3 plan | `docs/plans/YYYY-MM-DD-<feature>.md` |
 | `executing-plans` | 4 execute | the thing itself; ticked plan checkboxes |
 | `verifying-work` | 5 validate | coverage verdict + the unbacked set |
-| `code-review` | 6 review | findings + a sign-off receipt |
-| `delivering` | 7 deliver | merged / pushed / PR opened |
-| `releasing` | 8 release | the change serving at a named target + a quoted smoke check |
-| `knowledge-manager` | 9 record | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `decisions/` |
+| `no-slop` | 6 sweep | repo-wide slop findings + approved repairs |
+| `code-review` | 7 review | findings + a sign-off receipt |
+| `delivering` | 8 deliver | merged / pushed / PR opened |
+| `releasing` | 9 release | the change serving at a named target + a quoted smoke check |
+| `knowledge-manager` | 10 record | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `decisions/` |
 | `research` | — entered from any stage | `docs/research/YYYY-MM-DD-<topic>.md` |
-| `no-slop` | — entered from any stage | `.claude/` decay findings, then approved repairs |
 | `systematic-debugging` | — entered on any failure | root cause + `ISSUES.md` entry |
 
 ### Subagents
@@ -128,7 +128,7 @@ Run `/verify` before declaring any work done.
 | `.claude/agents/` | four subagents; dispatched by skills for parallel work, one file each |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
 | `.claude/routing/process-skills.md` | keyword → skill-name routing (mandatory per skill) |
-| `.claude/hooks/<event>/` | nine hooks over seven events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |
+| `.claude/hooks/<event>/` | ten hooks over seven events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |
 | `.claude/settings.json` | what actually fires; `hooks_registry.json` only documents intent |
 | `.claude/commands/` | the four slash commands above |
 | `tools/` | `run_checks.py` (one entry point for green), `smoke.py`, `run_hook.py`, the test suites, `check_config_json.py` |
@@ -143,7 +143,7 @@ There is no global layer — `~/.claude/` holds no skills, agents or hooks.
 
 **`../physrun/` is a sibling repo, not part of this one** — the first product
 built with this layer, and the first test of whether the layer ports. It carries
-a *subset* — 6 of these 9 hooks, its own `CLAUDE.md`, its own docs. Copying this
+a *subset* — 6 of these 10 hooks, its own `CLAUDE.md`, its own docs. Copying this
 file wholesale would be wrong; it asserts "there is no application code here"
 and a hook count, both false there. Porting found three bugs in a day, none of
 them findable from inside this repo. See `LOG.md` 2026-08-03 14:30.

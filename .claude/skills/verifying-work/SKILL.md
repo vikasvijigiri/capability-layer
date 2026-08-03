@@ -122,16 +122,17 @@ whose result covers content that no longer exists.
 
 ## Next step — you MUST take it
 
-**The terminal state is invoking `code-review`** when the result is a change to
-be delivered — `delivering` only after review has signed off. If the verdict was
+**The terminal state is invoking `no-slop`** when the result is a change to be
+delivered — it sweeps the repo before `code-review` sees the diff, so the
+clean-up is reviewed rather than shipped behind the review. If the verdict was
 gaps rather than verified, hand the gaps to `task-brief` instead and say so.
 
 ## Routing
 
 - Mandatory validator: none — this is the validator. The HARD-GATE is the gate.
 - Preceded by `executing-plans`, or by any work about to be called done.
-- Terminal handoff: `code-review` when the result is a change to be delivered;
-  `delivering` once review has signed off.
+- Terminal handoff: `no-slop` when the result is a change to be delivered, then
+  `code-review`; `delivering` once review has signed off.
 - Gaps that need real work become their own task via `task-brief`. A failure
   whose cause is unknown goes to `systematic-debugging`.
 - The verdict and its evidence belong in `LOG.md` via `knowledge-manager` —

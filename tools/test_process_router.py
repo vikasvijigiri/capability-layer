@@ -233,7 +233,10 @@ CHAIN_SUCCESSOR = {
     "brainstormer": "writing-plans",
     "writing-plans": "executing-plans",
     "executing-plans": "verifying-work",
-    "verifying-work": "code-review",
+    # no-slop sweeps the repo BEFORE review, so its repairs land inside the
+    # diff code-review reads. After review they would ship unreviewed.
+    "verifying-work": "no-slop",
+    "no-slop": "code-review",
     "code-review": "delivering",
     # delivering branches: `releasing` when the repo has a deploy target,
     # `knowledge-manager` directly when it has none. The chain successor is the

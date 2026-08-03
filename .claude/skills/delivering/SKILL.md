@@ -8,7 +8,7 @@ model: sonnet
 # Delivering
 
 Land finished work where it belongs in the repository, without deciding on the
-user's behalf. Workflow stage 7.
+user's behalf. Workflow stage 8.
 
 **This stage ends at the branch, not at the environment.** Merging changes a
 repository; releasing changes what users are looking at right now. `releasing`
@@ -172,7 +172,8 @@ Either way the unit of work is not finished until `LOG.md` says what shipped and
 ## Routing
 
 - Mandatory validator: none — the HARD-GATE plus the three preconditions are it.
-- Preceded by `verifying-work` and then `code-review`. Both, in that order.
+- Preceded by `verifying-work`, then `no-slop`, then `code-review`. All three,
+  in that order — the sweep runs before the review so its repairs are reviewed.
 - Terminal handoff: `releasing` when a deploy target exists; `knowledge-manager`
   directly when there is none — this stage is terminal only for work with no
   environment. Handing to `releasing` does not carry this stage's approval with

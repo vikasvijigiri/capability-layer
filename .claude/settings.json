@@ -34,6 +34,11 @@
             "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-run/06-artifact-autocommit.py\"",
             "statusMessage": "Checkpointing this turn's work..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-run/07-layer-drift.py\"",
+            "statusMessage": "Checking whether the .claude/ layer has drifted..."
           }
         ]
       }

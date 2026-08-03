@@ -333,11 +333,19 @@ with tempfile.TemporaryDirectory() as d3:
     # paths were absolute, baked from REPO_ROOT at import. With REPO_ROOT
     # overridden to a temp dir they still pointed at the real repository, so a
     # test run wrote its failure report into the developer's own tree.
+    # Snapshot rather than assert absence. The diagnose loop legitimately
+    # writes this file into the real repo whenever the checks go red, so
+    # `not exists()` conflated "this call did not write here" with "no session
+    # has ever failed a check" -- and the suite went red for an unrelated reason
+    # the first time someone fired the hook on a red tree.
+    real_report = ROOT / ".claude/hooks/state/check-failure-report.md"
+    before = real_report.read_bytes() if real_report.exists() else None
+
     mod._record_failure("test_x.py: 3 failed", ["a.py"])
     check("the report is written under the CURRENT REPO_ROOT",
           (tmp3 / ".claude/hooks/state/check-failure-report.md").is_file())
-    check("...and not into the real repo",
-          not (ROOT / ".claude/hooks/state/check-failure-report.md").exists())
+    after = real_report.read_bytes() if real_report.exists() else None
+    check("...and not into the real repo", before == after)
 
     body = (tmp3 / ".claude/hooks/state/check-failure-report.md").read_text(
         encoding="utf-8")

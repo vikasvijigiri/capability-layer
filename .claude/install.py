@@ -282,6 +282,7 @@ def main() -> int:
     print("  python tools/test_referenced_paths.py   # prose that names things")
     print("  python tools/test_process_router.py     # skills, agents, routing")
     print("  python tools/test_no_slop.py            # layer decay, mechanical half")
+    print("  python tools/test_no_slop.py --scope repo   # the pre-ship sweep")
     print("  python tools/run_checks.py --tier fast  # the project's own checks")
     print("\nThe auto-commit COMMITS at the end of every turn. It never pushes.")
     return 0

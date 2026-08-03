@@ -8,7 +8,7 @@ model: sonnet
 # Releasing
 
 Put delivered work into a running environment, prove it is actually serving, and
-keep a way back. Workflow stage 8.
+keep a way back. Workflow stage 9.
 
 Cap visible output at ~500 tokens.
 

@@ -12,7 +12,7 @@ git history.
 
 ## The chain
 
-Nine stages on the line, three entered from anywhere. One skill each — a stage
+Ten stages on the line, two entered from anywhere. One skill each — a stage
 with no owner is not a stage, and a skill owning two stages means the boundary
 between them never actually occurs.
 
@@ -24,16 +24,17 @@ between them never actually occurs.
 | — | **Human approval** | — | the plan | a yes, in the conversation |
 | 4 | Execute | `executing-plans` | an approved plan | the thing itself; ticked checkboxes |
 | 5 | Validate | `verifying-work` | the result + the Done-check | a coverage verdict and the unbacked set |
-| 6 | Review | `code-review` | the pending change | findings, then a sign-off receipt |
+| 6 | Sweep | `no-slop` | the verified tree | slop findings, then approved repairs |
+| 7 | Review | `code-review` | the pending change | findings, then a sign-off receipt |
 | — | **Human approval** | — | the findings | a yes, in the conversation |
-| 7 | Deliver | `delivering` | verified, reviewed work | merged / pushed / PR opened, or kept |
+| 8 | Deliver | `delivering` | verified, reviewed work | merged / pushed / PR opened, or kept |
 | — | **Human approval** | — | the target and the rollback | a yes, per target, in the conversation |
-| 8 | Release | `releasing` | delivered work + a deploy target | the change serving at a named target, a quoted smoke check, a named rollback |
-| 9 | Record | `knowledge-manager` | what happened | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `MEMORY.md`, `decisions/` |
+| 9 | Release | `releasing` | delivered work + a deploy target | the change serving at a named target, a quoted smoke check, a named rollback |
+| 10 | Record | `knowledge-manager` | what happened | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `MEMORY.md`, `decisions/` |
 
-Stage 8 is the only stage that is **skipped by absence rather than by judgement**:
+Stage 9 is the only stage that is **skipped by absence rather than by judgement**:
 a repo with no deploy target has nothing to release, and `releasing` says so and
-hands straight to 9. Stages 7 and 8 are two acts, not one — merging changes a
+hands straight to 10. Stages 8 and 9 are two acts, not one — merging changes a
 repository, releasing changes what users are looking at right now, and an
 approval for one is not an approval for the other.
 
@@ -44,7 +45,6 @@ need arises and return to the stage that called them:
 |---|---|---|---|
 | Research | `research` | any stage needs evidence from outside your own knowledge | whatever asked |
 | Diagnose | `systematic-debugging` | anything fails or behaves unexplainably, at any stage | the stage that hit the failure |
-| Layer clean-up | `no-slop` | the `.claude/` layer itself is suspected of decay — never a code diff | nothing; it reports, repairs on approval, stops |
 
 ### What this replaced, and why
 
@@ -93,11 +93,11 @@ where a problem enters. Route on the shape of what the user said:
 | A named change with unstated scope ("add X", "support Y") | 1 `task-brief` | The approach is settled; the risk is scope, not direction |
 | A question needing outside evidence | `research` | Neither design nor scope can be decided on a guess |
 | Something broken | `systematic-debugging` | Diagnosis precedes everything, including the brief |
-| The capability layer itself | `no-slop` | Decay accumulates across sessions, so no diff review sees it |
+| A repo suspected of slop, at any stage | 6 `no-slop` | Slop accumulates across sessions, so no diff review sees it |
 | An approved spec | 3 `writing-plans` | Design is done |
 | An approved plan | 4 `executing-plans` | — |
 | A finished change | 5 `verifying-work` | — |
-| Work that landed on a branch while the environment still serves the old version | 8 `releasing` | Delivery is done; only the release is outstanding |
+| Work that landed on a branch while the environment still serves the old version | 9 `releasing` | Delivery is done; only the release is outstanding |
 
 `brainstormer` before `task-brief` is the common case for open work, and both
 orders are correct for their own input. Superpowers has no brief stage at all
@@ -111,13 +111,13 @@ scope a brief would have carried.
 ## Not every stage every time
 
 The chain is a dependency order, not a checklist. Skip what the problem does not
-need — a one-line fix needs 6 and 7, nothing else. Three rules bind regardless:
+need — a one-line fix needs 7 and 8, nothing else. Three rules bind regardless:
 
 - **Stage 5 is never skipped when a completion claim is about to be made.** That
   is what the claim means.
-- **Stages 7 and 8 each require their own human yes**, and stage 8's is per
+- **Stages 8 and 9 each require their own human yes**, and stage 9's is per
   target. No skill can grant either.
-- **Stage 9 closes every unit of work**, including ones that skipped everything
+- **Stage 10 closes every unit of work**, including ones that skipped everything
   else. Unrecorded work is indistinguishable from work that never happened.
 
 ## Two shapes
@@ -148,23 +148,25 @@ criterion before the first pass.
                                              5 verifying-work
                                                     │
                                                     ▼
-                                              6 code-review
+                                                6 no-slop ◀──── layer drift
+                                                    │            (07-layer-drift.py,
+                                      [human yes]   │             --scope layer)
+                                                    ▼
+                                              7 code-review
                                                     │
                                       [human yes]   ▼
-                                               7 delivering
+                                               8 delivering
                                                     │
                                       [human yes]   ▼
-                                                8 releasing ──── no deploy target ┐
+                                                9 releasing ──── no deploy target ┐
                                                     │                             │
                                                     ▼                             │
-                                          9 knowledge-manager ◀───────────────────┘
+                                         10 knowledge-manager ◀───────────────────┘
 
    entered from any stage, returning to it:
      research               — needs outside evidence
      systematic-debugging   — something failed, incl. a red smoke check
-                              (stage 8 rolls back first, then enters here)
-     no-slop                — the .claude/ layer itself, not a diff
-                              (reports, then rectifies on approval; does not return)
+                              (stage 9 rolls back first, then enters here)
 ```
 
 `task-brief` branches: to `brainstormer` when the approach is open, to

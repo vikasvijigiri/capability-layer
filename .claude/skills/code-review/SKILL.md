@@ -165,6 +165,8 @@ sign-off. An agent reporting "looks good" is not a review a human gave.
 ## Routing
 
 - Mandatory validator: none. The sign-off in step 4 is the gate.
+- Preceded by `no-slop`, which sweeps the repo at stage 6 — so its repairs
+  are part of the diff you are reading, not a separate unreviewed change.
 - Terminal handoff: `delivering`, once the user has signed off. This skill does
   not push, merge or open the PR itself — that is `delivering`'s job, and it has
   its own approval gate.
