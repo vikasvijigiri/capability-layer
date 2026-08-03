@@ -35,6 +35,7 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -276,13 +277,96 @@ def ensure_stubs(target: Path, r: Report) -> None:
         r.did("write a project-checks.json stub")
 
 
+def assess(target: Path) -> list[str]:
+    """Where should the chain ENTER, given the state this repo is already in?
+
+    The layer is almost never installed into an empty repo. It lands on work
+    already in flight -- a half-finished branch, a plan with three tasks ticked,
+    a tree with uncommitted changes -- and `workflow.md` says plainly that the
+    numbers are a dependency order, not an arrival order. Nothing read that
+    table, so every install started at stage 1 regardless of what was there.
+
+    This reads the tree and names the stage. Signals only; it never acts.
+    """
+    def git(*a) -> str:
+        try:
+            p = subprocess.run(["git", *a], cwd=str(target), capture_output=True,
+                               text=True, timeout=30)
+            return p.stdout.strip() if p.returncode == 0 else ""
+        except (OSError, subprocess.SubprocessError):
+            return ""
+
+    notes: list[str] = []
+    dirty = [ln for ln in git("status", "--porcelain").splitlines() if ln.strip()]
+    branch = git("rev-parse", "--abbrev-ref", "HEAD")
+    protected = branch in ("main", "master", "develop", "release")
+
+    plans = sorted((target / "docs" / "plans").glob("*.md")) if (
+        target / "docs" / "plans").is_dir() else []
+    specs = sorted((target / "docs" / "specs").glob("*.md")) if (
+        target / "docs" / "specs").is_dir() else []
+    has_task = (target / "TASK.md").is_file()
+
+    # An unfinished plan is the strongest signal there is: it names the work,
+    # the order, and how far it got.
+    for plan in plans:
+        try:
+            body = plan.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        todo, done = body.count("- [ ]"), body.count("- [x]")
+        if todo:
+            notes.append(
+                f"stage 4 `executing-plans` — {plan.name} has {done} step(s) "
+                f"ticked and {todo} left")
+            break
+    else:
+        if specs and not plans:
+            notes.append(f"stage 3 `writing-plans` — {len(specs)} spec(s) in "
+                         f"docs/specs/ with no plan beside them")
+        elif has_task:
+            notes.append("stage 1 `task-brief` — TASK.md exists; read it before "
+                         "assuming the work is new")
+
+    if dirty:
+        notes.append(f"stage 5 `verifying-work` — {len(dirty)} uncommitted "
+                     f"path(s); prove what is there before adding to it")
+    if branch and not protected:
+        ahead = git("rev-list", "--count", f"origin/{branch}..HEAD") or git(
+            "rev-list", "--count", "HEAD")
+        notes.append(f"stage 7 `code-review` — on `{branch}`"
+                     + (f", {ahead} commit(s) unreviewed" if ahead else ""))
+    if protected:
+        notes.append(f"`{branch}` is protected — the auto-commit will refuse "
+                     f"until you branch. That is the first thing to do.")
+
+    tests = list(target.rglob("test_*.py")) + list(target.rglob("*_test.go")) \
+        + list(target.rglob("*.test.ts")) + list(target.rglob("*.spec.ts"))
+    if not tests:
+        notes.append('no tests found — set `"test": false` in '
+                     ".claude/project-checks.json or no code can auto-commit")
+
+    if not notes:
+        notes.append("clean tree, nothing in flight — stage 1 `task-brief`")
+    return notes
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--into", required=True, help="target repository root")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--assess", action="store_true",
+                    help="only report where the chain should enter; install nothing")
     args = ap.parse_args()
 
     target = Path(args.into).resolve()
+    # Before the source-repo guard on purpose: "where should the chain enter"
+    # is a fair question about any repository, including this one.
+    if args.assess and target.is_dir():
+        print(f"Where the chain should enter, for {target.name}:\n")
+        for note in assess(target):
+            print(f"  - {note}")
+        return 0
     if not target.is_dir():
         print(f"FAIL: {target} is not a directory", file=sys.stderr)
         return 1
@@ -312,6 +396,14 @@ def main() -> int:
     print("  python tools/test_no_slop.py --scope repo   # the pre-ship sweep")
     print("  python tools/run_checks.py --tier fast  # the project's own checks")
     print("\nThe auto-commit COMMITS at the end of every turn. It never pushes.")
+
+    # Landing on work already in flight is the normal case, not the edge case.
+    # `workflow.md` says plainly that the stage numbers are a dependency order
+    # rather than an arrival order, but nothing read that table, so every
+    # install effectively began at stage 1 no matter what was already here.
+    print("\nWhere the chain should enter, given what is already here:")
+    for note in assess(target):
+        print(f"  - {note}")
     return 0
 
 
