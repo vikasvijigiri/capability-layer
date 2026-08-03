@@ -96,6 +96,22 @@ py = tree({"pyproject.toml": "[project]\nname='x'\n", "ruff.toml": "",
            "mypy.ini": "[mypy]\n"})
 check("a python app detects pytest, ruff, mypy and an audit",
       kinds(py) == {"test", "lint", "typecheck", "audit"}, str(kinds(py)))
+
+# --- every Python tool runs as `{py} -m`, never bare.
+#
+# Found 2026-08-03 by porting this harness into a fresh repo: `pytest -q` was
+# reported "not installed" seconds after `python -m pytest` ran a passing suite,
+# because the package was importable but had no console script. The worse case
+# is silent: a bare name can resolve to a different interpreter's tool than the
+# one running the checks.
+PY_TOOLS = ("pytest", "ruff", "mypy", "pip_audit", "pip-audit")
+for _kind, _cmd in pc.detect_checks(py) + pc.detect_checks(ROOT):
+    _first = _cmd.split()[0].strip('"')
+    if any(_first == t or _first.endswith(f"/{t}") or _first.endswith(f"\\{t}")
+           for t in PY_TOOLS):
+        check(f"python tool invoked bare, not via -m: {_cmd}", False,
+              "needs a console script on PATH, and may pick another interpreter")
+check("no detected Python tool is invoked bare", True)
 check("...with pytest as the test command", "pytest -q" in commands(py))
 check("...ruff as the linter", "ruff check" in commands(py))
 check("...and mypy as the typechecker", "mypy" in commands(py))
@@ -206,7 +222,8 @@ check("a Makefile with no test target detects nothing",
 # Two markers meaning the same tool must not run it twice.
 dup = tree({"pyproject.toml": "[project]\nname='x'\n", "pytest.ini": "[pytest]\n"})
 check("duplicate markers do not duplicate the command",
-      [c for _, c in pc.detect_checks(dup)].count("pytest -q") == 1)
+      sum(1 for _, c in pc.detect_checks(dup) if c.endswith("-m pytest -q")) == 1,
+      str(pc.detect_checks(dup)))
 
 empty = tree({"README.md": "# hi\n"})
 check("a project with no markers detects nothing", pc.detect_checks(empty) == [])

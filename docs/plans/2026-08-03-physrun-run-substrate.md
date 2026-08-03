@@ -54,7 +54,7 @@ UAIOS repo. **The implementer does not have it — everything needed is here.**
 - Produces: an installable package `physrun` importable as `import physrun`;
   a working `python tools/run_checks.py --tier fast`.
 
-- [ ] **Step 1: Create the repo and directory skeleton**
+- [x] **Step 1: Create the repo and directory skeleton**
 
 ```bash
 cd ..
@@ -63,7 +63,7 @@ cd physrun
 git init -b main
 ```
 
-- [ ] **Step 2: Write `pyproject.toml`**
+- [x] **Step 2: Write `pyproject.toml`**
 
 ```toml
 [build-system]
@@ -90,7 +90,7 @@ where = ["src"]
 testpaths = ["tests"]
 ```
 
-- [ ] **Step 3: Write `.gitignore`**
+- [x] **Step 3: Write `.gitignore`**
 
 ```gitignore
 __pycache__/
@@ -104,7 +104,7 @@ dist/
 .physrun/
 ```
 
-- [ ] **Step 4: Copy the harness from UAIOS**
+- [x] **Step 4: Copy the harness from UAIOS**
 
 Run, from `physrun/`:
 
@@ -127,7 +127,7 @@ And edit `ruff.toml`, replacing the whole `[lint.per-file-ignores]` section with
 "tests/*" = ["S101", "S105", "S106", "S108"]
 ```
 
-- [ ] **Step 5: Write `.claude/project-checks.json`**
+- [x] **Step 5: Write `.claude/project-checks.json`**
 
 ```json
 {
@@ -140,7 +140,7 @@ And edit `ruff.toml`, replacing the whole `[lint.per-file-ignores]` section with
 No keys are set for `test`, `lint` or `typecheck`: detection finds `pyproject.toml`
 (pytest), `ruff.toml` and `mypy.ini` on its own.
 
-- [ ] **Step 6: Write `src/physrun/__init__.py`**
+- [x] **Step 6: Write `src/physrun/__init__.py`**
 
 ```python
 """Content-addressed run store for computational physics."""
@@ -148,7 +148,7 @@ No keys are set for `test`, `lint` or `typecheck`: detection finds `pyproject.to
 __version__ = "0.1.0"
 ```
 
-- [ ] **Step 7: Write the failing harness test**
+- [x] **Step 7: Write the failing harness test**
 
 `tests/test_harness.py`:
 
@@ -160,12 +160,12 @@ def test_package_imports_and_has_a_version():
     assert physrun.__version__ == "0.1.0"
 ```
 
-- [ ] **Step 8: Install and run it**
+- [x] **Step 8: Install and run it**
 
 Run: `python -m pip install -e ".[dev]" && python -m pytest tests/ -q`
 Expected: PASS, 1 test.
 
-- [ ] **Step 9: Prove the copied harness works in this fresh repo**
+- [x] **Step 9: Prove the copied harness works in this fresh repo**
 
 Run: `python tools/run_checks.py --tier fast`
 Expected: `PASS: N check(s) green (lint, test, typecheck)` and the resolved list
@@ -174,7 +174,7 @@ names `pytest -q`, `ruff check .` and `mypy`.
 If any check is reported `skipped: tool missing`, install it before continuing —
 a skipped check is not a passing one.
 
-- [ ] **Step 10: Write `README.md`**
+- [x] **Step 10: Write `README.md`**
 
 ````markdown
 # physrun
@@ -197,7 +197,7 @@ wrong number *reproducible and traceable*; it does not make it right. Judging
 convergence remains yours.
 ````
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add -A
@@ -218,7 +218,8 @@ git commit -m "feat: scaffold physrun package and check harness"
   - `class EnvLock` — frozen dataclass, fields `python: str`,
     `packages: tuple[tuple[str, str], ...]`
   - `EnvLock.canonical() -> str`
-  - `capture_env() -> EnvLock`
+  - `capture_env(track: tuple[str, ...] | None = None) -> EnvLock`
+  - `ABSENT: str = "absent"`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -250,6 +251,39 @@ def test_canonical_changes_when_a_version_changes():
     a = EnvLock(python="3.11.7", packages=(("numpy", "2.0.0"),))
     b = EnvLock(python="3.11.7", packages=(("numpy", "2.0.1"),))
     assert a.canonical() != b.canonical()
+
+
+# --- the declared subset.
+#
+# Hashing every installed distribution is maximally correct and practically
+# useless: installing `black` would invalidate every cached physics run. So a
+# caller may declare the packages that actually affect their result.
+
+def test_tracking_a_subset_captures_only_those_packages():
+    lock = capture_env(track=("pytest",))
+    assert [name for name, _ in lock.packages] == ["pytest"]
+
+
+def test_an_untracked_package_does_not_appear():
+    lock = capture_env(track=("pytest",))
+    assert all(name != "ruff" for name, _ in lock.packages)
+
+
+def test_a_tracked_but_missing_package_is_recorded_as_absent():
+    # Recorded, not skipped. A package appearing or disappearing must change
+    # the hash -- silently omitting it would let an install go unnoticed.
+    lock = capture_env(track=("definitely-not-installed",))
+    assert lock.packages == (("definitely-not-installed", ABSENT),)
+
+
+def test_absent_and_installed_hash_differently():
+    absent = EnvLock(python="3.11.7", packages=(("numpy", ABSENT),))
+    present = EnvLock(python="3.11.7", packages=(("numpy", "2.0.0"),))
+    assert absent.canonical() != present.canonical()
+
+
+def test_no_track_captures_everything():
+    assert len(capture_env().packages) > len(capture_env(track=("pytest",)).packages)
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -274,6 +308,10 @@ import platform
 from dataclasses import dataclass
 from importlib import metadata
 
+# Recorded for a tracked package that is not installed. A version string is
+# never "absent", so this cannot collide with a real one.
+ABSENT = "absent"
+
 
 @dataclass(frozen=True)
 class EnvLock:
@@ -294,13 +332,29 @@ class EnvLock:
         return "\n".join(lines)
 
 
-def capture_env() -> EnvLock:
-    """This interpreter and everything importable in it."""
-    packages = tuple(
-        (dist.metadata["Name"], dist.version)
+def capture_env(track: tuple[str, ...] | None = None) -> EnvLock:
+    """This interpreter, plus either every distribution or a declared subset.
+
+    `track=None` captures everything. Maximally correct, and in practice it
+    means installing any unrelated dev tool invalidates every cached run --
+    the cache is the whole value of the system, so that default is safe and
+    nearly useless.
+
+    `track=("numpy", "scipy")` captures only those. The user asserts these are
+    the packages whose versions can change a result. The risk is the mirror
+    image: forget one and a stale cache hit looks like a fresh answer. That is
+    why a tracked-but-missing package is recorded as ABSENT rather than
+    dropped -- installing or removing it still moves the hash.
+    """
+    installed = {
+        dist.metadata["Name"]: dist.version
         for dist in metadata.distributions()
         if dist.metadata["Name"]
-    )
+    }
+    if track is None:
+        packages = tuple(installed.items())
+    else:
+        packages = tuple((name, installed.get(name, ABSENT)) for name in track)
     return EnvLock(python=platform.python_version(), packages=packages)
 ```
 
@@ -956,13 +1010,19 @@ sys.stderr.write("boom")
 sys.exit(3)
 """
 
-COUNTS_CALLS = """
-import json, os
-marker = os.path.join(os.environ["PHYSRUN_ARTIFACTS"], "..", "..", "calls.txt")
-with open(marker, "a") as fh:
-    fh.write("x")
+# "Did this execute?" is answered by a nonce in the result, not by a counter
+# file. Two earlier drafts used the filesystem: one wrote to
+# PHYSRUN_ARTIFACTS/../.. which resolves into the system temp root rather than
+# tmp_path (the assertion would have passed only by accident), and one passed an
+# absolute counter path through `params` -- straight into the hash, which the
+# Global Constraints forbid.
+#
+# A nonce needs neither. If the second call returns the same nonce the code did
+# not run; if it differs, it did. That is the claim, asserted directly.
+NONCE = """
+import json, os, uuid
 with open(os.environ["PHYSRUN_RESULT"], "w") as fh:
-    json.dump({}, fh)
+    json.dump({"nonce": uuid.uuid4().hex}, fh)
 """
 
 
@@ -980,27 +1040,27 @@ def test_runs_the_code_and_captures_the_result(executor):
     assert run.wall_seconds >= 0
 
 
-def test_a_cache_hit_does_not_execute(executor, tmp_path):
+def test_a_cache_hit_does_not_execute(executor):
     # Not "a Run came back" -- assert the code did NOT run a second time. A
     # cache that silently re-executes is the same bug wearing a disguise.
-    spec = RunSpec(code=COUNTS_CALLS, params={"L": 1}, env=ENV)
-    executor.run(spec)
-    executor.run(spec)
-    assert (tmp_path / "store" / "calls.txt").read_text() == "x"
+    spec = RunSpec(code=NONCE, params={}, env=ENV)
+    first = executor.run(spec)
+    second = executor.run(spec)
+    assert second.result["nonce"] == first.result["nonce"]
 
 
-def test_force_re_executes(executor, tmp_path):
-    spec = RunSpec(code=COUNTS_CALLS, params={"L": 1}, env=ENV)
-    executor.run(spec)
-    executor.run(spec, force=True)
-    assert (tmp_path / "store" / "calls.txt").read_text() == "xx"
+def test_force_re_executes(executor):
+    spec = RunSpec(code=NONCE, params={}, env=ENV)
+    first = executor.run(spec)
+    second = executor.run(spec, force=True)
+    assert second.result["nonce"] != first.result["nonce"]
 
 
-def test_a_nondeterministic_spec_is_never_cached(executor, tmp_path):
-    spec = RunSpec(code=COUNTS_CALLS, params={"L": 1}, env=ENV, nondeterministic=True)
-    executor.run(spec)
-    executor.run(spec)
-    assert (tmp_path / "store" / "calls.txt").read_text() == "xx"
+def test_a_nondeterministic_spec_is_never_cached(executor):
+    spec = RunSpec(code=NONCE, params={}, env=ENV, nondeterministic=True)
+    first = executor.run(spec)
+    second = executor.run(spec)
+    assert second.result["nonce"] != first.result["nonce"]
 
 
 def test_a_failing_run_is_recorded_not_raised(executor):
@@ -1313,6 +1373,13 @@ def main(argv: list[str] | None = None) -> int:
     p_run.add_argument("--tag", action="append", default=[])
     p_run.add_argument("--force", action="store_true")
     p_run.add_argument("--nondeterministic", action="store_true")
+    p_run.add_argument(
+        "--track",
+        action="append",
+        default=[],
+        help="package whose version affects this result; repeatable. "
+        "Omit to hash the whole environment, which is safer and caches worse.",
+    )
 
     p_query = sub.add_parser("query", help="list matching runs")
     p_query.add_argument("--tag", action="append", default=[])
@@ -1335,10 +1402,16 @@ def main(argv: list[str] | None = None) -> int:
             return 1
 
         code = Path(args.script).read_text(encoding="utf-8")
+        if not args.track:
+            print(
+                "note: hashing the whole environment; installing any package "
+                "will invalidate this cache. Use --track to name what matters.",
+                file=sys.stderr,
+            )
         spec = RunSpec(
             code=code,
             params=params,
-            env=capture_env(),
+            env=capture_env(track=tuple(args.track) or None),
             nondeterministic=args.nondeterministic,
             tags=tuple(args.tag),
         )
@@ -1485,12 +1558,15 @@ def test_re_running_the_sweep_is_free(tmp_path):
     assert all(a.created_at == b.created_at for a, b in zip(first, second))
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run it**
 
 Run: `python -m pytest tests/test_ising.py -q`
-Expected: PASS if Tasks 2-5 are complete. If any test fails here, the failure is
-in the pipeline, not in this file — do not edit the expected values to make it
-pass. The analytic form is the ground truth.
+Expected: **PASS**, 3 tests.
+
+This task deliberately has no red-to-green cycle: it introduces no production
+code, only a check on code Tasks 2-5 already built. If it fails, the failure is
+in the pipeline, not in this file — **do not edit the expected values to make it
+pass.** The analytic form is the ground truth and the code is what is on trial.
 
 - [ ] **Step 3: Run the whole check set**
 
@@ -1507,6 +1583,55 @@ git commit -m "test: analytic Ising fixture proves the pipeline carries real num
 ```
 
 ---
+
+## Amendments made before execution
+
+`executing-plans` re-reads a plan before running it, and found two things the
+plan's own self-review had missed. Both were decided with the user on
+2026-08-03 and the plan text above already reflects them.
+
+**1. `capture_env` gained a declared subset.** As originally written it hashed
+every installed distribution, so installing `black` would invalidate every
+cached physics run — and the cache is the entire value of the system. The spec
+accepted "upgrading numpy invalidates the cache", which reads as *relevant*
+packages, not all of them.
+
+Now `capture_env(track=("numpy", "scipy"))` hashes only what the user declares.
+The mirror risk is real and stated in the docstring: forget a package and a
+stale hit looks like a fresh answer. A tracked-but-missing package records as
+`ABSENT` rather than being dropped, so installing or removing it still moves the
+hash. `--track` is repeatable on the CLI, and omitting it prints a warning and
+falls back to hashing everything — safe by default, fast by choice.
+
+**2. The "did it execute?" tests stopped using the filesystem.** Two drafts got
+this wrong: the first wrote a counter to `PHYSRUN_ARTIFACTS/../..`, which lands
+in the system temp root rather than `tmp_path`, so the assertion would have
+passed by accident; the second passed an absolute counter path through `params`,
+which the Global Constraints forbid from entering the hash.
+
+Both were working around a counter that should not exist. The tests now use a
+nonce in the result: same nonce means it did not run, different means it did.
+No paths, no filesystem, no monkeypatching, and it asserts the claim directly.
+
+## Deviations from the spec, stated rather than silent
+
+**Peak RSS is not captured.** The spec's §2 lists the Executor as capturing
+"stdout, stderr, artifacts, wall time, exit code, peak RSS". Everything but the
+last is implemented. Peak resident memory has no stdlib cross-platform API —
+`resource.getrusage` is POSIX-only and the Windows equivalent needs `psutil` or
+raw `ctypes` against `GetProcessMemoryInfo`, either of which breaks the
+no-third-party-runtime-dependency constraint.
+
+It is dropped rather than faked. Adding it later means one field on `Run`, one
+column, and a platform branch in `Executor._execute` — no format change to
+`run_id`, so no cache invalidation. Raise it as its own task if memory ceilings
+start mattering.
+
+**Everything else in scope is covered.** Store `put/get/query/gc`, artifact
+content-addressing, executor caching, force, nondeterminism, failure recording,
+and all eight of §5's fast-tier tests plus the Ising fixture. The three §5 tests
+belonging to the Binder — missing-run build failure, computed staleness,
+manifest completeness — are correctly absent: the Binder is not in this plan.
 
 ## Done when
 

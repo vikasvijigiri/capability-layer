@@ -156,9 +156,16 @@ MARKER_CHECKS: dict[str, list[tuple[str, str]]] = {
     "deno.json": [("test", "deno test -A"), ("lint", "deno lint"),
                   ("typecheck", "deno check .")],
     "deno.jsonc": [("test", "deno test -A"), ("lint", "deno lint")],
-    # --- Python
-    "pyproject.toml": [("test", "pytest -q"), ("audit", "{py} -m pip_audit")],
-    "pytest.ini": [("test", "pytest -q")],
+    # --- Python. Every Python tool is invoked as `{py} -m`, never bare.
+    #
+    # Two reasons, the second the serious one. A bare `pytest` needs a console
+    # script on PATH: on 2026-08-03 a fresh repo reported `pytest` not installed
+    # seconds after `python -m pytest` ran a passing suite, because the package
+    # was importable but had no .exe. And a bare name can resolve to a DIFFERENT
+    # interpreter's tool than the one running the checks -- linting with one
+    # Python and testing with another, silently.
+    "pyproject.toml": [("test", "{py} -m pytest -q"), ("audit", "{py} -m pip_audit")],
+    "pytest.ini": [("test", "{py} -m pytest -q")],
     "ruff.toml": [("lint", "{py} -m ruff check .")],
     ".ruff.toml": [("lint", "{py} -m ruff check .")],
     "mypy.ini": [("typecheck", "{py} -m mypy")],
