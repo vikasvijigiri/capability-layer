@@ -180,6 +180,16 @@ def main() -> int:
         if status[:1] in ("A", "D", "R", "?") and path.startswith(STRUCTURAL_DIRS):
             structural.setdefault(path, status[:1])
 
+    # Anchor on first run, so an empty `since` is never sticky. Without this the
+    # hook re-reads the SAME last commit every turn: state loss (a fresh clone, a
+    # deleted state file) seeded `since: ""`, that seeding read HEAD's additions
+    # as fresh drift, and the empty value was then written straight back -- so the
+    # nudge repeated forever. Reporting HEAD once after losing the record is
+    # right; reporting it every turn is the failure this hook exists to avoid.
+    if not since:
+        rc, head = git("rev-parse", "HEAD")
+        since = head if rc == 0 else ""
+
     save_state({"since": since, "touched": sorted(touched), "structural": structural})
 
     if structural:

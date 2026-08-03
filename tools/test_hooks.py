@@ -149,6 +149,140 @@ for _tcmd, _tdir, _tlabel in TARGET_CASES:
     else:
         print(f'OK: target_dir {_tlabel}')
 
+
+# --- 07-layer-drift.py -------------------------------------------------------
+#
+# Three bugs shipped in this hook in one session, every one silent and every one
+# found only by firing it by hand:
+#
+#   1. `structural` was keyed on "<status> <path>", so a file reported `A` by
+#      `git show` and `?` by `git status` occupied two slots and the hook
+#      double-counted its own addition.
+#   2. `--swept` deleted the state file, so the next turn re-read the same HEAD,
+#      rebuilt the counter, and the suggestion repeated every turn -- the exact
+#      "nobody reads it" failure the hook exists to prevent.
+#   3. A lost state file seeded `since: ""`, which was then written straight
+#      back, making the fallback permanent.
+#
+# All three are behaviour over a SEQUENCE of turns, which is why reading the
+# code missed them. These tests drive the sequence.
+
+import contextlib as _ctx  # noqa: E402
+import io as _io  # noqa: E402
+
+_DRIFT = ROOT / '.claude/hooks/post-run/07-layer-drift.py'
+
+
+def _load_drift(state_dir):
+    spec = _u.spec_from_file_location('drift', _DRIFT)
+    assert spec and spec.loader          # narrows for mypy; a missing hook is a bug
+    mod = _u.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    # Redirect state to a temp dir. Baking absolute paths at import is how an
+    # earlier suite wrote its scratch into the developer's own tree.
+    mod._state_path = lambda: Path(state_dir) / 'layer-drift.json'   # type: ignore[attr-defined]
+    return mod
+
+
+def _fire(mod, files):
+    """One turn. Returns the SPOKEN TEXT, or '' when the hook stayed silent.
+
+    Parsing the JSON matters and the first version of this helper did not: the
+    hook prints one line of JSON, so `stdout.splitlines()` returned a single
+    line holding every entry, and the duplicate-path assertion below counted 1
+    no matter how many entries there were. Re-introducing the bug it was written
+    to catch produced a green run.
+    """
+    mod.changed_layer_files = lambda since='': files
+    buf = _io.StringIO()
+    with _ctx.redirect_stdout(buf):
+        mod.main()
+    raw = buf.getvalue().strip()
+    if not raw:
+        return ''
+    return json.loads(raw)['hookSpecificOutput']['additionalContext']
+
+
+with tempfile.TemporaryDirectory() as _dd:
+    _ADDED = [('A', '.claude/skills/x/SKILL.md')]
+
+    # 1. one file, two statuses -> one entry
+    _m = _load_drift(_dd)
+    _out = _fire(_m, [('?', '.claude/skills/x/SKILL.md'),
+                      ('A', '.claude/skills/x/SKILL.md')])
+    _entries = [ln for ln in _out.splitlines() if '.claude/skills/x' in ln]
+    if len(_entries) != 1:
+        print(f'FAIL: drift double-counts one path across statuses: {_entries}')
+        fail = True
+    else:
+        print('OK: drift counts one entry per path, not per status')
+
+    # 2. the nudge must STOP after a sweep.
+    #
+    # This stubs `git`, NOT `changed_layer_files`, and the distinction is the
+    # whole test. Stubbing the higher function was the first attempt and it
+    # could not fail: it bypassed the since-vs-HEAD selection that the bug
+    # lived in, so reverting `swept()` to `unlink()` still produced a green run.
+    # Here HEAD keeps reporting the same addition forever -- exactly the real
+    # situation -- and only a recorded SHA can silence it.
+    def _fake_git(*args):
+        if args[:1] == ('rev-parse',):
+            return 0, 'sha1'
+        if args[:1] == ('cat-file',):
+            return (0, '') if 'sha1' in args[2] else (1, '')
+        if args[:1] == ('diff',):
+            return 0, ''                      # nothing new since the sweep
+        if args[:1] == ('show',):
+            return 0, 'A	.claude/skills/x/SKILL.md'   # HEAD, unchanging
+        return 0, ''
+
+    def _turn(state_dir):
+        mod = _load_drift(state_dir)
+        mod.git = _fake_git
+        buf = _io.StringIO()
+        with _ctx.redirect_stdout(buf):
+            mod.main()
+        return buf.getvalue().strip()
+
+    with tempfile.TemporaryDirectory() as _d2:
+        if not _turn(_d2):
+            print('FAIL: drift stayed silent when HEAD added a skill')
+            fail = True
+        _sw = _load_drift(_d2)
+        _sw.git = _fake_git
+        with _ctx.redirect_stdout(_io.StringIO()):
+            _sw.swept()
+        if _turn(_d2):
+            print('FAIL: drift still nudges after --swept -- it rebuilt from the '
+                  'same HEAD')
+            fail = True
+        else:
+            print('OK: drift goes quiet after --swept')
+
+    # 3. an empty `since` must never be written back
+    (Path(_dd) / 'layer-drift.json').unlink(missing_ok=True)
+    _m = _load_drift(_dd)
+    _fire(_m, [])
+    _since = json.loads((Path(_dd) / 'layer-drift.json').read_text())['since']
+    if not _since:
+        print('FAIL: drift wrote an empty `since` -- the fallback is now permanent')
+        fail = True
+    else:
+        print('OK: drift anchors `since` on first run after state loss')
+
+    # 4. a `since` that no longer resolves must not raise
+    _p = Path(_dd) / 'layer-drift.json'
+    _d = json.loads(_p.read_text())
+    _d['since'] = 'dead' * 10
+    _p.write_text(json.dumps(_d))
+    _m = _load_drift(_dd)
+    try:
+        _fire(_m, [])
+        print('OK: drift survives a `since` that no longer resolves')
+    except Exception as _exc:  # noqa: BLE001
+        print(f'FAIL: drift raised on an unresolvable `since`: {_exc}')
+        fail = True
+
 if fail:
     sys.exit(1)
 print('All hook tests passed')
