@@ -221,7 +221,7 @@ git commit -m "feat: scaffold physrun package and check harness"
   - `capture_env(track: tuple[str, ...] | None = None) -> EnvLock`
   - `ABSENT: str = "absent"`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/test_env.py`:
 
@@ -286,12 +286,12 @@ def test_no_track_captures_everything():
     assert len(capture_env().packages) > len(capture_env(track=("pytest",)).packages)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_env.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'physrun.env'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/physrun/env.py`:
 
@@ -358,12 +358,12 @@ def capture_env(track: tuple[str, ...] | None = None) -> EnvLock:
     return EnvLock(python=platform.python_version(), packages=packages)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python -m pytest tests/test_env.py -q`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/physrun/env.py tests/test_env.py
@@ -389,7 +389,7 @@ git commit -m "feat: capture the environment as a stable hashable lock"
 **This is the load-bearing task.** If `run_id` is not pure, the cache never hits,
 "already ran this" is false, and nothing errors.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/test_spec_hash.py`:
 
@@ -513,12 +513,12 @@ def test_id_is_stable_under_a_different_hash_seed(tmp_path):
     json.dumps(sorted(ids))  # keeps the import honest
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_spec_hash.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'physrun.spec'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/physrun/spec.py`:
 
@@ -591,12 +591,12 @@ def run_id(spec: RunSpec) -> str:
     return hashlib.sha256(blob).hexdigest()
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python -m pytest tests/test_spec_hash.py -q`
 Expected: PASS, 11 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/physrun/spec.py tests/test_spec_hash.py
@@ -625,7 +625,7 @@ git commit -m "feat: RunSpec and a pure content-addressed run_id"
     `put_artifact(data: bytes) -> str`, `get_artifact(digest: str) -> bytes`,
     `gc(*, keep: set[str]) -> int`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/test_store.py`:
 
@@ -743,12 +743,12 @@ def test_store_survives_reopening(tmp_path):
     assert Store(root).get(run.run_id) is not None
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_store.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'physrun.store'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/physrun/store.py`:
 
@@ -941,12 +941,12 @@ class Store:
         return len(doomed)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python -m pytest tests/test_store.py -q`
 Expected: PASS, 10 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/physrun/store.py tests/test_store.py
@@ -974,7 +974,7 @@ git commit -m "feat: SQLite run store with content-addressed artifacts"
 JSON in `$PHYSRUN_PARAMS`, writes its results as JSON to the path in
 `$PHYSRUN_RESULT`, and may write files into the directory `$PHYSRUN_ARTIFACTS`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/test_executor.py`:
 
@@ -1088,12 +1088,12 @@ def test_the_run_is_retrievable_from_the_store_afterwards(executor):
     assert executor.store.get(run.run_id) is not None
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_executor.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'physrun.executor'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/physrun/executor.py`:
 
@@ -1212,12 +1212,12 @@ class Executor:
         )
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python -m pytest tests/test_executor.py -q`
 Expected: PASS, 8 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/physrun/executor.py tests/test_executor.py
@@ -1238,7 +1238,7 @@ git commit -m "feat: executor with content-addressed caching"
 - Produces: `main(argv: list[str] | None = None) -> int`, and
   `parse_param(text: str) -> tuple[str, object]`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/test_cli.py`:
 
@@ -1309,12 +1309,12 @@ def test_show_of_an_unknown_id_fails_loudly(tmp_path, capsys):
     assert "not found" in capsys.readouterr().err.lower()
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_cli.py -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'physrun.cli'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/physrun/cli.py`:
 
@@ -1452,12 +1452,12 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python -m pytest tests/test_cli.py -q`
 Expected: PASS, 6 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/physrun/cli.py tests/test_cli.py
@@ -1480,7 +1480,7 @@ confident nonsense. This is the only one that checks the numbers mean something.
 The 1D transverse-field Ising model at the critical point has a closed-form
 single-particle spectrum, so the answer is known independently of the code.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/test_ising.py`:
 
@@ -1558,7 +1558,7 @@ def test_re_running_the_sweep_is_free(tmp_path):
     assert all(a.created_at == b.created_at for a, b in zip(first, second))
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run: `python -m pytest tests/test_ising.py -q`
 Expected: **PASS**, 3 tests.
@@ -1568,14 +1568,14 @@ code, only a check on code Tasks 2-5 already built. If it fails, the failure is
 in the pipeline, not in this file — **do not edit the expected values to make it
 pass.** The analytic form is the ground truth and the code is what is on trial.
 
-- [ ] **Step 3: Run the whole check set**
+- [x] **Step 3: Run the whole check set**
 
 Run: `python tools/run_checks.py --tier fast --require-test`
 Expected: `PASS: N check(s) green (lint, test, typecheck)`
 
 Fix any ruff or mypy finding rather than suppressing it.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/test_ising.py
