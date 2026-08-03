@@ -116,11 +116,74 @@ def is_instruction_doc(path: Path) -> bool:
             and "state" not in r.split("/"))
 
 
+# --- portability -------------------------------------------------------------
+#
+# A skill is copied verbatim into another repository, so anything it asserts
+# about THIS one becomes a false statement there. The lesson in "a hook that
+# blocked a turn until a skill ran deadlocked and was deleted" is generic and
+# worth keeping; "deleted on 2026-08-02" is provenance, and provenance does not
+# travel. The same applies to counts and to sibling repo names.
+#
+# Opt-in, and deliberately not part of `layer` or `repo`: this repo carries
+# years of hard-won specifics on purpose, and a check that turns the per-turn
+# gate red on all of them gets switched off within a day. Run it before
+# installing the layer somewhere, which is the only moment it matters.
+
+DATE_RE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
+THIS_REPO_RE = re.compile(r"\b(?:this|in this|here in this) repo(?:'s)?\b", re.I)
+# Names of repositories this layer has lived in. A skill naming one is asserting
+# something about a tree the reader may not have.
+SIBLING_RE = re.compile(r"\b(?:physrun|UAIOS)\b")
+
+
+def check_portability() -> int:
+    """Is the layer safe to copy into a repository that is not this one?"""
+    targets = sorted(list(SKILLS.rglob("*.md")) + list(AGENTS.rglob("*.md"))
+                     + list((CLAUDE / "commands").rglob("*.md")))
+    counts = {"dated claim": 0, "names this repo": 0, "names a sibling repo": 0}
+
+    for path in targets:
+        body = read_text(path)
+        if body is None:
+            continue
+        for lineno, line in enumerate(body.splitlines(), 1):
+            for label, rx in (("dated claim", DATE_RE),
+                              ("names this repo", THIS_REPO_RE),
+                              ("names a sibling repo", SIBLING_RE)):
+                m = rx.search(line)
+                if m:
+                    counts[label] += 1
+                    fail(f"{rel(path)}:{lineno} {label} ({m.group(0)!r}) — "
+                         f"false in any other repository; keep the lesson, "
+                         f"drop the provenance")
+
+    print(f"scope=portability: read {len(targets)} skill, agent and command "
+          f"files\n")
+    if failures:
+        for f in failures[:40]:
+            print(f"FAIL: {f}")
+        if len(failures) > 40:
+            print(f"... and {len(failures) - 40} more")
+        print("\n" + ", ".join(f"{v} {k}" for k, v in counts.items() if v))
+        print(f"{len(failures)} finding(s). The layer will still FUNCTION "
+              f"elsewhere — every one of these is a false statement, not a "
+              f"broken mechanism.")
+        return 1
+    print("OK: nothing in the layer asserts anything about a specific repository")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--scope", choices=("layer", "repo"), default="layer",
-                    help="layer = .claude/ only (default); repo = everything tracked")
+    ap.add_argument("--scope", choices=("layer", "repo", "portability"),
+                    default="layer",
+                    help="layer = .claude/ only (default); repo = everything "
+                         "tracked; portability = is the layer safe to install "
+                         "into another repository")
     args = ap.parse_args()
+
+    if args.scope == "portability":
+        return check_portability()
 
     files = tracked(None if args.scope == "repo" else ".claude")
     scannable = [p for p in files if p.name not in SELF_REFERENTIAL]

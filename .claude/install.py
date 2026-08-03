@@ -61,6 +61,17 @@ GITIGNORE_BLOCK = """
 # Hook state: per-turn bookkeeping and the diagnose-loop scratch report,
 # rewritten constantly and meaningless outside the session that wrote it.
 .claude/hooks/state/
+
+# Hook logs. `_hooklib.write_log` appends here and the entries capture tool
+# payloads verbatim, so they contain whatever the session contained.
+#
+# This line is why the block exists. The source repo has ignored these since
+# day one, so nothing here ever noticed -- but the installer only wrote the
+# state/ line, and a fresh target committed `artifact-create.log` on its first
+# `git add -A`. The layer's own suite then went red on the layer's own log,
+# reporting a credential pattern and two `TBD` markers inside the payloads.
+# Found by installing into a virgin repo and using it, not by reading.
+.claude/hooks/*.log
 """
 
 RUFF_BLOCK = '''
@@ -196,14 +207,30 @@ def merge_settings(target: Path, r: Report) -> None:
 
 
 def ensure_gitignore(target: Path, r: Report) -> None:
+    """Add whichever ignore lines are missing, not the block as a unit.
+
+    Checking for one line and skipping the whole block was a real bug: a repo
+    installed before `.claude/hooks/*.log` was added already had the state/
+    line, so it never received the new one and kept committing its hook logs.
+    An installer that is only correct on a virgin target is not an installer.
+    """
     path = target / ".gitignore"
     text = path.read_text(encoding="utf-8") if path.exists() else ""
-    if ".claude/hooks/state/" in text:
-        r.did("skip .gitignore -- already ignores the hook state")
+    have = {ln.strip() for ln in text.splitlines()}
+    wanted = [ln for ln in GITIGNORE_BLOCK.splitlines()
+              if ln.strip() and not ln.lstrip().startswith("#")]
+    missing = [ln for ln in wanted if ln.strip() not in have]
+
+    if not missing:
+        r.did("skip .gitignore -- every hook path is already ignored")
         return
     if not r.dry:
-        path.write_text(text + GITIGNORE_BLOCK, encoding="utf-8")
-    r.did("append .claude/hooks/state/ to .gitignore")
+        # Re-append the whole commented block on a first install, but only the
+        # bare missing lines on a top-up, so the reasons are not duplicated.
+        addition = (GITIGNORE_BLOCK if len(missing) == len(wanted)
+                    else "\n" + "\n".join(missing) + "\n")
+        path.write_text(text + addition, encoding="utf-8")
+    r.did(f"add {len(missing)} ignore line(s) to .gitignore: {', '.join(missing)}")
 
 
 def ensure_ruff(target: Path, r: Report) -> None:
