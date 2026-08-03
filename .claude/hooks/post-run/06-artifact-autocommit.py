@@ -102,6 +102,38 @@ NEVER_AUTO = (".claude/settings.json", ".claude/settings.local.json")
 # any invocation carrying this flag is by definition running underneath one.
 REENTRY_FLAG = "UAIOS_AUTOCOMMIT_RUNNING"
 
+# --- the diagnose loop --------------------------------------------------------
+#
+# When the checks are red this hook already refuses and says why. That is where
+# the information stops, and the next turn starts from prose in a scrollback.
+#
+# So: write the failing output to a file, count consecutive failures of the SAME
+# failure, and name the skill whose stated trigger this is. A hook cannot invoke
+# a skill -- confirmed in the official docs, see
+# docs/research/2026-08-02-automating-the-git-chain.md -- so this is a signal,
+# never a trigger.
+#
+# It deliberately does NOT block. `post-run/05-docs-gate.py` blocked a turn until
+# a skill ran, deadlocked, and was deleted on 2026-08-02. Write, suggest, get out
+# of the way.
+#
+# MAX_ATTEMPTS exists because a loop without a termination criterion does not
+# terminate -- `executing-plans` states the same rule for its own loop mode.
+# Three attempts at the SAME failure and it stops suggesting and escalates,
+# because a fix that has not converged in three passes is not converging.
+# Names, not paths. Derived from REPO_ROOT at CALL time, never baked at import:
+# the suites override `REPO_ROOT` to a temp repo, and a module-level absolute
+# path would keep pointing at the real one -- so a test run would quietly write
+# its failure report into the developer's actual repository. Caught 2026-08-03
+# by a ValueError that was the lesser symptom.
+FAILURE_STATE_NAME = "check-failures.json"
+FAILURE_REPORT_NAME = "check-failure-report.md"
+MAX_ATTEMPTS = 3
+
+
+def _state_dir() -> Path:
+    return REPO_ROOT / ".claude" / "hooks" / "state"
+
 
 def git(*args):
     """Run git and return (rc, stdout, stderr). Never raises."""
@@ -133,6 +165,66 @@ def run_suites():
     in a web app and reported "nothing to verify" on every commit.
     """
     return run_checks(REPO_ROOT, extra_env={REENTRY_FLAG: "1"})
+
+
+def _failure_signature(detail: str) -> str:
+    """A stable key for "the same failure again".
+
+    Digits are stripped before hashing: a suite reporting `3 failed` then
+    `2 failed` is the same failure getting closer, not a new one, and counting
+    them separately would reset the attempt budget on every partial fix.
+    """
+    import hashlib
+    import re as _re
+    normalised = _re.sub(r"\d+", "#", detail)
+    return hashlib.sha256(normalised.encode("utf-8", "replace")).hexdigest()[:12]
+
+
+def _load_failures() -> dict:
+    try:
+        return json.loads(
+            (_state_dir() / FAILURE_STATE_NAME).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _record_failure(detail: str, paths) -> int:
+    """Write the report, bump the counter, return the attempt number."""
+    signature = _failure_signature(detail)
+    state = _load_failures()
+    # Only the current signature is kept: a different failure means the previous
+    # one was resolved or replaced, and its count is no longer meaningful.
+    attempt = (state.get(signature, 0) if state.get("signature") == signature
+               else 0) + 1
+    try:
+        _state_dir().mkdir(parents=True, exist_ok=True)
+        (_state_dir() / FAILURE_STATE_NAME).write_text(
+            json.dumps({"signature": signature, signature: attempt}),
+            encoding="utf-8")
+        (_state_dir() / FAILURE_REPORT_NAME).write_text(
+            f"# Check failure — attempt {attempt} of {MAX_ATTEMPTS}\n\n"
+            f"Signature `{signature}` (digits normalised, so a partial fix does\n"
+            f"not reset the attempt budget).\n\n"
+            f"## What failed\n\n```\n{detail}\n```\n\n"
+            f"## Uncommitted at the time\n\n"
+            + "".join(f"- {p}\n" for p in paths[:40])
+            + "\n## Next\n\n"
+            "`systematic-debugging` owns this -- a failing check is its stated\n"
+            "trigger. It writes `ISSUES.md` if the cause is worth remembering.\n"
+            "This file is scratch, overwritten each failure, and is not a\n"
+            "knowledge doc.\n",
+            encoding="utf-8")
+    except OSError:
+        pass
+    return attempt
+
+
+def _clear_failures() -> None:
+    for name in (FAILURE_STATE_NAME, FAILURE_REPORT_NAME):
+        try:
+            (_state_dir() / name).unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def build_message(paths, suite_detail):
@@ -220,9 +312,22 @@ def main():
     # --- gate 4: the project's own checks
     ok, suite_detail, ran_test = run_suites()
     if not ok:
-        speak(f"Auto-commit skipped: checks are red ({suite_detail}). "
-              f"{len(paths)} file(s) left uncommitted -- a red checkpoint is "
-              f"worse than none. `03-checkpoint.py` has already snapshotted them.")
+        attempt = _record_failure(suite_detail, paths)
+        report = f".claude/hooks/state/{FAILURE_REPORT_NAME}"
+        if attempt >= MAX_ATTEMPTS:
+            speak(f"Checks red {attempt} times running on the SAME failure "
+                  f"({suite_detail}). Not suggesting another pass: a fix that "
+                  f"has not converged in {MAX_ATTEMPTS} attempts is not "
+                  f"converging, and looping further just burns turns. This needs "
+                  f"a human decision. Full report: {report}. "
+                  f"{len(paths)} file(s) uncommitted.")
+        else:
+            speak(f"Auto-commit skipped: checks are red ({suite_detail}). "
+                  f"Attempt {attempt} of {MAX_ATTEMPTS} on this failure. "
+                  f"Written to {report} -- **invoke `systematic-debugging`**, "
+                  f"whose stated trigger this is; it root-causes and writes "
+                  f"`ISSUES.md`. {len(paths)} file(s) left uncommitted; "
+                  f"`03-checkpoint.py` has already snapshotted them.")
         return
 
     # --- gate 4b: code with nothing that could have failed
@@ -289,10 +394,23 @@ def main():
               f"{len(paths)} file(s) still uncommitted and {index_state}.")
         return
 
+    # Green closes the loop FORWARD, not merely quiet. If a diagnose loop was
+    # running, say it ended and name the stage the workflow goes to next --
+    # otherwise "no longer failing" gets mistaken for "finished", which is the
+    # gap between stage 5 and stage 6 that `verifying-work` exists to hold.
+    was_looping = bool(_load_failures())
+    _clear_failures()
+
     rc_sha, sha, _ = git("rev-parse", "--short", "HEAD")
+    resolved = (
+        "The diagnose loop is closed -- checks went from red to green. "
+        if was_looping else ""
+    )
     speak(f"Checkpoint {sha if rc_sha == 0 else 'HEAD'}: {len(paths)} file(s), "
-          f"{suite_detail}. Local only -- nothing pushed. Review happens at the "
-          f"PR, over the whole branch.")
+          f"{suite_detail}. {resolved}Local only -- nothing pushed. "
+          f"Green is stage 5's mechanical half only; `verifying-work` still owns "
+          f"whether the goal was met, then `code-review` over the branch, then "
+          f"`delivering`. See .claude/workflow.md.")
 
 
 if __name__ == "__main__":
