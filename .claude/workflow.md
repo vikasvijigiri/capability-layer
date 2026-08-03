@@ -131,9 +131,9 @@ criterion before the first pass.
                                              5 verifying-work
                                                     │
                                                     ▼
-                                                6 no-slop ◀──── layer drift
-                                                    │            (07-layer-drift.py,
-                                      [human yes]   │             --scope layer)
+                                                6 no-slop
+                                                    │
+                                      [human yes]   │
                                                     ▼
                                               7 code-review
                                                     │
@@ -175,7 +175,7 @@ intentions:
 | Never deliver an unreviewed change | `code-review` over the branch at the push/PR boundary. Commits below that are unreviewed `wip:` checkpoints by design |
 | Never auto-commit a secret, a red suite, or onto a protected branch | `post-run/06-artifact-autocommit.py`, enforced inline — its commits never reach `PreToolUse` |
 | Never commit secrets | `pre-commit/01-secret-scan.py` |
-| Never leave a unit of work unrecorded | `knowledge-manager`, named by `pre-compact/01-knowledge-staleness.py` before context is compacted |
+| Never leave a unit of work unrecorded | `knowledge-manager`, invoked deliberately — no hook prompts for it |
 | Never put AI attribution in git history | `_hooklib.AI_ATTRIBUTION_PATTERNS`, checked inline by the auto-commit |
 
 ## Where state lives between stages

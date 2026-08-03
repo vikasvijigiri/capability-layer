@@ -209,10 +209,8 @@ def _record_failure(detail: str, paths) -> int:
             f"## Uncommitted at the time\n\n"
             + "".join(f"- {p}\n" for p in paths[:40])
             + "\n## Next\n\n"
-            "`systematic-debugging` owns this -- a failing check is its stated\n"
-            "trigger. It writes `ISSUES.md` if the cause is worth remembering.\n"
             "This file is scratch, overwritten each failure, and is not a\n"
-            "knowledge doc.\n",
+            "knowledge doc. Root-cause the failure before changing anything.\n",
             encoding="utf-8")
     except OSError:
         pass
@@ -324,9 +322,7 @@ def main():
         else:
             speak(f"Auto-commit skipped: checks are red ({suite_detail}). "
                   f"Attempt {attempt} of {MAX_ATTEMPTS} on this failure. "
-                  f"Written to {report} -- **invoke `systematic-debugging`**, "
-                  f"whose stated trigger this is; it root-causes and writes "
-                  f"`ISSUES.md`. {len(paths)} file(s) left uncommitted; "
+                  f"Written to {report}. {len(paths)} file(s) left uncommitted; "
                   f"`03-checkpoint.py` has already snapshotted them.")
         return
 
@@ -372,9 +368,36 @@ def main():
 
     # A pathspec commit alone cannot commit an untracked file, and a new file is
     # exactly what a turn most often produces. So stage first, still by explicit
-    # pathspec: `git add -- <paths>` can only ever touch the set computed above,
-    # so the sweep this hook exists to avoid remains impossible.
-    rc, _, stderr = git("add", "--", *paths)
+    # pathspec: the pathspec can only ever be the set computed above, so the
+    # sweep this hook exists to avoid remains impossible.
+    #
+    # DELETIONS are the case this got wrong, and the first turn that deleted a
+    # file aborted the whole commit: `git add -- <path>` fails with "pathspec did
+    # not match any files" when the path is in neither the worktree nor the index,
+    # which is exactly the state `git rm` leaves. Five deletions in one turn left
+    # a whole session uncommitted.
+    #
+    # `-A` alone does not fix it either -- it still cannot match a pathspec that
+    # resolves to nothing. The distinction that matters is WHY the path is absent:
+    #
+    #   `D ` staged deletion   -- already in the index; adding it is an error
+    #   ` D` worktree deletion -- must be staged, and needs `-A` to do it
+    #   anything else          -- exists on disk, a plain add works
+    #
+    # The pathspec is still the computed set either way, so the whole-tree sweep
+    # this hook exists to avoid remains impossible.
+    rc_st, st_out, _ = git("status", "--porcelain", "--", *paths)
+    staged_gone = set()
+    if rc_st == 0:
+        for line in st_out.splitlines():
+            if len(line) > 3 and line[0] == "D" and line[1] == " ":
+                staged_gone.add(line[3:].strip().strip('"'))
+    to_add = [p for p in paths if p not in staged_gone]
+    if to_add:
+        rc, _, stderr = git("add", "-A", "--", *to_add)
+    else:
+        # Every path is already staged (a pure-deletion turn). Nothing to add.
+        rc, stderr = 0, ""
     if rc != 0:
         msg_file.unlink(missing_ok=True)
         speak(f"Auto-commit could not stage its own paths ({stderr[:200]}); "
@@ -408,9 +431,7 @@ def main():
     )
     speak(f"Checkpoint {sha if rc_sha == 0 else 'HEAD'}: {len(paths)} file(s), "
           f"{suite_detail}. {resolved}Local only -- nothing pushed. "
-          f"Green is stage 5's mechanical half only; `verifying-work` still owns "
-          f"whether the goal was met, then `code-review` over the branch, then "
-          f"`delivering`. See .claude/workflow.md.")
+          f"Green is the mechanical half only -- it does not say the goal was met.")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 {
-  "_note": "Domain events and their subscriber scripts. Lifecycle wiring lives in .claude/settings.json; this file documents intent. Scripts read their payload via _hooklib.load_payload(), so both Claude Code (stdin) and tools/run_hook.py (HOOK_PAYLOAD) work. Pruned from 25 hooks across 13 events to 9 across 7 on 2026-08-02: a hook survives only if it DENIES something irreversible, ACTS, or is a one-line INFORM that costs nothing. See LOG.md 2026-08-02 21:10.",
+  "_note": "Domain events and their subscriber scripts. Lifecycle wiring lives in .claude/settings.json; this file documents intent. Scripts read their payload via _hooklib.load_payload(), so both Claude Code (stdin) and tools/run_hook.py work. Every hook here ACTS or DENIES. Hooks whose only output was the name of a skill were deleted on 2026-08-04: hooks and skills are independent, a hook cannot invoke a skill, and a skill name written into hook source is an unvalidated second copy of a routing decision. Skills trigger from their own `description:` frontmatter.",
   "events": {
     "session-start": {
       "description": "At session start; loads the knowledge docs into session context",
@@ -8,20 +8,12 @@
         ".claude/hooks/session-start/02-bootstrap-docs.py"
       ]
     },
-    "pre-run": {
-      "description": "Before work starts on a turn; suggests the process skill matching the request",
-      "claude_code_event": "UserPromptSubmit",
-      "subscribers": [
-        ".claude/hooks/pre-run/05-process-skill-router.py"
-      ]
-    },
     "post-run": {
-      "description": "After a turn completes; snapshots recovery state, commits the turn as a wip checkpoint if the artefact gates pass, then counts .claude/ drift and names the no-slop skill once it crosses a threshold",
+      "description": "After a turn completes; snapshots recovery state, then commits the turn as a wip checkpoint if the artefact gates pass",
       "claude_code_event": "Stop",
       "subscribers": [
         ".claude/hooks/post-run/03-checkpoint.py",
-        ".claude/hooks/post-run/06-artifact-autocommit.py",
-        ".claude/hooks/post-run/07-layer-drift.py"
+        ".claude/hooks/post-run/06-artifact-autocommit.py"
       ]
     },
     "pre-commit": {
@@ -51,20 +43,6 @@
       "claude_code_event": "PostToolUse (Edit, Write)",
       "subscribers": [
         ".claude/hooks/on-artifact-create/02-hook-self-test-nudge.py"
-      ]
-    },
-    "on-repo-create": {
-      "description": "After a tool call that could have created a directory; installs this layer into it if and only if it is a fresh git repo root outside this repo with no .claude/ yet. ACTS rather than reminds, and speaks its decision either way. Cannot see folders created outside a tool call -- Claude Code emits events for its own calls, not for the filesystem.",
-      "claude_code_event": "PostToolUse (Bash|PowerShell|Write)",
-      "subscribers": [
-        ".claude/hooks/on-repo-create/01-layer-import.py"
-      ]
-    },
-    "pre-compact": {
-      "description": "Before the context window is compacted; counts commits since the last knowledge-doc write and names knowledge-manager if the session is about to forget what it did. Speaks only, never blocks -- PreCompact supports decision:block and a refused compaction is a wedged session.",
-      "claude_code_event": "PreCompact",
-      "subscribers": [
-        ".claude/hooks/pre-compact/01-knowledge-staleness.py"
       ]
     },
     "global-session-start": {

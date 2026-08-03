@@ -1,6 +1,6 @@
 ---
 name: no-slop
-description: Use before shipping, to sweep the whole repo for slop and repair what the user approves — credentials, conflict markers, stray placeholders, hedged instructions, overlapping skill triggers, duplicate rules, god skills. Also on `.claude/` drift, named by `07-layer-drift.py`. Triggers include "clean up the repo", "no-slop check", "audit the capability layer", "is this clean enough to ship", "fix the slop". Do NOT use to review a diff (`code-review`) or to edit before the report is approved.
+description: Use before shipping, to sweep the whole repo for slop and repair what the user approves — credentials, conflict markers, stray placeholders, hedged instructions, overlapping skill triggers, duplicate rules, god skills. Triggers include "clean up the repo", "no-slop check", "audit the capability layer", "is this clean enough to ship", "fix the slop". Do NOT use to review a diff (`code-review`) or to edit before the report is approved.
 effort: high
 model: sonnet
 ---
@@ -25,18 +25,12 @@ Cap visible output at ~500 tokens. Findings with `file:line`, not a tour.
 | Scope | When | Command |
 |---|---|---|
 | **repo** | stage 6, before shipping — the full sweep | `python tools/test_no_slop.py --scope repo` |
-| **layer** | when `07-layer-drift.py` names this skill | `python tools/test_no_slop.py` |
+| **layer** | after adding or removing a skill, agent or hook | `python tools/test_no_slop.py` |
 
 The hook watches **volume of change**, which no check can see, because each of
 those turns passed. It fires on 8 changed `.claude/` files, or immediately when a
 skill, agent or hook is **added or deleted** — that is when trigger overlap
 appears, and no single edit can reveal it.
-
-**Clear the counter as your last step**, or the nudge repeats:
-
-```bash
-python .claude/hooks/post-run/07-layer-drift.py --swept
-```
 
 ## Two phases, and the gate between them is hard
 
@@ -125,8 +119,7 @@ Only what was approved, and only the local group.
    and `test_referenced_paths.py`.** All of them, because repairs here move
    counts and paths the other two own — that broke twice while writing this.
 3. Quote the result. Still red is `systematic-debugging`'s trigger, not a retry.
-4. Clear the drift counter with `--swept`.
-5. Report what changed, and what went to `task-brief` with the reason.
+4. Report what changed, and what went to `task-brief` with the reason.
 
 **You are editing the layer that is running.** An edited `SKILL.md` does not
 reload in this session, so do not verify by re-triggering it. An edited hook
@@ -161,7 +154,7 @@ was checked, never as a guarantee.
 | Fixing as you go | The report then describes a tree that no longer exists |
 | Treating a structural fix as a local one | Routing decides what fires; it ships unreviewed |
 | Skipping the re-run after repairs | Repairs move counts and paths two other suites assert |
-| Forgetting `--swept` | The drift nudge repeats every turn and starts being ignored |
+
 | Treating skill length as the god-skill signal | The longest skills here carry templates and are correct |
 
 ## Next step — you MUST take it
@@ -179,8 +172,8 @@ the sweep was clean — the reviewer needs to know it ran.
 - Preceded by `verifying-work`. Sweeping work that has not been verified spends
   a reader on a tree that may still change.
 - Terminal handoff: `code-review`, then `delivering`.
-- Also entered off-chain when `07-layer-drift.py` names it. That entry uses
-  `--scope layer` and returns to whatever was happening.
+- Also entered off-chain after a skill, agent or hook is added or removed. That
+  entry uses `--scope layer` and returns to whatever was happening.
 - Structural findings become their own task via `task-brief`. A sweep worth
   remembering goes to `LOG.md` via `knowledge-manager`.
 
@@ -189,4 +182,4 @@ the sweep was clean — the reviewer needs to know it ran.
 Every finding named a `file:line`, the script's output was quoted rather than
 re-derived, nothing was edited before the user approved it, structural findings
 went to `task-brief` instead of being applied, every suite named in phase 2 was
-re-run and quoted, and the drift counter was cleared.
+re-run and quoted, and structural findings were routed rather than applied.

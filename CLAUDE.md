@@ -51,18 +51,12 @@ adding a skill or wondering what comes next.
 | `systematic-debugging` | — entered on any failure | root cause + `ISSUES.md` entry |
 | `skill-authoring` | — entered to change this layer | a wired skill + a green `new_skill_check.py` |
 
-`pre-run/05-process-skill-router.py` falls back to **prompt shape** when no
-keyword matches: an imperative, or a framing plus a verb, names `task-brief`.
-"Build an AI platform that assists scientists" matched nothing and the chain
-never started. A question about existing state is left alone. The corpus in
-`tools/test_process_router.py` is real prompts, not invented ones.
-
-**The fallback is not a safety net for missing keywords.** `TASK_VERBS` holds
-only verbs that ask for a *change*; `check`, `audit`, `review` and `verify` are
-deliberately absent, because an audit routed to `task-brief` is routed to the
-wrong stage. "Check if the .claude folder is clean" therefore matched nothing at
-all until 2026-08-03 — the repair belongs in the owning skill's `Keywords:`
-line, never in `TASK_VERBS`.
+**Skills trigger from their own `description:` frontmatter, and nothing else.**
+A `UserPromptSubmit` hook and a `routing/process-skills.md` keyword table were
+deleted on 2026-08-04. A hook whose only output is the name of a skill couples two
+independent things and duplicates a routing decision nothing validated -- pointing
+one at a fabricated skill was tried, and every suite passed. The cost of removing
+it is real: there is no second signal when a description misses a phrasing.
 
 ### Subagents
 
@@ -75,18 +69,16 @@ subagents. `Explore.md` is different: it overrides the built-in to pin haiku.
 each has a "do NOT use" clause, a `tools:` allowlist, a pinned model, and a
 dispatcher that names it — and that it names its dispatcher back.
 
-Every skill **must** also have a `## <name>` entry in
-`.claude/routing/process-skills.md`; the skill listing is truncated against a
-token budget, so that file is the only routing signal that always survives.
-`tools/test_process_router.py` fails the build.
+`tools/test_process_router.py` asserts the skill and agent layer resolves against
+itself: frontmatter parses, names match directories, every skill named in prose
+exists, and each chain skill states its successor imperatively.
 
 ---
 
 ## Model and effort budget
 
 Every skill declared `model: opus` + `effort: high` until 2026-08-02 — a default
-nobody revisited, and `pre-run/05-process-skill-router.py` suggests a skill on
-most turns, so it applied constantly. The policy now:
+nobody revisited, and it applied on every turn. The policy now:
 
 `opus` for planning and diagnosis, `sonnet` for coding and procedure, `haiku`
 for pure extraction — the per-skill values are in each `SKILL.md` frontmatter,
@@ -99,9 +91,9 @@ doc sweeps and bulk edits, wrong for debugging), and **request shape**, which is
 the biggest and is the user's. Deliberation goes on resolving ambiguity, not
 solving problems; one goal per request cuts it directly.
 
-Descriptions are injected **every turn** (~1,100 tokens for thirteen) while
-`.claude/routing/process-skills.md` is read by a hook and costs nothing — so
-trigger breadth belongs in the routing file and descriptions stay ~380 chars.
+Descriptions are injected **every turn** (~1,200 tokens for thirteen) and are the
+only trigger surface, so breadth has to be paid for there — ~380 chars each, with
+a `Do NOT use` clause on all thirteen.
 `session-start/02-bootstrap-docs.py` is budgeted for the same reason: it injected
 26,990 chars before anyone typed, and now clips to ~5,500.
 
@@ -143,8 +135,7 @@ Run `/verify` before declaring any work done.
 | `.claude/skills/` | the thirteen skills above, one directory each |
 | `.claude/agents/` | five agents: the fan-out set dispatched by skills, plus `Explore` overriding the built-in onto haiku |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
-| `.claude/routing/process-skills.md` | keyword → skill-name routing (mandatory per skill) |
-| `.claude/hooks/<event>/` | thirteen hooks over ten events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `pre-compact`, `on-artifact-create`, `on-repo-create`, `global-session-start` |
+| `.claude/hooks/<event>/` | nine hooks over seven events, every one of which acts or denies; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create`, `global-session-start` |
 | `.claude/settings.json` | what actually fires — every hook but `global-session-start/`, which is wired in `~/.claude/settings.json`; `hooks_registry.json` only documents intent |
 | `.claude/commands/` | the six slash commands above |
 | `.claude/install.py` | ports the layer into another repo; `/install-layer` wraps it |
@@ -178,11 +169,11 @@ them, so they are code, not commentary:
 `TASK.md` (active task) · `PLAN.md` · `HANDOFF.md` (current work, pending, next)
 · `LOG.md` (history) · `ISSUES.md` · `MEMORY.md`
 
-**One thing watches them: `pre-compact/01-knowledge-staleness.py`.** It counts
-commits since the last write to `LOG.md`/`HANDOFF.md`/`ISSUES.md` and names
-`knowledge-manager` before the context is compacted — the boundary those files
-exist to survive. It speaks, never blocks (the Stop gate that blocked deadlocked
-and was deleted), and `06-artifact-autocommit.py` never checks they were written.
+**Nothing watches them.** The hook that did was deleted on 2026-08-04 with the
+other skill-naming hooks: a watcher whose only output is a skill name is the
+coupling this layer no longer has. `06-artifact-autocommit.py` commits these files
+along with everything else and never checks they were written, so invoking
+`knowledge-manager` is a habit, not a prompted one.
 
 ## The commit loop
 

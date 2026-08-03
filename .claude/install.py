@@ -54,7 +54,7 @@ SOURCE_REPO = SOURCE.parent
 # <target>`. Copying the command without the script gave every target a slash
 # command that could not run -- and a layer that cannot propagate itself is not
 # portable, it is just copied once.
-LAYER = ["skills", "agents", "routing", "commands", "hooks", "workflow.md",
+LAYER = ["skills", "agents", "commands", "hooks", "workflow.md",
          "install.py"]
 
 # The layer's own tooling. Lives in tools/ rather than .claude/ because

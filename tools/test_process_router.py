@@ -1,32 +1,26 @@
 #!/usr/bin/env python3
-"""Tests for skill routing: matching, fail-open, and heading validity.
+"""Tests that the skill and agent layer resolves against itself.
 
-`.claude/routing/process-skills.md` names skills directly, which makes a wrong
-heading a lie the router repeats every turn -- it would tell the model to invoke
-a skill that does not exist. That is asserted here rather than left to review.
+Skills trigger from their own `description:` frontmatter -- there is no keyword
+router. The prompt router and `routing/process-skills.md` were deleted on
+2026-08-04: a hook whose only output is the name of a skill couples two
+independent things and duplicates a routing decision nothing validated. The
+matching, fail-open and keyword assertions went with it.
 
-The capability router and its nine-domain `capabilities.md` were deleted on
-2026-08-01 along with the 85 skills they routed to; the overlap assertions that
-used to live here went with them, since there is no longer a second router to
-overlap with.
+What remains is the part that still has teeth: frontmatter parses and yields a
+description, every skill named in prose resolves, the chain's successors are
+stated imperatively, workflow.md agrees with itself, and the agents declare their
+bounds.
 
 Run: python tools/test_process_router.py
 """
 from __future__ import annotations
 
-import importlib.util
-import io
-import json
-import os
 import re
-import subprocess
 import sys
-from contextlib import redirect_stdout
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-HOOK = ROOT / ".claude" / "hooks" / "pre-run" / "05-process-skill-router.py"
-ROUTING = ROOT / ".claude" / "routing" / "process-skills.md"
 SKILLS = ROOT / ".claude" / "skills"
 
 failures: list[str] = []
@@ -40,113 +34,9 @@ def check(name: str, ok: bool, detail: str = "") -> None:
         failures.append(name)
 
 
-def run_hook(prompt: str) -> str:
-    """Injected additionalContext for a prompt, or '' when the hook stays silent."""
-    p = subprocess.run(
-        [sys.executable, str(HOOK)],
-        input=json.dumps({"prompt": prompt}),
-        capture_output=True, text=True, encoding="utf-8",
-    )
-    if p.returncode != 0:
-        return f"<hook exited {p.returncode}: {p.stderr.strip()}>"
-    out = p.stdout.strip()
-    if not out:
-        return ""
-    return json.loads(out)["hookSpecificOutput"]["additionalContext"]
 
 
-def load_module(path: Path, name: str):
-    spec = importlib.util.spec_from_file_location(name, path)
-    # Both asserts are real, not type-checker appeasement: a mistyped path makes
-    # spec_from_file_location return None, and the failure surfaces three lines
-    # later as `NoneType has no attribute loader` -- which reads like a bug in
-    # the module under test rather than a wrong path in this file.
-    assert spec is not None, f"no import spec for {path}"
-    assert spec.loader is not None, f"no loader for {path}"
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[name] = mod
-    spec.loader.exec_module(mod)
-    return mod
 
-
-# --- 1. matching behaviour -------------------------------------------------
-
-for prompt, expected in [
-    # The prompt this hook exists because of: it used to match the `research`
-    # capability on "papers", and nothing named `brainstormer`.
-    ("Lets brainstorm about collecting pioneering papers in a physics field",
-     "brainstormer"),
-    ("any ideas for how to structure this?", "brainstormer"),
-    ("what are our options here", "brainstormer"),
-    ("write the implementation plan for this spec", "writing-plans"),
-    ("turn the spec into tasks", "writing-plans"),
-    ("break this into bite-sized tasks", "writing-plans"),
-    # Stage 8 arrived 2026-08-02. This prompt was a *negative* control until
-    # then -- it was the plausible ops phrase that correctly matched nothing,
-    # because no skill owned the act. Now one does, so it is a positive.
-    ("deploy this to production", "releasing"),
-    ("roll it back, the smoke check is red", "releasing"),
-]:
-    ctx = run_hook(prompt)
-    check(f"matches {expected!r} for {prompt[:40]!r}", f"`{expected}`" in ctx,
-          f"got: {ctx[:160]!r}")
-
-# Word-boundary matching: substrings must not fire. This is the exact bug class
-# that regressed in the deleted hook 02 -- `retro` inside "retrograde".
-for prompt in [
-    "the retrograde motion of mercury",
-    "hello there",
-    # `deploy` inside `redeployment`, same bug class as `retro`/`retrograde`.
-    "the redeployment paperwork is filed",
-]:
-    check(f"stays silent for {prompt!r}", run_hook(prompt) == "",
-          f"got: {run_hook(prompt)[:120]!r}")
-
-# Plural tolerance on the final word.
-check("plural tolerance ('bounce ideas' matches as written)",
-      "`brainstormer`" in run_hook("lets bounce ideas around"))
-
-# The injected block is a recurring per-turn cost, so its size is asserted, not
-# left to drift. A one-skill match must stay under 40 tokens (~160 chars).
-_block = run_hook("lets brainstorm this")
-check("injected block stays small", len(_block) < 160,
-      f"{len(_block)} chars (~{len(_block)//4} tokens)")
-
-# --- 2. fail-open ----------------------------------------------------------
-
-backup = ROUTING.read_text(encoding="utf-8")
-try:
-    ROUTING.unlink()
-    check("fails open when routing file is missing",
-          run_hook("lets brainstorm this") == "")
-finally:
-    ROUTING.write_text(backup, encoding="utf-8")
-
-# Malformed input must not crash the turn.
-p = subprocess.run([sys.executable, str(HOOK)], input="not json at all",
-                   capture_output=True, text=True, encoding="utf-8")
-check("fails open on malformed payload", p.returncode == 0,
-      f"exit {p.returncode}: {p.stderr.strip()[:120]}")
-
-# --- 3. every heading names a real skill, and every skill is routed --------
-
-router = load_module(HOOK, "process_skill_router")
-entries = router.load_process_skills()
-check("routing file parses to at least one entry", len(entries) >= 1,
-      f"got {len(entries)}")
-
-skill_dirs = {p.name for p in SKILLS.iterdir() if p.is_dir()}
-for skill, words in entries:
-    check(f"{skill} is a real skill directory", skill in skill_dirs)
-    check(f"{skill} has keywords", bool(words))
-
-# The inverse direction. With the capability router gone this file is the only
-# routing signal there is, so an unrouted skill is invisible on any turn its
-# description is truncated out of the listing. That used to be a NOTE tolerated
-# across 86 skills; at this size there is no excuse for it.
-unrouted = sorted(skill_dirs - {s for s, _ in entries})
-check("every skill has a routing entry", not unrouted,
-      f"unrouted: {', '.join(unrouted)}")
 
 # --- 4. frontmatter actually yields a description --------------------------
 #
@@ -220,8 +110,8 @@ resolvable = skill_names | agent_files
 # no .claude/skills/ directory -- naming one is correct, not a dead reference.
 NOT_SKILLS = {
     # hook event directories
-    "pre-commit", "pre-run", "post-run", "pre-edit", "pre-deploy",
-    "session-start", "post-tool", "on-error",
+    "pre-commit", "post-run", "pre-edit", "pre-deploy", "session-start",
+    "pre-compact", "on-artifact-create", "global-session-start",
     # slash commands
     "skills-doctor",
     # Claude Code agent types
@@ -543,180 +433,9 @@ if AGENTS.exists():
               any(d in body for d in dispatchers),
               f"dispatched by {dispatchers} but names none of them")
 
-# --- routing keywords are unambiguous --------------------------------------
-#
-# A keyword claimed by two skills makes the router name both on the same turn,
-# which is worse than naming neither: the reader has to arbitrate, which is the
-# job the router was supposed to do.
-
-seen: dict[str, str] = {}
-collisions: list[str] = []
-for skill, words in entries:
-    for w in words:
-        if w in seen and seen[w] != skill:
-            collisions.append(f"{w!r} ({seen[w]} + {skill})")
-        seen[w] = skill
-check("no keyword is claimed by two skills", not collisions,
-      "; ".join(collisions))
-
-# A keyword that contains another skill's keyword fires both entries at once.
-contained = []
-for word, owner in seen.items():
-    for other, other_owner in seen.items():
-        if word != other and owner != other_owner and other in word:
-            contained.append(f"{word!r} ({owner}) contains {other!r} ({other_owner})")
-check("no keyword contains another skill's keyword", not contained,
-      "; ".join(contained[:4]))
-
-# Keywords must be lowercase: the hook lowercases the prompt but not the file,
-# so an uppercase keyword can never match anything.
-uppercase = [w for w, _ in seen.items() if w != w.lower()]
-check("every keyword is lowercase", not uppercase, ", ".join(uppercase[:5]))
-
-# --- the task-shape fallback -------------------------------------------------
-#
-# `task-brief` owns stage 1, but a keyword list can only name phrasings someone
-# thought of. "Build an AI platform that assists scientists" -- a real request
-# in this repo's history -- matched nothing at all, so the chain never started.
-#
-# The router falls back to SHAPE when no keyword matches. Every prompt below is
-# verbatim from a real session, which is the point: invented prompts get written
-# to match the regex that is about to read them.
-_router = load_module(
-    ROOT / ".claude/hooks/pre-run/05-process-skill-router.py", "shape_router")
-
-TASK_SHAPE_CASES = [
-    # (prompt, is this a request for work?)
-    ("Build an AI platform that can autonomously assist scientists", True),
-    ("create a hook/skill or command to import this .claude/ folder", True),
-    ("fix all the gaps, update .claude and claude.md", True),
-    ("add this skill in the work flow md file and at appropriate place", True),
-    ("can we have a hook, where if the time clicks 2:00AM the laptop sleeps", True),
-    ("I want to make this entire git flow autonomous except me at review", True),
-    ("implement all", True),
-    # The four the first version missed, verbatim. Every one is phrased as a
-    # REQUIREMENT or opens with filler -- neither of which the original
-    # imperative-or-framing rule could see.
-    ("no slop check skill file should be generic and not target this repo", True),
-    ("all the skills should be repo agnostic and work on any repo", True),
-    ("yes fix them. Also is our .claude folder ready to port?", True),
-    ("have that no-slop-check not only .claude, it should be repo level", True),
-    ("it should autotrigger and start working", True),
-    # Questions about existing state. Answering one is not building anything.
-    ("Are we ready and safe yet to transfer the ./claude folder to any repo?", False),
-    ("What about the physrun project? is that finished end to end?", False),
-    ("why is the auto-commit refusing?", False),
-    ("should we split this file?", False),
-    # Acknowledgements, not asks.
-    ("continue", False),
-    ("approved all", False),
-    ("yes", False),
-]
-
-for _prompt, _want in TASK_SHAPE_CASES:
-    _got = _router.looks_like_a_task(_prompt)
-    check(f"task-shape {'fires' if _want else 'stays quiet'}: {_prompt[:44]!r}",
-          _got == _want,
-          "missed a request for work" if _want else "fired on a question")
-
-
-# --- nested keywords must not inflate the ranking count ---------------------
-#
-# `main()` sorts skills by how many keywords matched, so a keyword contained in
-# another matched keyword for the same skill counted twice. 19 such pairs exist
-# across 11 of the 13 skills -- "use github" inside "use github and see how
-# people do it", "should be able to" inside "users should be able to". One
-# phrase in the prompt scored `research` at 3 for two concepts, and MAX_SKILLS
-# truncates on that number.
-
-_INFLATION_CASES = [
-    ("it would be nice if we could use github and see how people do it",
-     {"research": 1, "task-brief": 1}),
-    ("users should be able to export a report", {"task-brief": 1}),
-]
-for _prompt, _counts in _INFLATION_CASES:
-    for _skill, _words in _router.load_process_skills():
-        _hits = _router.hits_in(_prompt.lower(), _words)
-        if _skill in _counts:
-            check(f"`{_skill}` counts {_counts[_skill]} concept(s) in {_prompt[:32]!r}",
-                  len(_hits) == _counts[_skill], f"got {_hits}")
-
-# No matched keyword may be a substring of another matched keyword.
-for _prompt, _ in _INFLATION_CASES:
-    for _skill, _words in _router.load_process_skills():
-        _hits = _router.hits_in(_prompt.lower(), _words)
-        _nested = [(a, b) for a in _hits for b in _hits if a != b and a in b]
-        check(f"`{_skill}` returns no nested hits for {_prompt[:28]!r}",
-              not _nested, f"{_nested}")
-
-# --- what the hook actually INJECTS -----------------------------------------
-#
-# Everything above asserts `looks_like_a_task()`, a pure function. That is not
-# the routing decision -- `main()` is, and until 2026-08-03 it consulted shape
-# only when no keyword matched. So a prompt could be shaped like work, be
-# asserted as such right above, and still route somewhere else entirely.
-#
-# It was not hypothetical: two of the twelve task prompts in this very corpus
-# ("no slop check skill file should be generic…", "yes fix them. Also is our
-# .claude folder ready to port?") injected `no-slop` and never named
-# `task-brief`, with every check on this page green. A suite that cannot fail on
-# the bug it was written for is coverage in name only.
-
-def injected_for(prompt: str) -> str:
-    """Run the hook's main() in-process and return the context it injects."""
-    buf = io.StringIO()
-    old = os.environ.get("HOOK_PAYLOAD")
-    os.environ["HOOK_PAYLOAD"] = json.dumps({"prompt": prompt})
-    try:
-        with redirect_stdout(buf):
-            _router.main()
-    finally:
-        if old is None:
-            os.environ.pop("HOOK_PAYLOAD", None)
-        else:
-            os.environ["HOOK_PAYLOAD"] = old
-    out = buf.getvalue().strip()
-    if not out:
-        return ""
-    return json.loads(out)["hookSpecificOutput"]["additionalContext"]
-
-
-for _prompt, _want in TASK_SHAPE_CASES:
-    _ctx = injected_for(_prompt)
-    _named = f"`{_router.TASK_SHAPE_SKILL}`" in _ctx
-    check(f"injects task-brief: {_prompt[:44]!r}" if _want
-          else f"does not force task-brief: {_prompt[:44]!r}",
-          _named == _want,
-          "shape said work but the injected context never named it -- a keyword "
-          "match suppressed it" if _want else "named task-brief for a question")
-
-# A keyword match must not be LOST when the shape rule also fires. The fix adds
-# a line; replacing the matches would trade one silent misroute for another.
-COEXIST_CASES = [
-    ("Add a retry to the fetch call, the test fails without it",
-     "systematic-debugging"),
-    ("Add a healthcheck route so we can deploy this", "releasing"),
-    ("Add a rate limiter to the upload endpoint and review the diff after",
-     "code-review"),
-]
-for _prompt, _also in COEXIST_CASES:
-    _ctx = injected_for(_prompt)
-    check(f"keeps `{_also}` alongside task-brief: {_prompt[:34]!r}",
-          f"`{_also}`" in _ctx and f"`{_router.TASK_SHAPE_SKILL}`" in _ctx,
-          f"got: {_ctx.splitlines()[1:] or 'nothing'}")
-
-# Genuine non-task prompts that DO match a keyword must stay single-skill.
-for _prompt, _only in [("review the diff on this branch", "code-review"),
-                       ("why is this failing on windows only",
-                        "systematic-debugging"),
-                       ("deploy this to staging", "releasing")]:
-    _ctx = injected_for(_prompt)
-    check(f"`{_only}` alone for: {_prompt[:34]!r}",
-          f"`{_only}`" in _ctx and f"`{_router.TASK_SHAPE_SKILL}`" not in _ctx,
-          f"task-brief leaked in: {_ctx.splitlines()[1:]}")
-
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")
     sys.exit(1)
-print(f"All process-router tests passed ({len(entries)} entries routed)")
+print(f"All skill-layer tests passed ({len(skill_names)} skills, "
+      f"{len(agent_files)} agents)")

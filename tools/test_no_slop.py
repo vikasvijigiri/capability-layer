@@ -9,7 +9,7 @@ Why two scopes
 The two cadences cost different amounts and answer different questions:
 
   layer   the `.claude/` capability layer only. Cheap. Runs as part of the
-          normal suite every turn, and `post-run/07-layer-drift.py` names the
+          normal suite every turn, and the drift counter named the
           `no-slop` skill once enough of the layer has changed to be worth a
           reader.
   repo    every tracked file. Runs once before shipping, as workflow stage 6.

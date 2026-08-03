@@ -28,16 +28,13 @@ fail the run.
 from __future__ import annotations
 
 import re
-import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / ".claude" / "skills"
-ROUTING = ROOT / ".claude" / "routing" / "process-skills.md"
 WORKFLOW = ROOT / ".claude" / "workflow.md"
 CLAUDE_MD = ROOT / "CLAUDE.md"
-ROUTER = ROOT / ".claude" / "hooks" / "pre-run" / "05-process-skill-router.py"
 
 # Same numbers the suite enforces, quoted from the same reasoning: 1024 chars is
 # the hard frontmatter spec limit, and ~380 chars of description is the per-turn
@@ -98,38 +95,6 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     return out, raw
 
 
-def routing_entries() -> dict[str, list[str]]:
-    """`## <skill>` -> its keywords. Mirrors the hook's own parser."""
-    if not ROUTING.is_file():
-        return {}
-    text = ROUTING.read_text(encoding="utf-8", errors="ignore")
-    out: dict[str, list[str]] = {}
-    for block in re.split(r"^## +", text, flags=re.M)[1:]:
-        lines = block.splitlines()
-        if not lines:
-            continue
-        skill = lines[0].strip().lower()
-        if not skill or len(skill.split()) != 1:
-            continue
-        m = re.search(r"^Keywords:\s*(.+)$", block, re.M)
-        if not m:
-            out[skill] = []
-            continue
-        out[skill] = [k.strip().lower() for k in m.group(1).split(",") if k.strip()]
-    return out
-
-
-def fire_router(prompt: str) -> str:
-    """Run the real hook, so this reports what the session would see."""
-    try:
-        p = subprocess.run(
-            [sys.executable, str(ROUTER)],
-            input=f'{{"prompt": {prompt!r}}}'.replace("'", '"'),
-            capture_output=True, text=True, timeout=30,
-        )
-        return p.stdout
-    except (OSError, subprocess.SubprocessError):
-        return ""
 
 
 def check(name: str) -> int:
@@ -169,7 +134,7 @@ def check(name: str) -> int:
            "without it the router names this skill and its neighbour together")
     r.note(f"description <= {SOFT_DESCRIPTION} chars (injected every turn)",
            len(desc) <= SOFT_DESCRIPTION, f"{len(desc)} chars",
-           "put trigger breadth in process-skills.md, which costs nothing")
+           "the description is the only trigger surface")
     r.need(f"description <= {HARD_DESCRIPTION} chars", len(desc) <= HARD_DESCRIPTION,
            f"{len(desc)} chars")
     r.need(f"frontmatter <= {HARD_FRONTMATTER} chars", len(raw) + 8 <= HARD_FRONTMATTER,
@@ -178,34 +143,6 @@ def check(name: str) -> int:
            f"model: {fm.get('model', '(absent)')!r}")
     r.need("effort is one of low/medium/high", fm.get("effort", "") in EFFORTS,
            f"effort: {fm.get('effort', '(absent)')!r}")
-
-    # --- 3. routing entry ---------------------------------------------------
-    entries = routing_entries()
-    words = entries.get(name)
-    r.need("has a `## <name>` entry in routing/process-skills.md", words is not None,
-           "" if words is not None else "absent -- the build fails without it",
-           f"add a '## {name}' heading to {ROUTING.relative_to(ROOT)}")
-    r.need("that entry has a non-empty Keywords: line", bool(words),
-           "" if words else "heading with no keywords is silently skipped",
-           "one 'Keywords:' line, comma separated")
-
-    if words:
-        upper = [w for w in words if w != w.lower()]
-        r.need("every keyword is lowercase", not upper, ", ".join(upper[:4]),
-               "the hook lowercases the prompt but not the file")
-
-        # Collisions and containment, against every OTHER skill's keywords.
-        others = {w: s for s, ws in entries.items() if s != name for w in ws}
-        dupes = [w for w in words if w in others]
-        r.need("no keyword is already claimed by another skill", not dupes,
-               "; ".join(f"{w!r} ({others[w]})" for w in dupes[:4]))
-        contained = [f"{w!r} contains {o!r} ({others[o]})"
-                     for w in words for o in others if o in w and o != w]
-        contained += [f"{o!r} ({others[o]}) contains {w!r}"
-                      for w in words for o in others if w in o and o != w]
-        r.need("no keyword contains another skill's keyword", not contained,
-               "; ".join(contained[:3]),
-               "either one makes the router name two skills for one prompt")
 
     # --- 4. workflow.md and CLAUDE.md ---------------------------------------
     wf = WORKFLOW.read_text(encoding="utf-8", errors="ignore") if WORKFLOW.is_file() else ""
@@ -273,19 +210,19 @@ def check(name: str) -> int:
            not dangling, ", ".join(dangling[:6]),
            "check these are not skills you meant to name")
 
-    # --- 6. reachability: fire the real router ------------------------------
-    hit = ""
-    if words:
-        out = fire_router(words[0])
-        hit = words[0] if f"`{name}`" in out else ""
-        if not hit:
-            for w in words[1:6]:
-                if f"`{name}`" in fire_router(w):
-                    hit = w
-                    break
-    r.need("the router actually names it when fired at its own keywords",
-           bool(hit), f"matched on {hit!r}" if hit else "no keyword reached it",
-           "structure can be green while the skill is reachable by nothing")
+    # --- 6. reachability ----------------------------------------------------
+    #
+    # There is no keyword router any more, so reachability is a property of the
+    # description alone: it has to name triggers a real request would contain.
+    # That cannot be asserted mechanically -- what CAN be is that the description
+    # is not merely a restatement of the skill's own title, which is the shape a
+    # never-triggering description actually takes.
+    desc_l = desc.lower() if isinstance(desc, str) else ""
+    title_words = set(name.replace("-", " ").split())
+    r.note("description names triggers beyond the skill's own name",
+           bool(desc_l) and len(set(desc_l.split()) - title_words) > 20,
+           f"{len(desc_l.split())} words",
+           "list phrasings a user would actually type, plus a 'Do NOT use' clause")
 
     return r.render(name)
 

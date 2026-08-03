@@ -8,7 +8,7 @@ model: sonnet
 # Skill Authoring
 
 Create a skill that is actually reachable. Authoring the `SKILL.md` is the easy
-half; a skill is **invisible** until five other files know about it, and nothing
+half; a skill is **invisible** until four other files know about it, and nothing
 errors when they do not — it simply never fires.
 
 Cap visible output at ~500 tokens. The deliverable is the wired skill plus a
@@ -81,15 +81,15 @@ enforced, with the number and what enforces it:
 |---|---|---|
 | Directory name equals frontmatter `name:` | exact | `test_process_router.py` — mismatch makes the skill invisible with no error |
 | Lives at `<name>/SKILL.md`, never a flat `<name>.md` | — | same; a flat file never appears |
-| `description:` states triggers **and** a "Do NOT use" clause | ~380 chars | injected every turn, so it is a recurring cost; breadth belongs in the routing file |
+| `description:` states triggers **and** a "Do NOT use" clause | ~380 chars | injected every turn, so it is a recurring cost -- and it is the ONLY trigger surface |
 | Whole frontmatter | ≤ 1024 chars | hard spec limit |
 | `model:` and `effort:` present | — | `opus` planning/diagnosis · `sonnet` coding/procedure · `haiku` extraction |
 | Every skill named in backticks resolves | — | `test_process_router.py`. A name in prose resolving to nothing is this layer's most-repeated defect, and it has shipped past a green suite before |
 
-**Write the "Do NOT use" clause first.** It is what stops the router naming this
-skill and its neighbour together, and it is the half people skip.
+**Write the "Do NOT use" clause first.** It is what stops this skill and its
+neighbour both looking correct for one request, and it is the half people skip.
 
-## Phase 3 — wire it, all five places
+## Phase 3 — wire it, all four places
 
 Derived by grepping the repo for `brainstormer` and discarding history files.
 Miss any one and the failure is silence:
@@ -97,20 +97,16 @@ Miss any one and the failure is silence:
 | # | File | What to add | Failure if missed |
 |---|---|---|---|
 | 1 | `.claude/skills/<name>/SKILL.md` | the skill | — |
-| 2 | `.claude/routing/process-skills.md` | `## <name>` heading + one `Keywords:` line | **Build fails.** The only routing signal that survives description truncation |
-| 3 | `.claude/workflow.md` | a row — chain table if numbered, off-chain table if not | The chain has an owner nobody can find |
-| 4 | `CLAUDE.md` | a row in the Skills table | Invisible to anyone reading the bootloader |
-| 5 | the predecessor's `## Next step` | name this skill imperatively | **The chain stops there.** A handoff in a footnote reads as commentary |
+| 2 | `.claude/workflow.md` | a row — chain table if numbered, off-chain table if not | The chain has an owner nobody can find |
+| 3 | `CLAUDE.md` | a row in the Skills table | Invisible to anyone reading the bootloader |
+| 4 | the predecessor's `## Next step` | name this skill imperatively | **The chain stops there.** A handoff in a footnote reads as commentary |
 
-Keywords have three mechanical rules, all asserted: **lowercase** (the hook
-lowercases the prompt but not the file, so an uppercase keyword can never match),
-**no keyword claimed by two different skills**, and **no keyword containing
-another skill's keyword** — either makes the router name both for one prompt, which is
-worse than naming none because the reader has to arbitrate the job the router
-existed to do.
-
-Prefer multi-word phrases lifted from the description's trigger list. Single
-words fire on anything.
+It was five until 2026-08-04, when a keyword routing file and the hook that read
+it were deleted. **`description:` is now the only trigger surface**, which raises
+the stakes on it: there is no second signal to catch a phrasing the description
+misses. Spend the character budget on real trigger phrasings, and write the
+"Do NOT use" clause first — it is what stops this skill and its neighbour both
+looking correct for the same request.
 
 ## Phase 4 — check, then quote it
 
@@ -121,11 +117,6 @@ words fire on anything.
 The first is scoped to one skill and names the file to edit for each failure.
 The other two are the repo's own adjudicators and cover the rest of the layer.
 
-Then **fire the router against a prompt the skill should catch** — a wired skill
-whose keywords never match is wired to nothing:
-
-    python tools/run_hook.py pre-run '{"prompt":"<a real phrasing>"}'
-
 Quote the checker's output. "It passes" without the lines is the one thing this
 repo's working agreement forbids.
 
@@ -135,9 +126,9 @@ repo's working agreement forbids.
   `references/` pack file under one.
 - Writing the `SKILL.md` before asking about placement.
 - A description with triggers but no "Do NOT use".
-- Keywords invented rather than lifted from real phrasings someone would type.
+- Trigger phrasings invented rather than lifted from what someone would type.
 - Renumbering a stage without moving the other skills' `Workflow stage N` lines.
-- Reporting done on a green `SKILL.md` and an unedited `process-skills.md`.
+- Reporting done on a green `SKILL.md` with no row in `workflow.md`.
 
 ## Common Mistakes
 
@@ -146,7 +137,7 @@ repo's working agreement forbids.
 | A flat `.claude/skills/<name>.md` | Never appears, and nothing errors |
 | Frontmatter `name:` differing from the directory | Same silent invisibility |
 | Skipping the predecessor's `## Next step` | The chain stops one stage early and looks complete |
-| Keywords that overlap another skill's | Router names both; the reader arbitrates |
+| Triggers that overlap another skill's | Both look correct; the reader arbitrates |
 | A skill for a domain rather than a stage | Every project then pays for the domains it does not use |
 | Trusting a green suite as proof it is reachable | The suites check structure. Firing the router checks reachability |
 
@@ -161,7 +152,7 @@ repo's working agreement forbids.
 - A new skill is a hard-to-reverse structural decision and earns a `decisions/`
   record via `knowledge-manager`. That is a consequence of the change, not a
   handoff this skill performs.
-- `07-layer-drift.py` fires on a skill being added and names `no-slop`. The sweep
+- Adding a skill is when trigger overlap appears, so sweep with `no-slop`. The sweep
   is that hook's doing, not this skill's — naming it here as a conditional
   successor contradicted the off-chain contract two bullets above, which is the
   orchestration-leakage smell `no-slop` exists to catch.

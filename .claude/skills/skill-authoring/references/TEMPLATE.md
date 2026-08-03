@@ -83,7 +83,7 @@ what is true about the artefact when it worked.>
 
 `description:` is injected **every turn**, for every skill, whether or not it is
 relevant. Thirteen skills cost ~1,100 tokens per turn. Keep it near 380 characters
-and put trigger breadth in `.claude/routing/process-skills.md` instead, which a
+and put trigger breadth in its `description:` frontmatter instead, which a
 hook reads and costs nothing until it matches.
 
 The `Do NOT use` clause is not politeness. It is the only thing separating two
@@ -91,7 +91,7 @@ adjacent skills for the router, and the most common reason a prompt names two.
 
 ## Filling the routing entry
 
-In `.claude/routing/process-skills.md`:
+In its `description:` frontmatter:
 
 ```markdown
 ## <name>

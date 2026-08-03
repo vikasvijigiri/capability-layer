@@ -1,7 +1,12 @@
 # Hooks — .claude/hooks/
 
-**`hooks_registry.json` is the list of events and their scripts, and
-`../settings.json` is the only thing that actually fires them.** This file does
+**Every hook here ACTS or DENIES.** A hook whose only output was the name of a
+skill was deleted on 2026-08-04: hooks and skills are independent, a hook cannot
+invoke a skill, and a skill name in hook source is an unvalidated copy of a
+routing decision. Skills trigger from their own `description:`.
+
+`hooks_registry.json` lists the events and their scripts; `../settings.json` is
+the only thing that actually fires them. This file does
 not restate either; it says what a hook author needs that is not in those two.
 
 Until 2026-08-03 this README carried its own event list. It named six events with

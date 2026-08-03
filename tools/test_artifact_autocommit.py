@@ -350,7 +350,8 @@ with tempfile.TemporaryDirectory() as d3:
     body = (tmp3 / ".claude/hooks/state/check-failure-report.md").read_text(
         encoding="utf-8")
     check("the report quotes the failing output", "test_x.py" in body)
-    check("the report names systematic-debugging", "systematic-debugging" in body)
+    check("the report says to root-cause before changing anything",
+          "Root-cause the failure" in body)
     check("the report says it is scratch, not a knowledge doc",
           "not a" in body and "knowledge doc" in body)
 
@@ -370,14 +371,26 @@ with tempfile.TemporaryDirectory() as d3:
     check("MAX_ATTEMPTS is a real ceiling",
           isinstance(mod.MAX_ATTEMPTS, int) and 1 < mod.MAX_ATTEMPTS <= 10)
 
-# The escalation and forward-close wording, asserted on the source so a rewrite
-# cannot quietly drop either half.
+# Escalation wording, asserted on the source so a rewrite cannot quietly drop it.
 _src = HOOK.read_text(encoding="utf-8")
-check("the red path names the skill to invoke", "systematic-debugging" in _src)
 check("escalation stops suggesting rather than looping",
       "Not suggesting another pass" in _src)
-check("green closes the loop forward into the workflow",
-      "verifying-work" in _src and "code-review" in _src and "delivering" in _src)
+
+# The inverse of the old assertion. This hook ACTS; it must not name a skill in
+# anything it prints. Skill names in hook source are an unvalidated copy of a
+# routing decision -- three hooks carried them until 2026-08-04, and pointing one
+# at a fabricated skill passed every suite. Comments may still explain history;
+# only emitted strings are asserted.
+import ast as _ast  # noqa: E402, PLC0415
+
+_doc = _ast.get_docstring(_ast.parse(_src)) or ""
+_emitted = [n.value for n in _ast.walk(_ast.parse(_src))
+            if isinstance(n, _ast.Constant) and isinstance(n.value, str)
+            and n.value != _doc and len(n.value) < 4000]
+_named = sorted({s for s in ("systematic-debugging", "verifying-work", "code-review",
+                             "delivering", "no-slop", "knowledge-manager")
+                 if any(s in e for e in _emitted)})
+check("the hook names no skill in anything it emits", not _named, f"names {_named}")
 check("the loop never blocks the turn",
       '"decision"' not in _src and "block" not in _src.lower().split("deadlock")[0][-2000:])
 

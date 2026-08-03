@@ -35,7 +35,7 @@ Report, in this order:
    and deployment. Flag anything that looks misfiled.
 
 5. **Reachability.** Every skill must have a `## <name>` entry in
-   `.claude/routing/process-skills.md`, and every entry there must name a real
+   each skill's `description:`, and every entry there must name a real
    skill directory. With the capability router gone this file is the only routing
    signal that survives listing truncation, so an unrouted skill is invisible on
    any turn its description is truncated away.
