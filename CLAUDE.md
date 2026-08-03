@@ -38,12 +38,6 @@ adding a skill or wondering what comes next.
 | Skill | Stage | Produces |
 |---|---|---|
 | `task-brief` | 1 frame | `TASK.md` — six fields, approved |
-
-`pre-run/05-process-skill-router.py` falls back to **prompt shape** when no
-keyword matches: an imperative, or a framing plus a verb, names `task-brief`.
-"Build an AI platform that assists scientists" matched nothing and the chain
-never started. A question about existing state is left alone. The corpus in
-`tools/test_process_router.py` is real prompts, not invented ones.
 | `brainstormer` | 2 design | `docs/specs/YYYY-MM-DD-<topic>-design.md` |
 | `writing-plans` | 3 plan | `docs/plans/YYYY-MM-DD-<feature>.md` |
 | `executing-plans` | 4 execute | the thing itself; ticked plan checkboxes |
@@ -55,6 +49,19 @@ never started. A question about existing state is left alone. The corpus in
 | `knowledge-manager` | 10 record | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `decisions/` |
 | `research` | — entered from any stage | `docs/research/YYYY-MM-DD-<topic>.md` |
 | `systematic-debugging` | — entered on any failure | root cause + `ISSUES.md` entry |
+
+`pre-run/05-process-skill-router.py` falls back to **prompt shape** when no
+keyword matches: an imperative, or a framing plus a verb, names `task-brief`.
+"Build an AI platform that assists scientists" matched nothing and the chain
+never started. A question about existing state is left alone. The corpus in
+`tools/test_process_router.py` is real prompts, not invented ones.
+
+**The fallback is not a safety net for missing keywords.** `TASK_VERBS` holds
+only verbs that ask for a *change*; `check`, `audit`, `review` and `verify` are
+deliberately absent, because an audit routed to `task-brief` is routed to the
+wrong stage. "Check if the .claude folder is clean" therefore matched nothing at
+all until 2026-08-03 — the repair belongs in the owning skill's `Keywords:`
+line, never in `TASK_VERBS`.
 
 ### Subagents
 
@@ -91,7 +98,7 @@ doc sweeps and bulk edits, wrong for debugging), and **request shape**, which is
 the biggest and is the user's. Deliberation goes on resolving ambiguity, not
 solving problems; one goal per request cuts it directly.
 
-Descriptions are injected **every turn** (~1,000 tokens for eleven) while
+Descriptions are injected **every turn** (~1,000 tokens for twelve) while
 `.claude/routing/process-skills.md` is read by a hook and costs nothing — so
 trigger breadth belongs in the routing file and descriptions stay ~380 chars.
 `session-start/02-bootstrap-docs.py` is budgeted for the same reason: it injected
@@ -105,6 +112,8 @@ trigger breadth belongs in the routing file and descriptions stay ~380 chars.
     /save           stage, describe and commit (local only)
     /wip            branch, uncommitted work, which knowledge docs went stale
     /skills-doctor  skill layer health — description budget, YAML, name mismatches
+    /git-state      exact counts: committed, staged, unstaged, untracked, branch scope
+    /install-layer  copy this layer into another repo — wraps `.claude/install.py`
 
 Raw equivalents, run from the repo root:
 
@@ -136,7 +145,8 @@ Run `/verify` before declaring any work done.
 | `.claude/routing/process-skills.md` | keyword → skill-name routing (mandatory per skill) |
 | `.claude/hooks/<event>/` | ten hooks over seven events; `session-start`, `pre-run`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |
 | `.claude/settings.json` | what actually fires; `hooks_registry.json` only documents intent |
-| `.claude/commands/` | the four slash commands above |
+| `.claude/commands/` | the six slash commands above |
+| `.claude/install.py` | ports the layer into another repo; `/install-layer` wraps it |
 | `tools/` | `run_checks.py` (one entry point for green), `smoke.py`, `run_hook.py`, the test suites, `check_config_json.py` |
 | `docs/specs/`, `docs/plans/`, `docs/research/` | skill outputs, one dated file each |
 | `docs/archive/` | the pre-2026-08-01 design layer; superseded, see `docs/archive/ARCHIVE.md` |

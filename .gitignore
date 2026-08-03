@@ -12,11 +12,13 @@
 .claude/settings.local.json
 
 # Hook state: per-turn and per-review bookkeeping, rewritten constantly and
-# meaningful only to this checkout. Tracking it churns every commit, and worse,
-# `05-docs-gate.py` counts changed files that are not knowledge docs -- so a
-# tracked marker makes the gate partly trigger on its own bookkeeping.
-# `review-receipts.json` was tracked until 2026-08-02 and its writes changed the
-# fingerprint it had just recorded, so no receipt ever survived; see
+# meaningful only to this checkout. Tracking it churns every commit.
+#
+# Two reasons, one of them now historical. `05-docs-gate.py` (DELETED
+# 2026-08-02) counted changed files that were not knowledge docs, so a tracked
+# marker made that gate partly trigger on its own bookkeeping. The live reason
+# is `review-receipts.json`: tracked until 2026-08-02, and its writes changed
+# the fingerprint it had just recorded, so no receipt ever survived. See
 # ISSUES.md 2026-08-01 21:15.
 .claude/hooks/state/
 

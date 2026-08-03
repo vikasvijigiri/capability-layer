@@ -26,7 +26,8 @@ What it deliberately does NOT do
 --------------------------------
 - Overwrite an existing `CLAUDE.md`, `settings.json` or `project-checks.json`.
   Those carry decisions; a fresh copy would silently discard them.
-- Copy `hooks/state/`. Per-session scratch, meaningless elsewhere.
+- Copy `hooks/state/` or `hooks/*.log`. Per-session scratch and session
+  transcripts; the logs are the source's own prompt text, not layer content.
 - Commit anything. The target repo's own gates decide that.
 """
 
@@ -47,7 +48,14 @@ SOURCE_REPO = SOURCE.parent
 # `hooks_registry.json` is NOT listed: it lives inside `hooks/` and travels with
 # it. Naming it here made the installer warn that the source was missing a file
 # it had already copied.
-LAYER = ["skills", "agents", "routing", "commands", "hooks", "workflow.md"]
+#
+# `install.py` IS listed, and was not until 2026-08-03. `commands/` carries
+# `install-layer.md`, whose entire body is `python .claude/install.py --into
+# <target>`. Copying the command without the script gave every target a slash
+# command that could not run -- and a layer that cannot propagate itself is not
+# portable, it is just copied once.
+LAYER = ["skills", "agents", "routing", "commands", "hooks", "workflow.md",
+         "install.py"]
 
 # The layer's own tooling. Lives in tools/ rather than .claude/ because
 # `_projectchecks.detect_checks` looks for `tools/test_*.py`, and moving it
@@ -55,8 +63,24 @@ LAYER = ["skills", "agents", "routing", "commands", "hooks", "workflow.md"]
 TOOLS = ["run_checks.py", "run_hook.py", "test_referenced_paths.py",
          "test_process_router.py", "test_no_slop.py", "check_config_json.py"]
 
-# Never copied, and each for a different reason.
-NEVER = {"state", "settings.json", "project-checks.json", "install.py"}
+# Never copied out of `hooks/`, and each for a different reason. Passed to
+# `shutil.ignore_patterns`, so these are glob patterns, not names.
+#
+# This set was declared and then never referenced until 2026-08-03 -- it read as
+# a guard and enforced nothing. `settings.json` and `project-checks.json` were
+# excluded only by their absence from LAYER, which is a coincidence of that
+# list rather than a stated rule.
+#
+# `*.log` is the one that mattered. `_hooklib.write_log` records tool payloads
+# and prompt text verbatim, which is why `.gitignore` says they must never be
+# committed -- and the installer was copying 3.5 MB of the SOURCE session's
+# transcripts into every target. The target's `.gitignore` then hid them, so
+# nothing ever reported it.
+NEVER_IN_HOOKS = ("state", "__pycache__", "*.log")
+
+# Never copied at the top level of `.claude/`. Both carry decisions that a fresh
+# copy would silently discard; `ensure_stubs`/`merge_settings` handle them.
+NEVER_AT_ROOT = {"settings.json", "project-checks.json"}
 
 GITIGNORE_BLOCK = """
 # Hook state: per-turn bookkeeping and the diagnose-loop scratch report,
@@ -149,6 +173,11 @@ class Report:
 def copy_layer(target: Path, r: Report) -> None:
     dest_root = target / ".claude"
     for name in LAYER:
+        if name in NEVER_AT_ROOT:
+            # LAYER is edited by hand; this makes the rule hold rather than
+            # depending on someone remembering it.
+            r.warn(f"{name} is in LAYER but must never be copied -- skipped")
+            continue
         src = SOURCE / name
         if not src.exists():
             r.warn(f"source is missing {name} -- skipped")
@@ -160,7 +189,7 @@ def copy_layer(target: Path, r: Report) -> None:
         dst.parent.mkdir(parents=True, exist_ok=True)
         if src.is_dir():
             shutil.copytree(src, dst, dirs_exist_ok=True,
-                            ignore=shutil.ignore_patterns("state", "__pycache__"))
+                            ignore=shutil.ignore_patterns(*NEVER_IN_HOOKS))
         else:
             shutil.copy2(src, dst)
         r.did(f"copy .claude/{name}")
