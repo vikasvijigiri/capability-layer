@@ -224,6 +224,26 @@ def check(name: str) -> int:
            f"{len(desc_l.split())} words",
            "list phrasings a user would actually type, plus a 'Do NOT use' clause")
 
+    # --- 7. the Iron Law ----------------------------------------------------
+    #
+    # Every other check here proves the skill is WIRED. All of them can be green
+    # for a skill that changes nothing about the work, while costing ~380 chars of
+    # description budget on every turn of every session.
+    #
+    # A baseline is the only evidence that a skill earns its place: the same task
+    # attempted without it, then with it, and the difference. See
+    # docs/baselines/README.md for the procedure and what makes a record
+    # trustworthy.
+    #
+    # A NOTE and not a requirement, deliberately. Twelve of thirteen skills have
+    # no baseline, and a gate nobody can satisfy is a gate that gets switched off
+    # -- this repo has deleted three of those. The note is the standing pressure.
+    baseline = ROOT / "docs" / "baselines" / f"{name}.md"
+    r.note("has a baseline run recording what it improves",
+           baseline.is_file(),
+           "" if baseline.is_file() else f"no docs/baselines/{name}.md",
+           "run the task without the skill, then with it, and write the delta")
+
     return r.render(name)
 
 

@@ -221,6 +221,86 @@ if _report.is_file() and _wf.is_file():
               f"[state:{_key}]" in _wf_text and f"[/state:{_key}]" in _wf_text,
               "missing or unclosed -- an unclosed tag never matches and is silent")
 
+# --- every SessionStart hook survives being invoked, for every source -------
+#
+# SessionStart hooks run before anyone can see a prompt, so a crash there is the
+# most invisible failure the layer has: the session opens, the context is simply
+# missing, and nothing says why. Directions 1-3 above prove the wiring exists;
+# this proves the wired thing RUNS.
+#
+# Invoked through the command string in settings.json rather than a path written
+# here, so a broken registration is caught too. `source` is exercised across all
+# three values Claude Code sends -- `compact` and `resume` are the branches that
+# only execute after a context boundary, which is exactly when nobody is watching.
+#
+# What this cannot prove: that Claude Code actually invokes them, or that it acts
+# on `reloadSkills`. Both need a real session. Recorded in HANDOFF.md as such.
+
+# **Run as a subprocess, exit code asserted, is a check that cannot fail.** That
+# was the first version and a planted `raise` in a hook passed it: every hook here
+# ends in `except Exception: sys.exit(0)` so a crash never reaches the shell. The
+# fail-open guard is correct in production and it makes the exit code carry no
+# information at all in a test.
+#
+# So `main()` is called IN-PROCESS, inside the guard, where an exception is still
+# an exception. stdout is captured the same way the harness reads it.
+
+import importlib.util  # noqa: E402, PLC0415
+import io  # noqa: E402, PLC0415
+import os  # noqa: E402, PLC0415
+from contextlib import redirect_stdout  # noqa: E402, PLC0415
+
+
+def _load_hook(path: Path, name: str):
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None and spec.loader is not None, f"no loader for {path}"
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_ss_blocks = settings.get("hooks", {}).get("SessionStart", [])
+_cmds = [h.get("command", "") for _b in _ss_blocks for h in _b.get("hooks", [])]
+check("SessionStart has at least one registered hook", bool(_cmds))
+for _i, _cmd in enumerate(_cmds):
+    _script = _cmd.replace("$CLAUDE_PROJECT_DIR", str(ROOT)).replace('"', '')
+    _script = _script.split(None, 1)[1] if " " in _script else _script
+    _path = Path(_script)
+    _name = _path.name
+    if not _path.is_file():
+        check(f"{_name} exists to be invoked", False, "registered but not on disk")
+        continue
+    try:
+        _mod = _load_hook(_path, f"_ss_hook_{_i}")
+    except Exception as _exc:  # noqa: BLE001 - import failure IS the finding
+        check(f"{_name} imports", False, f"{type(_exc).__name__}: {_exc}"[:110])
+        continue
+    for _source in ("startup", "resume", "compact"):
+        os.environ["HOOK_PAYLOAD"] = json.dumps({"source": _source})
+        os.environ["UAIOS_AUTOCOMMIT_RUNNING"] = "1"
+        _buf = io.StringIO()
+        _raised = ""
+        try:
+            with redirect_stdout(_buf):
+                _mod.main()
+        except Exception as _exc:  # noqa: BLE001 - a raise is the finding
+            _raised = f"{type(_exc).__name__}: {_exc}"
+        check(f"{_name} runs clean on source={_source}", not _raised, _raised[:110])
+        # Silence is legal; malformed JSON is not -- the harness discards the whole
+        # payload and the hook looks like it ran.
+        _out = _buf.getvalue().strip()
+        if not _raised and _out:
+            try:
+                _d = json.loads(_out)["hookSpecificOutput"]
+                check(f"{_name} declares hookEventName on source={_source}",
+                      _d.get("hookEventName") == "SessionStart",
+                      f"got {_d.get('hookEventName')!r}")
+            except (ValueError, KeyError) as _exc:
+                check(f"{_name} emits valid hook JSON on source={_source}",
+                      False, str(_exc)[:100])
+os.environ.pop("HOOK_PAYLOAD", None)
+
 # --- the manual-only exemption must be deliberate, not a typo ---------------
 
 for name, entry in sorted(registry.items()):

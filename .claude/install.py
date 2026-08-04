@@ -389,9 +389,29 @@ def ensure_gitignore(target: Path, r: Report) -> None:
 
 
 def ensure_ruff(target: Path, r: Report) -> None:
+    """Add the hook exemptions to an existing ruff.toml. Never create one.
+
+    Creating one was considered on 2026-08-04 and rejected on a measurement: ruff
+    with DEFAULT rules reports nothing on these hooks. `S110`, `S112`, `I001` and
+    `BLE001` are not in the default set -- they fire only where a repo has opted
+    into bandit and isort rules. So writing a ruff.toml here would not be
+    protecting the hooks; it would be switching linting ON across a codebase whose
+    owner had not asked for it, and `_projectchecks` would then add `ruff check`
+    to their fast tier, where a single pre-existing violation blocks the
+    auto-commit on day one.
+
+    The residual risk is real but deferred: a target that adds those rule sets
+    LATER gets 48 findings in `.claude/hooks/`. It is not fixable at install time,
+    so it is stated instead -- and re-running the installer repairs it, the same
+    top-up path `ensure_gitignore` uses.
+    """
     path = target / "ruff.toml"
     if not path.exists():
-        r.did("skip ruff.toml -- not present, so nothing lints the hooks")
+        r.did("skip ruff.toml -- absent, and ruff's default rules flag nothing here")
+        r.warn("No ruff.toml, so no hook exemptions were written. Default ruff is "
+               "clean on these hooks. If you later select bandit (`S`), `BLE` or "
+               "isort (`I`) rules, the hooks need the `.claude/hooks/**` ignore "
+               "block -- re-run this installer and it will add it.")
         return
     text = path.read_text(encoding="utf-8")
     if ".claude/hooks/**" in text:
@@ -405,6 +425,37 @@ def ensure_ruff(target: Path, r: Report) -> None:
     if not r.dry:
         path.write_text(new, encoding="utf-8")
     r.did("add .claude/hooks/** ignores to ruff.toml")
+
+
+def ensure_ci(target: Path, r: Report) -> None:
+    """Copy the CI workflow, only when the target has none.
+
+    Portable by construction: it names no check. Both jobs call
+    `tools/run_checks.py`, the same resolver the auto-commit and `/verify` use, so
+    CI and local cannot disagree about what "the checks pass" means. A workflow
+    carrying its own command list is how a green local run starts coexisting with
+    a red pipeline.
+
+    **Never overwritten**, and that is not the usual "carries decisions" reason: a
+    workflow file runs on push in someone else's repository, so replacing theirs
+    would change what their pushes do. Additive only.
+    """
+    src = SOURCE_REPO / ".github" / "workflows" / "checks.yml"
+    if not src.is_file():
+        r.warn("source is missing .github/workflows/checks.yml -- skipped")
+        return
+    dst = target / ".github" / "workflows" / "checks.yml"
+    if dst.exists():
+        r.did("keep the existing .github/workflows/checks.yml")
+        return
+    if not r.dry:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+    r.did("copy .github/workflows/checks.yml (fast tier on push, slow on PR)")
+    r.warn("A CI workflow was added and it runs on every push. It installs ruff "
+           "and mypy and calls the same resolver as the local gate, so it can "
+           "only fail on what already fails locally -- but it is a change to what "
+           "your pushes do. Delete it if the repo has its own pipeline.")
 
 
 def ensure_stubs(target: Path, r: Report) -> None:
@@ -534,6 +585,7 @@ def main() -> int:
     merge_mcp(target, r)
     ensure_gitignore(target, r)
     ensure_ruff(target, r)
+    ensure_ci(target, r)
     ensure_stubs(target, r)
 
     print(f"{'DRY RUN — ' if args.dry_run else ''}installed into {target}\n")
