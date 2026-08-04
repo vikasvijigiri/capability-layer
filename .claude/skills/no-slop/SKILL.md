@@ -35,12 +35,18 @@ appears, and no single edit can reveal it.
 ## Two phases, and the gate between them is hard
 
 <HARD-GATE>
-Phase 1 REPORTS. Phase 2 REPAIRS. No edit before the full report is delivered
-and the user has approved what to fix.
+Phase 1 REPORTS in full. Phase 2 then repairs **the local group only, without
+asking** — the chain has two gates and this is not one.
 
-Fixing mid-review is not a style rule — it makes the report describe a tree that
-no longer exists, so nothing the user approves matches what they read. Deliver
-every finding first, even the one-character ones.
+Deliver every finding before touching anything, even the one-character ones.
+Fixing mid-sweep is still forbidden and the reason is unchanged: it makes the
+report describe a tree that no longer exists, so the reader cannot check a single
+claim against what is actually there.
+
+**Structural findings are never applied here.** Merging or retiring a skill,
+re-cutting triggers, deleting a document — those change what fires, and a layer
+nobody reviewed is exactly what this skill exists to prevent. They go to
+`task-brief` as their own task, reported and not touched.
 </HARD-GATE>
 
 ## Phase 1 — sweep
@@ -107,8 +113,12 @@ risk and the user is approving that risk:
 | **Local** | a hedge, a stray `TODO`, a missing `## Success`, a stale count, an over-budget description | Repairable here — contained in one file, mechanically checkable afterwards |
 | **Structural** | merging or splitting a skill, retiring one, re-cutting triggers, deleting a document | **`task-brief`, not an edit.** Routing decides which skill fires; re-cutting it mid-sweep ships a layer nobody reviewed |
 
-Ask with `AskUserQuestion`: apply all local fixes, apply a named subset, or
-report only. Never infer approval from the user having asked for a sweep.
+Then apply the local group. Do not ask — that group is defined by being
+contained in one file and mechanically checkable afterwards, which is exactly what
+makes it safe to apply unasked. Say what you changed after, with `file:line`.
+
+Structural findings are listed and left alone; name the `task-brief` each one
+would become.
 
 ## Phase 2 — rectify
 
@@ -139,7 +149,7 @@ was checked, never as a guarantee.
 - A finding with no `file:line`.
 - "Consider possibly simplifying this section" — name the sentence to cut.
 - Flagging a terminal handoff as leakage without opening `workflow.md`.
-- Editing anything before the report is approved.
+- Editing anything before the full report has been delivered.
 - Applying a structural fix because it "looked obvious".
 - Running `--scope layer` at stage 6. Shipping is the repo-wide cadence.
 - Inventing a smell to avoid reporting clean.
@@ -152,6 +162,7 @@ was checked, never as a guarantee.
 |---|---|
 | Reviewing a diff instead of the tree | That is `code-review`; slop does not live in one change |
 | Fixing as you go | The report then describes a tree that no longer exists |
+| Applying a structural fix because it looked contained | Routing decides what fires; it ships a layer nobody reviewed |
 | Treating a structural fix as a local one | Routing decides what fires; it ships unreviewed |
 | Skipping the re-run after repairs | Repairs move counts and paths two other suites assert |
 

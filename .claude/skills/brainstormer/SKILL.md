@@ -15,9 +15,19 @@ Cap visible output at ~500 tokens per turn. Design sections are the exception â€
 scale those to complexity, up to 200-300 words each.
 
 <HARD-GATE>
-Do NOT write code, scaffold a project, invoke an implementation skill, or take
-any implementation action until you have presented a design and the user has
-approved it. Every project, regardless of perceived simplicity.
+Do NOT write code, scaffold a project, or invoke an implementation skill from
+here. This skill produces a spec and stops. Every project, regardless of
+perceived simplicity.
+
+**Do not ask the user to approve the design.** The chain has two gates and this is
+not one â€” the spec feeds `writing-plans`, whose single gate is where a human first
+says yes. Present the design, save it, hand it on.
+
+The `AskUserQuestion` calls in steps 3 and 5 are **not** gates and must stay. They
+supply information nobody else has: which direction to take, which constraint is
+real. Removing them would not make this autonomous, it would make the spec mine
+and label it theirs -- and the first idea becoming an anchor is the exact failure
+this skill exists to prevent.
 </HARD-GATE>
 
 ## Anti-Pattern: "too simple to need a design"

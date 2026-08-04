@@ -15,7 +15,10 @@ Cap visible output at ~500 tokens. The deliverable is the wired skill plus a
 quoted checker run, not a tour of what you wrote.
 
 <HARD-GATE>
-NEVER create a skill without asking the user where it belongs.
+NEVER create a skill without asking the user where it belongs. This is a
+**question, not a gate** -- it is off the delivery chain, and placement decides the
+stage numbering of every skill after it, which is information no amount of reading
+the repo supplies.
 
 Placement is not a detail you infer. Whether a capability is a numbered stage, an
 off-chain entry, or not a skill at all determines the stage numbering of every

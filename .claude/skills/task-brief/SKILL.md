@@ -8,15 +8,19 @@ model: sonnet
 # Task Brief
 
 Turns "can we support multiple speakers?" into six lines someone could act on
-without re-reading the chat. Narrow by design: it produces an approved brief and
-`TASK.md`. It does not plan, implement, or verify.
+without re-reading the chat. Narrow by design: it produces `TASK.md`. It does not plan, implement, or verify.
 
 Cap visible output at ~500 tokens. The brief is six lines, not six paragraphs.
 
 <HARD-GATE>
-Nothing is written and no work starts until the user approves the brief.
-Presenting the brief and acting on it in the same turn is the failure this skill
-exists to prevent.
+**Do not ask the user to approve the brief.** The chain has exactly two gates and
+this is not one of them: state the six fields, write `TASK.md`, and continue.
+
+Every field filled by inference rather than by the user's words must be marked
+`(inferred)` in `TASK.md`. That is what replaces the approval -- the user reads
+one artefact instead of answering a dialogue, and an assumption that was never
+stated is visible rather than silently blessed. A brief with more inferred fields
+than stated ones is the signal to stop and say so in one line, not to ask.
 </HARD-GATE>
 
 ## Skip it when
@@ -59,33 +63,29 @@ another job.
 - **Out-of-scope is never blank here.** Name the adjacent thing you could
   plausibly touch and won't.
 
-**4. Score confidence, then ask or present.** 0-100: how much of the six could
+**4. Score confidence, then proceed.** 0-100: how much of the six could
 you fill without guessing? Weight down hard for a missing Constraints or
 Out-of-scope — the two most often silently assumed — and further if Done-check
-isn't concrete. **≥75** present the brief; **<75** one round of
-`AskUserQuestion` targeted at the blank fields only, never a generic "tell me
-more", then redraft.
+isn't concrete.
 
-**5. Gate it.** Print the six lines as plain text first — six fields cannot be
-read inside a dialogue box. Then `AskUserQuestion`:
+The score decides what you say, never whether you ask. **≥75** state the brief
+and continue. **<75** state it, name the weak fields as `(inferred)`, and say in
+one line that the scope is thin — then continue anyway. A low score is
+information for the reader, not a request for input.
 
-- **Approve** — state what approving commits to, and name every field filled by
-  inference rather than by the user's words.
-- **Refine** — nothing written; redraft and re-present. May run more than once.
-- **Cancel** — nothing written, `TASK.md` untouched.
+**5. Print the six lines as plain text.** Not inside a dialogue box; six fields
+cannot be read in one. Mark every field filled by inference `(inferred)` — that
+marking is what replaced the approval, so it is the one thing here that is not
+optional.
 
-Free-text **Other** is always appended, which is how one field gets corrected
-without rejecting the whole brief. A plain "yes" in chat is approval — the
-dialogue is the default, not a hoop.
+**6. Write `TASK.md`, then hand off.** Write the six fields under its existing
+names (`Goal` / `Input` / `Output` / `Constraints` / `Done Checks` /
+`Out of Scope`) with `Status: In Progress`, carrying the `(inferred)` markers
+through. Overwrite in place — it is current state, not history. Then take the
+successor in `## Routing` in the same turn: a brief concrete enough to write is
+concrete enough to build.
 
-**6. Write `TASK.md`, then stop.** On approval only, write the six fields under
-its existing names (`Goal` / `Input` / `Output` / `Constraints` / `Done Checks` /
-`Out of Scope`) with `Status: In Progress`. Overwrite in place — it is current
-state, not history. An approved brief has exactly one destination: execute
-directly against the Done-check. A brief concrete enough to approve is concrete
-enough to build.
-
-Do not hand an approved brief to `writing-plans`; that needs a design spec and
+Do not hand the brief to `writing-plans`; that needs a design spec and
 six lines is not one. If the work turns out to need real sequencing, the brief
 was too big — say so and go to `brainstormer`.
 
@@ -95,7 +95,7 @@ was too big — say so and go to `brainstormer`.
 - "They clearly meant X, I'll put it in Outputs." A guess wearing an approved
   field's clothes.
 - "Done-check: the tests pass." Name the command and its exit condition.
-- "The brief is approved, so I can start while I write `TASK.md`."
+- "The scope is thin, I had better ask." State it `(inferred)` and continue.
 - "They said the file is at X, so it's at X." Step 2 exists because that has
   been wrong before.
 
@@ -107,14 +107,14 @@ was too big — say so and go to `brainstormer`.
 |---|---|
 | Filling six fields from the prompt alone | The brief inherits the prompt's wrong premises and now looks approved |
 | Briefing a two-line change | Overhead exceeds the work; a brief that is overhead stops being read |
-| Presenting the brief inside `AskUserQuestion` | Six fields cannot be read in a dialogue box — print them first |
+| Asking the user to approve the brief | The chain has two gates and this is not one; mark inferred fields and continue |
 | Treating a blank Outputs as "decide later" | It is the signal to stop and go to `brainstormer`, not a gap to fill |
 
 ## Next step — you MUST take it
 
-The brief is not the deliverable; the work is. When `TASK.md` is approved, say
+The brief is not the deliverable; the work is. Once `TASK.md` is written, say
 which successor you are invoking and invoke it in the same turn: **straight to
-the change** (the normal case — a brief concrete enough to approve is concrete
+the change** (the normal case — a brief concrete enough to write is concrete
 enough to build), or **`brainstormer`** when a blank field showed the approach is
 still open.
 
@@ -129,8 +129,9 @@ brief, so an un-handed-off brief is simply forgotten.
 
 ## Routing
 
-- Mandatory validator: none. The approval gate in step 5 is the gate.
-- Terminal handoff, and you MUST take it once the brief is approved — one of
+- Mandatory validator: none, and no approval gate. The `(inferred)` markers in
+  `TASK.md` are what a reader checks instead.
+- Terminal handoff, and you MUST take it once `TASK.md` is written — one of
   **two**, decided by what the brief says:
   1. The six fields are filled → do the change, then `verifying-work`.
   2. A field could not be filled because the approach is undecided → invoke
@@ -150,6 +151,6 @@ brief, so an un-handed-off brief is simply forgotten.
 
 ## Success
 
-`TASK.md` holds six approved fields, every inferred field was named at the
-approval gate, and the Done-check is something a fresh session could run without
-asking a question.
+`TASK.md` holds the six fields, every field filled by inference is marked
+`(inferred)` there, and the Done-check is something a fresh session could run
+without asking a question. No dialogue was opened to get there.

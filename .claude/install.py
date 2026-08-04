@@ -151,40 +151,82 @@ RUFF_BLOCK = '''
 ".claude/hooks/**" = ["S110", "S112", "I001"]
 '''
 
-CLAUDE_STUB = """# {name} — CLAUDE.md
+CLAUDE_STUB = """# {name}
 
-<!-- Written by .claude/install.py. Replace this with what is actually true
-here; it is a bootloader, not documentation. Keep it under ~150 lines. -->
+<!-- Written by .claude/install.py. Every line below is a question about THIS
+repo, not about the capability layer -- replace the em-dashes with real answers
+and delete what does not apply. CLAUDE.md is loaded in full on every session, so
+it is the most expensive prose in the repo: keep it under ~150 lines and make
+each line one a newcomer could not have guessed. -->
 
-## The commit loop
+## What this is
 
-`post-run/06-artifact-autocommit.py` commits what changed at the end of every
-turn, as a `wip:` checkpoint, but only if the branch is not protected, no
-changed file matches a credential pattern, no schema migration is present, the
-change is under `max_files`, and the fast-tier checks pass.
+—
 
-**It commits without asking.** That is deliberate and it is the main thing to
-know about this layer. It never pushes.
+<!-- One paragraph. What the thing does and who for. Not the tech stack; that is
+below. If you cannot say it in a paragraph, that is worth knowing. -->
 
-On red it writes `.claude/hooks/state/check-failure-report.md` and asks for
-`systematic-debugging`; three strikes on the same failure and it escalates.
+## Architecture
 
-## Checks
+<!-- Directory layout and the two or three modules that carry the design. A
+newcomer's first question is always "where does X live". -->
 
-    python tools/run_checks.py --tier fast --require-test
+| Path | What it is |
+|---|---|
+| — | — |
 
-Resolves this project's own lint, typecheck and test commands from marker files
-and runs them. `--require-test` fails when no test ran at all -- passing and
-having nothing to run are different facts.
+## Commands
 
-**A repo with no tests cannot auto-commit code** until `"test": false` is set in
-`.claude/project-checks.json`, stating deliberately that there are none.
+<!-- The real ones, copied from a terminal where they worked. Not the ones you
+believe are in package.json. -->
+
+    —
+
+## Conventions
+
+<!-- Only the ones a reader would otherwise get wrong: naming, error handling,
+what never goes in a commit, which directories are generated. -->
+
+- —
 
 ## Gotchas
 
+<!-- Each entry should be something that has actually cost someone an hour. A
+gotchas list nobody bled for is a style guide. -->
+
+- —
+
+---
+
+## The capability layer
+
+`.claude/` holds skills, hooks and commands installed from elsewhere.
+`.claude/workflow.md` owns the stage order; each `SKILL.md` states its own gates.
+
+**The auto-commit commits at the end of every turn.** `post-run/06-artifact-autocommit.py`
+checkpoints whatever the turn changed, as a `wip:` commit, but only when the branch
+is unprotected, no changed file matches a credential pattern, no schema migration
+is present, the change is under `max_files`, and the fast-tier checks pass. It
+never pushes. That is the single most surprising behaviour here.
+
+On red it writes `.claude/hooks/state/check-failure-report.md` and counts
+consecutive failures of the same failure; three strikes and it stops suggesting.
+
+### Checks
+
+    python tools/run_checks.py --tier fast --require-test
+
+Resolves this project's own lint, typecheck and test commands from marker files.
+`--require-test` fails when no test ran at all -- passing and having nothing to
+run are different facts. **A repo with no tests cannot auto-commit code** until
+`"test": false` is set in `.claude/project-checks.json`, stating deliberately that
+there are none.
+
+### Layer gotchas
+
 - All hooks are `python …`. Without Python on PATH they fail silently.
-- A hook's failure symptom is silence. After editing one, fire it against a
-  realistic payload; a clean diff proves nothing.
+- A hook's failure symptom is silence. After editing one, fire it with
+  `python tools/run_hook.py <event> '<json>'`; a clean diff proves nothing.
 """
 
 PROJECT_CHECKS_STUB = {

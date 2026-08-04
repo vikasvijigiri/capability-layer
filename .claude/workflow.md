@@ -34,6 +34,35 @@ between them never actually occurs.
 | 9 | Release | `releasing` | delivered work + a deploy target | the change serving at a named target, a quoted smoke check, a named rollback |
 | 10 | Record | `knowledge-manager` | what happened | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `MEMORY.md`, `decisions/` |
 
+### Two gates, and why the delivery approvals are not a third
+
+The chain stops and asks the user in exactly **two** places:
+
+| Gate | Where | What is being judged |
+|---|---|---|
+| 1 | end of `3 writing-plans` | the finished plan — the first artefact a human can actually judge |
+| 2 | `7 code-review` sign-off | the assembled change, with its findings |
+
+Nowhere else. `1 task-brief` states its six fields, marks anything inferred, and
+continues. `2 brainstormer` presents a spec and hands on. `6 no-slop` applies its
+local repairs unasked, because that group is defined by being contained in one file
+and mechanically checkable afterwards. Three gates inside `writing-plans` became
+one, on the argument that re-cutting a plan after one gate is cheaper than a
+dialogue before every plan.
+
+**Questions are not gates.** `brainstormer` still asks which direction to take and
+which constraint is real, because that is information nobody else has — removing
+it would not make the chain autonomous, it would make the spec the model's and
+label it the user's. A gate asks *may I proceed*; a question asks *which way*.
+Only the first kind was removed.
+
+**8 `delivering` and 9 `releasing` keep their approvals, and they are not counted
+above** because they are not workflow tuning. `~/.claude/CLAUDE.md` lists as a
+non-negotiable limit: never push, merge, publish or deploy without explicit user
+approval. Those two stages exist to honour it, stage 9's is per target, and no
+skill can grant either. Two gates gets the work done autonomously; leaving the
+machine still costs a yes.
+
 Stage 9 is the only stage that is **skipped by absence rather than by judgement**:
 a repo with no deploy target has nothing to release, and `releasing` says so and
 hands straight to 10. Stages 8 and 9 are two acts, not one — merging changes a
@@ -99,7 +128,8 @@ need — a one-line fix needs 7 and 8, nothing else. Three rules bind regardless
 - **Stage 5 is never skipped when a completion claim is about to be made.** That
   is what the claim means.
 - **Stages 8 and 9 each require their own human yes**, and stage 9's is per
-  target. No skill can grant either.
+  target. No skill can grant either. These are the delivery approvals, separate
+  from the two gates above.
 - **Stage 10 closes every unit of work**, including ones that skipped everything
   else. Unrecorded work is indistinguishable from work that never happened.
 

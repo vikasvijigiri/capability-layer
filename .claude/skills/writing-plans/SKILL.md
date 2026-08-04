@@ -42,20 +42,24 @@ Where the spec is silent and the answer changes the plan, ask — one question p
 message, `AskUserQuestion` with concrete options rather than an open prompt.
 Don't ask what the spec already answers; re-read it first.
 
-## Three blocking gates
+## One blocking gate
 
-Each is an `AskUserQuestion`. Never proceed past one on inference.
+**This is gate 1 of the chain's two.** Decomposition and execution mode are
+decided here and stated, not asked -- only the finished plan is put to the user,
+because a plan is the artefact they can actually judge, and three dialogues to
+reach one document was the cost that made people skip the stage.
 
-**Gate 1 — decomposition.** If the spec covers multiple independent subsystems
-it should have been split during brainstorming. If it wasn't, propose one plan
-per subsystem, each producing working testable software on its own. Offer:
-proceed as one plan, or split into the named sub-projects.
+**Decomposition — decide it, then say what you decided.** If the spec covers
+multiple independent subsystems, write one plan per subsystem, each producing
+working testable software on its own, and name the split in one line at the top.
+Do not ask first; a split you can justify in a sentence does not need a dialogue.
 
-**Gate 2 — task breakdown.** Present titles plus one-line deliverables, no code
-yet. Offer: approve, re-cut the boundaries, or change the order. Writing task
-bodies before boundaries are agreed wastes the most expensive part of the plan.
+**Task breakdown — no longer a separate gate.** Boundaries used to be approved
+before the bodies were written, to avoid wasting the expensive part. That trade is
+now paid deliberately: writing the bodies costs tokens, and re-cutting after the
+single gate costs one revision, which is cheaper than a dialogue on every plan.
 
-**Gate 3 — execution handoff.** After saving the plan:
+**The gate — the finished plan.** After saving it:
 > "Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:"
 > 1. **Subagent-driven (recommended)** — a fresh `general-purpose` agent per task
 >    via the Agent tool, review between tasks. Requires disjoint files per task

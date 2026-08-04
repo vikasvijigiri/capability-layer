@@ -433,6 +433,50 @@ if AGENTS.exists():
               any(d in body for d in dispatchers),
               f"dispatched by {dispatchers} but names none of them")
 
+# --- the chain has exactly two gates ----------------------------------------
+#
+# Gates creep back one skill at a time, and each addition looks locally
+# reasonable -- "surely THIS one needs a yes". Nine skills carried approval
+# machinery before 2026-08-04; the collapse to two is only durable if a tenth
+# fails the build.
+#
+# Asserted on `AskUserQuestion`, because that is the mechanism that actually stops
+# and waits. Prose saying "ask the user" is not counted -- it cannot block.
+#
+# The allowed set is small and each entry is a different KIND of thing:
+#   writing-plans   gate 1 -- the finished plan
+#   code-review     gate 2 -- sign-off on the change
+#   brainstormer    NOT a gate. Its clarify/converge calls supply information the
+#                   model does not have; removing them would make the spec the
+#                   model's own and label it the user's.
+#   skill-authoring NOT a gate, and off the delivery chain. Placement decides the
+#                   stage numbering of every later skill.
+#
+# `delivering` and `releasing` are absent on purpose: they ask in prose, and their
+# approvals are a standing safety limit rather than a workflow gate.
+
+GATE_SKILLS = {"writing-plans", "code-review"}
+QUESTION_SKILLS = {"brainstormer", "skill-authoring"}
+
+_prompting = {
+    d.name for d in sorted(SKILLS.iterdir()) if d.is_dir()
+    and "AskUserQuestion" in (d / "SKILL.md").read_text(encoding="utf-8")
+}
+_unexpected = sorted(_prompting - GATE_SKILLS - QUESTION_SKILLS)
+check("no skill prompts the user outside the two gates and two question skills",
+      not _unexpected,
+      f"{_unexpected} added a gate -- the chain allows two, see workflow.md")
+
+for _g in sorted(GATE_SKILLS):
+    check(f"gate skill `{_g}` still has its prompt", _g in _prompting,
+          "a gate was removed; the chain would then have no human checkpoint here")
+
+for _skill in ("task-brief", "no-slop"):
+    _body = (SKILLS / _skill / "SKILL.md").read_text(encoding="utf-8")
+    check(f"`{_skill}` opens no dialogue", "AskUserQuestion" not in _body,
+          "its approval gate was removed on 2026-08-04; this re-adds it")
+
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")
