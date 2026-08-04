@@ -35,14 +35,20 @@ handoffs — read the skill, don't infer an order from this list.
 consumes and produces, and the two shapes (linear and loop). Read it before
 adding a skill or wondering what comes next.
 
+**The chain stops for the user in exactly two places** — the finished plan at the
+end of `writing-plans`, and the sign-off in `code-review`. Nothing else asks.
+`tools/test_process_router.py` fails if a tenth skill grows a dialogue. Delivery is
+separate and not counted: `delivering` and `releasing` still need an explicit yes,
+because unapproved push, merge and deploy are forbidden outright below.
+
 | Skill | Stage | Produces |
 |---|---|---|
-| `task-brief` | 1 frame | `TASK.md` — six fields, approved |
+| `task-brief` | 1 frame | `TASK.md` — six fields, inferred ones marked |
 | `brainstormer` | 2 design | `docs/specs/YYYY-MM-DD-<topic>-design.md` |
 | `writing-plans` | 3 plan | `docs/plans/YYYY-MM-DD-<feature>.md` |
 | `executing-plans` | 4 execute | the thing itself; ticked plan checkboxes |
 | `verifying-work` | 5 validate | coverage verdict + the unbacked set |
-| `no-slop` | 6 sweep | repo-wide slop findings + approved repairs |
+| `no-slop` | 6 sweep | repo-wide findings; local repairs applied, structural reported |
 | `code-review` | 7 review | findings + a sign-off receipt |
 | `delivering` | 8 deliver | merged / pushed / PR opened |
 | `releasing` | 9 release | the change serving at a named target + a quoted smoke check |
@@ -135,7 +141,7 @@ Run `/verify` before declaring any work done.
 | `.claude/skills/` | the thirteen skills above, one directory each |
 | `.claude/agents/` | five agents: the fan-out set dispatched by skills, plus `Explore` overriding the built-in onto haiku |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
-| `.claude/hooks/<event>/` | ten hooks over seven events, every one of which acts, denies or measures; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create`, `global-session-start` |
+| `.claude/hooks/<event>/` | eleven hooks over seven events, every one of which acts, denies or measures; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create`, `global-session-start` |
 | `.claude/settings.json` | what actually fires — every hook but `global-session-start/`, which is wired in `~/.claude/settings.json`; `hooks_registry.json` only documents intent |
 | `.claude/commands/` | the six slash commands above |
 | `.claude/install.py` | ports the layer into another repo; `/install-layer` wraps it |
@@ -287,6 +293,8 @@ named**, never failed.
 - Commit secrets or credentials.
 - Push, merge, publish or deploy without explicit user approval.
 - Create a duplicate implementation of something that already exists.
-- Put AI attribution in git history. `04-delivery-guard.py` denied this and was
-  deleted on 2026-08-02; now only `_hooklib.AI_ATTRIBUTION_PATTERNS` checks it,
-  and only over messages the auto-commit generates. Yours are unchecked.
+- Put AI attribution in git history. Two layers now: `attribution.commit`/`pr`
+  are `""` in `~/.claude/settings.json` so the harness appends nothing, and
+  `pre-commit/03-attribution-guard.py` DENIES a hand-written `-m` carrying a
+  trailer — plus a `user.name`/`user.email` that resolves to an AI, which no
+  per-message check would ever see. The "yours are unchecked" gap is closed.

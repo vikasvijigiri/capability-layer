@@ -3,6 +3,74 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-04 03:40
+**Nine approval gates became two, and the distinction that made it safe is
+question vs gate.** Gate 1 is the finished plan at the end of `writing-plans`;
+gate 2 is the `code-review` sign-off. `task-brief`, `brainstormer`, `no-slop` and
+two of `writing-plans`' three gates stopped asking.
+
+**`brainstormer` kept its nine `AskUserQuestion` calls and that was deliberate.**
+They are not gates. A gate asks *may I proceed*; clarify and converge ask *which
+direction*, which is information no amount of reading the repo supplies. Removing
+them would not have made the chain autonomous -- it would have made the spec mine
+and labelled it the user's, which is the exact failure that skill exists to
+prevent. Only its *approval* went.
+
+**What replaced `task-brief`'s gate is checkable rather than absent:** every field
+filled by inference is now marked `(inferred)` in `TASK.md`. The user reads one
+artefact instead of answering a dialogue, and an assumption nobody stated is
+visible rather than silently blessed.
+
+**The delivery approvals were NOT removed, and the user chose that** when the
+conflict was put to them: `~/.claude/CLAUDE.md` forbids push, merge, publish or
+deploy without explicit approval, so `delivering` and `releasing` still ask. Two
+gates gets the work done; leaving the machine costs a yes. `workflow.md` now says
+why they are not a third gate.
+
+**Locked with an assertion, because gates creep back one plausible skill at a
+time.** `test_process_router.py` asserts the exact prompting set -- two gate skills
+plus `brainstormer`/`skill-authoring` as question-only -- and that `task-brief` and
+`no-slop` open no dialogue at all. Negative-tested: adding one line of
+`AskUserQuestion` to `task-brief` exits 1.
+
+**The installed `CLAUDE.md` is now about the target repo, not about the layer.**
+The stub was a bootloader describing the commit loop; it is now What this is /
+Architecture / Commands / Conventions / Gotchas, 76 lines, with the layer demoted
+below a rule. Em-dashes rather than `TODO`, because `test_no_slop` flags
+`TODO|FIXME|XXX|TBD|HACK` and a stub that fails the target's own sweep on arrival
+is worse than no stub.
+
+**Five packaging gaps closed, four of one kind.** `.mcp.json` and
+`.vscode/mcp.json` are now merged into targets -- `source-digger`'s `tools:` list
+names `mcp__github__*`, so a target had an agent whose tools did not exist.
+`tools/smoke.py` (mandated by `releasing`) and the four hook suites are copied.
+CI is copied when absent. **A virgin repo now passes all 8 suites; it did not
+before.**
+
+**The checker that should have caught those had a blind spot.**
+`test_referenced_paths.py`'s `FULL_PATH_RE` required the path to fill the backtick
+span, so `python tools/smoke.py --url ...` never matched -- every real reference is
+inside a command. Broadened; it immediately found 3 dangling references in a
+target that had been passing for four days.
+
+**Two things I got wrong, both caught by measuring rather than reading:**
+1. I reported the hooks as unprotected without a ruff.toml. **Default ruff is
+   clean on them** -- `S110`/`I001`/`BLE001` are not in the default set. Shipping a
+   ruff.toml would have switched linting on across the target's codebase and put
+   `ruff check` in their fast tier, where one pre-existing violation blocks the
+   auto-commit on day one. Replaced with a warning.
+2. My first SessionStart health check asserted exit 0 -- **which every hook returns
+   unconditionally**, because they all end in `except Exception: sys.exit(0)`. A
+   planted `raise` passed it. Rewritten to call `main()` in-process, inside the
+   fail-open wrapper; the planted raise now exits 1 in both hooks.
+
+**The Iron Law has a mechanism and one real record.** `docs/baselines/` with the
+procedure, and `code-review.md` written from this session as an unstaged natural
+experiment: ~30 turns of "8/8 suites green, looks good" versus one skill run that
+produced a scope error before reading a line plus two live defects. Verdict keep.
+`new_skill_check.py` reports a missing baseline as an advisory note -- 12 of 13
+skills lack one, and a gate nobody can satisfy gets switched off.
+
 ## 2026-08-04 01:20
 **Hooks and skills are now independent, and five files were deleted to get
 there.** 30 commits today; `55 files changed, 3830 insertions(+), 1000

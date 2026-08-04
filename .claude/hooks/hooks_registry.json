@@ -18,11 +18,12 @@
       ]
     },
     "pre-commit": {
-      "description": "Before a git commit/push finalizes; refuses credentials and protected-branch commits",
+      "description": "Before a git commit/push finalizes; refuses credentials, protected-branch commits, and AI attribution in either the message or the target repo's configured author",
       "claude_code_event": "PreToolUse (Bash|PowerShell)",
       "subscribers": [
         ".claude/hooks/pre-commit/01-secret-scan.py",
-        ".claude/hooks/pre-commit/02-branch-guard.py"
+        ".claude/hooks/pre-commit/02-branch-guard.py",
+        ".claude/hooks/pre-commit/03-attribution-guard.py"
       ]
     },
     "pre-edit": {

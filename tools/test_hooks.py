@@ -177,12 +177,22 @@ for _tcmd, _tdir, _tlabel in TARGET_CASES:
 # commands this repo runs, and a literal cloud-spend string in a source file makes
 # the file itself undeployable. It denied the command that was writing this test.
 _CLOUD = 'aws ' + 'ec2 ' + 'run-instances --image-id ami-0'
+# Same runtime assembly, same reason: `03-attribution-guard.py` scans the commands
+# this repo runs, so a literal trailer in this file would make the file that tests
+# the guard the one thing the guard refuses to commit.
+_DIRTY_COMMIT = ('git commit -m "docs: x' + chr(10) + chr(10)
+                 + 'Co-Authored' + '-By: Claude <noreply@anthropic.com>"')
 DENY_CASES = [
     ('pre-edit', {'tool_name': 'Write',
                   'tool_input': {'file_path': 'package-lock.json'}},
      'a lockfile write'),
     ('pre-deploy', {'tool_name': 'Bash', 'tool_input': {'command': _CLOUD}},
      'an unattended cloud-spend command'),
+    # Assembled at runtime for the same reason as _CLOUD and PLANTED_KEY: the
+    # guard scans this repo's own commands, and a literal trailer here would make
+    # the file that tests it uncommittable.
+    ('pre-commit', {'tool_name': 'Bash', 'tool_input': {'command': _DIRTY_COMMIT}},
+     'AI attribution in a commit message'),
 ]
 for _event, _payload, _label in DENY_CASES:
     _p = run_hook(_event, _payload)
