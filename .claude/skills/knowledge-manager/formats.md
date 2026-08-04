@@ -29,7 +29,7 @@ standard Markdown rendering (no blank line = no break) — bullets are the
 only formatting that reliably renders each field on its own line across
 renderers, without relying on trailing-space hard-break tricks. This
 applies to every field-shaped block in this file (`TASK.md`'s two
-formats, `PLAN.md`, decision records) — anywhere a fixed set of labeled
+formats, decision records) — anywhere a fixed set of labeled
 fields gets written, use bullets, not consecutive plain lines. If any
 single field's content itself needs sub-structure (e.g. `Input` listing
 several files), nest a sub-bullet list under that field rather than
@@ -59,63 +59,6 @@ shape per entry:
 history and the original commit/PR already carry that detail; the archive
 entry only needs enough to answer what was asked and what shipped.)
 `workflow-orchestrator`'s Knowledge Update stage is what performs this move.
-
-## PLAN.md
-
-The active implementation plan, if the current task has one:
-
-```
-## Objective
-## Execution Plan
-## Dependencies
-## Risks
-## Acceptance Criteria
-```
-
-Overwrite in place. This is a persistent, checked-in doc — distinct from
-Claude Code's own ephemeral plan-mode file under `~/.claude/plans/`, which
-is a per-session scratch artifact for getting the user's approval and
-isn't checked into the repo.
-
-### Execution Plan — one row per step, dispatch declared
-
-`## Execution Plan` is a table, not prose. Every step names **who executes it**
-before execution starts, so the dispatch choice is reviewable up front and
-auditable afterwards instead of being decided silently in the moment:
-
-```
-| # | Step | Owner | Kind | Depends on |
-|---|------|-------|------|-----------|
-| 1 | Draft the PRD | requirements-analyst | skill | — |
-| 2 | Pick stack + write ADR | stack-selector | skill | 1 |
-| 3 | Implement API | backend-engineer | subagent | 2 |
-| 4 | Implement UI | frontend-engineer | subagent | 2 |
-| 5 | Review the diff | code-review | skill | 3, 4 |
-| 6 | Deploy | (resolve-at-runtime) | — | 5 |
-```
-
-- **Owner** — the exact skill, subagent, or workflow that runs the step. Use the
-  real registered name (it must exist in the Skill Registry, the agent roster, or
-  `workflows/`), never a description of one.
-- **Kind** — `skill` · `subagent` · `workflow` · `direct`. `direct` means the main
-  context does it inline with ordinary tools; use it rather than inventing an owner
-  for a step too small to delegate.
-- **Depends on** — step numbers only. Two steps with disjoint dependencies *and*
-  disjoint files/APIs/schemas are the parallel-safe set; this column is what makes
-  that judgment checkable instead of asserted.
-
-**Hooks are never Owners.** They fire on events regardless of what any plan says, so
-a plan cannot invoke one. If a hook backstops a step, mention it in the Step text
-(e.g. "commit — `git-delivery-guard` will scan"), never in the Owner column.
-
-**`(resolve-at-runtime)` is a legitimate entry**, for steps whose owner genuinely
-can't be known until an earlier step produces output. Mark it explicitly. An honest
-unknown is fine; a confidently wrong Owner is not.
-
-**The tag binds execution.** Whoever executes the plan dispatches as tagged, or
-states the deviation and why *before* acting on it — see `workflow-orchestrator`
-§4. A plan whose Owners are quietly ignored is worse than one with no Owner column,
-because it reads as a guarantee it isn't keeping.
 
 ## MEMORY.md
 
@@ -199,7 +142,7 @@ hypothesis.
 ## Decision records (`decisions/`)
 
 One file per non-obvious, hard-to-reverse decision — not a restatement of
-something already obvious from the code or from `PLAN.md`. Lightweight
+something already obvious from the code. Lightweight
 ADR shape:
 
 ```

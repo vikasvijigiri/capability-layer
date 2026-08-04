@@ -166,7 +166,7 @@ them findable from inside this repo. See `LOG.md` 2026-08-03 14:30.
 Six files at the repo root carry state between sessions. Hooks read and gate on
 them, so they are code, not commentary:
 
-`TASK.md` (active task) · `PLAN.md` · `HANDOFF.md` (current work, pending, next)
+`TASK.md` (active task) · `HANDOFF.md` (current work, pending, next)
 · `LOG.md` (history) · `ISSUES.md` · `MEMORY.md`
 
 **`session-start/03-state-report.py` measures them.** It counts commits since

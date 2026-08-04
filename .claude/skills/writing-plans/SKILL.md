@@ -29,10 +29,12 @@ This skill produces a plan document and stops at the execution handoff.
 `docs/plans/YYYY-MM-DD-<feature>.md` — the task-by-task script a fresh engineer
 or subagent executes, with real code and real test commands.
 
-`PLAN.md` at the repo root is a different artefact: ordering, dependencies,
-risks and acceptance criteria across a whole effort. No skill owns it. If that
-strategic layer is wanted, build it as its own skill rather than widening this
-one — merging them produces a document that does neither well.
+A root `PLAN.md` existed as an unfilled template until 2026-08-04 and was
+deleted: four days of use never produced one, and two skills disagreed about who
+owned it. If a programme-level artefact is ever wanted — ordering, dependencies
+and risk across a whole effort rather than one feature — build it as its own
+skill. Do not widen this one; merging them produces a document that does neither
+well.
 
 ## Asking questions
 
@@ -197,7 +199,7 @@ job.**
 | Referring to a type or function no task defines | The implementer has only their own task; an undefined name is a dead end |
 | Renaming across tasks (`clearLayers` → `clearFullLayers`) | Silent integration bug the self-review exists to catch |
 | Skipping a gate on inference | All three block; "they'd obviously approve" is not an approval |
-| Widening this into `PLAN.md` territory | Ordering and risk across an effort is a different artefact — see Output |
+| Widening into programme-level ordering and risk | That is a different artefact across a whole effort — see Output |
 
 ## Process Flow
 

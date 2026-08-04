@@ -68,7 +68,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = REPO_ROOT / ".claude" / "workflow.md"
 
 # The history files, as opposed to current-state files. A turn may legitimately
-# leave `TASK.md` and `PLAN.md` alone; these three are the record, and a session
+# leave `TASK.md` alone; these three are the record, and a session
 # that ends without touching one of them has left nothing behind.
 HISTORY_DOCS = ("LOG.md", "HANDOFF.md", "ISSUES.md")
 

@@ -345,7 +345,7 @@ def ask(reason: str, event: str = "PreToolUse") -> None:
 # and the commit that follows it. Do not reintroduce one speculatively: each
 # existed to answer a question some gate asked, and the gates are gone.
 
-KNOWLEDGE_DOCS = {"LOG.md", "HANDOFF.md", "TASK.md", "PLAN.md", "MEMORY.md", "ISSUES.md"}
+KNOWLEDGE_DOCS = {"LOG.md", "HANDOFF.md", "TASK.md", "MEMORY.md", "ISSUES.md"}
 
 
 def changed_paths(repo_root=None):

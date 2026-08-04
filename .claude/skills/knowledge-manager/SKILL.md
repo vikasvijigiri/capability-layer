@@ -1,6 +1,6 @@
 ---
 name: knowledge-manager
-description: Use when a unit of work finishes and the repo's persistent docs no longer match reality. Triggers include "log this", "record this", "handoff", "where did we get to", finishing a task, or making a hard-to-reverse decision. Owns TASK.md, PLAN.md, MEMORY.md, HANDOFF.md, LOG.md, ISSUES.md and decisions/. Do NOT use for CLAUDE.md, or to restate a diff git already holds.
+description: Use when a unit of work finishes and the repo's persistent docs no longer match reality. Triggers include "log this", "record this", "handoff", "where did we get to", finishing a task, or making a hard-to-reverse decision. Owns TASK.md, MEMORY.md, HANDOFF.md, LOG.md, ISSUES.md and decisions/. Do NOT use for CLAUDE.md, or to restate a diff git already holds.
 context:
   - formats.md
 effort: low
@@ -9,7 +9,7 @@ model: sonnet
 
 # Knowledge Manager
 
-Owns exactly seven things: `TASK.md`, `PLAN.md`, `MEMORY.md`, `HANDOFF.md`,
+Owns exactly six things: `TASK.md`, `MEMORY.md`, `HANDOFF.md`,
 `LOG.md`, `ISSUES.md`, `decisions/`. Nothing else. **No hook watches these files
 any more** — a hook is a subprocess with no tool access, so it could refuse a
 turn but never compose an entry, and every hook that tried was deleted.
@@ -69,7 +69,6 @@ waste this table exists to prevent.
 | Write here | When | Update style |
 |---|---|---|
 | `TASK.md` | a task starts, changes status, or reaches Done | `## Active` in place; `## Completed` append-only |
-| `PLAN.md` | a task needs an implementation plan | overwrite in place |
 | `MEMORY.md` | a convention emerges that outlives the task | append, sparingly |
 | `HANDOFF.md` | a session changed real state | overwrite in place |
 | `LOG.md` | something happened worth a dated line | append at top |

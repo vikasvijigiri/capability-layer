@@ -17,13 +17,12 @@ Report:
    not committed separately from unstaged work.
 
 3. **Doc staleness — the part worth having.** Compare what the diff actually
-   touches against `TASK.md`, `HANDOFF.md`, `LOG.md` and `PLAN.md`:
+   touches against `TASK.md`, `HANDOFF.md` and `LOG.md`:
    - Does `HANDOFF.md`'s `Current Work` match what is uncommitted? A `HANDOFF`
      saying "none active" over a forty-file diff is stale, and stale is worse than
      empty because the next session trusts it.
    - Does `TASK.md` have an `Active` entry for this work, and is its status right?
    - Has `LOG.md` got an entry covering the uncommitted change?
-   - Does `PLAN.md` describe work that is already done?
    Report each as current or stale, with the specific mismatch.
 
 4. **Blocked or pending.** `HANDOFF.md`'s `Pending`, `Next Steps` and

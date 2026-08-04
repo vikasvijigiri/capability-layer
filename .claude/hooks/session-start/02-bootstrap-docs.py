@@ -35,7 +35,6 @@ NOISE_DIRS = {
 BOOTSTRAP_FILES = [
     "CLAUDE.md",
     "TASK.md",
-    "PLAN.md",
     "MEMORY.md",
     "HANDOFF.md",
     "LOG.md",
@@ -369,28 +368,6 @@ entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
 """
 
-PLAN_MD_SKELETON = """# Plan
-
-<!-- Active implementation plan for the current task, if one exists. Overwrite in place.
-Execution Plan is a table, one row per step, and every row declares who executes it:
-Owner = a real registered skill/subagent/workflow name, Kind = skill|subagent|workflow|
-direct, Depends on = step numbers. Hooks are never Owners (they fire on events, a plan
-cannot invoke one). Use (resolve-at-runtime) when an owner honestly isn't knowable yet.
-Sections: Objective / Execution Plan / Dependencies / Risks / Acceptance Criteria. -->
-
-## Objective
-
-## Execution Plan
-
-| # | Step | Owner | Kind | Depends on |
-|---|------|-------|------|-----------|
-
-## Dependencies
-
-## Risks
-
-## Acceptance Criteria
-"""
 
 MEMORY_MD_SKELETON = """# Project Memory
 
@@ -620,7 +597,6 @@ def main():
     skeletons = {
         "CLAUDE.md": claude_md_skeleton(repo_name, stack),
         "TASK.md": TASK_MD_SKELETON,
-        "PLAN.md": PLAN_MD_SKELETON,
         "MEMORY.md": MEMORY_MD_SKELETON,
         "HANDOFF.md": HANDOFF_MD_SKELETON,
         "LOG.md": LOG_MD_SKELETON,
