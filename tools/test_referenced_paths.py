@@ -43,7 +43,22 @@ SOURCES = [
 # Two shapes appear in this repo's prose:
 #   a full path      `.claude/hooks/pre-commit/01-secret-scan.py`, `tools/x.py`
 #   a bare hook name `04-delivery-guard.py`, resolved against .claude/hooks/*/
-FULL_PATH_RE = re.compile(r"`([\w./-]*(?:\.claude/hooks|tools)/[\w./-]+\.py)`")
+#
+# The path is NOT anchored to the backticks, and requiring that was a real blind
+# spot: the old pattern was `` `<path>` `` with the path filling the span, so it
+# only matched a path quoted alone. Every actual reference is inside a command --
+# `python tools/smoke.py --url ...` -- where the spaces break the closing anchor.
+#
+# Consequence, measured: `tools/smoke.py` is named by `releasing/SKILL.md` and
+# `releasing/references/PLATFORMS.md`, and `tools/test_hooks.py` by
+# `task-brief/SKILL.md`. Neither was copied by `install.py`, so every installed
+# repo carried a mandated command that could not run -- and this suite passed in
+# the target, scanning 30 prose files, for four days.
+#
+# Now matched anywhere, including inside fenced code blocks, which is where a
+# runnable command usually lives. The `is marked gone` escape below still applies.
+FULL_PATH_RE = re.compile(
+    r"(?<![\w./-])((?:[\w.-]+/)*(?:\.claude/hooks|tools)/[\w./-]+\.py)\b")
 BARE_HOOK_RE = re.compile(r"`(\d{2}-[\w-]+\.py)`")
 
 # A line carrying any of these is claiming the thing is gone, which is exactly

@@ -19,6 +19,9 @@ was found by something breaking rather than by reading:
      breaking every hook at once, silently.
   4. `CLAUDE.md` must be written fresh. The source's asserts things like "there
      is no application code here" and a hook count, both false elsewhere.
+  5. `.mcp.json` and `.vscode/mcp.json` must be MERGED too, and were not copied at
+     all until 2026-08-04. Several skills name MCP tools directly in their
+     `tools:` allowlist, so a target got agents whose tools did not exist.
 
 Four manual steps is a procedure someone gets wrong. This is the script.
 
@@ -60,9 +63,26 @@ LAYER = ["skills", "agents", "commands", "hooks", "workflow.md",
 # The layer's own tooling. Lives in tools/ rather than .claude/ because
 # `_projectchecks.detect_checks` looks for `tools/test_*.py`, and moving it
 # would mean the layer could not check itself.
-TOOLS = ["run_checks.py", "run_hook.py", "test_referenced_paths.py",
-         "test_process_router.py", "test_no_slop.py", "check_config_json.py",
-         "new_skill_check.py"]
+# `smoke.py` and the four hook suites were missing until 2026-08-04, and the
+# omission was invisible because `test_referenced_paths.py` only matched a path
+# that filled a backtick span -- so `python tools/smoke.py --url ...` never
+# resolved as a reference. Every installed repo carried a `releasing` skill whose
+# mandatory smoke check named a file that was not there.
+#
+# The four suites matter more than they look: they are the only things that prove
+# a target's HOOKS work, and the hooks are the part of this layer that commits
+# without asking. `test_hook_registration.py` catches a hook that is on disk and
+# wired nowhere; `test_artifact_autocommit.py` covers the gates on the auto-commit
+# itself. A target that cannot run those is trusting the riskiest component blind.
+#
+# Side effect, deliberate: `_projectchecks.detect_checks` builds the test command
+# from `tools/test_*.py`, so copying these makes them part of the target's own
+# fast tier. That is the point -- the layer checks itself there as it does here.
+TOOLS = ["run_checks.py", "run_hook.py", "smoke.py",
+         "test_referenced_paths.py", "test_process_router.py", "test_no_slop.py",
+         "test_hooks.py", "test_hook_registration.py",
+         "test_artifact_autocommit.py", "test_project_checks.py",
+         "check_config_json.py", "new_skill_check.py"]
 
 # Never copied out of `hooks/`, and each for a different reason. Passed to
 # `shutil.ignore_patterns`, so these are glob patterns, not names.
@@ -257,6 +277,90 @@ def merge_settings(target: Path, r: Report) -> None:
     r.did(f"merge {added} hook block(s) into the existing settings.json")
 
 
+# MCP server configs. Both live at the repo root rather than inside `.claude/`,
+# which is why they are handled here instead of by `LAYER`, and both use a
+# different key for the same idea.
+#
+# Copied because a layer without them is not the package it claims to be: several
+# skills name MCP tools directly -- `source-digger`'s `tools:` allowlist lists
+# `mcp__github__get_file_contents` and `mcp__context7__query-docs` -- so a target
+# that received the agents but not the server definitions gets an agent whose
+# tools do not exist.
+#
+# Safe to travel, checked rather than assumed: no absolute paths, no embedded
+# secrets. `filesystem` is scoped to `"."` in `.mcp.json` and `${workspaceFolder}`
+# in the VS Code twin, `github` reads `${GITHUB_TOKEN}` from the environment, and
+# everything else is an `npx`/`uvx` package name or a public HTTPS endpoint.
+MCP_FILES = (
+    (".mcp.json", "mcpServers"),
+    (".vscode/mcp.json", "servers"),
+)
+
+
+def merge_mcp(target: Path, r: Report) -> None:
+    """Union the server definitions. Never clobber a name the target already has.
+
+    Merged rather than copied for the same reason as `settings.json`: a target may
+    configure its own servers, and overwriting the file would silently delete
+    them. An entry that already exists under the same name is left alone -- the
+    target's version wins, because it is the one someone chose for that repo.
+
+    `.vscode/mcp.json` also carries an `inputs` array (the token prompt), unioned
+    by `id` so a second install does not duplicate the prompt.
+    """
+    for rel, key in MCP_FILES:
+        src_path = SOURCE_REPO / rel
+        if not src_path.is_file():
+            r.warn(f"source is missing {rel} -- skipped")
+            continue
+        try:
+            src = json.loads(src_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            r.warn(f"{rel} in the source does not parse ({exc}) -- skipped")
+            continue
+
+        dst_path = target / rel
+        if not dst_path.exists():
+            if not r.dry:
+                dst_path.parent.mkdir(parents=True, exist_ok=True)
+                dst_path.write_text(json.dumps(src, indent=2) + "\n", encoding="utf-8")
+            r.did(f"create {rel} with {len(src.get(key, {}))} server(s)")
+            continue
+
+        try:
+            existing = json.loads(dst_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            r.warn(f"{rel} in the target does not parse ({exc}) -- left untouched")
+            continue
+
+        merged = dict(existing)
+        servers = dict(merged.get(key) or {})
+        added = [n for n in src.get(key, {}) if n not in servers]
+        for name in added:
+            servers[name] = src[key][name]
+        merged[key] = servers
+
+        inputs_added = 0
+        if "inputs" in src:
+            have = {i.get("id") for i in merged.get("inputs", []) if isinstance(i, dict)}
+            fresh = [i for i in src["inputs"]
+                     if isinstance(i, dict) and i.get("id") not in have]
+            if fresh:
+                merged["inputs"] = list(merged.get("inputs", [])) + fresh
+                inputs_added = len(fresh)
+
+        if not r.dry and (added or inputs_added):
+            dst_path.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
+        r.did(f"merge {len(added)} server(s)"
+              + (f" and {inputs_added} input(s)" if inputs_added else "")
+              + f" into the existing {rel}")
+
+    r.warn("MCP servers are DEFINED but not approved. `enabledMcpjsonServers` "
+           "lives in .claude/settings.local.json, which is gitignored and never "
+           "copied -- so the target prompts per server on first use. That is the "
+           "correct per-project trust boundary, not a missing step.")
+
+
 def ensure_gitignore(target: Path, r: Report) -> None:
     """Add whichever ignore lines are missing, not the block as a unit.
 
@@ -427,6 +531,7 @@ def main() -> int:
     r = Report(args.dry_run)
     copy_layer(target, r)
     merge_settings(target, r)
+    merge_mcp(target, r)
     ensure_gitignore(target, r)
     ensure_ruff(target, r)
     ensure_stubs(target, r)

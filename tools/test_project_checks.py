@@ -121,9 +121,21 @@ py_bare = tree({"pyproject.toml": "[project]\nname='x'\n"})
 check("no ruff.toml means no lint", "lint" not in kinds(py_bare))
 check("no mypy.ini means no typecheck", "typecheck" not in kinds(py_bare))
 
-check("this repo resolves all three fast kinds",
-      {k for k, _ in pc.resolve_checks(ROOT)[0]} == {"test", "lint", "typecheck"},
-      str({k for k, _ in pc.resolve_checks(ROOT)[0]}))
+# What resolves HERE depends on which config files this repo has, so asserting a
+# fixed set makes the suite a statement about one repo. It used to demand all
+# three, and `install.py` began copying this file to targets on 2026-08-04 -- a
+# fresh repo has no linter, resolves `test` alone, and failed a suite that was
+# describing somewhere else. The portable invariant is the implication: a config
+# file present means its kind resolves, and `test` resolves wherever tests exist.
+_resolved = {k for k, _ in pc.resolve_checks(ROOT)[0]}
+_expected = {"test"} if list((ROOT / "tools").glob("test_*.py")) else set()
+if (ROOT / "ruff.toml").is_file() or (ROOT / ".ruff.toml").is_file():
+    _expected.add("lint")
+if (ROOT / "mypy.ini").is_file() or (ROOT / "setup.cfg").is_file():
+    _expected.add("typecheck")
+check("every fast kind this repo has config for actually resolves",
+      _expected <= _resolved,
+      f"expected at least {sorted(_expected)}, resolved {sorted(_resolved)}")
 
 
 # --- the two tiers -----------------------------------------------------------
