@@ -2,6 +2,9 @@
 description: Granular git accounting — exact counts for committed, staged, unstaged, untracked, recoverable and branch scope (how many concerns one branch is carrying), with the command behind every number
 ---
 
+Mode: read-only
+Arguments: optional section filter in `$ARGUMENTS` such as `staged`, `history`, or `recoverable`.
+
 Measure the repository. Report numbers with the command that produced them, never
 a recollection. Read-only: this command never stages, commits, pushes or edits.
 

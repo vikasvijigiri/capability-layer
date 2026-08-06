@@ -2,6 +2,9 @@
 description: Where was I — branch, uncommitted work, and which knowledge docs have gone stale relative to the actual diff
 ---
 
+Mode: read-only
+Arguments: optional focus hint in `$ARGUMENTS` such as `docs` or `git`.
+
 Answer "where was I" from the repo's real state, not from memory of the
 conversation. Read-only; this command never edits, stages, commits or pushes.
 
