@@ -14,6 +14,7 @@
 # Machine-local: which project MCP servers this machine has approved.
 # Belongs to the checkout, not the repo.
 .claude/settings.local.json
+CLAUDE.local.md
 
 # Hook state: per-turn and per-review bookkeeping, rewritten constantly and
 # meaningful only to this checkout. Tracking it churns every commit.
@@ -25,6 +26,8 @@
 # the fingerprint it had just recorded, so no receipt ever survived. See
 # ISSUES.md 2026-08-01 21:15.
 .claude/hooks/state/
+.claude/workflow-state/
+node_modules/
 
 __pycache__/
 *.pyc

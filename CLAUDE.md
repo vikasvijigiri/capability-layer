@@ -1,4 +1,4 @@
-# UAIOS — CLAUDE.md
+# CLAUDE.md
 
 A Claude Code capability layer: skills, lifecycle hooks and slash commands that
 enforce a spec → plan → build → verify workflow, plus the knowledge docs that
@@ -7,9 +7,9 @@ carry state between sessions. There is no application code here.
 This file is a bootloader: point at the thing that owns the work rather than
 restating it. History belongs in `LOG.md` and git.
 
-**Max 300 lines, and `tools/test_referenced_paths.py` enforces it** by reading
+**Max 320 lines, and `tools/test_referenced_paths.py` enforces it** by reading
 that number from this sentence. It said 150 for two weeks while the file grew to
-282 — an unchecked limit is a wish. 300 is set just above the current size on
+282 — an unchecked limit is a wish. 320 is set just above the current size on
 purpose: growth now has to be paid for by cutting something, and the suite says
 so rather than a reviewer noticing.
 
@@ -35,8 +35,10 @@ handoffs — read the skill, don't infer an order from this list.
 consumes and produces, and the two shapes (linear and loop). Read it before
 adding a skill or wondering what comes next.
 
-**The chain stops for the user in exactly two places** — the finished plan at the
-end of `writing-plans`, and the sign-off in `code-review`. Nothing else asks.
+**The chain has exactly two workflow approval gates** — the finished plan at the
+end of `writing-plans`, and the sign-off in `code-review`. Operational safety
+checks may still require confirmation, such as choosing a worktree or target;
+they do not grant approval to bypass either gate.
 `tools/test_process_router.py` fails if a tenth skill grows a dialogue. Delivery is
 separate and not counted: `delivering` and `releasing` still need an explicit yes,
 because unapproved push, merge and deploy are forbidden outright below.
@@ -55,7 +57,16 @@ because unapproved push, merge and deploy are forbidden outright below.
 | `knowledge-manager` | 10 record | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `decisions/` |
 | `research` | — entered from any stage | `docs/research/YYYY-MM-DD-<topic>.md` |
 | `systematic-debugging` | — entered on any failure | root cause + `ISSUES.md` entry |
-| `skill-authoring` | — entered to change this layer | a wired skill + a green `new_skill_check.py` |
+| `capability-layer-maintenance` | — entered to change this layer | aligned contracts, wiring, hooks, and green validators |
+| `using-git-worktrees` | — entered before isolated implementation | verified worktree, branch, and base commit |
+| `security-review` | — entered for trust-boundary changes | threat surface, ranked findings, residual risk |
+| `artifact-review` | — entered before material spec/plan approval | independent artifact verdict |
+| `designer` | — entered for user-facing product surfaces | design contract, token rules, states, and accessibility floor |
+| `test-driven-development` | — entered when behavior needs executable proof | red-green-refactor evidence |
+| `supply-chain-audit` | — entered for dependency, CI, or provenance risk | dependency and build-chain verdict |
+| `performance-engineering` | — entered for measurable performance risk | reproducible benchmark and regression guard |
+| `observability-sre` | — entered for production operations readiness | SLOs, signals, alerts, and runbook evidence |
+| `accessibility-audit` | — entered for inclusive interface evidence | automated plus manual accessibility verdict |
 
 **Skills trigger from their own `description:` frontmatter, and nothing else.**
 A `UserPromptSubmit` hook and a `routing/process-skills.md` keyword table were
@@ -70,7 +81,10 @@ Dispatched by the skill that owns the stage, only when the user has asked for
 subagents. `Explore.md` is different: it overrides the built-in to pin haiku.
 
 `source-digger` (research), `failure-investigator` (debugging),
-`diff-reviewer` (review) fan out; `task-implementer` **never runs two at once**.
+`diff-reviewer` (review), `spec-reviewer` (spec compliance), `test-verifier`
+(verification), `architecture-reviewer` (design), `security-reviewer` (security),
+and `release-verifier` (release evidence) fan out; `task-implementer` **never
+runs two at once**.
 `.claude/workflow.md` carries the table. `tools/test_process_router.py` asserts
 each has a "do NOT use" clause, a `tools:` allowlist, a pinned model, and a
 dispatcher that names it — and that it names its dispatcher back.
@@ -97,9 +111,9 @@ doc sweeps and bulk edits, wrong for debugging), and **request shape**, which is
 the biggest and is the user's. Deliberation goes on resolving ambiguity, not
 solving problems; one goal per request cuts it directly.
 
-Descriptions are injected **every turn** (~1,200 tokens for thirteen) and are the
+Descriptions are injected **every turn** (~2,050 tokens for twenty-two) and are the
 only trigger surface, so breadth has to be paid for there — ~380 chars each, with
-a `Do NOT use` clause on all thirteen.
+a `Do NOT use` clause on all twenty-two.
 `session-start/02-bootstrap-docs.py` is budgeted for the same reason: it injected
 26,990 chars before anyone typed, and now clips to ~5,500.
 
@@ -107,12 +121,17 @@ a `Do NOT use` clause on all thirteen.
 
 ## Commands
 
-    /verify         the project's own lint + test commands, hook imports, frontmatter parse
-    /save           stage, describe and commit (local only)
-    /wip            branch, uncommitted work, which knowledge docs went stale
-    /skills-doctor  skill layer health — description budget, YAML, name mismatches
-    /git-state      exact counts: committed, staged, unstaged, untracked, branch scope
-    /install-layer  copy this layer into another repo — wraps `.claude/install.py`
+    /verify          canonical full lint, test, typecheck and capability checks
+    /verify-change   fast checks for the current change
+    /save            explicitly confirmed local commit; never pushes
+    /wip             branch, uncommitted work, and documentation staleness
+    /git-state       exact Git counts and branch accounting
+    /skills-doctor   deterministic capability-layer diagnosis
+    /plan-review     independent spec/plan review before execution
+    /security-review independent trust-boundary review
+    /release-check   non-destructive release-readiness evidence
+    /handoff         durable read-only session-state report
+    /pr-review       high-confidence pull-request review; local by default
 
 Raw equivalents, run from the repo root:
 
@@ -123,7 +142,7 @@ Raw equivalents, run from the repo root:
     python tools/test_no_slop.py
     python tools/test_referenced_paths.py
     python tools/test_project_checks.py
-    python tools/check_config_json.py
+    python .claude/hooks/check_config_json.py
     python -m ruff check .
     python tools/new_skill_check.py <name>|--all   # is one skill actually reachable
     python tools/run_checks.py --tier all --require-test   # both tiers
@@ -138,13 +157,13 @@ Run `/verify` before declaring any work done.
 
 | Path | What it is |
 |---|---|
-| `.claude/skills/` | the thirteen skills above, one directory each |
-| `.claude/agents/` | five agents: the fan-out set dispatched by skills, plus `Explore` overriding the built-in onto haiku |
+| `.claude/skills/` | the 22 skills above, one directory each |
+| `.claude/agents/` | ten agents: the fan-out set dispatched by skills, plus `Explore` overriding the built-in onto haiku |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
-| `.claude/hooks/<event>/` | eleven hooks over seven events, every one of which acts, denies or measures; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create`, `global-session-start` |
-| `.claude/settings.json` | what actually fires — every hook but `global-session-start/`, which is wired in `~/.claude/settings.json`; `hooks_registry.json` only documents intent |
-| `.claude/commands/` | the six slash commands above |
-| `.claude/install.py` | ports the layer into another repo; `/install-layer` wraps it |
+| `.claude/hooks/<event>/` | hooks over several events that act, deny or measure; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |
+| `.claude/settings.json` | what actually fires for this repository; `hooks_registry.json` documents the repository's hook contract |
+| `.claude/commands/` | the eleven slash commands above |
+| (portability installer removed) | this repo no longer ships an installer that copies the layer into other repos |
 | `tools/` | `run_checks.py` (one entry point for green), `smoke.py`, `run_hook.py`, the test suites, `check_config_json.py` |
 | `docs/specs/`, `docs/plans/`, `docs/research/` | skill outputs, one dated file each |
 | `docs/archive/` | the pre-2026-08-01 design layer; superseded, see `docs/archive/ARCHIVE.md` |
@@ -153,10 +172,10 @@ Run `/verify` before declaring any work done.
 | `.github/workflows/checks.yml` | CI; calls the same resolver, so it cannot drift from local |
 | `.mcp.json`, `.vscode/mcp.json` | MCP servers, kept in sync by hand |
 
-`~/.claude/` holds no skills or agents — only `SessionStart` →
-`global-session-start/01-layer-bootstrap.py`, **by absolute path into this repo**.
-It installs the layer into any repo a session opens in that is a git root with no
-`.claude/skills/` and no foreign `.claude/`. Moving this repo silently breaks it.
+`~/.claude/` holds no skills or agents. This layer now relies on a local
+`SessionStart` bootstrap hook (`.claude/hooks/session-start/02-bootstrap-docs.py`) to
+initialise repository scaffolding in-place; it does not attempt to copy the
+layer into other repositories automatically.
 
 **`../physrun/` is a sibling repo, not part of this one** — the first product
 built with this layer, and the first test of whether the layer ports. It carries
@@ -173,7 +192,7 @@ Six files at the repo root carry state between sessions. Hooks read and gate on
 them, so they are code, not commentary:
 
 `TASK.md` (active task) · `HANDOFF.md` (current work, pending, next)
-· `LOG.md` (history) · `ISSUES.md` · `MEMORY.md`
+· `LOG.md` (history) · `ISSUES.md` · `MEMORY.md` · `README.md`
 
 **`session-start/03-state-report.py` measures them.** It counts commits since
 `LOG.md`/`HANDOFF.md`/`ISSUES.md` last changed, and `.claude/` files changed since

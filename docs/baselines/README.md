@@ -43,11 +43,16 @@ document that costs ~380 characters of description budget on every single turn.
 ## Status
 
 `tools/new_skill_check.py` reports a missing baseline as an advisory note rather
-than a failure, because twelve of the thirteen skills do not have one yet and a
-gate nobody can satisfy gets switched off. The note is the pressure; closing it is
-the work.
+than a failure, because a gate nobody can satisfy gets switched off. The note is
+the pressure; closing it is the work.
 
 | Skill | Baseline |
 |---|---|
 | `code-review` | [code-review.md](code-review.md) — passed, 2 live defects the green suites missed |
-| everything else | **not run.** Named in `HANDOFF.md` as the largest standing risk |
+| `designer` | [designer.md](designer.md) — initial record; live comparative run still required |
+| `test-driven-development` | [test-driven-development.md](test-driven-development.md) — comparative pilot pending |
+| `supply-chain-audit` | [supply-chain-audit.md](supply-chain-audit.md) — comparative pilot pending |
+| `performance-engineering` | [performance-engineering.md](performance-engineering.md) — comparative pilot pending |
+| `observability-sre` | [observability-sre.md](observability-sre.md) — comparative pilot pending |
+| `accessibility-audit` | [accessibility-audit.md](accessibility-audit.md) — comparative pilot pending |
+| `artifact-review` through `writing-plans` | [capability-layer-audit.md](capability-layer-audit.md) — dated comparative campaign; individual records link to the shared evidence |
