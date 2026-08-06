@@ -1,0 +1,4 @@
+interface:
+  display_name: "Capability Layer Maintenance"
+  short_description: "Maintain the canonical agent capability layer"
+  default_prompt: "Audit and maintain the canonical .claude capability layer, its contracts, wiring, and validators."

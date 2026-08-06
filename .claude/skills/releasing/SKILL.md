@@ -1,11 +1,17 @@
 ---
 name: releasing
 description: Use when delivered work needs to reach a running environment - deployed, published, rolled out or promoted. Triggers include "deploy this", "push it live", "release to staging", "is it live", "roll it back". Do NOT use to merge or open a PR (delivering), to prove it meets the brief (verifying-work), or to debug a failed deploy - roll back first.
+when_to_use: when work must reach a running environment
 effort: low
 model: sonnet
+disable-model-invocation: true
 ---
 
 # Releasing
+
+At the shipment gate, present the release candidate, smoke evidence, rollback,
+and target, then use `AskUserQuestion` for the single explicit shipment
+approval. Do not ask for approval earlier in the workflow.
 
 Put delivered work into a running environment, prove it is actually serving, and
 keep a way back. Workflow stage 9.
@@ -106,6 +112,23 @@ binds harder here, because the thing you are asserting about is live.
 If the target has no way to prove the change is serving, that is a finding worth
 recording, not a reason to skip the check.
 
+## After the smoke check — observe and close the release
+
+The smoke check proves initial serving, not operational health. Before declaring
+the release complete:
+
+1. Confirm the target's logs, health metrics, error rate, latency, and key
+   business signal for the agreed observation window. Use the target's existing
+   dashboards or checks; do not invent a healthy value.
+2. Compare the observed signal with the pre-release baseline. Record the
+   version, target, observation window, and exact evidence.
+3. If the signal breaches the agreed threshold, roll back using the named
+   procedure, smoke-check the rollback, and then enter `systematic-debugging`.
+4. If the signal is healthy, hand the evidence to `knowledge-manager`, including
+   residual risk, follow-up monitoring, and who owns the next action.
+
+No release is closed by a deploy exit code or a single HTTP response alone.
+
 **The mechanism.** This skill mandated a smoke check long before anything could
 perform one:
 
@@ -175,6 +198,10 @@ working. Never route around it by switching tool or shell.
 | Debugging the live failure before rolling back | Every minute of diagnosis is a minute of outage |
 | Skipping the "what rollback does not undo" line | The reversible deploy sat on an irreversible migration |
 | Branching on the platform inside this file | The next platform adds another branch, forever |
+
+After the smoke check and observation window, dispatch `release-verifier` for
+an independent readiness check when the harness supports subagents. Missing
+health evidence is BLOCKED, not a successful release.
 
 ## Next step — you MUST take it
 

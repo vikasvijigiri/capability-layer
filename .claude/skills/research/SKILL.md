@@ -1,8 +1,10 @@
 ---
 name: research
 description: Use when a decision needs evidence from outside your own knowledge, before designing or building. Triggers include "how do people usually handle this", "what's the prior art", "check whether this exists already", "compare the options", "investigate". Do NOT use for a single-fact lookup, for a question about this repo that Grep settles, or once the evidence is in hand.
+when_to_use: when external evidence is required
 effort: high
 model: opus
+disable-model-invocation: true
 ---
 
 # Research

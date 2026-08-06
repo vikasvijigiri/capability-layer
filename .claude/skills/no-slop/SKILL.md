@@ -1,8 +1,10 @@
 ---
 name: no-slop
 description: Use before shipping, to sweep the whole repo for slop and repair what the user approves — credentials, conflict markers, stray placeholders, hedged instructions, overlapping skill triggers, duplicate rules, god skills. Triggers include "clean up the repo", "no-slop check", "audit the capability layer", "is this clean enough to ship", "fix the slop". Do NOT use to review a diff (`code-review`) or to edit before the report is approved.
+when_to_use: when the repo needs a cleanup audit before shipping
 effort: high
 model: sonnet
+disable-model-invocation: true
 ---
 
 # No-Slop
@@ -19,6 +21,11 @@ This one reads standing artefacts, diff or no diff: slop accumulates across
 sessions, and every turn that produced it was individually green.
 
 Cap visible output at ~500 tokens. Findings with `file:line`, not a tour.
+
+Classify every finding as `P0` release-blocking, `P1` high-risk, or `P2` cleanup.
+State the evidence and the smallest safe repair. A clean result means the
+automated checks passed and the judgement pass found no unexplained findings;
+it is not a guarantee that an unrendered or untested surface is correct.
 
 ## Two scopes, two cadences
 
@@ -60,6 +67,17 @@ second, weaker answer to a settled question.
 
 Then read for the four things it cannot decide.
 
+Use this pass order so a cheap failure stops an expensive review:
+
+1. **P0 safety:** credentials, destructive commands, conflict markers, broken
+   configuration, unsafe permissions, and claims of completion without proof.
+2. **P1 correctness:** unhandled failures, unreachable behavior, missing edge
+   cases, stale references, scope violations, and duplicated sources of truth.
+3. **P1 product quality:** incomplete loading/empty/error/permission states,
+   inaccessible interactions, responsive overflow, or a design token violation.
+4. **P2 maintainability:** naming, comments, local consistency, dead weight,
+   redundant prose, and cosmetic cleanup.
+
 **1. Overlapping triggers.** One request that two different skills would both
 plausibly claim. The script catches identical keywords; it cannot catch *"review
 this change"* and *"is this ready to ship"* pointing elsewhere. Test it: write
@@ -81,6 +99,19 @@ of it.
 **4. Orchestration leakage.** A skill deciding what comes next rather than
 producing an artefact and letting the caller decide.
 
+**5. Design-surface slop.** If the change touches a user-facing surface, read
+`DESIGN.md` or invoke `designer`; do not recreate its rules here. Check the
+implemented surface for semantic tokens, allowed type and spacing scales,
+responsive behavior, all meaningful states, visible focus, actual contrast,
+alternative text, color-independent meaning, and reduced motion. If there is no
+design contract, report a `P1` missing-decision finding and route it to
+`designer`; do not invent a visual system during cleanup.
+
+**6. Evidence slop.** For each important claim, ask what artifact proves it:
+test output for behavior, a diff for scope, a rendered view for visual quality,
+and a log/smoke check for deployment. “Looks fine”, “should work”, and “done”
+are not evidence. Missing evidence is a finding, not an invitation to guess.
+
 **This layer breaks that rule deliberately, so read carefully.** Every skill
 states a terminal handoff and `.claude/workflow.md` owns the chain — considered,
 because a stage with no named successor gets skipped. The finding is therefore
@@ -97,6 +128,10 @@ sitting beside them ("2-5 minutes", "~500 tokens"). Read for it yourself.
 At `--scope repo`, also read for dead weight the script cannot judge: a document
 superseded by a newer one and never marked, a `tools/` script nothing calls, a
 config key no code reads.
+
+For each changed file, record one of three outcomes: `pass`, `finding`, or
+`deliberate exception`. Exceptions must name the rule, reason, owner, and expiry
+or follow-up; “intentional” alone is not a justification.
 
 ## The report, and the approval gate
 

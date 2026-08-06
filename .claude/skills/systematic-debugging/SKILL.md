@@ -1,8 +1,10 @@
 ---
 name: systematic-debugging
 description: Use on any bug, test failure or unexpected behaviour, before proposing a fix. Triggers include "why is this failing", "this is broken", "it worked before", "figure out why", "root cause", a hook that produced no output, a check that passes when it should fail. Do NOT use for a failure already root-caused, or a known-unimplemented feature.
+when_to_use: when a failure needs root-cause analysis
 effort: high
 model: opus
+disable-model-invocation: true
 ---
 
 # Systematic Debugging

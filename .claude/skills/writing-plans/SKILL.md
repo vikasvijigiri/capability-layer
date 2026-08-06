@@ -1,265 +1,207 @@
 ---
 name: writing-plans
-model: opus
-description: Use when an approved spec exists for a multi-step task and no implementation code is written yet. Triggers include "write the implementation plan", "turn the spec into tasks", "break this down", "what order should we build this in". Do NOT use before a spec exists (brainstormer), for a six-line brief (task-brief), or for a single change needing no sequencing.
+description: Use when an approved spec must become a concrete implementation plan before code changes begin. Triggers include "write the implementation plan", "turn the spec into tasks", "break this down", or "what order should we build this in". Do NOT use before a spec exists (brainstormer), for a small scoped brief (task-brief), or to implement the plan (executing-plans).
+when_to_use: when an approved spec must be turned into executable tasks
 effort: high
+model: opus
+disable-model-invocation: true
 ---
 
 # Writing Plans
 
-Write the plan assuming the engineer has zero context for this codebase and
-questionable taste: which files to touch per task, the code, the tests, how to
-run them. Bite-sized tasks. DRY. YAGNI. TDD. Frequent commits. Assume a skilled
-developer who knows almost nothing about our toolset or problem domain, and
-does not know good test design well.
+Create a detailed implementation plan from an approved specification. The
+deliverable is a plan document, not production code, scaffolding, migrations,
+tests, or implementation edits.
 
-**Announce at start:** "I'm using the writing-plans skill to create the
-implementation plan."
+## Hard boundary
 
-**Save to** `docs/plans/YYYY-MM-DD-<feature-name>.md` (user preference
-overrides).
+- Read and inspect the repository; do not modify source, tests, configuration,
+  or documentation other than the plan being created.
+- Do not execute the plan while writing it. Do not invoke `executing-plans`,
+  implement a task, or claim that the feature is built.
+- Do not invent requirements. Mark an unresolved requirement as a question and
+  return to `brainstormer` if the approach is not actually settled.
+- Do not start without an approved spec. A rough request belongs to
+  `task-brief`; an unsettled direction belongs to `brainstormer`.
 
-<HARD-GATE>
-Do NOT write implementation code, scaffold, or invoke an implementation skill.
-This skill produces a plan document and stops at the execution handoff.
-</HARD-GATE>
+## Procedure
 
-## Output
+### 1. Confirm the input
 
-`docs/plans/YYYY-MM-DD-<feature>.md` — the task-by-task script a fresh engineer
-or subagent executes, with real code and real test commands.
+Announce: "I'm using the writing-plans skill to create the implementation plan."
 
-A root `PLAN.md` existed as an unfilled template until 2026-08-04 and was
-deleted: four days of use never produced one, and two skills disagreed about who
-owned it. If a programme-level artefact is ever wanted — ordering, dependencies
-and risk across a whole effort rather than one feature — build it as its own
-skill. Do not widen this one; merging them produces a document that does neither
-well.
+Read the approved spec completely. Extract the goal, non-goals, constraints,
+acceptance criteria, affected user flows, and explicit technical decisions.
+Confirm that the spec describes one coherent deliverable. If it spans
+independent subsystems that could be built and verified separately, stop and
+recommend separate specs and plans.
 
-## Asking questions
+For a material feature or architectural change, invoke `artifact-review` on the
+spec before drafting the plan. A REVISE verdict returns to `brainstormer`; do
+not plan around an independently identified spec gap.
 
-Where the spec is silent and the answer changes the plan, ask — one question per
-message, `AskUserQuestion` with concrete options rather than an open prompt.
-Don't ask what the spec already answers; re-read it first.
+For cross-cutting boundaries, dispatch `architecture-reviewer` through
+`artifact-review`; it reports risks while this skill owns the plan and approval
+gate.
 
-## One blocking gate
+### 2. Inspect the repository before designing tasks
 
-**This is gate 1 of the chain's two.** Decomposition and execution mode are
-decided here and stated, not asked -- only the finished plan is put to the user,
-because a plan is the artefact they can actually judge, and three dialogues to
-reach one document was the cost that made people skip the stage.
+Inspect the current branch and working tree. Locate the existing implementation,
+tests, configuration, build commands, conventions, and neighboring features.
+Read the relevant files end-to-end where practical; do not plan from filenames
+or from the spec alone.
 
-**Decomposition — decide it, then say what you decided.** If the spec covers
-multiple independent subsystems, write one plan per subsystem, each producing
-working testable software on its own, and name the split in one line at the top.
-Do not ask first; a split you can justify in a sentence does not need a dialogue.
+Record the evidence that determines the plan:
 
-**Task breakdown — no longer a separate gate.** Boundaries used to be approved
-before the bodies were written, to avoid wasting the expensive part. That trade is
-now paid deliberately: writing the bodies costs tokens, and re-cutting after the
-single gate costs one revision, which is cheaper than a dialogue on every plan.
+- existing files and their responsibilities;
+- extension points, interfaces, data flow, and dependencies;
+- test seams and the commands that exercise them;
+- generated files or migration rules that must not be edited directly;
+- repository constraints, platform assumptions, and known risks.
 
-**The gate — the finished plan.** After saving it:
-> "Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:"
-> 1. **Subagent-driven (recommended)** — a fresh `general-purpose` agent per task
->    via the Agent tool, review between tasks. Requires disjoint files per task
->    and frozen interfaces, per each task's **Interfaces** block.
-> 2. **Inline execution** — run tasks in this session, batching with checkpoints.
+### 3. Freeze the file map
 
-Wait for the choice.
+Before defining tasks, write a file map. For every file the implementation may
+touch, state whether it will be created, modified, moved, or deleted and what
+responsibility it owns after the change. Prefer focused changes that follow the
+repository's existing structure. Do not propose a refactor merely because a
+different layout would be cleaner.
 
-## Before defining tasks: map the files
+Every planned file must have a reason. Every requirement in the spec must map
+to at least one file or to an explicit verification step.
 
-Which files get created or modified, and what each is responsible for. This is
-where decomposition gets locked in.
+### 4. Decompose into executable tasks
 
-- One clear responsibility per file; clear boundaries, well-defined interfaces.
-- Prefer smaller focused files — you reason best about code you can hold in
-  context at once, and edits are more reliable.
-- Files that change together live together. Split by responsibility, not by
-  technical layer.
-- Follow established patterns in existing codebases. Don't unilaterally
-  restructure, but if a file you're modifying has grown unwieldy, planning a
-  split is reasonable.
+Order tasks by dependency, from foundations to behavior to integration and
+documentation. A task is the smallest independently reviewable change that
+has its own verification cycle; split tasks when a reviewer could accept one
+part and reject another.
 
-## Task right-sizing
+Each task MUST include:
 
-A task is the smallest unit that carries its own test cycle and is worth a fresh
-reviewer's gate. Fold setup, configuration, scaffolding and documentation into
-the task whose deliverable needs them; split only where a reviewer could
-meaningfully reject one task while approving its neighbour. Each task ends with
-an independently testable deliverable.
+```markdown
+### Task N: [Component or behavior]
 
-Each **step** is one action, 2-5 minutes: write the failing test / run it and see
-it fail / implement minimally / run it and see it pass / commit.
+**Purpose:** [the observable outcome]
 
-## Plan document header
+**Files:**
+- Create: `exact/path` — [responsibility]
+- Modify: `exact/path:relevant-symbol` — [change]
+- Test: `exact/path` — [coverage]
 
-Every plan MUST start with this:
+**Dependencies:** [earlier task, interface, migration, or none]
+
+**Implementation notes:**
+- [exact symbols, data flow, invariants, and edge cases]
+- [interfaces consumed and produced, including names and types where known]
+
+**Verification:**
+- Run: `[exact test or check command]`
+- Expect: [observable passing result]
+
+**Done when:** [a concrete, reviewable condition]
+```
+
+Use test-first sequencing for behavior that can be tested: define the failing
+case, identify the minimal implementation required, then define the passing
+check. Include production-code sketches only when they clarify an interface;
+do not write complete implementation bodies into the plan.
+
+Do not use vague steps such as "implement appropriately", "add validation",
+"handle edge cases", "write tests", or "finish the remaining work". Replace
+each with the exact file, symbol, behavior, test input, expected result, and
+command an implementer needs.
+
+Do not include a task for committing, pushing, merging, or deploying. Those are
+controlled by the execution, review, delivery, and release stages. Mention a
+safe checkpoint only when it is a repository convention the executor must
+observe.
+
+### 5. Write the plan document
+
+Save the plan at:
+
+`docs/plans/YYYY-MM-DD-<feature-name>.md`
+
+Use a stable, descriptive feature name. The document MUST begin with:
 
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** implement this plan task-by-task. Steps use
-> checkbox (`- [ ]`) syntax for tracking.
+**Goal:** [one sentence]
 
-**Goal:** [One sentence describing what this builds]
+**Source spec:** [path to the approved spec]
 
-**Architecture:** [2-3 sentences about approach]
+**Architecture:** [the chosen approach and why it fits the existing system]
 
-**Tech Stack:** [Key technologies/libraries]
+**Tech stack and constraints:** [versions, boundaries, conventions, and non-goals]
 
-## Global Constraints
+## File map
+...
 
-[The spec's project-wide requirements — version floors, dependency limits,
-naming and copy rules, platform requirements — one line each, values copied
-verbatim from the spec. Every task implicitly includes this section.]
-
----
+## Tasks
+...
 ```
 
-## Task structure
+Keep the plan self-contained. An engineer who has not participated in the
+conversation should be able to execute each task without guessing what a path,
+symbol, test, or dependency means.
 
-````markdown
-### Task N: [Component Name]
+### 6. Self-review before handoff
 
-**Files:**
-- Create: `exact/path/to/file.py`
-- Modify: `exact/path/to/existing.py:123-145`
-- Test: `tests/exact/path/to/test.py`
+Before the approval gate, invoke `artifact-review` on the completed plan. Treat
+its verdict as independent evidence; do not silently repair a rejected plan in
+the same review pass.
 
-**Interfaces:**
-- Consumes: [what this uses from earlier tasks — exact signatures]
-- Produces: [what later tasks rely on — exact names, parameter and return
-  types. An implementer sees only their own task; this block is how they learn
-  the names neighbouring tasks use.]
+Then review the completed plan against the spec, not against memory:
 
-- [ ] **Step 1: Write the failing test**
+1. Coverage — every requirement, acceptance criterion, and constraint has a
+   task or verification step.
+2. Ordering — no task consumes a file, symbol, schema, or interface that a
+   later task creates.
+3. File accuracy — every path exists or is explicitly marked for creation;
+   symbols and neighboring patterns match the repository.
+4. Testability — every behavior-changing task has a concrete test or check,
+   with expected output and failure coverage where practical.
+5. Completeness — no placeholders, hidden decisions, accidental scope, or
+   production implementation disguised as plan prose.
+6. Execution safety — irreversible actions, migrations, credentials, and
+   external integrations have explicit constraints and rollback considerations.
 
-```python
-def test_specific_behavior():
-    result = function(input)
-    assert result == expected
-```
+Fix gaps in the plan before presenting it. If a gap reveals that the spec is
+incomplete or the approach is unsettled, stop and route back to the appropriate
+earlier skill instead of filling the gap by assumption.
 
-- [ ] **Step 2: Run test to verify it fails**
+## Completion and handoff
 
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: FAIL with "function not defined"
+The skill is complete only when the plan is saved, self-reviewed, and presented
+for the plan approval gate. State the plan path, task count, key assumptions,
+known risks, and any unanswered questions, then use `AskUserQuestion` to ask
+whether the user approves the plan. Do not proceed past that gate.
 
-- [ ] **Step 3: Write minimal implementation**
-
-```python
-def function(input):
-    return expected
-```
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: PASS
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add tests/path/test.py src/path/file.py
-git commit -m "feat: add specific feature"
-```
-````
-
-## Self-review
-
-After writing the complete plan, check it against the spec with fresh eyes.
-Yourself, not a subagent.
-
-1. **Spec coverage** — skim each spec requirement. Can you point to a task that
-   implements it? Add tasks for any gaps.
-2. **Placeholder scan** — hunt the Red Flags below and fix them.
-3. **Type consistency** — do types, signatures and property names in later tasks
-   match what earlier tasks defined? `clearLayers()` in Task 3 but
-   `clearFullLayers()` in Task 7 is a bug.
-
-Fix inline; no need to re-review.
-
-## Red Flags — the plan is not finished
-
-- "TBD", "TODO", "implement later", "fill in details".
-- "Add appropriate error handling" / "add validation" / "handle edge cases".
-- "Write tests for the above" with no test body.
-- "Similar to Task N" — repeat the code; tasks get read out of order.
-- A step that says what to do without showing how. Code steps need code blocks.
-- A reference to a type, function or method no task defines.
-- "The spec implies it, so I don't need to state it." The implementer never sees
-  the spec.
-- "I'll write the task bodies first and get boundaries approved after."
-
-**Each of these turns the handoff into a request that the implementer redo your
-job.**
-
-## Common Mistakes
-
-| Mistake | Why it bites |
-|---|---|
-| Referring to a type or function no task defines | The implementer has only their own task; an undefined name is a dead end |
-| Renaming across tasks (`clearLayers` → `clearFullLayers`) | Silent integration bug the self-review exists to catch |
-| Skipping a gate on inference | All three block; "they'd obviously approve" is not an approval |
-| Widening into programme-level ordering and risk | That is a different artefact across a whole effort — see Output |
-
-## Process Flow
-
-```dot
-digraph writing_plans {
-    "Read the approved spec" [shape=box];
-    "Needs decomposition?" [shape=diamond];
-    "Split into sub-project plans" [shape=box];
-    "Map file structure" [shape=box];
-    "Draft task breakdown" [shape=box];
-    "User approves breakdown?" [shape=diamond];
-    "Write full plan\n(code + TDD steps)" [shape=box];
-    "Self-review\n(fix inline)" [shape=box];
-    "User approves written plan?" [shape=diamond];
-    "Execution handoff" [shape=doublecircle];
-
-    "Read the approved spec" -> "Needs decomposition?";
-    "Needs decomposition?" -> "Split into sub-project plans" [label="yes"];
-    "Split into sub-project plans" -> "Map file structure";
-    "Needs decomposition?" -> "Map file structure" [label="no"];
-    "Map file structure" -> "Draft task breakdown";
-    "Draft task breakdown" -> "User approves breakdown?";
-    "User approves breakdown?" -> "Draft task breakdown" [label="no, revise"];
-    "User approves breakdown?" -> "Write full plan\n(code + TDD steps)" [label="yes"];
-    "Write full plan\n(code + TDD steps)" -> "Self-review\n(fix inline)";
-    "Self-review\n(fix inline)" -> "User approves written plan?";
-    "User approves written plan?" -> "Write full plan\n(code + TDD steps)" [label="changes requested"];
-    "User approves written plan?" -> "Execution handoff" [label="approved"];
-}
-```
+After the user approves the plan, invoke `executing-plans` and pass it the plan
+path. Until approval is explicit, stop here.
 
 ## Next step — you MUST take it
 
-**The terminal state is invoking `executing-plans`**, once gate 3 is answered.
-Pass it the plan path and the execution mode the user chose. Gate 3 chooses the
-mode, not the successor.
+The terminal state is invoking `executing-plans` after the user approves the
+saved plan. Pass the plan path. Do not implement any task in this skill.
 
 ## Routing
 
-- Mandatory validator: none — this produces a plan document, not a change to
-  running code. The self-review and the three gates are the gates.
-- Preceded by `brainstormer`, which produces the spec this consumes.
-- Terminal handoff, and you MUST take it once gate 3 is answered: invoke
-  `executing-plans`, telling it which execution mode the user chose. Gate 3
-  picks the *mode*; the successor skill is the same either way.
-- Before any task that pushes, merges, deploys or is otherwise irreversible,
-  stop and get explicit approval in the conversation. There is no approval
-  skill — the plan names the step and you ask.
+- Mandatory validator: the self-review in this skill; no implementation suite
+  runs because this skill produces a plan, not product code.
+- Independent validator: `artifact-review` for material specs and plans.
+- Preceded by `brainstormer`, which produces the approved spec consumed here.
+- Terminal handoff: `executing-plans`, only after the plan approval gate.
+- If the spec is incomplete or the approach is unsettled, return to
+  `brainstormer`; do not fill the gap by assumption.
 
-## Success
+## Success criteria
 
-A fresh engineer with no context for this codebase can execute the plan
-top-to-bottom without asking a question: every task names the exact files, the
-interfaces its neighbours rely on, real code, and a command whose real output
-says whether it worked.
-
-The three gates were answered by the user rather than inferred, and every
-deviation from the spec is written into the plan with its reason -- including
-the ones deliberately not built.
+- A dated plan exists under `docs/plans/`.
+- The plan describes implementation work without performing it.
+- Tasks are ordered, independently verifiable, and specific enough to execute.
+- The plan contains no unresolved placeholders or invented requirements.
+- Every spec requirement and affected file is accounted for.
+- Execution has not started before approval.

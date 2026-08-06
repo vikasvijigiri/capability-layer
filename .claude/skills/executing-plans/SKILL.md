@@ -1,11 +1,17 @@
 ---
 name: executing-plans
 description: Use when an approved plan or task list exists and the work is to carry it out. Triggers include "execute the plan", "implement this", "start building", "do task 3", "continue the plan". Also for open-ended work with no fixed end state. Do NOT use to write the plan (writing-plans), diagnose a failure (systematic-debugging), or judge the result (verifying-work).
+when_to_use: when a plan is approved and execution begins
 effort: medium
 model: sonnet
+disable-model-invocation: true
 ---
 
 # Executing Plans
+
+Implementation starts only in a verified worktree. Invoke `using-git-worktrees`
+when the current checkout is not already the explicitly chosen isolated branch;
+record the worktree path and base commit before task 1.
 
 Carry out an approved plan and produce the thing it describes. Workflow stage 4.
 
@@ -193,6 +199,10 @@ digraph executing_plans {
 }
 ```
 
+Before the terminal handoff, dispatch `spec-reviewer` when the implementation
+has an approved spec or material acceptance criteria. It checks compliance but
+does not fix or approve the work. Then invoke `verifying-work`.
+
 ## Next step — you MUST take it
 
 **The terminal state is invoking `verifying-work`**, once every task is ticked.
@@ -219,6 +229,7 @@ evidence; the diff is.
 
 - Mandatory validator: `verifying-work`. Every task green is not the same as the
   goal met, and this skill cannot judge its own output.
+- Independent compliance lens: `spec-reviewer` for material approved specs.
 - Preceded by `writing-plans`, which produces the plan this consumes.
 - Terminal handoff: `verifying-work`, then `delivering`.
 - A failure worth remembering goes to `ISSUES.md` via `systematic-debugging`; the

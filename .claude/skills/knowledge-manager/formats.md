@@ -4,6 +4,13 @@ The per-file specification for the seven docs `knowledge-manager` owns. Load
 this only for the file(s) actually being written — `SKILL.md`'s routing table
 says which section applies.
 
+## README.md
+
+Stable project truth for a new human or agent: purpose, setup, usage,
+architecture, repository map, conventions, and links to deeper docs. Do not put
+active work, handoff state, historical entries, or capability-layer contracts
+here. Update only when the project itself changes.
+
 ## TASK.md
 
 Two sections, two different rules — this file is the accountability trail
