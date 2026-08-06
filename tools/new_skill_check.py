@@ -235,9 +235,8 @@ def check(name: str) -> int:
     # docs/baselines/README.md for the procedure and what makes a record
     # trustworthy.
     #
-    # A NOTE and not a requirement, deliberately. Twelve of thirteen skills have
-    # no baseline, and a gate nobody can satisfy is a gate that gets switched off
-    # -- this repo has deleted three of those. The note is the standing pressure.
+    # A NOTE and not a requirement, deliberately. Baseline coverage is evidence
+    # of value, but a gate nobody can satisfy is a gate that gets switched off.
     baseline = ROOT / "docs" / "baselines" / f"{name}.md"
     r.note("has a baseline run recording what it improves",
            baseline.is_file(),

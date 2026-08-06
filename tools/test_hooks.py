@@ -81,7 +81,7 @@ if p.returncode != 0:
 else:
     print('OK: pre-commit (clean file)')
 
-# 3. pre-commit with a planted secret should fail (non-zero exit).
+# 3. pre-commit with a planted secret should emit a structured deny and return 0.
 # The fake key is assembled at runtime rather than written as one literal:
 # 01-secret-scan.py scans this file too, and a literal `AKIA` + 16 chars here
 # makes the repo permanently uncommittable. The bytes written to the temp file
@@ -94,11 +94,11 @@ with tempfile.NamedTemporaryFile('w', suffix='.txt', delete=False, encoding='utf
 try:
     rel = secret_file.relative_to(ROOT).as_posix()
     p = run_hook('pre-commit', {'files': [rel]})
-    if p.returncode == 0:
-        print('FAIL: pre-commit did not detect planted secret')
+    if p.returncode != 0 or '"permissionDecision": "deny"' not in p.stdout:
+        print('FAIL: pre-commit did not emit a structured deny')
         fail = True
     else:
-        print('OK: pre-commit detected planted secret (exit', p.returncode, ')')
+        print('OK: pre-commit detected planted secret with structured deny')
 finally:
     secret_file.unlink(missing_ok=True)
 

@@ -1,0 +1,5 @@
+# Worktree-specific files to copy into new git worktrees
+# Add paths here if you want them created automatically in new worktrees.
+
+# Example:
+# .vscode/settings.json

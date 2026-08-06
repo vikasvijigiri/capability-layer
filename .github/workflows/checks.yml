@@ -6,6 +6,12 @@
 # pass" means. A workflow with its own copy of the command list is how a green
 # local run starts coexisting with a red pipeline.
 #
+# It calls the resolver as a library rather than through a CLI wrapper. A
+# `tools/run_checks.py` wrapper did that job until 2026-08-04 and was deleted with
+# the rest of the repo-root `tools/` directory -- the resolver was always the real
+# thing and the wrapper only parsed `--tier`. Inlining it keeps the property above
+# while leaving `.claude/` as the only directory the layer needs.
+#
 # Two jobs, matching the two tiers: `fast` on every push, `slow` only on pull
 # requests, because a production build and a browser suite cost minutes.
 
@@ -28,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # The suites read `git log` and `git diff` against the base, which an
+          # The resolver reads `git log` and `git diff` against the base, which an
           # unfetched shallow clone cannot answer.
           fetch-depth: 0
 
@@ -49,7 +55,15 @@ jobs:
       - name: Run the fast tier
         env:
           PYTHONIOENCODING: utf-8
-        run: python tools/run_checks.py --tier fast
+        run: |
+          python - <<'PY'
+          import importlib.util as u, sys
+          spec = u.spec_from_file_location("pc", ".claude/hooks/_projectchecks.py")
+          pc = u.module_from_spec(spec); spec.loader.exec_module(pc)
+          ok, detail, ran_test = pc.run_checks(kinds=pc.FAST_KINDS)
+          print(("PASS" if ok else "FAIL"), detail, "| test ran:", ran_test)
+          sys.exit(0 if ok else 1)
+          PY
 
   slow:
     name: build · audit · e2e · smoke
@@ -73,4 +87,12 @@ jobs:
       - name: Run the slow tier
         env:
           PYTHONIOENCODING: utf-8
-        run: python tools/run_checks.py --tier slow
+        run: |
+          python - <<'PY'
+          import importlib.util as u, sys
+          spec = u.spec_from_file_location("pc", ".claude/hooks/_projectchecks.py")
+          pc = u.module_from_spec(spec); spec.loader.exec_module(pc)
+          ok, detail, _ = pc.run_checks(kinds=pc.SLOW_KINDS)
+          print(("PASS" if ok else "FAIL"), detail)
+          sys.exit(0 if ok else 1)
+          PY

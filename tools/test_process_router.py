@@ -449,14 +449,14 @@ if AGENTS.exists():
 #   brainstormer    NOT a gate. Its clarify/converge calls supply information the
 #                   model does not have; removing them would make the spec the
 #                   model's own and label it the user's.
-#   skill-authoring NOT a gate, and off the delivery chain. Placement decides the
-#                   stage numbering of every later skill.
+#   capability-layer-maintenance is not a gate, and is off the delivery chain. Its ownership does not change
+#                   product stage numbering.
 #
 # `delivering` and `releasing` are absent on purpose: they ask in prose, and their
 # approvals are a standing safety limit rather than a workflow gate.
 
-GATE_SKILLS = {"writing-plans", "code-review"}
-QUESTION_SKILLS = {"brainstormer", "skill-authoring"}
+GATE_SKILLS = {"writing-plans", "releasing"}
+QUESTION_SKILLS = {"brainstormer"}
 
 _prompting = {
     d.name for d in sorted(SKILLS.iterdir()) if d.is_dir()
