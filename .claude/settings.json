@@ -7,17 +7,11 @@
             "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start/02-bootstrap-docs.py\"",
             "statusMessage": "Loading knowledge docs into session context..."
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
+          },
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-run/05-process-skill-router.py\"",
-            "statusMessage": "Matching request against process-skill keywords..."
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start/03-state-report.py\"",
+            "statusMessage": "Measuring repo state against the branch point..."
           }
         ]
       }
@@ -38,7 +32,7 @@
           {
             "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-run/07-layer-drift.py\"",
-            "statusMessage": "Checking whether the .claude/ layer has drifted..."
+            "statusMessage": "Checking capability-layer drift..."
           }
         ]
       }
@@ -61,6 +55,11 @@
             "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-deploy/01-spend-guard.py\"",
             "statusMessage": "Running deploy spend guard checks..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit/03-attribution-guard.py\"",
+            "statusMessage": "Checking the commit message and author for AI attribution..."
           }
         ]
       },

@@ -4,15 +4,19 @@ Every hook here has two callers and must behave identically for both:
 
   Claude Code       registers the script directly in .claude/settings.json and
                     delivers the payload as JSON on stdin.
-  a validator       runs `python tools/run_hook.py <event> '<json>'`, which
-                    delivers the payload in the HOOK_PAYLOAD env var. CLAUDE.md
-                    requires validators to do this, so it cannot be dropped.
+  a human           runs the script directly with the payload in the HOOK_PAYLOAD
+                    env var, which is the documented way to test a hook after
+                    editing it:
 
-`load_payload()` accepts either, so a hook never cares which one invoked it.
+                        HOOK_PAYLOAD='{}' python .claude/hooks/<event>/<hook>.py
 
-Not placed inside an event directory on purpose: run_hook.py executes every
-file in `.claude/hooks/<event>/`, so a helper module living there would be
-run as though it were a hook.
+`load_payload()` accepts either, so a hook never cares which one invoked it. Both
+paths are load-bearing -- CLAUDE.md requires a hook to be fired by hand before it
+is trusted, because a broken hook's symptom is silence.
+
+Not placed inside an event directory on purpose: anything that runs every file in
+`.claude/hooks/<event>/` would run a helper module living there as though it were
+a hook. The `_` prefix says the same thing to a reader.
 """
 
 from __future__ import annotations
@@ -78,7 +82,8 @@ SECRET_PATTERNS = [
 #
 # No literal example DSN here on purpose: this file is itself scanned, and a
 # realistic one in a comment made the repo uncommittable the moment the pattern
-# was added. `tools/test_hooks.py` documents the same trap for `AKIA`.
+# was added. The same trap applies to `AKIA` and to any other prefix added below:
+# write the pattern, never an instance of it.
 #
 # fnmatch semantics, matched against the repo-relative POSIX path and against the
 # bare filename, so `id_rsa` matches at any depth.
@@ -208,8 +213,8 @@ def secret_path_hit(rel):
     norm = str(rel).replace("\\", "/")
     # NOT lstrip("./") -- that strips a *character set*, so ".env" becomes "env"
     # and the single most important pattern here silently stops matching. Caught
-    # on 2026-08-02 by running it; the identical bug had just been fixed in
-    # tools/test_referenced_paths.py, which is how often this one bites.
+    # on 2026-08-02 by running it, and it was the second place in the repo to have
+    # the identical bug that week, which is how often this one bites.
     while norm.startswith("./"):
         norm = norm[2:]
     name = norm.rsplit("/", 1)[-1]

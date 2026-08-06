@@ -81,7 +81,9 @@ def main():
             + ", ".join(findings)
             + ". Remove the secret and re-stage before committing."
         )
-        sys.exit(1)
+        # `deny()` emits the structured PreToolUse decision. Structured hook
+        # output must return 0; exit 2 is reserved for stderr-only blocking.
+        return
 
 
 if __name__ == "__main__":

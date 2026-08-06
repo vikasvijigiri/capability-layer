@@ -14,7 +14,13 @@ back to `{}` -- which is correct behaviour and completely silent.
 
 So the check is cheap, the failure is catastrophic, and nothing else looks.
 
-Run: python tools/check_config_json.py
+It lives inside `.claude/hooks/` rather than beside a test suite because it is
+part of the hook layer: it validates only `.claude/` files, and `.claude/` is the
+whole portable unit. Moved here on 2026-08-04 when the repo-root `tools/`
+directory was deleted -- of everything in there, this was the only file the hooks
+could not do without, being the one guard on their own wiring.
+
+Run: python .claude/hooks/check_config_json.py
 """
 from __future__ import annotations
 
@@ -23,7 +29,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+# `.claude/hooks/check_config_json.py` -> repo root is two levels up. It was one
+# level while this lived in `tools/`; getting this wrong makes every path below
+# resolve inside `.claude/`, where `git ls-files` finds nothing and the check
+# passes vacuously.
+ROOT = Path(__file__).resolve().parents[2]
 
 # Files whose *shape* matters, beyond parsing. Each maps to the key that must be
 # present -- a settings.json that parses but has no `hooks` block is a file that

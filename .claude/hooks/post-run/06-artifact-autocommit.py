@@ -93,12 +93,16 @@ DEFAULT_MAX_FILES = 25
 # that governs this hook was altered without anyone reading the diff.
 NEVER_AUTO = (".claude/settings.json", ".claude/settings.local.json")
 
-# Re-entry guard. `tools/test_hooks.py` fires the whole `post-run` event, which
-# reaches this hook, which runs the suites, which runs `test_hooks.py` -- an
-# unbounded recursion that presents as a hang, not an error. Found on 2026-08-02
-# by the run timing out at two minutes.
+# Re-entry guard. Anything that fires the whole `post-run` event reaches this
+# hook, which runs this project's checks; if one of those checks in turn fires the
+# event, the recursion is unbounded and presents as a hang, not an error. A test
+# suite doing exactly that found it on 2026-08-02, by timing out at two minutes.
 #
-# It does double duty: a suite run must never produce a real commit either, and
+# The suite is gone but the guard is not, and must not be: any check command a
+# project configures can reach this hook the same way, and the failure is silent
+# until it hangs.
+#
+# It does double duty: a check run must never produce a real commit either, and
 # any invocation carrying this flag is by definition running underneath one.
 REENTRY_FLAG = "UAIOS_AUTOCOMMIT_RUNNING"
 
@@ -159,10 +163,15 @@ def run_suites():
     """(ok, detail, ran_test) for whatever this project's checks are.
 
     Delegates to `_projectchecks`, which detects `npm test`, `tsc --noEmit`,
-    `pytest`, `cargo test`, this repo's own `tools/test_*.py` and so on, and lets
+    `pytest`, `cargo test` and so on from marker files, and lets
     `.claude/project-checks.json` override any of them. Until 2026-08-02 this
-    function hardcoded `tools/test_*.py`, which would have found nothing at all
-    in a web app and reported "nothing to verify" on every commit.
+    function hardcoded one repo's own Python suites, which would have found
+    nothing at all in a web app and reported "nothing to verify" on every commit.
+
+    In this capability repo it resolves to the configured lint, typecheck, and
+    standalone contract-test commands. A project without test markers or an
+    explicit test command still returns `ran_test=False`, which keeps the
+    unverified-code gate honest rather than pretending that no test was a pass.
     """
     return run_checks(REPO_ROOT, extra_env={REENTRY_FLAG: "1"})
 
@@ -333,17 +342,16 @@ def main():
     # safety story evaporating quietly, which is the failure mode this repo keeps
     # rediscovering. Prose-only turns are unaffected: a README has nothing a
     # suite could have caught.
-    # `"test": false` is the stated decision that this project has no suite. The
-    # refusal message offers it as the way out, so it has to actually open --
-    # an escape hatch that does not is worse than none, because the next person
-    # disables the whole hook instead.
+    # A false `test` value is the explicit opt-out for a project with no suite.
+    # This repo configures real standalone tests, so its code edits are gated by
+    # those commands instead of relying on the opt-out.
     test_disabled = load_config(REPO_ROOT).get("test") is False
     if not ran_test and not test_disabled and changed_includes_code(paths):
         speak(f"Auto-commit REFUSED: this turn changed code but no test check "
               f"ran ({suite_detail}). An unattended commit is only as good as "
               f"what could have failed, and nothing could have. Add a test "
-              f"command to {CONFIG_NAME}, or set `\"test\": false` there to say "
-              f"deliberately that this project has none. {len(paths)} file(s) "
+               f"command to {CONFIG_NAME}, or set `\"test\": false` only when "
+               f"this project deliberately has no suite. {len(paths)} file(s) "
               f"left uncommitted.")
         return
 

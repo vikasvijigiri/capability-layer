@@ -1,10 +1,15 @@
 """What "the checks pass" means for whatever project this is.
 
-The auto-commit gates on a green suite. Until 2026-08-02 that meant literally
-`tools/test_*.py`, hardcoded, which is correct for this repo and useless for the
-web app it was about to be pointed at -- `npm test` would never have been found,
+The auto-commit gates on a green suite. Until 2026-08-02 that meant one repo's
+own Python suites, hardcoded, which was correct there and useless for the web app
+it was about to be pointed at -- `npm test` would never have been found,
 `run_suites()` would have returned "nothing to verify", and the one gate holding
 up unattended committing would have passed vacuously on every commit.
+
+There is no per-repo escape hatch in `detect_checks` any more either, for the same
+reason: one was carried here for this repo's shape and it was the only branch in
+the file that could not port. What a project's checks are is `MARKER_CHECKS` plus
+`.claude/project-checks.json`, in every repo including this one.
 
 Three ideas here, the first two taken from carlrannaberg/claudekit's
 `test-project.ts` and `typecheck-project.ts`, which solve the same problem for
@@ -260,15 +265,17 @@ def detect_checks(root=None):
         if any(root.glob(pattern)):
             found.extend(checks)
 
-    found.extend(_make_checks(root))
+    # Small capability repositories often keep executable contract suites as
+    # standalone `tools/test_*.py` scripts rather than a pytest project. Treat
+    # each script as a test command so temporary fixtures and layer-only repos
+    # still get real test evidence without inventing a package marker.
+    tool_tests = sorted((root / "tools").glob("test_*.py"))
+    found.extend(
+        ("test", f'"{sys.executable}" "{p.relative_to(root)}"')
+        for p in tool_tests
+    )
 
-    # This repo's own shape: standalone `tools/test_*.py` scripts, each its own
-    # suite with no runner. Kept because it is what this repo is, not because
-    # Python is special -- an equivalent convention in any language would earn
-    # its own entry.
-    if (root / "tools").is_dir():
-        for suite in sorted((root / "tools").glob("test_*.py")):
-            found.append(("test", f'"{sys.executable}" tools/{suite.name}'))
+    found.extend(_make_checks(root))
 
     # A marker can fire twice -- pyproject.toml and pytest.ini both mean pytest.
     seen, unique = set(), []

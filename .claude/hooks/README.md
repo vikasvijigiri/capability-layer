@@ -27,7 +27,7 @@ were deleted on 2026-08-02 and the survivors kept their numbers.
 ## Writing one
 
 - **Read the payload with `_hooklib.load_payload()`**, never `os.environ`
-  directly. Claude Code delivers it on **stdin**; `tools/run_hook.py` sets
+  directly. Claude Code delivers it on **stdin**; testing by hand sets
   `HOOK_PAYLOAD`. `load_payload` accepts both, so one script works under each.
 - **End in `except Exception: pass`.** A hook that raises can wedge a session.
   Every script here does this, and `ruff.toml` silences `S110`/`S112` for the
@@ -46,13 +46,28 @@ were deleted on 2026-08-02 and the survivors kept their numbers.
 
 ## Testing one
 
-    python tools/run_hook.py <event> '<json-payload>'
-    python tools/run_hook.py <event> --file payload.json
+Set the payload in the environment and run the script. There is no runner and
+there does not need to be one — `load_payload()` reads `HOOK_PAYLOAD`, so this is
+the whole procedure:
+
+    HOOK_PAYLOAD='{}' python .claude/hooks/<event>/<hook>.py
+    HOOK_PAYLOAD="$(cat payload.json)" python .claude/hooks/<event>/<hook>.py
+
+A `tools/run_hook.py` wrapper did this until 2026-08-04. It only iterated the
+directory and set the variable, and it lived outside `.claude/`, so it went with
+the rest of `tools/`.
 
 **A hook bug's symptom is silence, which is identical to "no problem".** A clean
-diff proves nothing; fire the script against a realistic payload. On Windows,
-PowerShell strips inner double quotes from a single-quoted argument before the
-child process sees them — escape them, or use `--file`.
+diff proves nothing; fire the script against a realistic payload.
+
+Two traps when you do:
+
+- On Windows, PowerShell strips inner double quotes from a single-quoted argument
+  before the child process sees them. Use the Bash tool, or read the payload from
+  a file as above.
+- **Never fire `post-run/06-artifact-autocommit.py` without
+  `UAIOS_AUTOCOMMIT_RUNNING=1`** in the environment. It commits for real
+  otherwise, which is the correct behaviour and not what you wanted from a test.
 
 ## Security
 

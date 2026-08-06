@@ -1,10 +1,10 @@
 """
 SessionStart hook — global, runs once per session in every repo.
 
-Scope, by design: repository detection, one-time file scaffolding, and
-minimal context loading. Nothing here plans, writes source, reviews, or
-commits — that's the model's job during the actual session, not this
-deterministic script's.
+Scope, by design: repository detection, missing-scaffolding detection, and
+minimal context loading. Nothing here authors strategic documents, writes
+source, reviews, or commits — that's the model's job during the actual
+session, not this deterministic script's.
 
 Also subsumes the old inline "load HANDOFF.md" SessionStart command: this
 script loads HANDOFF.md itself (plus a few other minimal-context sources),
@@ -15,6 +15,11 @@ import json
 import os
 import re
 import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _hooklib import load_payload  # noqa: E402
 
 
 AI_APP_DEP_MARKERS = (
@@ -33,6 +38,7 @@ NOISE_DIRS = {
 }
 
 BOOTSTRAP_FILES = [
+    "README.md",
     "CLAUDE.md",
     "TASK.md",
     "MEMORY.md",
@@ -416,6 +422,22 @@ Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md s
 one entry per incident, newest first. Not preloaded at SessionStart -- read on demand. -->
 """
 
+README_MD_SKELETON = """# README
+
+<!-- Auto-bootstrapped stub. Fill in with a short project summary, how to run it,
+and any repository-specific conventions. -->
+
+## What this is
+
+## Getting started
+
+## Commands
+
+## Conventions
+
+## Notes
+"""
+
 DECISIONS_README_SKELETON = """# Decisions
 
 One file per non-obvious decision. Only add an entry for choices that
@@ -432,6 +454,17 @@ Rationale.
 
 ## Alternatives considered
 What else was on the table and why it lost.
+"""
+
+DOCS_PLANS_README_SKELETON = """# Plans
+
+Feature plans, delivery sequences, and implementation notes go in this
+folder. Create one file per feature under `docs/plans/`.
+"""
+
+DOCS_ARCHIVE_README_SKELETON = """# Archive
+
+Retired designs, archived decisions, and deprecated notes live here.
 """
 
 
@@ -586,31 +619,21 @@ def list_decisions(root):
 
 
 def main():
+    # Consume the standard Claude Code payload even though this hook's current
+    # policy is identical for startup, resume, and compact events.
+    load_payload()
     root = find_git_root(os.getcwd())
     if root is None:
         return
 
-    stack = detect_stack(root)
-    repo_name = os.path.basename(root)
-    created = []
-
-    skeletons = {
-        "CLAUDE.md": claude_md_skeleton(repo_name, stack),
-        "TASK.md": TASK_MD_SKELETON,
-        "MEMORY.md": MEMORY_MD_SKELETON,
-        "HANDOFF.md": HANDOFF_MD_SKELETON,
-        "LOG.md": LOG_MD_SKELETON,
-        "ISSUES.md": ISSUES_MD_SKELETON,
-    }
-    for name in BOOTSTRAP_FILES:
-        if write_if_missing(os.path.join(root, name), skeletons[name]):
-            created.append(name)
-
-    decisions_dir = os.path.join(root, "decisions")
-    if not os.path.isdir(decisions_dir):
-        os.makedirs(decisions_dir, exist_ok=True)
-    if write_if_missing(os.path.join(decisions_dir, "README.md"), DECISIONS_README_SKELETON):
-        created.append("decisions/README.md")
+    missing_docs = [
+        name for name in BOOTSTRAP_FILES
+        if not os.path.isfile(os.path.join(root, name))
+    ]
+    missing_dirs = [
+        name for name in ("decisions", "docs", "docs/plans", "docs/archive")
+        if not os.path.isdir(os.path.join(root, name))
+    ]
 
     missing_env_keys = check_env_setup(root)
 
@@ -623,11 +646,13 @@ def main():
             + ". Remind the user at a convenient point (not necessarily now) -- "
             "never fill these in yourself, they're the user's own credentials."
         )
-    if created:
+    if missing_docs or missing_dirs:
         sections.append(
-            "--- Repo bootstrap (auto) ---\n"
-            f"Created missing doc scaffolding: {', '.join(created)}. "
-            "These are placeholder stubs -- fill in with real project specifics as work happens."
+            "--- Documentation drift detected (read-only) ---\n"
+            f"Missing strategic documents: {', '.join(missing_docs) or 'none'}. "
+            f"Missing directories: {', '.join(missing_dirs) or 'none'}. "
+            "Route the repair to the documented owner; this hook never writes "
+            "strategic content."
         )
 
     claude_md_path = os.path.join(root, "CLAUDE.md")

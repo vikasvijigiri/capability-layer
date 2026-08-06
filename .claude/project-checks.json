@@ -3,10 +3,33 @@
 
   "lint": [
     "python -m ruff check .",
-    "python tools/check_config_json.py"
+    "python .claude/hooks/check_config_json.py",
+    "python tools/new_skill_check.py --all"
   ],
 
   "_why_lint": "ruff.toml selects E,F,I,B,S,UP -- the S set is bandit's rules native to ruff, so shell=True is caught without a second tool. Enabling it on 2026-08-03 found four unused imports in shipped hooks. The JSON check is listed explicitly because a configured list REPLACES detection; it is here rather than in a test suite because a stray comma in settings.json silently turns the whole hook layer off.",
+
+  "test": [
+    "python tools/test_hooks.py",
+    "python tools/test_process_router.py",
+    "python tools/test_hook_registration.py",
+    "python tools/test_artifact_autocommit.py",
+    "python tools/test_no_slop.py",
+    "python tools/test_referenced_paths.py",
+    "python tools/test_project_checks.py",
+    "python tools/test_session_start_contract.py",
+    "python tools/test_hook_standards.py",
+    "python tools/test_hook_policy.py",
+    "python tools/test_agent_standards.py",
+    "python tools/test_command_standards.py",
+    "python tools/test_workflow_standards.py",
+    "python tools/test_stop_hook_guard.py",
+    "node tools/test_workflow_runner.mjs",
+    "python tools/test_harness_contract.py",
+    "python tools/test_pilot_contract.py"
+  ],
+
+  "_why_test": "The repository includes eleven executable test suites covering hooks, routing, registration, autocommit, slop, references, project checks, SessionStart contracts, hook standards, agent standards, and command standards. Run all of them as the test tier so `--require-test` distinguishes real evidence from a disabled check.",
 
   "_why_typecheck_absent": "Absent, not false: detection finds mypy.ini and runs it. It was disabled on the assumption an unannotated codebase would drown in findings -- measured instead, it was six errors across nineteen files, all one pattern, all real. A fresh clone without mypy installed skips the check with a note rather than failing.",
 

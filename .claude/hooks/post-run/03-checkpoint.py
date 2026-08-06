@@ -70,6 +70,10 @@ def prune(root):
 
 def main():
     payload = load_payload()
+    # Stop hooks can be re-entered while the runtime is continuing a stop
+    # decision. Never create a second checkpoint during that continuation.
+    if payload.get("stop_hook_active"):
+        return
     cwd = payload.get("cwd") or os.getcwd()
 
     root_proc = git(["rev-parse", "--show-toplevel"], cwd)
