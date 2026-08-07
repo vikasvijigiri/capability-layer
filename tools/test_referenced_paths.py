@@ -268,15 +268,17 @@ for source in sorted(seen):
 
 print(f"{len(seen)} prose files scanned against {len(live)} hooks on disk")
 print(f"live counts: {counts}")
-# --- CLAUDE.md obeys its own stated line limit --------------------------------
+# --- CLAUDE.md obeys its own stated line limit, IF it states one --------------
 #
 # The limit is parsed FROM the file, so the file stays its own source of truth
-# and this check cannot drift from it. It read "~150 lines" for two weeks while
-# the file grew to 282: a limit nothing enforces is a wish, and this is the one
-# file every session loads in full.
+# and this check cannot drift from it.
 #
-# A ported repo whose CLAUDE.md states no limit is a skip, not a failure --
-# nothing here should impose a ceiling on a repo that never asked for one.
+# This repo stated 320 until 2026-08-07 and no longer states anything, so the
+# branch below is a deliberate skip rather than an oversight. The number was
+# removed because it had started to distort edits: every genuine addition became
+# a hunt for unrelated lines to delete, which is editing by budget instead of by
+# judgement. The check stays because it costs nothing and a repo that does want a
+# ceiling gets one by writing "max N lines" -- opt in, never imposed.
 _claude_md = ROOT / "CLAUDE.md"
 if _claude_md.is_file():
     _text = _claude_md.read_text(encoding="utf-8")

@@ -160,6 +160,17 @@ check("...and the ledger records that restore has been spent",
 check("...and the attempt count is cleared, so the re-attempt is not pre-spent",
       lp._rs.read_ledger(repo, "demo").get("attempts") == 0)
 
+# The other half of the restore point: a tree verified and committed by hand
+# never passes through the autocommit hook, so without an explicit marker a
+# branch can be green all day and still have nothing to fall back to.
+fresh = commit(repo, "app.py", "def f():\n    return 2\n")
+ok_mark, mark_detail = lp.mark_green(repo, "demo")
+check("marking green points the ref at HEAD",
+      ok_mark and lp.green_sha(repo, "demo") == fresh, mark_detail)
+check("...so a later restore comes back to the newer verified tree",
+      lp.restore(repo, "demo")[0]
+      and (repo / "app.py").read_text(encoding="utf-8") == "def f():\n    return 2\n")
+
 ok2, detail2 = lp.restore(repo, "no-such-slug")
 check("restoring with no green ref fails loudly rather than resetting to anything",
       not ok2 and "nothing verified" in detail2, detail2)

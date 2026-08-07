@@ -75,7 +75,8 @@ example collections) into a separate linked file instead of inlining it.
 - Full API details: [reference.md](reference.md)
 ```
 
-Keep `SKILL.md` itself under ~500 lines.
+Keep `SKILL.md` short — `templates/Skills.md` states the size rule and why, and
+is the one place it lives.
 
 ### 6. Decide if it needs live data
 If the skill's instructions depend on current state (a diff, a PR, test

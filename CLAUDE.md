@@ -7,11 +7,11 @@ carry state between sessions. There is no application code here.
 This file is a bootloader: point at the thing that owns the work rather than
 restating it. History belongs in `LOG.md` and git.
 
-**Max 320 lines, and `tools/test_referenced_paths.py` enforces it** by reading
-that number from this sentence. It said 150 for two weeks while the file grew to
-282 — an unchecked limit is a wish. 320 is set just above the current size on
-purpose: growth now has to be paid for by cutting something, and the suite says
-so rather than a reviewer noticing.
+Keep it roughly this length. There is no enforced ceiling any more: a hard number
+turned every real addition into a hunt for lines to delete elsewhere, which is
+editing by budget rather than by judgement. The cost is real and unchanged —
+this file loads every session — so prefer a pointer to a paragraph, and put
+history in `LOG.md`.
 
 ---
 

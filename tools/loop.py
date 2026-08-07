@@ -141,6 +141,30 @@ def next_step(root: Path, slug: str | None = None) -> dict:
     return step
 
 
+def mark_green(root: Path, slug: str) -> tuple[bool, str]:
+    """Point this unit's green ref at HEAD.
+
+    `06-artifact-autocommit.py` does this itself after every checkpoint it makes,
+    which covers the automatic path. This covers the other one: a tree verified
+    and committed by hand never passes through that hook, so without it a branch
+    can be green for a day and still have nothing to fall back to. Only call it
+    when the tier actually passed -- the ref's whole value is that it names a
+    tree that was verified, not merely one that exists.
+    """
+    if not slug or slug == "HEAD":
+        return False, "no slug -- detached HEAD has no unit of work"
+    try:
+        proc = subprocess.run(
+            ["git", "update-ref", f"{GREEN_REF_PREFIX}{slug}", "HEAD"],
+            cwd=str(root), capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return False, str(exc)
+    if proc.returncode != 0:
+        return False, proc.stderr.strip()
+    return True, f"{GREEN_REF_PREFIX}{slug} -> {(green_sha(root, slug) or '')[:12]}"
+
+
 def restore(root: Path, slug: str) -> tuple[bool, str]:
     """Reset hard to the last verified-good tree. Destructive, so it is never
     reached without an explicit flag: it discards work the loop produced, which
@@ -177,10 +201,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--json", action="store_true", dest="as_json")
     ap.add_argument("--restore", action="store_true",
                     help="perform the reset to the last green tree (destructive)")
+    ap.add_argument("--mark-green", action="store_true", dest="mark",
+                    help="record HEAD as verified-good; only after a green tier")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
     slug = args.slug or _rs.gather_facts(root)["slug"]
+
+    if args.mark:
+        ok, detail = mark_green(root, slug)
+        print(detail)
+        return 0 if ok else 1
 
     if args.restore:
         ok, detail = restore(root, slug)
