@@ -1,6 +1,6 @@
 ---
 name: delivering
-description: Use after verification and automated review to prepare a branch, PR, and merge-queue handoff. Do not deploy or ask for a separate delivery approval. Do NOT use to review code, diagnose failures, or release to production.
+description: Prepare a branch, PR and merge-queue handoff after verification and review. Do NOT use to deploy, to review code, or to diagnose failures.
 when_to_use: when verified reviewed work is ready for repository integration
 effort: high
 model: sonnet

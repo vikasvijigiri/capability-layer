@@ -1,6 +1,6 @@
 ---
 name: releasing
-description: Use when delivered work needs to reach a running environment - deployed, published, rolled out or promoted. Triggers include "deploy this", "push it live", "release to staging", "is it live", "roll it back". Do NOT use to merge or open a PR (delivering), to prove it meets the brief (verifying-work), or to debug a failed deploy - roll back first.
+description: Delivered work needs to reach a running environment - deployed, published, rolled out or promoted. Triggers include "deploy this", "push it live", "release to staging", "is it live", "roll it back". Do NOT use to merge or open a PR (delivering), to prove it meets the brief (verifying-work), or to debug a failed deploy - roll back first.
 when_to_use: when work must reach a running environment
 effort: low
 model: sonnet

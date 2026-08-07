@@ -1,6 +1,6 @@
 ---
 name: using-git-worktrees
-description: Use before implementation when work must be isolated from the current checkout, especially for multi-file changes, parallel work, or risky experiments. Triggers include "create a worktree", "isolate this work", "work on a separate branch", or "keep this off main". Do NOT use for read-only research, a task already inside the correct worktree, or a normal one-file edit with explicit branch context.
+description: Work must be isolated from the current checkout before implementation - multi-file changes, parallel work, risky experiments. Triggers include "create a worktree", "isolate this work", "keep this off main". Do NOT use for read-only research, work already in the right worktree, or a one-file edit with explicit branch context.
 when_to_use: before implementation when checkout isolation is required
 effort: medium
 model: sonnet

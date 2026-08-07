@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: Use when an approved spec must become a concrete implementation plan before code changes begin. Triggers include "write the implementation plan", "turn the spec into tasks", "break this down", or "what order should we build this in". Do NOT use before a spec exists (brainstormer), for a small scoped brief (task-brief), or to implement the plan (executing-plans).
+description: An approved spec must become a concrete implementation plan before code changes begin. Triggers include "write the implementation plan", "turn the spec into tasks", "break this down", "what order should we build this in". Do NOT use before a spec exists (brainstormer), for a small scoped brief (task-brief), or to implement it (executing-plans).
 when_to_use: when an approved spec must be turned into executable tasks
 effort: high
 model: opus

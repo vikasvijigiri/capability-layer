@@ -1,6 +1,6 @@
 ---
 name: no-slop
-description: Use before shipping, to sweep the whole repo for slop and repair what the user approves — credentials, conflict markers, stray placeholders, hedged instructions, overlapping skill triggers, duplicate rules, god skills. Triggers include "clean up the repo", "no-slop check", "audit the capability layer", "is this clean enough to ship", "fix the slop". Do NOT use to review a diff (`code-review`) or to edit before the report is approved.
+description: Sweep the whole repo before shipping and repair what the user approves - credentials, conflict markers, stray placeholders, hedged instructions, overlapping triggers, duplicate rules, god skills. Triggers include "clean up the repo", "no-slop check", "is this clean enough to ship". Do NOT use to review a diff (code-review) or to edit before the report is approved.
 when_to_use: when the repo needs a cleanup audit before shipping
 effort: high
 model: sonnet

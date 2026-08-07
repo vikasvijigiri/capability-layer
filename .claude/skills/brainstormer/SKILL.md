@@ -1,6 +1,6 @@
 ---
 name: brainstormer
-description: Use when creative work is starting and the approach is not yet settled - a feature, direction or behaviour change. Triggers include "any ideas", "what are our options", "how should we approach", "is there a better way", "I am stuck". Do NOT use once a design exists and the work is to plan or build it (writing-plans), or when only scope is vague (task-brief).
+description: Creative work is starting and the approach is unsettled - a feature, direction or behaviour change. Triggers include "any ideas", "what are our options", "how should we approach", "is there a better way", "I am stuck". Do NOT use once a design exists (writing-plans) or when only scope is vague (task-brief).
 when_to_use: when a design is needed before implementation
 effort: high
 model: opus

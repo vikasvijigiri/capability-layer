@@ -1,6 +1,6 @@
 ---
 name: verifying-work
-description: Use when work is finished and about to be called done, before review or delivery. Triggers include "is this done", "does this meet the brief", "prove it works", "are we finished", or any completion claim in any wording. Do NOT use to find defects in a diff (code-review), to diagnose a failure you already found (systematic-debugging), or to run suites when nothing is claimed (/verify).
+description: Work is finished and about to be called done, before review or delivery. Triggers include "is this done", "does this meet the brief", "prove it works", "are we finished", or any completion claim in any wording. Do NOT use to find defects in a diff (code-review), to diagnose a failure already found (systematic-debugging), or when nothing is claimed (/verify).
 when_to_use: when results need validation after execution
 effort: medium
 model: sonnet

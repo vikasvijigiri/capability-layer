@@ -1,6 +1,6 @@
 ---
 name: designer
-description: "Create or audit a product design contract before UI work: product feeling, voice, color/type/spacing tokens, layout, components, motion, accessibility, responsive states, and anti-patterns. Use for new screens, redesigns, design-system decisions, visual polish, or design QA. Do NOT use for implementation-only coding, generic code review, or asset generation without a design decision."
+description: Create or audit a product design contract before UI work - feeling, voice, color/type/spacing tokens, layout, components, motion, accessibility, responsive states, anti-patterns. For new screens, redesigns, design-system decisions, visual polish. Do NOT use for implementation-only coding or generic code review.
 when_to_use: when a product surface needs a coherent design system or visual/UX audit
 effort: high
 model: sonnet

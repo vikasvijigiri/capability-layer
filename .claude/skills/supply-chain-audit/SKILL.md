@@ -1,6 +1,6 @@
 ---
 name: supply-chain-audit
-description: "Audit dependencies and build supply chains for vulnerable or unpinned packages, lockfile drift, unsafe scripts, provenance gaps, license conflicts, secret exposure, and CI tampering. Use before release, after dependency changes, or for production-risk reviews. Do NOT use as a replacement for a full application security review."
+description: Audit dependencies and the build chain for vulnerable or unpinned packages, lockfile drift, unsafe scripts, provenance gaps, license conflicts, secret exposure and CI tampering. Before release or after dependency changes. Do NOT use as a replacement for a full application security review.
 when_to_use: when dependency, build, CI, package, or provenance risk needs review
 effort: high
 model: sonnet

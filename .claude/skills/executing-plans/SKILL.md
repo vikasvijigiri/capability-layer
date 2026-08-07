@@ -1,6 +1,6 @@
 ---
 name: executing-plans
-description: Use when an approved plan or task list exists and the work is to carry it out. Triggers include "execute the plan", "implement this", "start building", "do task 3", "continue the plan". Also for open-ended work with no fixed end state. Do NOT use to write the plan (writing-plans), diagnose a failure (systematic-debugging), or judge the result (verifying-work).
+description: An approved plan or task list exists and the work is to carry it out. Triggers include "execute the plan", "implement this", "start building", "do task 3", "continue the plan", and open-ended work with no fixed end state. Do NOT use to write the plan (writing-plans), diagnose a failure (systematic-debugging), or judge the result (verifying-work).
 when_to_use: when a plan is approved and execution begins
 effort: medium
 model: sonnet

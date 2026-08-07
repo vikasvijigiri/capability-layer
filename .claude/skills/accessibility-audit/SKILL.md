@@ -1,6 +1,6 @@
 ---
 name: accessibility-audit
-description: "Audit and improve web or product interfaces for keyboard access, semantics, focus, contrast, text scaling, forms, screen readers, alternative text, motion, touch targets, and error recovery. Use for UI changes, design QA, accessibility regressions, or release gates. Do NOT use an automated scan alone as accessibility proof."
+description: Keyboard access, semantics, focus, contrast, text scaling, forms, screen readers, alt text, motion, touch targets, error recovery. For UI changes, design QA, accessibility regressions, release gates. Do NOT use an automated scan alone as proof.
 when_to_use: when a user-facing interface needs accessibility evidence or remediation
 effort: high
 model: sonnet

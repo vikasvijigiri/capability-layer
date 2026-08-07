@@ -1,6 +1,6 @@
 ---
 name: observability-sre
-description: "Design or audit production observability: logs, metrics, traces, SLOs, alerts, dashboards, health checks, runbooks, capacity signals, and rollback evidence. Use before launch, after incidents, or when a service cannot be operated confidently. Do NOT use logs alone as observability or create alerts without an action."
+description: Design or audit production signals - logs, metrics, traces, SLOs, alerts, dashboards, health checks, runbooks, capacity, rollback evidence. Before launch, after incidents, or when a service cannot be operated confidently. Do NOT use logs alone as observability, or create an alert with no action.
 when_to_use: when a service needs production signals, SLOs, alerts, or operational readiness
 effort: high
 model: sonnet

@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Use before delivery to inspect the actual branch diff for correctness, security, tests, scope, and silent failures. Return a structured verdict; do not edit or ask for approval. Do NOT use to implement fixes, release, or replace verification.
+description: Inspect the actual branch diff before delivery for correctness, security, tests, scope and silent failures, returning a structured verdict. Do NOT use to implement fixes, to release, or to replace verification.
 when_to_use: when a verified change needs an independent review
 effort: high
 model: sonnet

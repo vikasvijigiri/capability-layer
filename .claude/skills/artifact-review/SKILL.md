@@ -1,6 +1,6 @@
 ---
 name: artifact-review
-description: Use to independently review a design spec or implementation plan for coverage, decomposition, architecture, file accuracy, testability, and scope before execution. Triggers include "review the spec", "review the plan", "does this plan cover everything", or "check this design before coding". Do NOT use for code review, implementation, or a plan that has not been read completely.
+description: Independently review a spec or plan for coverage, decomposition, architecture, file accuracy, testability and scope before execution. Triggers include "review the spec", "review the plan", "does this cover everything". Do NOT use for code review, implementation, or a plan not read in full.
 when_to_use: before execution when a spec or plan needs an independent review
 effort: high
 model: sonnet

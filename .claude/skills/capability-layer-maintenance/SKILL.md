@@ -1,6 +1,6 @@
 ---
 name: capability-layer-maintenance
-description: Maintain and audit the canonical agent capability layer, including CLAUDE.md, AGENTS.md, harnesses.json, workflow policy, skills, agents, commands, hooks, rules, settings, and validators. Use for capability-layer drift, stale second-brain contracts, hook safety, harness alignment, or structural changes. Do NOT use for ordinary product code, product documentation, or creating one isolated skill.
+description: Audit or repair the capability layer itself - CLAUDE.md, AGENTS.md, harnesses.json, workflow policy, skills, agents, commands, hooks, rules, settings, validators. For layer drift, stale contracts, hook safety, harness alignment. Do NOT use for product code, product docs, or one isolated new skill.
 when_to_use: when the agent layer or its governing contracts need audit, repair, migration, or ownership clarification
 effort: high
 model: opus

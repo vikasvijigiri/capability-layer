@@ -1,6 +1,6 @@
 ---
 name: performance-engineering
-description: "Measure and improve latency, throughput, resource usage, startup, bundle size, database behavior, and performance regressions with reproducible workloads and budgets. Use for slow paths, scale changes, performance-sensitive features, or release readiness. Do NOT use for intuition-only optimization or as a replacement for correctness testing."
+description: Measure and improve latency, throughput, resource usage, startup, bundle size, database behaviour and regressions, with reproducible workloads and budgets. For slow paths, scale changes, release readiness. Do NOT use for intuition-only optimization or as a substitute for correctness testing.
 when_to_use: when a product has a performance target, regression, or scale risk
 effort: high
 model: sonnet

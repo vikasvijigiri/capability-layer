@@ -55,6 +55,14 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 HARD_FRONTMATTER = 1024
 SOFT_DESC = 500
+
+# Every description is injected on every turn, so their sum is a standing cost
+# paid before the user types anything. Reported, never enforced: a hard ceiling
+# turns each new skill into a hunt for words to cut from unrelated ones, and the
+# trigger phrases are the part that would go first -- which is the part that
+# makes a skill fire at all. Measured 7813 chars across 22 skills on 2026-08-07
+# and tightened to 6721 the same day by deleting framing, not triggers.
+DESC_BUDGET: list[int] = []
 for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
     text = (d / "SKILL.md").read_text(encoding="utf-8")
     try:
@@ -79,6 +87,8 @@ for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
     if isinstance(desc, str) and len(desc) > SOFT_DESC:
         print(f"NOTE: {d.name} description is {len(desc)} chars "
               f"(over the {SOFT_DESC} soft target, under the hard limit)")
+    if isinstance(desc, str):
+        DESC_BUDGET.append(len(desc))
 
 # --- The chain resolves ---------------------------------------------------
 #
@@ -481,5 +491,9 @@ print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")
     sys.exit(1)
+_total = sum(DESC_BUDGET)
+print(f"description budget: {_total} chars across {len(DESC_BUDGET)} skills "
+      f"(~{_total // 4} tokens injected every turn, mean "
+      f"{_total // max(len(DESC_BUDGET), 1)})")
 print(f"All skill-layer tests passed ({len(skill_names)} skills, "
       f"{len(agent_files)} agents)")

@@ -1,6 +1,6 @@
 ---
 name: test-driven-development
-description: "Drive implementation from executable tests: define behavior, write a failing test, make the smallest change, refactor, and prove regression coverage. Use for new behavior, bug fixes, risky refactors, APIs, and boundary conditions. Do NOT use as a substitute for system-level verification or exploratory testing."
+description: Drive implementation from executable tests - define behaviour, write a failing test, make the smallest change, refactor, prove regression coverage. For new behaviour, bug fixes, risky refactors, APIs, boundary conditions. Do NOT use as a substitute for system-level verification or exploratory testing.
 when_to_use: when new or changed behavior needs executable proof
 effort: high
 model: sonnet

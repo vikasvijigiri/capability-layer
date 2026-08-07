@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: Use for an independent security review of changes involving authentication, authorization, secrets, personal data, external input, dependencies, deployment, or trust boundaries. Triggers include "threat model this", "security review", "check auth", or "audit dependencies". Do NOT use as a generic code review, for harmless formatting changes, or to fix findings while reviewing.
+description: Independent security review of changes touching authentication, authorization, secrets, personal data, external input, dependencies, deployment or trust boundaries. Triggers include "threat model this", "security review", "check auth", "audit dependencies". Do NOT use as generic code review, for formatting, or to fix findings while reviewing.
 when_to_use: when a change crosses a security or trust boundary
 effort: high
 model: opus

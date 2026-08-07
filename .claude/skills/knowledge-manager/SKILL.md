@@ -1,6 +1,6 @@
 ---
 name: knowledge-manager
-description: Use when a unit of work finishes and the repo's persistent docs no longer match reality. Triggers include "update the README", "log this", "record this", "handoff", "where did we get to", finishing a task, or making a hard-to-reverse decision. Owns README.md, TASK.md, MEMORY.md, HANDOFF.md, LOG.md, ISSUES.md and decisions/. Do NOT use for CLAUDE.md or capability-layer contracts, or to restate a diff git already holds.
+description: A unit of work finished and the persistent docs no longer match reality. Triggers include "update the README", "log this", "record this", "handoff", "where did we get to", or a hard-to-reverse decision. Owns README, TASK, MEMORY, HANDOFF, LOG, ISSUES and decisions/. Do NOT use for CLAUDE.md or layer contracts, or to restate a diff.
 when_to_use: when persistent docs must be updated
 context: false
   - formats.md
