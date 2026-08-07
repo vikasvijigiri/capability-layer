@@ -64,7 +64,10 @@ from _hooklib import (  # noqa: E402
     AI_ATTRIBUTION_PATTERNS,
     PROTECTED_BRANCHES,
     changed_paths,
+    classify_failure,
     current_branch,
+    failure_budget,
+    failure_signature,
     load_payload,
     migration_paths,
     scan_for_secrets,
@@ -134,6 +137,26 @@ FAILURE_STATE_NAME = "check-failures.json"
 FAILURE_REPORT_NAME = "check-failure-report.md"
 MAX_ATTEMPTS = 3
 
+# What to do about each class, in the report, where the next turn will read it.
+# The wrong remedy is worse than none: editing product code to chase a locked
+# file changes working code for a fault that is not in it.
+REMEDY_NOTE = {
+    "transient": "This looks like infrastructure, not the change. Rerun the exact "
+                 "command. Do NOT edit product code. If the output is not "
+                 "byte-identical on the retry, it was never transient.",
+    "deterministic": "This is a real defect. Reproduce it, find the root cause, "
+                     "make the smallest change that addresses it, rerun the "
+                     "focused check, then the tier.",
+    "merge": "Fetch the current target and rebase onto it. Resolve only "
+             "mechanical conflicts; anything touching public API, migrations, "
+             "auth or business logic goes back to plan approval.",
+    "security": "Not auto-repairable and not retryable. Stop, remove the "
+                "credential or address the finding, and rerun the security check.",
+    "unknown": "No rule matched this output. Treat it as a real defect, and once "
+               "the cause is known add a row to `_hooklib.FAILURE_CLASSES` so the "
+               "next occurrence is classified.",
+}
+
 
 def _state_dir() -> Path:
     return REPO_ROOT / ".claude" / "hooks" / "state"
@@ -176,17 +199,10 @@ def run_suites():
     return run_checks(REPO_ROOT, extra_env={REENTRY_FLAG: "1"})
 
 
-def _failure_signature(detail: str) -> str:
-    """A stable key for "the same failure again".
-
-    Digits are stripped before hashing: a suite reporting `3 failed` then
-    `2 failed` is the same failure getting closer, not a new one, and counting
-    them separately would reset the attempt budget on every partial fix.
-    """
-    import hashlib
-    import re as _re
-    normalised = _re.sub(r"\d+", "#", detail)
-    return hashlib.sha256(normalised.encode("utf-8", "replace")).hexdigest()[:12]
+# Kept as a name here because the suites call it, but there is one definition and
+# it is in `_hooklib` -- `tools/loop.py` needs the identical key, and two copies
+# would diverge on the copy that decides when to give up.
+_failure_signature = failure_signature
 
 
 def _load_failures() -> dict:
@@ -198,8 +214,16 @@ def _load_failures() -> dict:
 
 
 def _record_failure(detail: str, paths) -> int:
-    """Write the report, bump the counter, return the attempt number."""
+    """Write the report, bump the counter, return the attempt number.
+
+    The class is recorded alongside the count so the next turn knows what kind
+    of failure it is looking at without re-deriving it, and so the report says
+    which remedy applies -- retrying a real defect and repairing a network blip
+    are both wasted turns, and they look identical in the raw output.
+    """
     signature = _failure_signature(detail)
+    kind, action = classify_failure(detail)
+    budget = failure_budget(kind)
     state = _load_failures()
     # Only the current signature is kept: a different failure means the previous
     # one was resolved or replaced, and its count is no longer meaningful.
@@ -208,14 +232,18 @@ def _record_failure(detail: str, paths) -> int:
     try:
         _state_dir().mkdir(parents=True, exist_ok=True)
         (_state_dir() / FAILURE_STATE_NAME).write_text(
-            json.dumps({"signature": signature, signature: attempt}),
+            json.dumps({"signature": signature, signature: attempt,
+                        "failure_class": kind, "action": action,
+                        "max_attempts": budget}),
             encoding="utf-8")
         (_state_dir() / FAILURE_REPORT_NAME).write_text(
-            f"# Check failure — attempt {attempt} of {MAX_ATTEMPTS}\n\n"
+            f"# Check failure — attempt {attempt} of {budget}\n\n"
+            f"Class `{kind}`, remedy `{action}`.\n"
             f"Signature `{signature}` (digits normalised, so a partial fix does\n"
             f"not reset the attempt budget).\n\n"
-            f"## What failed\n\n```\n{detail}\n```\n\n"
-            f"## Uncommitted at the time\n\n"
+            + (f"{REMEDY_NOTE[kind]}\n\n" if kind in REMEDY_NOTE else "")
+            + f"## What failed\n\n```\n{detail}\n```\n\n"
+            + "## Uncommitted at the time\n\n"
             + "".join(f"- {p}\n" for p in paths[:40])
             + "\n## Next\n\n"
             "This file is scratch, overwritten each failure, and is not a\n"
@@ -320,17 +348,20 @@ def main():
     ok, suite_detail, ran_test = run_suites()
     if not ok:
         attempt = _record_failure(suite_detail, paths)
+        kind, action = classify_failure(suite_detail)
+        budget = failure_budget(kind)
         report = f".claude/hooks/state/{FAILURE_REPORT_NAME}"
-        if attempt >= MAX_ATTEMPTS:
-            speak(f"Checks red {attempt} times running on the SAME failure "
+        if attempt >= budget:
+            speak(f"Checks red {attempt} times running on the SAME {kind} failure "
                   f"({suite_detail}). Not suggesting another pass: a fix that "
-                  f"has not converged in {MAX_ATTEMPTS} attempts is not "
+                  f"has not converged in {budget} attempts is not "
                   f"converging, and looping further just burns turns. This needs "
                   f"a human decision. Full report: {report}. "
                   f"{len(paths)} file(s) uncommitted.")
         else:
             speak(f"Auto-commit skipped: checks are red ({suite_detail}). "
-                  f"Attempt {attempt} of {MAX_ATTEMPTS} on this failure. "
+                  f"Class {kind}, remedy {action} -- attempt {attempt} of {budget}. "
+                  f"{REMEDY_NOTE.get(kind, '')} "
                   f"Written to {report}. {len(paths)} file(s) left uncommitted; "
                   f"`03-checkpoint.py` has already snapshotted them.")
         return

@@ -393,6 +393,132 @@ def changed_paths(repo_root=None):
 
 
 
+# --- what kind of failure is this ------------------------------------------
+#
+# The autocommit hook counted every red check identically: it hashed the failing
+# output and spent one of three repair attempts. So a port collision, a locked
+# file on Windows, or a registry hiccup burned the same budget as a real type
+# error, and escalated with the same words -- while "repairing" infrastructure
+# noise means editing product code to chase a fault that is not in it.
+#
+# The fix is to decide the KIND before spending anything, and to decide it from
+# a data table rather than a judgement. Same shape as `_projectchecks.MARKER_CHECKS`:
+# a new ecosystem, or a new flavour of noise, is a row.
+#
+# Order is priority, first match wins, and the order is the policy:
+#
+#   security      never retried, never auto-repaired, budget 0
+#   merge         fixed by rebasing onto the current target, not by editing files
+#   deterministic a real defect -- repaired on a budget
+#   transient     infrastructure -- retried, and product code is left alone
+#   unknown       treated as deterministic, because guessing "noise" would
+#                 retry a real bug forever
+#
+# deterministic outranks transient deliberately. Output carrying both an
+# assertion failure and a network warning is a real failure that happened to
+# mention the network; classifying it the other way retries until the budget is
+# gone and changes nothing.
+FAILURE_CLASSES = [
+    # --- security -----------------------------------------------------------
+    (re.compile(r"(?i)\b(?:secret|credential|api[_-]?key|token)s?\b[^\n]{0,60}"
+                r"\b(?:detected|found|leaked|exposed|would be committed)\b"),
+     "security", "block"),
+    (re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY"),
+     "security", "block"),
+    (re.compile(r"\bCVE-\d{4}-\d{4,}\b"), "security", "block"),
+    (re.compile(r"(?i)\b(?:critical|high)\s+severity\s+vulnerabilit"),
+     "security", "block"),
+
+    # --- merge --------------------------------------------------------------
+    (re.compile(r"CONFLICT \([^)]+\)"), "merge", "rebase"),
+    (re.compile(r"(?i)automatic merge failed"), "merge", "rebase"),
+    (re.compile(r"(?i)\bneeds rebase\b"), "merge", "rebase"),
+
+    # --- deterministic ------------------------------------------------------
+    (re.compile(r"\berror TS\d+\b"), "deterministic", "repair"),          # tsc
+    (re.compile(r"\berror\[E\d+\]"), "deterministic", "repair"),          # rustc
+    (re.compile(r"\b(?:Syntax|Import|ModuleNotFound|Name|Type|Attribute|Value|Key|Index)"
+                r"Error\b"), "deterministic", "repair"),
+    (re.compile(r"\bAssertionError\b"), "deterministic", "repair"),
+    (re.compile(r"(?m)^FAILED\s"), "deterministic", "repair"),            # pytest
+    (re.compile(r"(?i)\b\d+ (?:tests? )?failed\b"), "deterministic", "repair"),
+    (re.compile(r"(?i)\bexpected\b[^\n]{0,40}\bto (?:be|equal|contain|match)\b"),
+     "deterministic", "repair"),
+    (re.compile(r"(?i)\bundefined: \w+"), "deterministic", "repair"),     # go
+    (re.compile(r"(?i)\bcannot find (?:name|module|symbol|package)\b"),
+     "deterministic", "repair"),
+    # `path:line:col: CODE message` -- ruff, flake8, eslint --format=compact
+    (re.compile(r"(?m)^\S+:\d+:\d+: [A-Z]+\d+\b"), "deterministic", "repair"),
+
+    # --- transient ----------------------------------------------------------
+    (re.compile(r"\b(?:ECONNRESET|ETIMEDOUT|ECONNREFUSED|EAI_AGAIN|ENOTFOUND)\b"),
+     "transient", "retry"),
+    (re.compile(r"\b(?:EADDRINUSE|EBUSY|EAGAIN|EMFILE|ENFILE)\b"), "transient", "retry"),
+    (re.compile(r"(?i)address already in use"), "transient", "retry"),
+    (re.compile(r"(?i)\brate limit(?:ed|ing)?\b|\b429 too many requests\b"),
+     "transient", "retry"),
+    (re.compile(r"(?i)could not resolve host|temporary failure in name resolution"),
+     "transient", "retry"),
+    (re.compile(r"(?i)resource temporarily unavailable"), "transient", "retry"),
+    (re.compile(r"(?i)being used by another process"), "transient", "retry"),  # Windows
+    (re.compile(r"(?i)connection reset by peer|network is unreachable"),
+     "transient", "retry"),
+    (re.compile(r"(?i)\b(?:read|connect|handshake) timed out\b"), "transient", "retry"),
+]
+
+# How many times each kind may be attempted before the ladder escalates.
+#
+# security is 0 on purpose: a credential in a diff is not a thing to have another
+# go at. transient is lower than deterministic because a retry is nearly free and
+# a third identical network failure is not noise any more -- it is an outage, and
+# an outage is a human's problem, not a repair loop's.
+FAILURE_BUDGETS = {
+    "security": 0,
+    "merge": 2,
+    "transient": 2,
+    "deterministic": 3,
+    "unknown": 3,
+}
+
+DEFAULT_FAILURE_CLASS = ("unknown", "repair")
+
+
+def classify_failure(detail: str) -> tuple[str, str]:
+    """(class, action) for a failing check's output. Never raises.
+
+    Unmatched output is `("unknown", "repair")` rather than anything cheaper:
+    the expensive mistake is calling a real defect noise, so the default is the
+    one that investigates.
+    """
+    if not detail:
+        return DEFAULT_FAILURE_CLASS
+    for pattern, kind, action in FAILURE_CLASSES:
+        if pattern.search(detail):
+            return kind, action
+    return DEFAULT_FAILURE_CLASS
+
+
+def failure_budget(kind: str) -> int:
+    """Attempts allowed for a class before the ladder escalates."""
+    return FAILURE_BUDGETS.get(kind, FAILURE_BUDGETS["unknown"])
+
+
+def failure_signature(detail: str) -> str:
+    """A stable key for "the same failure again".
+
+    Digits are stripped before hashing: a suite reporting `3 failed` then
+    `2 failed` is the same failure getting closer, not a new one, and counting
+    them separately would reset the attempt budget on every partial fix.
+
+    Lived in `post-run/06-artifact-autocommit.py` until the loop needed it too.
+    One definition, because two would diverge and the diverged copy would be the
+    one deciding when to give up.
+    """
+    import hashlib
+    normalised = re.sub(r"\d+", "#", detail)
+    return hashlib.sha256(normalised.encode("utf-8", "replace")).hexdigest()[:12]
+
+
 # --- reading what the user actually said ----------------------------------
 #
 # The PreToolUse payload carries `transcript_path`, a JSONL file of the whole
