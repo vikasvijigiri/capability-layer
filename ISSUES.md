@@ -6,6 +6,67 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-07 — the branch guard's cross-repo bypass came back, one flag wider
+- **Phase/Context**: `code-review` at stage 7 on the 452-file rebuild branch,
+  routed here on a P1. Full tier was green throughout — this bug is invisible to
+  every check the repo has, which is the point.
+- **Symptom**: none. No error, no output. `02-branch-guard.py` resolved the
+  **session's** branch instead of the command's target for
+  `git --no-pager -C ../other commit`, so a commit onto a sibling repo's
+  protected `main` would have been allowed silently. Identical class to
+  2026-08-03 14:20, which cost eight such commits.
+- **Root cause**: `GIT_C_RE = r"\bgit\s+(?:-\w+\s+\S+\s+)*-C\s+..."` assumes every
+  git global flag is `-x value`. Boolean globals consume no value, so the
+  repetition cannot pass them, and `-\w+` cannot match a `--long` flag at all
+  (`-` is not `\w`). Four of git's documented globals defeat it: `--no-pager`,
+  `-P`, `--paginate`, `--literal-pathspecs`. Reproduced before any fix:
+
+      git -C /t commit                     -> /t
+      git --no-pager -C /t commit          -> None   <-- guard reads session repo
+      git -P -C /t commit                  -> None
+      git --paginate -C /t commit          -> None
+      git --literal-pathspecs -C /t commit -> None
+
+- **The deeper cause, and the actual fix**: *three* implementations of "which repo
+  does this command touch" existed — `02-branch-guard.py` (regex),
+  `03-attribution-guard.py` (a different, looser regex that got all seven cases
+  right), and `_hooklib.is_git_commit` (a tokeniser, for the adjacent question).
+  They disagreed, and the weakest one was guarding the protected branch. Fixing
+  only branch-guard's regex would have left two copies free to diverge again —
+  which is exactly what happened between 2026-08-03 and now. So the fix is
+  `_hooklib.git_dash_c` + `git_target_dir`, tokenisers that walk git's flag region
+  against `VALUE_FLAGS` the way `is_git_commit` already did, with both hooks
+  delegating and **no second copy left**.
+- **Attempt that was rejected before being made**: patching `GIT_C_RE` to also
+  match boolean flags. Rejected because `_hooklib` line 164 already records the
+  outcome of that approach — *"a regex was tried first and got this wrong in both
+  directions"* — and because it leaves the three-implementation divergence intact.
+  The bug recurring in a file whose comment explains why regexes fail here is the
+  evidence that the copy, not the pattern, is the defect.
+- **Verification**: four failing cases written into `tools/test_hooks.py`
+  `TARGET_CASES` first and watched fail (`-> ...\notes, want ...\FDE_Vikas`), then
+  all ten pass. End-to-end against a real temp repo on `main`: all four forms
+  `DENIED`. Whole `pre-commit` event fired via `run_hook.py`. Tier:
+  `PASS: 26 check(s) green (lint, test, typecheck); audit disabled`.
+- **Status**: **Resolved.**
+
+## 2026-08-07 — package-lock.json contradicted its own manifest
+- **Symptom**: `package.json` declared zero dependencies while the lockfile still
+  pinned `@anthropic-ai/claude-agent-sdk` plus its transitive tree (per-platform
+  sharp binaries, zod) — stale evidence sitting against
+  `decisions/2026-08-07-one-workflow-engine.md`, which states the dependency was
+  removed. `npm ci --dry-run` reported `remove zod / @img/sharp-win32-x64 /
+  @anthropic-ai/claude-agent-sdk`.
+- **Root cause**: the SDK and `tools/run_workflow.mjs` were deleted and
+  `package.json` rewritten by hand; the lockfile was never regenerated, because
+  nothing in the repo runs `npm` any more — `audit` is `false` by decision.
+- **Fix**: `npm install --package-lock-only`, then `npm ci` to reconcile
+  `node_modules`. Lockfile now has one package entry and no dependencies;
+  `npm ci --dry-run` reports `up to date`.
+- **Status**: **Resolved.** Not a build break at any point — `npm ci` reconciles
+  rather than erroring — but a decision record and the tree disagreed, and the
+  tree is what a reader checks.
+
 ## 2026-08-03 17:05 — the layer installer is written twice, and it has already drifted once
 - **Phase/Context**: no-slop sweep at `--scope layer`, fired by
   `07-layer-drift.py` after `global-session-start/` was added. Script green

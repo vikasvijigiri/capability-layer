@@ -45,6 +45,7 @@ from _hooklib import (  # noqa: E402
     AI_ATTRIBUTION_PATTERNS,
     command_of,
     deny,
+    git_target_dir,
     is_git_commit,
     load_payload,
 )
@@ -86,17 +87,12 @@ def messages(cmd: str) -> list[str]:
     return out
 
 
+# `target_dir` was a third implementation of "which repo does this command touch",
+# with its own regex. All three disagreed on `git --no-pager -C ../other commit`.
+# `_hooklib.git_target_dir` is the one tokeniser now; the session cwd is "." here
+# because this hook only reads git config, which is relative-safe.
 def target_dir(cmd: str) -> str:
-    """The repo the command actually commits in -- last `cd`, then `git -C`."""
-    d = "."
-    for hit in re.finditer(r"\bcd\s+([^\s;&|]+)", cmd):
-        d = hit.group(1).strip("'\"")
-    # Distinct name: mypy types a variable once per scope, and the loop above
-    # binds a Match while this binds Match | None.
-    dash_c = re.search(r"\bgit\b[^;&|]*?\s-C\s+([^\s;&|]+)", cmd)
-    if dash_c:
-        d = dash_c.group(1).strip("'\"")
-    return d if Path(d).is_dir() else "."
+    return git_target_dir(cmd, ".")
 
 
 def configured_author(cwd: str) -> str:

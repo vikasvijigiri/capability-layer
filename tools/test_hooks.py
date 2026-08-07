@@ -152,6 +152,19 @@ TARGET_CASES = [
     ('cd .. && git commit', str(ROOT.parent), 'cd wins'),
     ('git -C .. commit', str(ROOT.parent), 'git -C wins'),
     ('cd /definitely-not-a-dir && git commit', _here, 'nonexistent falls back'),
+    # A boolean global flag before -C. The old regex assumed every global flag
+    # was `-x value`, so `--no-pager` (which takes none) stopped the repetition
+    # and -C was never seen -- the guard then checked the SESSION's branch and
+    # would have allowed a commit onto a sibling repo's protected main. Exactly
+    # the 2026-08-03 bug, reachable again by one extra flag. Four of git's own
+    # documented global flags trigger it.
+    ('git --no-pager -C .. commit', str(ROOT.parent), '--no-pager before -C'),
+    ('git -P -C .. commit', str(ROOT.parent), '-P before -C'),
+    ('git --paginate -C .. commit', str(ROOT.parent), '--paginate before -C'),
+    ('git --literal-pathspecs -C .. commit', str(ROOT.parent),
+     '--literal-pathspecs before -C'),
+    ('git -c user.name=T -C .. commit', str(ROOT.parent), '-c=value then -C'),
+    ('git --git-dir=../.git -C .. commit', str(ROOT.parent), '--flag=value then -C'),
 ]
 # Distinct names from the block above: mypy types a variable once per scope,
 # and _want is a bool there and a path here.

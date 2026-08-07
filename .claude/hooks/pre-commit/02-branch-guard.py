@@ -23,7 +23,13 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from _hooklib import command_of, deny, is_git_commit, load_payload  # noqa: E402
+from _hooklib import (  # noqa: E402
+    command_of,
+    deny,
+    git_target_dir,
+    is_git_commit,
+    load_payload,
+)
 
 PROTECTED = {"main", "master", "develop", "release"}
 
@@ -48,34 +54,13 @@ def git(args, cwd):
 # it read the SESSION's branch and cheerfully allowed eight commits onto another
 # repo's protected `main` -- silently, which is the worst way for a guard to
 # fail. See ISSUES.md 2026-08-03 14:20.
-CD_RE = re.compile(r"(?:^|&&|;|\|\|)\s*cd\s+(?:--\s+)?([\"']?)([^\s\"'&;|]+)\1")
-GIT_C_RE = re.compile(r"\bgit\s+(?:-\w+\s+\S+\s+)*-C\s+([\"']?)([^\s\"'&;|]+)\1")
-
-
-def target_dir(command: str, session_cwd: str) -> str:
-    """Where the command's git will actually run.
-
-    `git -C` wins over `cd`: it is applied per-invocation and overrides whatever
-    directory the shell is in. Relative paths resolve against the last `cd` if
-    there was one, otherwise against the session cwd -- the same way the shell
-    would do it.
-    """
-    def resolve(against: str, candidate: str) -> str:
-        return candidate if os.path.isabs(candidate) else os.path.join(against, candidate)
-
-    base = session_cwd
-
-    # The LAST cd is the one in effect when git runs: `cd a && cd b && git …`
-    # commits in b.
-    cds = CD_RE.findall(command)
-    if cds:
-        base = resolve(base, cds[-1][1])
-
-    git_cs = GIT_C_RE.findall(command)
-    if git_cs:
-        base = resolve(base, git_cs[-1][1])
-
-    return base if os.path.isdir(base) else session_cwd
+#
+# The resolver lives in `_hooklib` and is a tokeniser. This file carried its own
+# regex until the second occurrence of the same bug: it assumed every git global
+# flag is `-x value`, so `git --no-pager -C ../other commit` slipped past and the
+# guard read the session's branch again. `03-attribution-guard.py` needs the same
+# answer and had a third implementation that disagreed. One copy now.
+target_dir = git_target_dir
 
 
 def main():

@@ -184,6 +184,82 @@ def is_git_commit(command: str) -> bool:
     return False
 
 
+# A command can commit into a repository that is not the session's:
+#
+#     cd ../other && git commit …
+#     git -C ../other commit …
+#
+# Two hooks need this answer -- `02-branch-guard.py` to read the right branch and
+# `03-attribution-guard.py` to read the right `user.name`. They each had their own
+# regex for it, and the two disagreed: branch-guard's
+#
+#     r"\bgit\s+(?:-\w+\s+\S+\s+)*-C\s+..."
+#
+# assumed every global flag is `-x value`, so a BOOLEAN global (`--no-pager`,
+# `-P`, `--paginate`, `--literal-pathspecs`) stopped the repetition and the `-C`
+# after it was never seen. The guard then resolved the SESSION's repo and would
+# have allowed a commit onto a sibling's protected `main` -- silently, and for
+# the second time: the identical class of bug cost eight such commits on
+# 2026-08-03, which is why `is_git_commit` above is a tokeniser and not a regex.
+#
+# So this is a tokeniser too, and there is one copy. Two implementations of "which
+# repo does this command touch" is how the weaker one ends up guarding the
+# unattended path.
+CD_RE = re.compile(r"(?:^|&&|;|\|\|)\s*cd\s+(?:--\s+)?([\"']?)([^\s\"'&;|]+)\1")
+
+
+def git_dash_c(command: str) -> str | None:
+    """The last `git -C <dir>` target in a command, or None.
+
+    Walks git's global-flag region the way git itself does: a flag consumes one
+    extra token only when it is in `VALUE_FLAGS`. Boolean flags and
+    `--flag=value` forms consume nothing extra, which is precisely what the old
+    regex could not express.
+    """
+    toks = command.split()
+    found = None
+    for i, tok in enumerate(toks):
+        if tok != "git" and not tok.endswith("/git"):
+            continue
+        j = i + 1
+        while j < len(toks) and toks[j].startswith("-"):
+            if toks[j] == "-C" and j + 1 < len(toks):
+                found = toks[j + 1].strip("\"'")
+            if toks[j] in VALUE_FLAGS:
+                j += 1  # skip its value too
+            j += 1
+    return found
+
+
+def git_target_dir(command: str, session_cwd: str) -> str:
+    """The directory the command's git will actually run in.
+
+    `git -C` wins over `cd`: it is applied per-invocation and overrides whatever
+    directory the shell is in. Relative paths resolve against the last `cd` if
+    there was one, otherwise against the session cwd -- the way the shell does it.
+
+    A path that does not exist falls back to `session_cwd`, so a caller always
+    gets a real directory to inspect rather than having to handle None.
+    """
+    def resolve(against: str, candidate: str) -> str:
+        return (candidate if os.path.isabs(candidate)
+                else os.path.join(against, candidate))
+
+    base = session_cwd
+
+    # The LAST cd is the one in effect when git runs: `cd a && cd b && git …`
+    # commits in b.
+    cds = CD_RE.findall(command)
+    if cds:
+        base = resolve(base, cds[-1][1])
+
+    dash_c = git_dash_c(command)
+    if dash_c:
+        base = resolve(base, dash_c)
+
+    return base if os.path.isdir(base) else session_cwd
+
+
 def current_branch(repo_root=None):
     """The checked-out branch name, or None when git cannot answer.
 
