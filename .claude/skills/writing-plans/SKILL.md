@@ -149,6 +149,25 @@ Keep the plan self-contained. An engineer who has not participated in the
 conversation should be able to execute each task without guessing what a path,
 symbol, test, or dependency means.
 
+### Constitution gate — tick or justify
+
+Every plan carries this block. An unticked box is legal; an unticked box with no
+written reason is not. `.claude/constitution.md` holds the articles.
+
+```markdown
+## Constitution gate
+- [ ] I Evidence — every task names the exact command and the expected output
+- [ ] II Test first — every behaviour task defines its failing test first
+- [ ] III Smallest change — no refactor beyond what the task requires
+- [ ] IV Reversibility — irreversible steps are named and gated on a human
+- [ ] V No silent degradation — checks that will be skipped are listed here
+- [ ] VI Mechanism — any rule this plan adds is enforced by a test or a hook
+- [ ] VII Secrets — no credential enters the repo
+
+## Complexity tracking
+<one line per unticked box: which article, and why the exception is right>
+```
+
 ### The two markers the machinery reads
 
 `tools/resume.py` derives the workflow state from this file, so these two strings
