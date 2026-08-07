@@ -211,6 +211,43 @@ def check_temp_dir_cleanup() -> None:
                      f"teardown fail the suite after it has already passed")
 
 
+def check_hook_spawn_stdin() -> None:
+    """A test that spawns a hook must close or supply its stdin.
+
+    `_hooklib.load_payload()` falls back to reading stdin, guarded only by
+    `isatty()`. An inherited pipe is not a TTY, so the guard passes and the read
+    blocks on an EOF that never arrives. A spawned hook inherits whatever the
+    spawner had, and under `run_checks.py` -- itself launched from a pipe -- that
+    is an open handle. The hook hangs, the suite dies on its timeout, and it only
+    happens when run through the tier, never standalone.
+
+    Proven 2026-08-07: same suite, `exit=124` with a pipe on stdin, `exit=0` with
+    `< /dev/null`. `_hooklib` documents the trap for `run_hook.py`; the test had
+    it too. Pass `stdin=subprocess.DEVNULL`, or set `HOOK_PAYLOAD` in the child's
+    environment, which `load_payload` reads first for exactly this reason.
+    """
+    # Narrow on purpose. `sys.executable` is what distinguishes "spawns a Python
+    # hook" from "runs git and happens to mention the hooks/state ledger path" --
+    # the first draft of this check flagged resume.py and loop.py for the latter,
+    # and a check that cries wolf is a check someone switches off.
+    needle = "subprocess." + "run("
+    for path in sorted(ROOT.glob("tools/*.py")):
+        text = read_text(path)
+        if text is None or needle not in text or "sys.executable" not in text:
+            continue
+        # Comments stripped first. The comment explaining WHY stdin must be
+        # closed contains the string `stdin=`, so scanning raw text let a file
+        # satisfy this check by talking about it -- caught on the first negative
+        # test, which is the only reason it is not still true.
+        code = "\n".join(ln for ln in text.splitlines()
+                         if not ln.lstrip().startswith("#"))
+        spawns_hook = "hooks" in code or "BOOTSTRAP_SCRIPT" in code
+        if spawns_hook and "stdin=" not in code and "HOOK_PAYLOAD" not in code:
+            fail(f"{rel(path)} spawns a hook without closing or supplying stdin — "
+                 f"load_payload() blocks on an inherited pipe and the suite hangs "
+                 f"only when run through the tier")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--scope", choices=("layer", "repo", "portability"),
@@ -224,6 +261,7 @@ def main() -> int:
         return check_portability()
 
     check_temp_dir_cleanup()
+    check_hook_spawn_stdin()
 
     files = tracked(None if args.scope == "repo" else ".claude")
     scannable = [p for p in files if p.name not in SELF_REFERENTIAL]

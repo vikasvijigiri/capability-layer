@@ -102,14 +102,22 @@ def check_bootstrap_runtime() -> None:
         root_files_before = {p.name for p in tmp.iterdir() if p.is_file()}
         root_dirs_before = {p.name for p in tmp.iterdir() if p.is_dir()}
 
+        # `stdin=DEVNULL` is the whole reason this test terminates.
+        #
+        # `_hooklib.load_payload()` falls back to reading stdin, guarded only by
+        # `isatty()` -- and an inherited pipe is not a TTY, so the guard passes
+        # and the read blocks until EOF that never comes. Spawning the hook
+        # without redirecting stdin hands it whatever this process inherited;
+        # under `run_checks.py` (itself launched from a pipe) that is an open
+        # handle, so the hook hung and the suite died on its timeout. The hook
+        # runs in ~0.25s with stdin closed.
+        #
+        # `_hooklib` documents this exact trap for `run_hook.py`. The test had
+        # the same bug. Diagnosed 2026-08-07 after first misreading it as
+        # machine contention and uselessly raising the timeout to 120s.
         proc = subprocess.run([sys.executable, str(contract.BOOTSTRAP_SCRIPT)],
                               cwd=tmp, env=env, capture_output=True, text=True,
-                              # The hook itself runs in ~0.25s. 30s still timed
-                              # out on 2026-08-07 with twenty suites' worth of
-                              # subprocesses ahead of it on Windows, so this
-                              # number was measuring machine contention, not the
-                              # hook. A timeout should catch a hang, not a queue.
-                              timeout=120)
+                              stdin=subprocess.DEVNULL, timeout=30)
         check("bootstrap hook exits cleanly in a fresh repo",
               proc.returncode == 0,
               proc.stderr.strip() or proc.stdout.strip() or f"exit {proc.returncode}")

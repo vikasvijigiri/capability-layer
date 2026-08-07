@@ -5,5 +5,5 @@
   "engines": {
     "node": ">=20"
   },
-  "_why": "Kept with no dependencies so `npm audit` still resolves for any JS a product adds later. It previously existed only for tools/run_workflow.mjs and the agent SDK, both deleted 2026-08-07 -- see decisions/2026-08-07-one-workflow-engine.md. An audit over zero dependencies passes trivially; that is an honest report of this repo's JS surface, not a weakened gate."
+  "_why": "Kept with no dependencies so `npm audit` still resolves for any JS a product adds later. It previously existed only for tools/run_workflow.mjs and the agent SDK, both deleted 2026-08-07 -- see decisions/2026-08-07-one-workflow-engine.md. With no dependencies, detection resolves no audit check at all -- so `.claude/project-checks.json` sets `audit: false` explicitly, and run_checks reports it as disabled rather than leaving the slow tier silently empty."
 }

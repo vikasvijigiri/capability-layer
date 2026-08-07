@@ -37,6 +37,9 @@
 
   "_why_typecheck_absent": "Absent, not false: detection finds mypy.ini and runs it. It was disabled on the assumption an unannotated codebase would drown in findings -- measured instead, it was six errors across nineteen files, all one pattern, all real. A fresh clone without mypy installed skips the check with a note rather than failing.",
 
+  "audit": false,
+  "_why_audit_false": "Stated, not silent. Deleting tools/run_workflow.mjs on 2026-08-07 removed the only JavaScript dependency, and detection then resolved NO slow-tier check at all -- an absent gate that still read as coverage. `false` makes run_checks report it as disabled by decision. Restore a real command the moment this repo has a dependency tree worth auditing.",
+
   "timeout": 300,
   "max_files": 25
 }
