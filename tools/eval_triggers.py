@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -57,11 +58,17 @@ def run_query(query: str, timeout: int = 180) -> set[str]:
     rather than asking the model to self-report -- a model asked "would you use
     a skill?" answers a different question than the one being measured.
     """
+    # Each invocation is a REAL session in this repository, so its post-run hook
+    # would auto-commit whatever happens to be in the working tree -- forty times,
+    # while an eval is running. `UAIOS_AUTOCOMMIT_RUNNING` is the re-entry guard
+    # that hook already checks; setting it here is the same mechanism the check
+    # runner uses when it spawns suites that would otherwise recurse.
+    env = dict(os.environ, UAIOS_AUTOCOMMIT_RUNNING="1")
     try:
         proc = subprocess.run(
             ["claude", "-p", query, "--output-format", "json"],
             cwd=str(ROOT), capture_output=True, text=True,
-            stdin=subprocess.DEVNULL, timeout=timeout,
+            stdin=subprocess.DEVNULL, timeout=timeout, env=env,
         )
     except (OSError, subprocess.SubprocessError):
         return set()
