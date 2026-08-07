@@ -51,12 +51,22 @@ def load_queries() -> dict:
     return {k: v for k, v in raw.items() if not k.startswith("_")}
 
 
-def run_query(query: str, timeout: int = 180) -> set[str]:
-    """Which skills Claude actually invoked for this prompt.
+def run_query(query: str, timeout: int = 180) -> tuple[set[str], float]:
+    """(skills actually invoked, cost in USD) for one prompt.
 
-    `--output-format json` carries the tool calls, so this reads what happened
-    rather than asking the model to self-report -- a model asked "would you use
-    a skill?" answers a different question than the one being measured.
+    **`--output-format json` does not work for this and the first version of this
+    file used it.** That format returns only a result summary -- `result`,
+    `usage`, `total_cost_usd`, `session_id` -- with no record of any tool call. So
+    grepping it for a skill name could only ever match if the final prose happened
+    to mention the skill, and the measured trigger rate came out at a uniform 0.1
+    across two unrelated skills with a suspiciously perfect 0.0 false-fire rate.
+    That was the instrument, not the descriptions. It cost about $29 to learn.
+
+    `stream-json --verbose` emits every message, and an invocation appears as a
+    `tool_use` block. Verified against a trivial prompt: `tool_use names: ['Read']`.
+
+    Cost is returned rather than discarded, because a harness that spends real
+    money silently is how you find out afterwards.
     """
     # Each invocation is a REAL session in this repository, so its post-run hook
     # would auto-commit whatever happens to be in the working tree -- forty times,
@@ -66,28 +76,63 @@ def run_query(query: str, timeout: int = 180) -> set[str]:
     env = dict(os.environ, UAIOS_AUTOCOMMIT_RUNNING="1")
     try:
         proc = subprocess.run(
-            ["claude", "-p", query, "--output-format", "json"],
+            ["claude", "-p", query, "--output-format", "stream-json", "--verbose"],
             cwd=str(ROOT), capture_output=True, text=True,
             stdin=subprocess.DEVNULL, timeout=timeout, env=env,
         )
     except (OSError, subprocess.SubprocessError):
-        return set()
+        return set(), 0.0
+
+    known = {d.name for d in SKILLS.iterdir() if d.is_dir()}
     used: set[str] = set()
+    cost = 0.0
     for line in proc.stdout.splitlines():
-        for name in {d.name for d in SKILLS.iterdir() if d.is_dir()}:
-            if f'"{name}"' in line or f"skills/{name}/" in line:
-                used.add(name)
-    return used
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if event.get("type") == "result":
+            cost += float(event.get("total_cost_usd") or 0.0)
+        message = event.get("message") or {}
+        blocks = message.get("content")
+        if not isinstance(blocks, list):
+            continue
+        for block in blocks:
+            if not isinstance(block, dict) or block.get("type") != "tool_use":
+                continue
+            # A skill reaches the transcript as a `Skill` tool_use whose input
+            # names it. Both spellings are accepted because the field name is the
+            # harness's, not this repo's, and a rename would silently zero every
+            # measurement -- the failure mode this function already had once.
+            args = block.get("input") or {}
+            for key in ("skill", "name", "skill_name"):
+                value = args.get(key)
+                if isinstance(value, str) and value in known:
+                    used.add(value)
+    return used, cost
 
 
-def evaluate(skill: str, cases: list[dict], repeats: int, dry: bool) -> dict:
+def evaluate(skill: str, cases: list[dict], repeats: int, dry: bool,
+             limit: int | None = None) -> dict:
     hits = misses = false_fires = correct_silence = 0
+    spent = 0.0
+    # Sample evenly across positives and negatives, so `--limit 4` is two of each
+    # rather than four positives.
+    if limit:
+        pos_cases = [c for c in cases if c["should_trigger"]][: max(limit // 2, 1)]
+        neg_cases = [c for c in cases if not c["should_trigger"]][: max(limit // 2, 1)]
+        cases = pos_cases + neg_cases
     for case in cases:
         for _ in range(repeats):
             if dry:
                 fired = case["should_trigger"]      # assume perfection, cost zero
             else:
-                fired = skill in run_query(case["query"])
+                invoked, cost = run_query(case["query"])
+                fired = skill in invoked
+                spent += cost
             if case["should_trigger"]:
                 hits += fired
                 misses += not fired
@@ -101,6 +146,7 @@ def evaluate(skill: str, cases: list[dict], repeats: int, dry: bool) -> dict:
         "trigger_rate": round(hits / pos, 3) if pos else None,
         "false_fire_rate": round(false_fires / neg, 3) if neg else None,
         "positives": pos, "negatives": neg, "dry_run": dry,
+        "cost_usd": round(spent, 4),
     }
 
 
@@ -110,6 +156,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--repeats", type=int, default=1)
+    # A live query measured at ~$0.72 on 2026-08-07, so a full 40-query run is
+    # ~$29. Sampling exists so a harness change can be validated for ~$3 before
+    # anyone commits to the full sweep.
+    ap.add_argument("--limit", type=int,
+                    help="use only N queries per skill, split evenly pos/neg")
     # Dry run is the default and `--live` is the opt-in, not the reverse. The
     # first version had only `--dry-run`, which could be turned on and never off.
     ap.add_argument("--live", action="store_true",
@@ -143,14 +194,20 @@ def main(argv: list[str] | None = None) -> int:
 
     dry = not args.live
     if args.all and not dry and not args.accept:
-        cost = sum(len(data[t]) for t in targets) * args.repeats
-        print(f"REFUSED: a real --all run is {cost} claude invocations. "
+        n = sum(min(len(data[t]), args.limit or len(data[t])) for t in targets)
+        cost = n * args.repeats
+        print(f"REFUSED: a real --all run is {cost} claude invocations "
+              f"(~${cost * 0.72:.0f} at the measured per-query rate). "
               f"Unattended spend needs a decision -- pass "
               f"--yes-i-accept-the-cost if that decision is yes.")
         return 1
 
-    results = [evaluate(t, data[t], args.repeats, dry) for t in targets if t in data]
+    results = [evaluate(t, data[t], args.repeats, dry, args.limit)
+               for t in targets if t in data]
     print(json.dumps(results, indent=2))
+    if not dry:
+        _total = sum(r["cost_usd"] for r in results)
+        print(f"\ntotal spend: ${_total:.2f}")
     if dry:
         print("\nDRY RUN -- no claude invocations, every answer assumed correct. "
               "These numbers measure nothing; they prove the harness runs.")

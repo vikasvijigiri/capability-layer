@@ -6,6 +6,32 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-07 — the trigger eval measured its own instrument, and it cost $29
+
+- **Symptom**: `tools/eval_triggers.py` reported `trigger_rate 0.1` for both
+  `code-review` and `systematic-debugging`, with `false_fire_rate 0.0`. Read
+  naively that says the descriptions almost never fire.
+- **Why it was not believed**: two unrelated skills scoring *identically* at 0.1,
+  with a flawless 0.0 on negatives, is the shape of a broken detector rather than
+  two independent prose failures. `systematic-debugging`'s own rule applies —
+  make the harness deterministic before trusting its verdict.
+- **Root cause**: `run_query` invoked `claude -p --output-format json`. That
+  format returns a **result summary only** — `result`, `usage`, `total_cost_usd`,
+  `session_id` — and carries no tool-call record at all. Grepping it for a skill
+  name could only match if the closing prose happened to name the skill. Every
+  real trigger was unobservable, so 0.1 was noise, not signal. Confirmed by
+  dumping one response's keys.
+- **Fix**: `--output-format stream-json --verbose`, parsed per line, reading
+  `tool_use` blocks. Verified on a trivial prompt: `tool_use names: ['Read']`.
+- **Two things added because their absence caused this**: the harness now returns
+  and prints **cost** (one query measured $0.72, so the blind 40-query run was
+  ~$29), and takes `--limit N` so a harness change can be validated for a few
+  dollars instead of thirty. The spend guard now quotes a price:
+  `~$6 at the measured per-query rate`.
+- **Status**: **Resolved for the instrument; the measurement itself is still
+  unknown.** No claim about description quality survives this — the earlier 0.1
+  is withdrawn, not restated with a caveat.
+
 ## 2026-08-07 — the branch guard's cross-repo bypass came back, one flag wider
 - **Phase/Context**: `code-review` at stage 7 on the 452-file rebuild branch,
   routed here on a P1. Full tier was green throughout — this bug is invisible to
