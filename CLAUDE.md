@@ -54,6 +54,7 @@ because unapproved push, merge and deploy are forbidden outright below.
 
 | Skill | Stage | Produces |
 |---|---|---|
+| `repo-recon` | — entry boundary | `docs/recon/YYYY-MM-DD-<repo>.md` — the map, and up to five candidates |
 | `task-brief` | 1 frame | `TASK.md` — six fields, inferred ones marked |
 | `brainstormer` | 2 design | `docs/specs/YYYY-MM-DD-<topic>-design.md` |
 | `writing-plans` | 3 plan | `docs/plans/YYYY-MM-DD-<feature>.md` |
@@ -166,12 +167,12 @@ named seven of nineteen. Run `/verify` before declaring any work done.
 
 | Path | What it is |
 |---|---|
-| `.claude/skills/` | the 13 skills above, one directory each; `<skill>/references/` holds depth loaded on demand, not per turn |
-| `.claude/agents/` | ten agents: the fan-out set dispatched by skills, plus `Explore` overriding the built-in onto haiku |
+| `.claude/skills/` | the 14 skills above, one directory each; `<skill>/references/` holds depth loaded on demand, not per turn |
+| `.claude/agents/` | eleven agents: the fan-out set dispatched by skills, plus `Explore` overriding the built-in onto haiku |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
 | `.claude/hooks/<event>/` | hooks over several events that act, deny or measure; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |
 | `.claude/settings.json` | what actually fires for this repository; `hooks_registry.json` documents the repository's hook contract |
-| `.claude/commands/` | the eleven slash commands above |
+| `.claude/commands/` | the twelve slash commands above |
 | `tools/` | `run_checks.py` (one entry point for green), `resume.py` (where this unit of work is), `loop.py` (the escalation ladder), `smoke.py`, `run_hook.py`, the suites |
 | `docs/specs/`, `docs/plans/`, `docs/research/` | skill outputs, one dated file each |
 | `docs/archive/` | the pre-2026-08-01 design layer; superseded, see `docs/archive/ARCHIVE.md` |

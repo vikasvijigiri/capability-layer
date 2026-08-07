@@ -1,6 +1,6 @@
 ---
 name: delivering
-description: Prepare a branch, PR and merge-queue handoff after verification and review. Do NOT use to deploy, to review code, or to diagnose failures.
+description: Verified, reviewed work is ready to land in the repository - branch, commit, push, pull request, merge queue. Triggers include "open a PR", "push this up", "merge it", "ship it", "is this ready to land", "rebase onto main", "resolve these conflicts", "why is the merge queue stuck". Do NOT use to deploy or roll out (releasing), to review code (code-review), or to diagnose a failing check. Use this whenever reviewed work needs to reach the repository.
 when_to_use: when verified reviewed work is ready for repository integration
 effort: high
 model: sonnet
