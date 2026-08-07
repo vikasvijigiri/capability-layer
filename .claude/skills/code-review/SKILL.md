@@ -5,7 +5,7 @@ when_to_use: when a verified change needs an independent review
 effort: high
 model: sonnet
 disable-model-invocation: false
-allowed-tools: Read Grep Glob Bash
+allowed-tools: Read Grep Glob Bash Task
 ---
 
 # Code Review

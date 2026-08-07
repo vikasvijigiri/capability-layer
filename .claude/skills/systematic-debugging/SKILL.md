@@ -5,7 +5,7 @@ when_to_use: when a failure needs root-cause analysis
 effort: high
 model: opus
 disable-model-invocation: false
-allowed-tools: Read Grep Glob Bash
+allowed-tools: Read Grep Glob Bash Task
 ---
 
 # Systematic Debugging

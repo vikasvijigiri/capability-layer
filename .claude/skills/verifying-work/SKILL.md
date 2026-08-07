@@ -5,7 +5,7 @@ when_to_use: when results need validation after execution
 effort: medium
 model: sonnet
 disable-model-invocation: false
-allowed-tools: Read Grep Glob Bash
+allowed-tools: Read Grep Glob Bash Task
 ---
 
 # Verifying Work

@@ -5,7 +5,7 @@ when_to_use: when external evidence is required
 effort: high
 model: opus
 disable-model-invocation: false
-allowed-tools: Read Grep Glob WebFetch WebSearch
+allowed-tools: Read Grep Glob WebFetch WebSearch Task
 ---
 
 # Research

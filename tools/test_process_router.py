@@ -217,6 +217,11 @@ if _WF.is_file():
 
 
 CHAIN_SUCCESSOR = {
+    # An entry capability rather than a numbered stage: it runs before stage 1
+    # when the repository is unknown, and never again once its map exists. Listed
+    # here so its handoff is pinned like every other -- an off-chain skill whose
+    # successor nothing asserts is exactly how the chain silently stops.
+    "repo-recon": "task-brief",
     "brainstormer": "writing-plans",
     "writing-plans": "executing-plans",
     "executing-plans": "verifying-work",
@@ -505,6 +510,64 @@ if AGENTS.exists():
     orphans = sorted(agent_names - named_by_skills - BUILTIN_OVERRIDES)
     check("every agent is named by at least one skill", not orphans,
           f"unreachable: {', '.join(orphans)}")
+
+    # --- a dispatching skill pre-approves the dispatch tool -----------------
+    #
+    # The defect this catches, found by audit on 2026-08-07 and green until then:
+    # every skill's `allowed-tools` was some subset of Read/Grep/Glob/Bash, and
+    # not one granted `Task`. Five skills carried explicit fan-out instructions
+    # and eight agents named a dispatching skill in their body, so every
+    # documented parallel review stopped for a permission prompt in the middle of
+    # the skill that was meant to be running autonomously.
+    #
+    # The check above already asserts the reverse direction -- that every agent is
+    # named by some skill. Nothing asserted that the naming skill could actually
+    # reach it. `allowed-tools` is a pre-approval list, not a restriction, so the
+    # symptom was an interruption rather than an error: the worst kind, because it
+    # looks like the harness asking a reasonable question.
+    #
+    # `Task` is the tool name in the published skills contract; `Agent` is the
+    # name some hosts present. Either satisfies this -- the layer is
+    # harness-neutral by `AGENTS.md`, and pinning one host's spelling here would
+    # make the check wrong somewhere it is supposed to hold.
+    DISPATCH_TOOLS = {"Task", "Agent"}
+
+    def granted_tools(text: str) -> set[str]:
+        """The skill's pre-approved tool set. An unparseable header yields the
+        empty set, which fails the check below -- the right direction, since a
+        header nothing can read grants nothing either."""
+        import yaml  # noqa: PLC0415
+        parts = text.split("---", 2)
+        if len(parts) < 3:
+            return set()
+        loaded = yaml.safe_load(parts[1])
+        if not isinstance(loaded, dict):
+            return set()
+        return set(str(loaded.get("allowed-tools") or "").replace(",", " ").split())
+
+    for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
+        text = (d / "SKILL.md").read_text(encoding="utf-8")
+        body = text.split("---", 2)[-1]
+        dispatched = sorted({
+            n for n in re.findall(r"`([a-z][a-z0-9]+(?:-[a-z0-9]+)+)`", body)
+            if n in agent_names
+        })
+        approved = granted_tools(text)
+
+        if dispatched:
+            check(f"{d.name} pre-approves the dispatch tool it needs for "
+                  f"{', '.join(dispatched)}",
+                  bool(approved & DISPATCH_TOOLS),
+                  f"names {len(dispatched)} agent(s) but grants only "
+                  f"{sorted(approved)} -- every dispatch stops for a permission "
+                  f"prompt mid-skill, which reads as the harness being careful "
+                  f"rather than as the layer being miswired")
+        elif approved & DISPATCH_TOOLS:
+            # The converse. A stray grant is not dangerous, but it is a claim
+            # about the skill that its body does not support, and this layer's
+            # whole premise is that such claims get checked.
+            check(f"{d.name} grants dispatch and names an agent to dispatch",
+                  False, "pre-approves Task but its body names no agent")
 
     # The exemption must stay honest: an override has to actually override
     # something, so its filename is its identity and the frontmatter `name:` has
