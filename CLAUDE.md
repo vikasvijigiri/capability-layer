@@ -135,21 +135,16 @@ a `Do NOT use` clause on all twenty-two.
 
 Raw equivalents, run from the repo root:
 
-    python tools/test_hooks.py
-    python tools/test_process_router.py
-    python tools/test_hook_registration.py
-    python tools/test_artifact_autocommit.py
-    python tools/test_no_slop.py
-    python tools/test_referenced_paths.py
-    python tools/test_project_checks.py
-    python .claude/hooks/check_config_json.py
-    python -m ruff check .
-    python tools/new_skill_check.py <name>|--all   # is one skill actually reachable
     python tools/run_checks.py --tier all --require-test   # both tiers
+    python tools/resume.py            # which state this unit of work is in
+    python tools/loop.py              # what the escalation ladder says to do next
+    python tools/loop.py --restore    # reset to the last verified-green tree
+    python tools/new_skill_check.py <name>|--all   # is one skill actually reachable
     python tools/smoke.py --url <url> --expect-status 200   # is it actually serving
     python tools/run_hook.py <event> '<json-payload>'   # fire one hook manually
 
-Run `/verify` before declaring any work done.
+Individual suites live in `.claude/project-checks.json` — the copy that sat here
+named seven of nineteen. Run `/verify` before declaring any work done.
 
 ---
 
@@ -163,8 +158,7 @@ Run `/verify` before declaring any work done.
 | `.claude/hooks/<event>/` | hooks over several events that act, deny or measure; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |
 | `.claude/settings.json` | what actually fires for this repository; `hooks_registry.json` documents the repository's hook contract |
 | `.claude/commands/` | the eleven slash commands above |
-| (portability installer removed) | this repo no longer ships an installer that copies the layer into other repos |
-| `tools/` | `run_checks.py` (one entry point for green), `smoke.py`, `run_hook.py`, the test suites, `check_config_json.py` |
+| `tools/` | `run_checks.py` (one entry point for green), `resume.py` (where this unit of work is), `loop.py` (the escalation ladder), `smoke.py`, `run_hook.py`, the suites |
 | `docs/specs/`, `docs/plans/`, `docs/research/` | skill outputs, one dated file each |
 | `docs/archive/` | the pre-2026-08-01 design layer; superseded, see `docs/archive/ARCHIVE.md` |
 | `decisions/` | dated ADRs |
@@ -172,17 +166,14 @@ Run `/verify` before declaring any work done.
 | `.github/workflows/checks.yml` | CI; calls the same resolver, so it cannot drift from local |
 | `.mcp.json`, `.vscode/mcp.json` | MCP servers, kept in sync by hand |
 
-`~/.claude/` holds no skills or agents. This layer now relies on a local
-`SessionStart` bootstrap hook (`.claude/hooks/session-start/02-bootstrap-docs.py`) to
-initialise repository scaffolding in-place; it does not attempt to copy the
-layer into other repositories automatically.
+`~/.claude/` holds no skills or agents. `session-start/02-bootstrap-docs.py`
+initialises scaffolding in place; nothing copies the layer into other repos.
 
 **`../physrun/` is a sibling repo, not part of this one** — the first product
-built with this layer, and the first test of whether the layer ports. It carries
-the whole layer as of 2026-08-03, plus its own `CLAUDE.md` and docs. Copying this
-file wholesale would be wrong; it asserts "there is no application code here"
-and a hook count, both false there. Porting found three bugs in a day, none of
-them findable from inside this repo. See `LOG.md` 2026-08-03 14:30.
+built with this layer, and the first test of whether it ports. Copying this file
+wholesale would be wrong: it asserts "there is no application code here" and a
+hook count, both false there. Porting found three bugs in a day, none findable
+from inside this repo. See `LOG.md` 2026-08-03 14:30.
 
 ---
 
@@ -266,10 +257,20 @@ It **suggests**, never triggers: a hook cannot invoke a skill, confirmed in the
 official docs. And it never blocks — `post-run/05-docs-gate.py` blocked a turn
 until a skill ran, deadlocked, and was deleted on 2026-08-02.
 
-Three attempts at the same failure and it stops suggesting and escalates, because
-a fix that has not converged in three passes is not converging. Green clears the
-state and closes the loop **forward**: it names `verifying-work` → `code-review`
-→ `delivering`, so "no longer failing" is not mistaken for "finished".
+**The budget depends on the kind**, decided by `_hooklib.FAILURE_CLASSES` — a
+table, not a judgement — before anything is spent: `security` 0, `transient` 2,
+`merge` 2, `deterministic`/`unknown` 3. Unmatched output is a defect, never
+noise. Until 2026-08-07 every red check cost the same three attempts, so a locked
+file escalated like a type error, and "repairing" it meant editing product code
+to chase a fault that was not in it. `tools/loop.py` turns class + attempt into
+one of six rungs (retry, repair, restore, rebase, retreat, block); `test_loop.py`
+proves by exhaustion that every path terminates. **`restore` is load-bearing** —
+three failed repairs leave the tree worse than they found it, so a fourth debugs
+the loop's own damage. Green updates `refs/uaios/green/<slug>`; restore goes
+there.
+
+Green closes the loop **forward**: `verifying-work` → `code-review` →
+`delivering`, so "no longer failing" is not mistaken for "finished".
 
 **The slow tier is the only thing that verifies the running system.** Everything
 else reads the source. A repo can lint, typecheck and unit-test green and still

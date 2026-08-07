@@ -254,6 +254,28 @@ def _record_failure(detail: str, paths) -> int:
     return attempt
 
 
+GREEN_REF_PREFIX = "refs/uaios/green/"
+
+
+def _slug() -> str:
+    """The unit of work, taken from the branch. `feat/x` -> `x`."""
+    branch = current_branch(REPO_ROOT) or ""
+    prefix = "feat/"
+    return branch[len(prefix):] if branch.startswith(prefix) else branch
+
+
+def _mark_green() -> None:
+    """Point this unit's green ref at HEAD. Best effort, never fatal.
+
+    Called only after the fast tier passed, so the ref always names a tree that
+    was actually verified -- not merely one that was committed.
+    """
+    slug = _slug()
+    if not slug or slug == "HEAD":
+        return
+    git("update-ref", f"{GREEN_REF_PREFIX}{slug}", "HEAD")
+
+
 def _clear_failures() -> None:
     for name in (FAILURE_STATE_NAME, FAILURE_REPORT_NAME):
         try:
@@ -462,6 +484,19 @@ def main():
     # gap between stage 5 and stage 6 that `verifying-work` exists to hold.
     was_looping = bool(_load_failures())
     _clear_failures()
+
+    # --- the restore point.
+    #
+    # This commit's tree just passed the whole fast tier, which makes it the
+    # newest verified-good state of this unit of work. Recording it is what lets
+    # the escalation ladder undo itself: three failed repair attempts do not
+    # leave the tree where they found it, they leave it worse, and the fourth
+    # attempt is then debugging damage the loop did rather than the original
+    # defect. `tools/loop.py` resets here rather than digging further.
+    #
+    # A ref rather than a file: durable, survives a cleared context and a fresh
+    # clone of the same repository, and there is no state to desync.
+    _mark_green()
 
     rc_sha, sha, _ = git("rev-parse", "--short", "HEAD")
     resolved = (
