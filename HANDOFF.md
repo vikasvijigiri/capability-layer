@@ -26,11 +26,17 @@ and `decisions/2026-08-07-derived-state-over-stored-state.md` says why.
 
 ## Pending
 
-- Cut `.claude/workflow.md`'s prose state machine (lines 38-61); it is now a
-  second, unenforced description of what `resume.py` and `loop.py` do.
-- Phase 3 onward of the Trunk + Queue plan: `[NEEDS CLARIFICATION]` markers,
-  `.claude/constitution.md`, `tools/analyze.py`, the `merge_group` CI shape and
-  `CODEOWNERS`, then collapsing 22 skills to 5.
+- **Nothing has ever been pushed.** No remote exists, so the `merge_group`
+  trigger, the `conclusion` required check and `CODEOWNERS` are correct as files
+  and unproven against GitHub. `/publish` when you want that closed;
+  `[state:no-remote]` says so at session start.
+- Canary release (`release.yaml` thresholds, auto-rollback) is unbuilt on
+  purpose — there is no deploy target, so every assertion would test a mock.
+  It belongs in a repo that deploys something.
+- Skills went 22 → 13 by folding techniques into the stage that uses them.
+  `task-brief`+`brainstormer` and `verifying-work`+`systematic-debugging` were
+  deliberately left apart: their triggers are genuinely different and merging
+  them trades routing precision for ~200 tokens.
 - Populate and maintain `README.md` as stable project documentation.
 - Refresh stale historical entries only when they are no longer useful as
   history; do not rewrite `LOG.md` merely to remove old names.

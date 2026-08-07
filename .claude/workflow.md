@@ -91,6 +91,15 @@ The durable knowledge artifacts are behind the current workflow run. Resume
 `knowledge-manager` before claiming the unit complete.
 [/state:docs-stale]
 
+[state:no-remote]
+This branch has commits and no git remote, so nothing can be pushed, no pull
+request can exist, and the merge-queue configuration in `.github/workflows/`
+has never been exercised against the service that enforces it. `/publish`
+creates the repository, pushes, opens the PR, and prints the branch-protection
+settings to enable by hand. It needs an explicit yes -- publishing is
+outward-facing and a repository, once public, can be indexed before it is deleted.
+[/state:no-remote]
+
 [state:layer-unreviewed]
 The capability layer changed without a completed layer audit. Run the
 capability-layer-maintenance audit and the no-slop layer scan before delivery.

@@ -126,6 +126,8 @@ now because framing was cut and four audit skills became `code-review` lenses. E
     /release-check   non-destructive release-readiness evidence
     /handoff         durable read-only session-state report
     /pr-review       high-confidence pull-request review; local by default
+    /publish         create the repo, push, open the PR — one explicit yes, and
+                     it never configures its own merge gates
 
 Raw equivalents, run from the repo root:
 

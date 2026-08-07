@@ -162,6 +162,11 @@ def counts() -> dict:
         "last_doc_sha": last_doc[:8],
         "layer_files": layer_files,
         "uncommitted": len(dirty),
+        # Zero remotes means committed work has nowhere to go: no push, no PR,
+        # and the merge queue is a configuration nobody has ever exercised. Read
+        # from git like everything else here, so there is no flag to clear when
+        # a remote is finally added.
+        "remotes": len([ln for ln in git("remote").splitlines() if ln.strip()]),
     }
 
 
@@ -200,6 +205,11 @@ def main() -> int:
         # "unreviewed", not "drifted": this is branch-scoped, so it measures what
         # review has not yet seen rather than decay since some marker.
         states.append("layer-unreviewed")
+    # Committed work and nowhere to send it. Not reported on the default branch
+    # or on an empty branch: a remote is premature until something exists that
+    # would go through a PR, and saying so earlier trains people to ignore it.
+    if c["remotes"] == 0 and (c["commits_on_branch"] or 0) >= 1:
+        states.append("no-remote")
     if not states:
         return 0
 
