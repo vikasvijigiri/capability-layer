@@ -57,6 +57,11 @@ order. Brainstorm the first one through the normal flow; each gets its own
 spec → plan → build cycle. Questions spent refining the wrong scope are wasted.
 
 **3. Ask clarifying questions** — purpose, constraints, success criteria.
+- **Only ask what changes the direction.** A detail that merely needs deciding
+  is not a question, it is `[NEEDS CLARIFICATION: <question>]` written into the
+  spec where the answer belongs. `writing-plans` carries markers forward and
+  resolves every one in a single batch at Gate 1, so asking here buys nothing
+  and interrupts while the answer is least informed.
 - One question per message. Break wide topics into several turns.
 - Use `AskUserQuestion`, not prose with lettered options — the user should
   click, not retype.

@@ -236,6 +236,26 @@ check("...and a spent budget derives BLOCKED", rs.derive_state(f) == "BLOCKED")
 check("a corrupt ledger reads as fresh rather than raising",
       rs.gather_facts(repo, "checkout-retry")["attempts"] == 0)
 
+# --- the prose and the code agree on the two marker strings -----------------
+#
+# `derive_state` reads a plan file that a skill wrote. If the skill says
+# "NEEDS CLARIFICATION" and the deriver looks for "[NEEDS CLARIFICATION", the
+# gate silently stops working -- a plan full of open questions derives as
+# approved, which is the one failure this mechanism exists to prevent. Nothing
+# else binds the two, so this does.
+
+_plans = (ROOT / ".claude/skills/writing-plans/SKILL.md").read_text(encoding="utf-8")
+_brain = (ROOT / ".claude/skills/brainstormer/SKILL.md").read_text(encoding="utf-8")
+
+check("writing-plans states the clarification marker verbatim",
+      rs.CLARIFICATION_MARKER in _plans, rs.CLARIFICATION_MARKER)
+check("writing-plans states the approval marker verbatim",
+      rs.APPROVAL_MARKER in _plans, rs.APPROVAL_MARKER)
+check("brainstormer routes non-directional questions to a marker",
+      rs.CLARIFICATION_MARKER in _brain)
+check("writing-plans batches the markers into one question at the gate",
+      "AskUserQuestion" in _plans and "One batch" in _plans)
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

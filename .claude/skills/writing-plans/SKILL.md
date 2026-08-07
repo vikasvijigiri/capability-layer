@@ -19,8 +19,10 @@ tests, or implementation edits.
   or documentation other than the plan being created.
 - Do not execute the plan while writing it. Do not invoke `executing-plans`,
   implement a task, or claim that the feature is built.
-- Do not invent requirements. Mark an unresolved requirement as a question and
-  return to `brainstormer` if the approach is not actually settled.
+- Do not invent requirements. **Never guess.** Write
+  `[NEEDS CLARIFICATION: <the exact question>]` inline where the answer belongs
+  and keep going — a marker costs one line, a wrong assumption costs the build.
+  Return to `brainstormer` only if the approach itself is unsettled.
 - Do not start without an approved spec. A rough request belongs to
   `task-brief`; an unsettled direction belongs to `brainstormer`.
 
@@ -147,6 +149,21 @@ Keep the plan self-contained. An engineer who has not participated in the
 conversation should be able to execute each task without guessing what a path,
 symbol, test, or dependency means.
 
+### The two markers the machinery reads
+
+`tools/resume.py` derives the workflow state from this file, so these two strings
+are contract, not style:
+
+| Marker | Meaning |
+|---|---|
+| `[NEEDS CLARIFICATION: q]` | an open question, inline where the answer belongs |
+| `## Approved` | the user passed Gate 1 |
+
+**A marker outranks approval.** While any remains, the derived state is
+`WAITING_PLAN_APPROVAL` no matter what else the file says — so a plan cannot be
+approved over an open question, and the enforcement is a function rather than a
+reviewer's attention.
+
 ### 6. Self-review before handoff
 
 Before the approval gate, invoke `artifact-review` on the completed plan. Treat
@@ -175,9 +192,14 @@ earlier skill instead of filling the gap by assumption.
 ## Completion and handoff
 
 The skill is complete only when the plan is saved, self-reviewed, and presented
-for the plan approval gate. State the plan path, task count, key assumptions,
-known risks, and any unanswered questions, then use `AskUserQuestion` to ask
-whether the user approves the plan. Do not proceed past that gate.
+for the plan approval gate. State the plan path, task count, key assumptions and
+known risks.
+
+**Then put every `[NEEDS CLARIFICATION]` marker into one `AskUserQuestion` call.**
+One batch, at the gate — not a question each time one arises. Scattered questions
+are what turned two gates into nine, and they interrupt at the moment the answer
+is least informed. Write the answers back into the plan, delete the markers, add
+`## Approved`, and stop.
 
 After the user approves the plan, invoke `executing-plans` and pass it the plan
 path. Until approval is explicit, stop here.
@@ -199,9 +221,11 @@ saved plan. Pass the plan path. Do not implement any task in this skill.
 
 ## Success criteria
 
-- A dated plan exists under `docs/plans/`.
+- A dated plan exists under `docs/plans/`, named `<date>-<slug>.md` where `<slug>`
+  matches the branch (`feat/<slug>`) — one slug ties plan, branch, green ref and PR.
 - The plan describes implementation work without performing it.
 - Tasks are ordered, independently verifiable, and specific enough to execute.
-- The plan contains no unresolved placeholders or invented requirements.
+- Every open question was a marker, and every marker was answered at the gate —
+  none invented, none left behind.
 - Every spec requirement and affected file is accounted for.
 - Execution has not started before approval.
