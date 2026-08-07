@@ -18,8 +18,10 @@ This command can change Git state. Follow this exact order:
    `main`, `master`, `develop`, or `release`.
 3. Read the complete staged and unstaged diff. Propose a subject under 72
    characters and list the exact paths that would be staged.
-4. Ask for **explicit confirmation** immediately before `git add` and
-   `git commit`. Showing a proposed message is not confirmation.
+4. Use **`AskUserQuestion`** immediately before `git add` and `git commit`,
+   with the proposed subject in the question. Showing a message is not
+   confirmation, and neither is a prose question — approval has to be a click
+   the user made, not an inference from whatever they said next.
 5. Stage only the listed paths, commit without `--no-verify`, and report the
    resulting short SHA.
 

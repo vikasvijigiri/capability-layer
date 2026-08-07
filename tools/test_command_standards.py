@@ -30,9 +30,25 @@ for path in sorted(COMMANDS.glob("*.md")):
                 failures.append(f"{path.name}: references missing {rel}")
 
 save = (COMMANDS / "save.md").read_text(encoding="utf-8")
-for phrase in ("explicit confirmation", "Never push", "/verify"):
+for phrase in ("AskUserQuestion", "Never push", "/verify"):
     if phrase not in save:
         failures.append(f"save.md: missing safety contract {phrase!r}")
+
+# --- every mutating command asks with the tool, not in prose ------------------
+#
+# "Ask for explicit confirmation" is a sentence the model can satisfy by writing
+# a question into its reply, which the user can answer with silence and which
+# scrolls out of view in a long turn. `AskUserQuestion` renders a decision the
+# user clicks, so approval is a recorded event rather than something inferred
+# from whatever they said next. Asserted here because a command that mutates
+# state is exactly where that distinction is load-bearing.
+#
+# read-only commands are exempt by construction: they have nothing to confirm.
+for path in sorted(COMMANDS.glob("*.md")):
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if re.search(r"^Mode:\s*mutating$", text, re.M) and "AskUserQuestion" not in text:
+        failures.append(f"{path.name}: mutating but never names AskUserQuestion — "
+                        f"a prose confirmation is answerable by silence")
 
 verify = (COMMANDS / "verify.md").read_text(encoding="utf-8")
 if "tools/run_checks.py --tier all --require-test" not in verify:

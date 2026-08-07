@@ -11,5 +11,5 @@ Inspect the PR state, diff, repository instructions, and relevant history. Run
 independent review lenses, validate each finding before reporting it, and output
 only high-confidence findings with file and line evidence. Default output is
 local. If `--comment` is supplied, show the complete proposed comment and ask
-for explicit confirmation before posting anything. Never merge, push, or close
+`AskUserQuestion` before posting anything. Never merge, push, or close
 the PR.

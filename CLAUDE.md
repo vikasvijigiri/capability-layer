@@ -36,9 +36,15 @@ consumes and produces, and the two shapes (linear and loop). Read it before
 adding a skill or wondering what comes next.
 
 **The chain has exactly two workflow approval gates** — the finished plan at the
-end of `writing-plans`, and the sign-off in `code-review`. Operational safety
-checks may still require confirmation, such as choosing a worktree or target;
-they do not grant approval to bypass either gate.
+end of `writing-plans`, and the shipment approval in `releasing`. Both are asked
+with `AskUserQuestion`, never in prose: a prose question is answerable by silence
+and scrolls away, so approval must be a click the user made rather than something
+inferred from their next message. `test_process_router.py` holds the set to those
+two. This file said gate 2 was the `code-review` sign-off until 2026-08-07, which
+contradicted `workflow.md`, the suite, and `code-review` itself — it returns a
+verdict and asks nothing. Operational safety checks may still require
+confirmation, such as choosing a worktree or target; they do not grant approval
+to bypass either gate.
 `tools/test_process_router.py` fails if a tenth skill grows a dialogue. Delivery is
 separate and not counted: `delivering` and `releasing` still need an explicit yes,
 because unapproved push, merge and deploy are forbidden outright below.

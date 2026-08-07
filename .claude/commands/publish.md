@@ -26,8 +26,11 @@ confirmation in step 4 is the whole point, and showing a plan is not confirmatio
 3. Report, in this order: the resolved owner, the proposed repository name, the
    visibility, the branch, the number of commits that would be pushed, and any
    uncommitted paths that would **not** be pushed.
-4. Ask for **explicit confirmation**, naming the visibility in the question.
-   Default to `--private`. Public is a separate answer, never an assumption.
+4. Use **`AskUserQuestion`** to confirm, naming the visibility in the question
+   itself. Options are real positions — publish private, publish public, cancel —
+   each `description` saying what it means. Never add an "other" option; the tool
+   appends one. A prose question is not confirmation: it is answerable by silence
+   and it scrolls away in a long turn.
 5. `gh repo create <owner>/<name> --private --source . --remote origin`
    then `git push -u origin <branch>`. Never `--force`, never to `main`.
 6. `gh pr create --fill --base main --head <branch>`.
