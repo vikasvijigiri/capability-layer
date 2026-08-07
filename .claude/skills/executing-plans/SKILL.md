@@ -1,6 +1,6 @@
 ---
 name: executing-plans
-description: An approved plan or task list exists and the work is to carry it out. Triggers include "execute the plan", "implement this", "start building", "do task 3", "continue the plan", and open-ended work with no fixed end state. Do NOT use to write the plan (writing-plans), diagnose a failure (systematic-debugging), or judge the result (verifying-work).
+description: An approved plan or task list exists and the work is to carry it out, including test-first development and isolating work in a worktree. Triggers include "execute the plan", "implement this", "start building", "do task 3", "write a failing test first", "create a worktree", "keep this off main". Do NOT use to write the plan (writing-plans), diagnose a failure (systematic-debugging), or judge the result (verifying-work).
 when_to_use: when a plan is approved and execution begins
 effort: medium
 model: sonnet
@@ -9,7 +9,8 @@ disable-model-invocation: true
 
 # Executing Plans
 
-Implementation starts only in a verified worktree. Invoke `using-git-worktrees`
+Implementation starts only in a verified worktree. Follow
+`references/using-git-worktrees.md`
 when the current checkout is not already the explicitly chosen isolated branch;
 record the worktree path and base commit before task 1.
 
@@ -202,6 +203,18 @@ digraph executing_plans {
 Before the terminal handoff, dispatch `spec-reviewer` when the implementation
 has an approved spec or material acceptance criteria. It checks compliance but
 does not fix or approve the work. Then invoke `verifying-work`.
+
+## Techniques — read one when the task calls for it
+
+Separate skills until 2026-08-07. Each charged a description on every turn for
+depth that applies to some tasks, not all. Same content, loaded on demand.
+
+| The task involves | Read |
+|---|---|
+| new or changed behaviour that needs executable proof | `references/test-driven-development.md` |
+| multi-file, parallel or risky work that must not touch the checkout | `references/using-git-worktrees.md` |
+
+Isolation is a decision made **before** the first edit, not after the diff grows.
 
 ## Next step — you MUST take it
 

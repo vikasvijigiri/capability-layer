@@ -100,12 +100,12 @@ of it.
 producing an artefact and letting the caller decide.
 
 **5. Design-surface slop.** If the change touches a user-facing surface, read
-`DESIGN.md` or invoke `designer`; do not recreate its rules here. Check the
+`DESIGN.md` or the design contract in `brainstormer`; do not recreate its rules here. Check the
 implemented surface for semantic tokens, allowed type and spacing scales,
 responsive behavior, all meaningful states, visible focus, actual contrast,
 alternative text, color-independent meaning, and reduced motion. If there is no
 design contract, report a `P1` missing-decision finding and route it to
-`designer`; do not invent a visual system during cleanup.
+`brainstormer`; do not invent a visual system during cleanup.
 
 **6. Evidence slop.** For each important claim, ask what artifact proves it:
 test output for behavior, a diff for scope, a rendered view for visual quality,

@@ -1,6 +1,6 @@
 ---
 name: releasing
-description: Delivered work needs to reach a running environment - deployed, published, rolled out or promoted. Triggers include "deploy this", "push it live", "release to staging", "is it live", "roll it back". Do NOT use to merge or open a PR (delivering), to prove it meets the brief (verifying-work), or to debug a failed deploy - roll back first.
+description: Delivered work needs to reach a running environment - deployed, published, rolled out or promoted - with the signals needed to operate it there. Triggers include "deploy this", "push it live", "release to staging", "is it live", "roll it back", "add SLOs", "set up alerts", "is this observable". Do NOT use to merge or open a PR (delivering), to prove it meets the brief (verifying-work), or to debug a failed deploy - roll back first.
 when_to_use: when work must reach a running environment
 effort: low
 model: sonnet
@@ -202,6 +202,16 @@ working. Never route around it by switching tool or shell.
 After the smoke check and observation window, dispatch `release-verifier` for
 an independent readiness check when the harness supports subagents. Missing
 health evidence is BLOCKED, not a successful release.
+
+## Operating what you released
+
+The observability-sre skill was separate until 2026-08-07; it is now
+`references/observability-sre.md`. Read it before the first release to a target,
+and after any incident - SLOs, alerts, dashboards, health checks, runbooks,
+capacity signals, rollback evidence.
+
+A deploy exit code is not health. The release is observed against a metric window
+or it is not observed at all.
 
 ## Next step — you MUST take it
 

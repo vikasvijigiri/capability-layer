@@ -1,6 +1,6 @@
 ---
 name: brainstormer
-description: Creative work is starting and the approach is unsettled - a feature, direction or behaviour change. Triggers include "any ideas", "what are our options", "how should we approach", "is there a better way", "I am stuck". Do NOT use once a design exists (writing-plans) or when only scope is vague (task-brief).
+description: Creative work is starting and the approach is unsettled - a feature, a direction, a behaviour change, or the look and feel of a user-facing surface. Triggers include "any ideas", "what are our options", "how should we approach", "is there a better way", "I am stuck", "design this screen", "what should this look like". Do NOT use once a design exists (writing-plans) or when only scope is vague (task-brief).
 when_to_use: when a design is needed before implementation
 effort: high
 model: opus
@@ -97,6 +97,13 @@ requirement readable two ways. Fix inline, don't re-review.
 > want changes before we write the implementation plan."
 
 **10. Hand off** to `writing-plans`. Nothing else.
+
+## Design contract for user-facing surfaces
+
+The designer skill was separate until 2026-08-07; it is now
+`references/designer.md`. Read it when the spec covers a screen, a flow, or
+anything a person looks at - product feeling, voice, colour/type/spacing tokens,
+layout, components, motion, responsive states, and the accessibility floor.
 
 ## Design guidance
 

@@ -58,12 +58,7 @@ because unapproved push, merge and deploy are forbidden outright below.
 | `research` | — entered from any stage | `docs/research/YYYY-MM-DD-<topic>.md` |
 | `systematic-debugging` | — entered on any failure | root cause + `ISSUES.md` entry |
 | `capability-layer-maintenance` | — entered to change this layer | aligned contracts, wiring, hooks, and green validators |
-| `using-git-worktrees` | — entered before isolated implementation | verified worktree, branch, and base commit |
-| `artifact-review` | — entered before material spec/plan approval | independent artifact verdict |
-| `code-review` lenses | security · supply chain · performance · accessibility, in `code-review/references/` | loaded per diff, not per turn |
-| `designer` | — entered for user-facing product surfaces | design contract, token rules, states, and accessibility floor |
-| `test-driven-development` | — entered when behavior needs executable proof | red-green-refactor evidence |
-| `observability-sre` | — entered for production operations readiness | SLOs, signals, alerts, and runbook evidence |
+| references | each stage keeps its depth in `<skill>/references/` — review lenses, worktrees, TDD, artifact review, design contract, SRE | loaded per task, not per turn |
 
 **Skills trigger from their own `description:` frontmatter, and nothing else.**
 A `UserPromptSubmit` hook and a `routing/process-skills.md` keyword table were
@@ -152,7 +147,7 @@ named seven of nineteen. Run `/verify` before declaring any work done.
 
 | Path | What it is |
 |---|---|
-| `.claude/skills/` | the 18 skills above, one directory each; `<skill>/references/` holds depth loaded on demand, not per turn |
+| `.claude/skills/` | the 13 skills above, one directory each; `<skill>/references/` holds depth loaded on demand, not per turn |
 | `.claude/agents/` | ten agents: the fan-out set dispatched by skills, plus `Explore` overriding the built-in onto haiku |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
 | `.claude/hooks/<event>/` | hooks over several events that act, deny or measure; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |

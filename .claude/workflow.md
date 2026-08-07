@@ -72,9 +72,8 @@ repository workflow runner. Chat is not durable evidence.
 
 Use `research` for external evidence, `systematic-debugging` for any failure,
 `artifact-review` for material specs or
-plans, `designer` for user-facing design, `test-driven-development` for new
-behavior, `observability-sre` for production signals, and `code-review`'s
-security, supply-chain, performance and accessibility lenses. Maintain the
+plans. Depth that used to be its own skill now lives in `<skill>/references/`
+and is read per task. Maintain the
 capability layer with `capability-layer-maintenance`; it may repair wiring but
 never authors product strategy.
 
@@ -106,8 +105,3 @@ These skills are reusable capabilities, not additional lifecycle stages:
 | Research | `research` | external evidence |
 | Diagnose | `systematic-debugging` | root-cause and bounded recovery |
 | Maintain | `capability-layer-maintenance` | layer contracts and wiring |
-| Isolation | `using-git-worktrees` | worktree and branch safety |
-| Artifact review | `artifact-review` | independent spec/plan review |
-| Design | `designer` | user-facing design and visual QA |
-| Test first | `test-driven-development` | executable behavior proof |
-| Operations | `observability-sre` | production signals and runbooks |

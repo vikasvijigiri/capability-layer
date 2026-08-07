@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: An approved spec must become a concrete implementation plan before code changes begin. Triggers include "write the implementation plan", "turn the spec into tasks", "break this down", "what order should we build this in". Do NOT use before a spec exists (brainstormer), for a small scoped brief (task-brief), or to implement it (executing-plans).
+description: An approved spec must become a concrete implementation plan before code changes begin, and that spec or plan reviewed independently first. Triggers include "write the implementation plan", "turn the spec into tasks", "break this down", "review the spec", "review the plan", "does this cover everything". Do NOT use before a spec exists (brainstormer), for a small scoped brief (task-brief), or to implement it (executing-plans).
 when_to_use: when an approved spec must be turned into executable tasks
 effort: high
 model: opus
@@ -38,12 +38,13 @@ Confirm that the spec describes one coherent deliverable. If it spans
 independent subsystems that could be built and verified separately, stop and
 recommend separate specs and plans.
 
-For a material feature or architectural change, invoke `artifact-review` on the
+For a material feature or architectural change, apply
+`references/artifact-review.md` to the
 spec before drafting the plan. A REVISE verdict returns to `brainstormer`; do
 not plan around an independently identified spec gap.
 
 For cross-cutting boundaries, dispatch `architecture-reviewer` through
-`artifact-review`; it reports risks while this skill owns the plan and approval
+`architecture-reviewer`; it reports risks while this skill owns the plan and approval
 gate.
 
 ### 2. Inspect the repository before designing tasks
@@ -195,7 +196,7 @@ It reports missing sections, unresolved markers, unjustified gate exceptions,
 tasks with no verification command, and `Modify` targets that do not exist. Fix
 every finding before spending a review on the plan.
 
-Then invoke `artifact-review` on the completed plan. Treat its verdict as
+Then apply `references/artifact-review.md` to the completed plan. Treat its verdict as
 independent evidence; do not silently repair a rejected plan in the same pass.
 
 Then review the completed plan against the spec, not against memory:
@@ -216,6 +217,14 @@ Then review the completed plan against the spec, not against memory:
 Fix gaps in the plan before presenting it. If a gap reveals that the spec is
 incomplete or the approach is unsettled, stop and route back to the appropriate
 earlier skill instead of filling the gap by assumption.
+
+## Independent artifact review
+
+The artifact-review skill was separate until 2026-08-07; it is now
+`references/artifact-review.md`. Read it when the spec or plan is material enough
+that an independent verdict is worth the pass — a cross-cutting change, a new
+boundary, anything hard to reverse. For architectural risk, dispatch
+`architecture-reviewer`; it reports, this skill still owns the plan and the gate.
 
 ## Completion and handoff
 
@@ -241,7 +250,7 @@ saved plan. Pass the plan path. Do not implement any task in this skill.
 
 - Mandatory validator: the self-review in this skill; no implementation suite
   runs because this skill produces a plan, not product code.
-- Independent validator: `artifact-review` for material specs and plans.
+- Independent validator: `references/artifact-review.md` for material specs and plans.
 - Preceded by `brainstormer`, which produces the approved spec consumed here.
 - Terminal handoff: `executing-plans`, only after the plan approval gate.
 - If the spec is incomplete or the approach is unsettled, return to
