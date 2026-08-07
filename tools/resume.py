@@ -66,6 +66,28 @@ MAX_REJECTIONS = 3
 STATE_DIR = Path(".claude") / "hooks" / "state"
 GREEN_REF = "refs/uaios/green/"
 
+# Where a reconnaissance map lands, and how much code makes one worth having.
+#
+# The gap this closes was found by running this script against its own repository
+# on 2026-08-07: 104 commits of finished work, and `state=PLANNING`. Not a bug in
+# the derivation -- every fact it reads was correct. The problem is that all of
+# them are facts about *this layer's* artifacts (a plan file, a `feat/` branch, a
+# green ref), so a repository that has never used the layer has nothing for it to
+# read, and "no plan" was indistinguishable from "nothing has happened here".
+#
+# That mattered because the layer is meant to be installed into existing repos.
+# Answering PLANNING there is not merely unhelpful, it is wrong in a specific way:
+# it invites planning against a codebase nobody has read.
+RECON_DIR = "docs/recon"
+# Twenty files of code. Below that a session can simply read the repository, and
+# a recon pass would cost more than it returns.
+RECON_THRESHOLD = 20
+CODE_SUFFIXES = (
+    ".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".rs", ".go", ".java", ".kt",
+    ".rb", ".php", ".ex", ".cs", ".swift", ".c", ".h", ".cc", ".cpp", ".scala",
+    ".vue", ".svelte",
+)
+
 # A label the diff review applies when it finds something of high severity. The
 # queue treats it as blocking, and so does this.
 BLOCKING_LABELS = {"review:blocked", "do-not-merge", "do-not-merge/hold"}
@@ -81,6 +103,8 @@ TERMINAL = {
 # What the loop does next in each state. Kept beside the states rather than in a
 # skill, because a state whose next action lives somewhere else drifts from it.
 NEXT_ACTION = {
+    "RECON": "map the repository before planning inside it -- what it is, what is "
+             "half-built, and what has no test",
     "PLANNING": "write the plan and its acceptance tests",
     "WAITING_PLAN_APPROVAL": "human: resolve clarifications, then mark the plan approved",
     "BUILD": "implement against the plan's acceptance tests",
@@ -174,6 +198,21 @@ def rejections(text: str) -> list[str]:
     return out
 
 
+def _layer_owned(root: Path) -> set[str]:
+    """Repo-relative paths the capability layer installed, or empty.
+
+    Fails open to empty rather than raising: this runs inside the session-start
+    hook, where an exception is invisible and a wrong count is merely wrong.
+    """
+    try:
+        data = json.loads(
+            (root / ".claude" / "layer-manifest.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    paths = data.get("paths") if isinstance(data, dict) else None
+    return {str(p).replace("\\", "/") for p in paths} if isinstance(paths, list) else set()
+
+
 def ledger_path(root: Path, slug: str) -> Path:
     return root / STATE_DIR / f"resume-{slug}.json"
 
@@ -207,6 +246,28 @@ def gather_facts(root: Path, slug: str | None = None) -> dict:
     branch_rc, _ = _git(root, "rev-parse", "--verify", "--quiet",
                         f"refs/heads/{work_branch}")
     branch_exists = branch_rc == 0 or branch == work_branch
+
+    # One `git ls-files` rather than a tree walk: this runs at session start, and
+    # a full walk of an unfamiliar monorepo is not something to pay for before
+    # anyone has typed. Tracked files only, which is also the right set -- an
+    # untracked build directory is not this repository's code.
+    _, tracked = _git(root, "ls-files")
+    # The layer installs ~33 tool scripts of its own. Counting them as the host's
+    # code would send a two-file repository into RECON one commit after install,
+    # which is the guest measuring itself and reporting the host's size. The
+    # manifest is written by `.claude/install.py` and is absent here, where the
+    # layer IS the repository.
+    owned = _layer_owned(root)
+    code_files = sum(
+        1 for line in tracked.splitlines()
+        if line.strip().endswith(CODE_SUFFIXES)
+        and line.strip().replace("\\", "/") not in owned
+    )
+    recon_dir = root / RECON_DIR
+    recon_maps = (
+        sorted(p.name for p in recon_dir.glob("*.md") if p.name != "README.md")
+        if recon_dir.is_dir() else []
+    )
 
     _, head = _git(root, "rev-parse", "HEAD")
     green_rc, green = _git(root, "rev-parse", "--verify", "--quiet",
@@ -251,6 +312,9 @@ def gather_facts(root: Path, slug: str | None = None) -> dict:
         "branch": branch,
         "plan_exists": plan is not None,
         "plan_path": str(plan.relative_to(root)) if plan is not None else None,
+        "code_files": code_files,
+        "recon_maps": recon_maps,
+        "recon_exists": bool(recon_maps),
         "plan_approved": APPROVAL_MARKER in plan_text,
         "clarifications": plan_text.count(CLARIFICATION_MARKER),
         "rejections": _rejections,
@@ -289,8 +353,15 @@ def derive_state(facts: dict) -> str:
         proceeding would bake in a guess.
       - a spent budget outranks everything below it. Otherwise a unit that has
         exhausted its ladder keeps being handed back to REPAIR forever.
+      - RECON outranks PLANNING. Both mean "there is no plan", but planning
+        against a codebase nobody has read produces a plan against an imagined
+        one. Only reachable when there is real code and no map, so a repository
+        this layer has been used in from the start never sees it.
     """
     if not facts.get("plan_exists"):
+        if (facts.get("code_files", 0) >= RECON_THRESHOLD
+                and not facts.get("recon_exists")):
+            return "RECON"
         return "PLANNING"
     if facts.get("clarifications", 0) > 0:
         return "WAITING_PLAN_APPROVAL"

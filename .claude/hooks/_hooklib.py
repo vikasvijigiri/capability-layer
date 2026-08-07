@@ -628,3 +628,47 @@ def failure_signature(detail: str) -> str:
 
 
 
+
+
+# --- what the capability layer owns, in a repository it was installed into ---
+#
+# The defect this closes, found end-to-end on 2026-08-07 by installing into a
+# synthetic inherited repo and reading the output: `tools/recon.py` reported "25
+# test files over 26 code files (ratio 0.962)" for a repository whose own source
+# was a single file. It was counting the layer's own `tools/test_*.py`. Same root
+# cause made `install.py --dry-run` say "empty -- start at task-brief" and the
+# post-install report say "an existing codebase", and it would have pushed
+# `resume.py` into RECON on a two-file repo.
+#
+# Three readings of the host repository, all inflated by the guest. A layer that
+# measures itself and calls the number the host's is worse than one that measures
+# nothing, because every judgement downstream inherits it.
+#
+# Pattern-matching `tools/` was the obvious fix and is wrong: a host repository
+# may have its own `tools/`, and the installer merges into it. So the installer
+# records exactly what it wrote, and this reads that record back. Absent manifest
+# means nothing is excluded -- which is correct in the source repo, where the
+# layer IS the repository.
+LAYER_MANIFEST = ".claude/layer-manifest.json"
+
+
+def layer_paths(root):
+    """The repo-relative posix paths this layer installed, or an empty set.
+
+    Fails open to empty: an unreadable or malformed manifest must not hide the
+    host's own files from a measurement. Over-reporting the host's code is a
+    recoverable inconvenience; under-reporting it is a wrong answer that looks
+    right.
+    """
+    import json as _json
+    import os as _os
+    path = _os.path.join(str(root), *LAYER_MANIFEST.split("/"))
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = _json.load(fh)
+    except Exception:
+        return set()
+    paths = data.get("paths") if isinstance(data, dict) else None
+    if not isinstance(paths, list):
+        return set()
+    return {str(p).replace("\\", "/") for p in paths}

@@ -81,6 +81,7 @@ def facts(**overrides) -> dict:
 # --- one case per state ------------------------------------------------------
 
 CASES = [
+    ("RECON", facts(plan_exists=False, code_files=40, recon_exists=False)),
     ("PLANNING", facts(plan_exists=False)),
     ("WAITING_PLAN_APPROVAL", facts(plan_approved=False)),
     ("BUILD", facts(branch_exists=False)),
@@ -108,6 +109,38 @@ check("every state in the table is reachable from a fixture",
 # is precisely when nobody can afford to debug the resume itself.
 
 check("an empty dict still derives a state", rs.derive_state({}) == "PLANNING")
+
+
+# --- the entry boundary: a repo this layer was dropped into ------------------
+#
+# The defect: run this against any repository that has never used the layer and
+# it answered PLANNING, because every fact it reads is about the layer's own
+# artifacts. Measured on this repo on 2026-08-07 -- 104 commits of finished work,
+# state=PLANNING. "No plan here" and "nothing has happened here" were one state.
+
+check("a large unmapped codebase with no plan needs reconnaissance first",
+      rs.derive_state(facts(plan_exists=False, code_files=200,
+                            recon_exists=False)) == "RECON")
+check("...but a small one does not -- just read it",
+      rs.derive_state(facts(plan_exists=False, code_files=3,
+                            recon_exists=False)) == "PLANNING",
+      "a recon pass over four files costs more than it returns")
+check("...and once a map exists, recon does not repeat",
+      rs.derive_state(facts(plan_exists=False, code_files=200,
+                            recon_exists=True)) == "PLANNING")
+check("an empty repository plans rather than reconnoitres",
+      rs.derive_state({"code_files": 0}) == "PLANNING")
+check("a repo at exactly the threshold reconnoitres",
+      rs.derive_state(facts(plan_exists=False, code_files=rs.RECON_THRESHOLD,
+                            recon_exists=False)) == "RECON",
+      "the boundary is inclusive; an off-by-one here silently skips the stage")
+check("recon never outranks an existing plan",
+      rs.derive_state(facts(plan_exists=True, plan_approved=False,
+                            code_files=500, recon_exists=False))
+      == "WAITING_PLAN_APPROVAL",
+      "a plan that exists was written by someone who had read the repo")
+check("RECON is not terminal -- something automatic must move out of it",
+      "RECON" not in rs.TERMINAL)
 check("a partial dict does not raise",
       rs.derive_state({"plan_exists": True}) == "WAITING_PLAN_APPROVAL")
 check("every derived state has a next action",

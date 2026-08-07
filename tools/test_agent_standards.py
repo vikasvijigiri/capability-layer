@@ -11,7 +11,7 @@ AGENTS = ROOT / ".claude" / "agents"
 READ_ONLY = {
     "Explore", "diff-reviewer", "failure-investigator", "spec-reviewer",
     "test-verifier", "architecture-reviewer", "security-reviewer",
-    "release-verifier",
+    "release-verifier", "repo-cartographer",
 }
 failures: list[str] = []
 
