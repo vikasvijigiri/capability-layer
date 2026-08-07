@@ -54,7 +54,7 @@ def main() -> int:
                 if not match:
                     fail(f"{event} command does not name a repository hook script")
                 assert match is not None
-                path = ROOT / ".claude" / "hooks" / Path(match.group(1).replace("/", "\\"))
+                path = ROOT / ".claude" / "hooks" / Path(match.group(1))
                 if not path.is_file():
                     fail(f"registered hook is missing: {path.relative_to(ROOT)}")
                 seen.add(path)

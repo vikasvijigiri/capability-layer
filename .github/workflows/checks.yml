@@ -56,7 +56,11 @@ jobs:
         continue-on-error: true
 
       - name: Install this repo's own tooling
-        run: python -m pip install --quiet ruff mypy
+        # pyyaml is NOT optional here. `test_process_router.py` breaks out of its
+        # frontmatter loop on ImportError, so without it the skill and agent
+        # contract checks silently do not run and CI reports green on a layer
+        # nobody validated. Caught by the first real CI run, 2026-08-07.
+        run: python -m pip install --quiet ruff mypy pyyaml
 
       - name: Run the fast tier
         env:

@@ -113,6 +113,26 @@ if OWNERS.is_file():
                  "/.claude/project-checks.json", "/.github/workflows/"):
         check(f"{must} is owned", any(ln.split()[0] == must for ln in rules))
 
+# --- every workflow, not just this one ---------------------------------------
+#
+# `ci.yml` sat beside `checks.yml` for months referencing requirements.txt,
+# docs/diagrams/ and tools/test_resolver.py -- none of which exist. It failed on
+# every push and nothing here looked at it, because this suite only ever read
+# `checks.yml`. A second workflow running its own tests also defeats the
+# single-required-check design: branch protection names `conclusion`, so whatever
+# that other workflow decides is invisible to the merge.
+
+WORKFLOWS = ROOT / ".github" / "workflows"
+_files = sorted(WORKFLOWS.glob("*.yml")) + sorted(WORKFLOWS.glob("*.yaml"))
+check("there is at least one workflow", bool(_files))
+for _wf in _files:
+    _text = _wf.read_text(encoding="utf-8")
+    for _ref in set(re.findall(r"(?:python |-r )([A-Za-z0-9_./-]+\.(?:py|txt))", _text)):
+        check(f"{_wf.name} references a file that exists: {_ref}",
+              (ROOT / _ref).is_file(),
+              "a workflow step pointing at a deleted path fails every run, and "
+              "a red job nobody reads is worse than no job")
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

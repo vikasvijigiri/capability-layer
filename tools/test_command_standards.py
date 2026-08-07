@@ -26,7 +26,7 @@ for path in sorted(COMMANDS.glob("*.md")):
         failures.append(f"{path.name}: missing $ARGUMENTS handling")
     if "python tools/" in text:
         for rel in re.findall(r"python (tools/[A-Za-z0-9_.\\/-]+\.py)", text):
-            if not (ROOT / rel.replace("/", "\\")).is_file():
+            if not (ROOT / rel).is_file():
                 failures.append(f"{path.name}: references missing {rel}")
 
 save = (COMMANDS / "save.md").read_text(encoding="utf-8")

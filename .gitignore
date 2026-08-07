@@ -31,3 +31,7 @@ node_modules/
 
 __pycache__/
 *.pyc
+
+# Eval output is a run artefact, not source. An empty one -- which is what
+# `tee` leaves while a run is in flight -- fails the JSON linter.
+docs/evals/results-*.json
