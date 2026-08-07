@@ -1,6 +1,6 @@
 ---
 name: knowledge-manager
-description: A unit of work finished and the persistent docs no longer match reality. Triggers include "update the README", "log this", "record this", "handoff", "where did we get to", or a hard-to-reverse decision. Owns README, TASK, MEMORY, HANDOFF, LOG, ISSUES and decisions/. Do NOT use for CLAUDE.md or layer contracts, or to restate a diff.
+description: Update the durable docs when they stop matching reality. Owns README, TASK, MEMORY, HANDOFF, LOG, ISSUES and decisions/. Triggers include "update the README", "log this", "record this", "handoff", "where did we get to", "note this decision". Do NOT use for CLAUDE.md or layer contracts, or to restate a diff. Use this whenever a unit of work ends, even if unasked.
 when_to_use: when persistent docs must be updated
   - formats.md
 effort: low

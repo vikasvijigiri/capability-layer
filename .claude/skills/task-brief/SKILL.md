@@ -1,6 +1,6 @@
 ---
 name: task-brief
-description: A request names work but leaves goal, constraints or scope unstated, and the approach is settled. Triggers include "add X", "can we support Y", "users should be able to", "make it so that", or a bug report worth tracking. Do NOT use for a direct question, work already scoped, a one-file change with a stated goal, or an unsettled approach (brainstormer). Use this whenever work is named but unscoped, even if the user does not ask for a brief.
+description: Turn a vague request into a bounded, actionable brief. Triggers include "add X", "can we support Y", "users should be able to", "make it so that", "we need a way to", "track this bug". Do NOT use for a direct question, work already scoped, a one-file change with a stated goal, or an unsettled approach (brainstormer). Use this whenever work is named but unscoped, even if the user does not ask.
 when_to_use: when a clear brief is needed for work
 effort: medium
 model: sonnet

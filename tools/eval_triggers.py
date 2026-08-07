@@ -51,6 +51,83 @@ def load_queries() -> dict:
     return {k: v for k, v in raw.items() if not k.startswith("_")}
 
 
+def validate(data: dict) -> list[str]:
+    """Problems with the query set itself, checked before any money is spent.
+
+    Three invariants, and the second is the one that is easy to get backwards.
+
+    **Coverage.** A skill with no query set cannot be measured, so "it triggers"
+    is an assertion about it rather than a finding. Coverage was 6 of 14 until
+    2026-08-07 while every description was being tuned for triggering -- eight of
+    them tuned blind.
+
+    **One positive owner per query.** A query filed as a positive for its true
+    owner and a NEGATIVE for a competitor is the strongest test in the set: it
+    measures the competition that suppresses triggering, which is the failure mode
+    that gets worse as each description individually improves. That is required,
+    not forbidden. What is contradictory is one query expected to fire *two*
+    skills -- whichever wins, at least one measurement is wrong by construction.
+
+    **Shape.** A case missing `should_trigger` would be scored as a negative by
+    `.get`, silently turning a positive into a false-fire test.
+    """
+    problems: list[str] = []
+    known = {d.name for d in SKILLS.iterdir() if d.is_dir()} if SKILLS.is_dir() else set()
+
+    for name, cases in data.items():
+        if known and name not in known:
+            problems.append(f"{name}: no such skill directory")
+        if not isinstance(cases, list) or not cases:
+            problems.append(f"{name}: query set is empty")
+            continue
+        for index, case in enumerate(cases):
+            if not isinstance(case, dict) or "query" not in case:
+                problems.append(f"{name}[{index}]: no `query`")
+            elif not isinstance(case.get("should_trigger"), bool):
+                problems.append(
+                    f"{name}[{index}]: `should_trigger` missing or not a bool -- "
+                    f"it would be scored as a negative")
+
+    for name in sorted(known - set(data)):
+        problems.append(
+            f"{name}: no query set, so its trigger rate cannot be measured at all")
+
+    owners: dict[str, list[str]] = {}
+    for name, cases in data.items():
+        if not isinstance(cases, list):
+            continue
+        for case in cases:
+            if isinstance(case, dict) and case.get("should_trigger") is True:
+                owners.setdefault(str(case.get("query", "")).strip().lower(),
+                                  []).append(name)
+    for query, claimants in sorted(owners.items()):
+        if len(claimants) > 1:
+            problems.append(
+                f"{query[:50]!r} is a positive for {claimants} -- a query may "
+                f"have one expected owner; name it a negative for the others")
+    return problems
+
+
+def discrimination_pairs(data: dict) -> int:
+    """Queries that are a positive for one skill and a named negative for another.
+
+    The count worth watching. A set with none of these measures each description
+    in isolation and cannot see the competition between them.
+    """
+    positives: dict[str, set[str]] = {}
+    negatives: dict[str, set[str]] = {}
+    for name, cases in data.items():
+        if not isinstance(cases, list):
+            continue
+        for case in cases:
+            if not isinstance(case, dict):
+                continue
+            bucket = positives if case.get("should_trigger") else negatives
+            bucket.setdefault(str(case.get("query", "")).strip().lower(),
+                              set()).add(name)
+    return sum(1 for q in positives if negatives.get(q))
+
+
 def run_query(query: str, timeout: int = 180) -> tuple[set[str], float]:
     """(skills actually invoked, cost in USD) for one prompt.
 
@@ -177,15 +254,33 @@ def main(argv: list[str] | None = None) -> int:
               f"write one before measuring anything")
         return 1
 
+    # Validated on every invocation, including --list, because --list is what the
+    # test tier runs. A malformed set is cheaper to catch here than after 168
+    # paid invocations have scored against it.
+    problems = validate(data)
+
     if args.list:
         total = sum(len(v) for v in data.values())
         print(f"{len(data)} skill(s), {total} queries")
         for name, cases in sorted(data.items()):
-            pos = sum(1 for c in cases if c["should_trigger"])
+            pos = sum(1 for c in cases if c.get("should_trigger"))
             print(f"  {name:<24} {len(cases):>3} queries  ({pos} positive, "
                   f"{len(cases) - pos} near-miss)")
-        print(f"\na real run costs {total} claude invocations per repeat")
+        print(f"\ncross-skill discrimination pairs: {discrimination_pairs(data)}")
+        print(f"a real run costs {total} claude invocations per repeat")
+        if problems:
+            print(f"\n{len(problems)} problem(s) with the query set:")
+            for problem in problems:
+                print(f"  - {problem}")
+            return 1
         return 0
+
+    if problems:
+        print(f"REFUSED: {len(problems)} problem(s) with the query set. Fix these "
+              f"before spending anything on it:")
+        for problem in problems:
+            print(f"  - {problem}")
+        return 1
 
     targets = sorted(data) if args.all else ([args.skill] if args.skill else [])
     if not targets:

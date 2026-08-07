@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Inspect the actual branch diff before delivery for correctness, security, tests, scope, silent failures, dependencies, accessibility and performance, returning a structured verdict. Triggers include "review this", "threat model this", "check auth", "audit dependencies", "is this accessible", "why is this slow". Do NOT use to implement fixes, to release, or to replace verification. Use this whenever a diff is about to be delivered, even if the user does not ask for a review.
+description: Review the actual branch diff and return a verdict. Triggers include "review this", "check the diff", "threat model this", "check auth", "audit dependencies", "is this accessible", "why is this slow", "is this safe to merge". Do NOT use to implement fixes, to release, or to replace verification. Use this whenever a diff is about to be delivered, even if the user does not ask for a review.
 when_to_use: when a verified change needs an independent review
 effort: high
 model: sonnet

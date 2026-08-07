@@ -1,6 +1,6 @@
 ---
 name: executing-plans
-description: An approved plan or task list exists and the work is to carry it out, including test-first development and isolating work in a worktree. Triggers include "execute the plan", "implement this", "start building", "do task 3", "write a failing test first", "create a worktree", "keep this off main". Do NOT use to write the plan (writing-plans), diagnose a failure (systematic-debugging), or judge the result (verifying-work).
+description: Carry out an approved plan, test-first and in a worktree. Triggers include "execute the plan", "implement this", "start building", "do task 3", "write a failing test first", "create a worktree", "keep this off main", "build it". Do NOT use to write the plan (writing-plans), diagnose a failure (systematic-debugging), or judge the result (verifying-work). Use this whenever an approved plan is about to be built.
 when_to_use: when a plan is approved and execution begins
 effort: medium
 model: sonnet

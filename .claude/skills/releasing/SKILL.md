@@ -1,6 +1,6 @@
 ---
 name: releasing
-description: Delivered work needs to reach a running environment - deployed, published, rolled out or promoted - with the signals needed to operate it there. Triggers include "deploy this", "push it live", "release to staging", "is it live", "roll it back", "add SLOs", "set up alerts", "is this observable". Do NOT use to merge or open a PR (delivering), to prove it meets the brief (verifying-work), or to debug a failed deploy - roll back first.
+description: Get delivered work running in a real environment, with signals. Triggers include "deploy this", "push it live", "release to staging", "is it live", "roll it back", "add SLOs", "set up alerts", "is this observable". Do NOT use to merge or open a PR (delivering), to prove it meets the brief (verifying-work), or to debug a failed deploy - roll back first. Use this whenever a change must reach a running target.
 when_to_use: when work must reach a running environment
 effort: low
 model: sonnet

@@ -363,5 +363,341 @@
       "query": "commit what we have done so far",
       "should_trigger": false
     }
+  ],
+  "task-brief": [
+    {
+      "query": "we need a way for users to export their invoices as csv",
+      "should_trigger": true
+    },
+    {
+      "query": "can we support multiple currencies at checkout",
+      "should_trigger": true
+    },
+    {
+      "query": "add a dark mode toggle",
+      "should_trigger": true
+    },
+    {
+      "query": "make it so admins can suspend an account without deleting it",
+      "should_trigger": true
+    },
+    {
+      "query": "the search returns stale results after an edit, worth tracking",
+      "should_trigger": true
+    },
+    {
+      "query": "what does the invoice exporter currently support",
+      "should_trigger": false
+    },
+    {
+      "query": "any ideas on how we should approach multi-currency",
+      "should_trigger": false
+    },
+    {
+      "query": "change the button colour in src/ui/Button.tsx to #333",
+      "should_trigger": false
+    },
+    {
+      "query": "write the implementation plan for csv export",
+      "should_trigger": false
+    },
+    {
+      "query": "the export endpoint 500s on empty invoices, why",
+      "should_trigger": false
+    }
+  ],
+  "brainstormer": [
+    {
+      "query": "any ideas for how to onboard new users faster",
+      "should_trigger": true
+    },
+    {
+      "query": "what are our options for handling offline edits",
+      "should_trigger": true
+    },
+    {
+      "query": "i am stuck on how to structure the permissions model",
+      "should_trigger": true
+    },
+    {
+      "query": "is there a better way to do this than polling",
+      "should_trigger": true
+    },
+    {
+      "query": "what should the settings screen look like",
+      "should_trigger": true
+    },
+    {
+      "query": "we already picked event sourcing, write the plan",
+      "should_trigger": false
+    },
+    {
+      "query": "add a settings screen with three tabs",
+      "should_trigger": false
+    },
+    {
+      "query": "what is the prior art for CRDTs",
+      "should_trigger": false
+    },
+    {
+      "query": "the permissions check is failing for admins",
+      "should_trigger": false
+    },
+    {
+      "query": "start building the onboarding flow",
+      "should_trigger": false
+    }
+  ],
+  "writing-plans": [
+    {
+      "query": "the spec is approved, turn it into tasks",
+      "should_trigger": true
+    },
+    {
+      "query": "break this down into steps i can hand to someone",
+      "should_trigger": true
+    },
+    {
+      "query": "what order should we build the migration in",
+      "should_trigger": true
+    },
+    {
+      "query": "does the plan cover the rollback case",
+      "should_trigger": true
+    },
+    {
+      "query": "review the plan before we start",
+      "should_trigger": true
+    },
+    {
+      "query": "start on task 1",
+      "should_trigger": false
+    },
+    {
+      "query": "we have not decided the approach yet",
+      "should_trigger": false
+    },
+    {
+      "query": "add csv export",
+      "should_trigger": false
+    },
+    {
+      "query": "did we finish everything in the plan",
+      "should_trigger": false
+    },
+    {
+      "query": "the plan's task 3 command fails",
+      "should_trigger": false
+    }
+  ],
+  "verifying-work": [
+    {
+      "query": "is this done",
+      "should_trigger": true
+    },
+    {
+      "query": "prove the export actually works",
+      "should_trigger": true
+    },
+    {
+      "query": "are we finished with the migration work",
+      "should_trigger": true
+    },
+    {
+      "query": "did that change do what the brief asked",
+      "should_trigger": true
+    },
+    {
+      "query": "confirm this is complete before i show the client",
+      "should_trigger": true
+    },
+    {
+      "query": "review the diff for security issues",
+      "should_trigger": false
+    },
+    {
+      "query": "the test is failing, why",
+      "should_trigger": false
+    },
+    {
+      "query": "run the linter",
+      "should_trigger": false
+    },
+    {
+      "query": "open a PR for this",
+      "should_trigger": false
+    },
+    {
+      "query": "what is left to do in this repo",
+      "should_trigger": false
+    }
+  ],
+  "no-slop": [
+    {
+      "query": "clean up the repo before we ship",
+      "should_trigger": true
+    },
+    {
+      "query": "is this clean enough to ship",
+      "should_trigger": true
+    },
+    {
+      "query": "any leftover placeholders or dead code in here",
+      "should_trigger": true
+    },
+    {
+      "query": "tidy up the docs, some of them contradict each other",
+      "should_trigger": true
+    },
+    {
+      "query": "do a no-slop check",
+      "should_trigger": true
+    },
+    {
+      "query": "review the diff on this branch",
+      "should_trigger": false
+    },
+    {
+      "query": "delete src/legacy/old_api.py",
+      "should_trigger": false
+    },
+    {
+      "query": "why is the build slow",
+      "should_trigger": false
+    },
+    {
+      "query": "update the README",
+      "should_trigger": false
+    },
+    {
+      "query": "what is unfinished in this codebase",
+      "should_trigger": false
+    }
+  ],
+  "releasing": [
+    {
+      "query": "deploy this to staging",
+      "should_trigger": true
+    },
+    {
+      "query": "push it live",
+      "should_trigger": true
+    },
+    {
+      "query": "is it live yet",
+      "should_trigger": true
+    },
+    {
+      "query": "roll it back, error rate spiked",
+      "should_trigger": true
+    },
+    {
+      "query": "set up alerts for the checkout endpoint",
+      "should_trigger": true
+    },
+    {
+      "query": "open a PR and merge it",
+      "should_trigger": false
+    },
+    {
+      "query": "prove this meets the brief",
+      "should_trigger": false
+    },
+    {
+      "query": "review the diff before release",
+      "should_trigger": false
+    },
+    {
+      "query": "write the release notes",
+      "should_trigger": false
+    },
+    {
+      "query": "is the branch ready to land",
+      "should_trigger": false
+    }
+  ],
+  "knowledge-manager": [
+    {
+      "query": "update the README to describe the new CLI",
+      "should_trigger": true
+    },
+    {
+      "query": "log what we did today",
+      "should_trigger": true
+    },
+    {
+      "query": "write a handoff, i am stopping here",
+      "should_trigger": true
+    },
+    {
+      "query": "where did we get to last session",
+      "should_trigger": true
+    },
+    {
+      "query": "note this decision somewhere durable",
+      "should_trigger": true
+    },
+    {
+      "query": "update CLAUDE.md with the new skill count",
+      "should_trigger": false
+    },
+    {
+      "query": "summarise the diff for me",
+      "should_trigger": false
+    },
+    {
+      "query": "what does this repo do",
+      "should_trigger": false
+    },
+    {
+      "query": "review the docs for contradictions",
+      "should_trigger": false
+    },
+    {
+      "query": "add a docs page for the api",
+      "should_trigger": false
+    }
+  ],
+  "research": [
+    {
+      "query": "how do people usually handle rate limiting at this scale",
+      "should_trigger": true
+    },
+    {
+      "query": "what is the prior art for this",
+      "should_trigger": true
+    },
+    {
+      "query": "does a library already do this",
+      "should_trigger": true
+    },
+    {
+      "query": "compare postgres and clickhouse for our event volume",
+      "should_trigger": true
+    },
+    {
+      "query": "is this even possible with the stripe api",
+      "should_trigger": true
+    },
+    {
+      "query": "what does our rate limiter do right now",
+      "should_trigger": false
+    },
+    {
+      "query": "what version of stripe are we on",
+      "should_trigger": false
+    },
+    {
+      "query": "we already picked clickhouse, plan the migration",
+      "should_trigger": false
+    },
+    {
+      "query": "any ideas for reducing event volume",
+      "should_trigger": false
+    },
+    {
+      "query": "the stripe webhook is timing out",
+      "should_trigger": false
+    }
   ]
 }

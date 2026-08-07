@@ -1,6 +1,6 @@
 ---
 name: capability-layer-maintenance
-description: The capability layer itself needs work - CLAUDE.md, AGENTS.md, harnesses.json, workflow policy, skills, agents, commands, hooks, rules, settings, validators. Triggers include "add a skill", "the hook is not firing", "fix the layer", "update CLAUDE.md", "audit .claude", "this skill never triggers", "wire up a subagent", "the layer has drifted". Do NOT use for product code, product docs, or a plain question about how the layer works. Use this whenever .claude/ is the thing being changed.
+description: Audit or repair the agent layer itself. Covers .claude/, CLAUDE.md, AGENTS.md, skills, agents, hooks, commands, rules and validators. Triggers include "add a skill", "the hook is not firing", "fix the layer", "audit .claude", "this skill never triggers", "wire up a subagent", "the layer has drifted". Do NOT use for product code, product docs, or a plain question about how the layer works. Use this whenever .claude/ is what changes.
 when_to_use: when the agent layer or its governing contracts need audit, repair, migration, or ownership clarification
 effort: high
 model: opus

@@ -63,6 +63,8 @@ SOFT_DESC = 500
 # makes a skill fire at all. Measured 7813 chars across 22 skills on 2026-08-07
 # and tightened to 6721 the same day by deleting framing, not triggers.
 DESC_BUDGET: list[int] = []
+# name -> description, for the cross-skill collision check after the loop.
+DESCRIPTIONS: dict[str, str] = {}
 for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
     text = (d / "SKILL.md").read_text(encoding="utf-8")
     try:
@@ -78,7 +80,18 @@ for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
     if not isinstance(front, dict):
         continue
     desc = front.get("description")
-    check(f"{d.name} has a non-empty description", bool(desc))
+    # `bool(desc)` was the check, and a dict is truthy. An unquoted `: ` inside a
+    # description makes YAML parse the scalar as a mapping, so the old assertion
+    # passed on a description that had ceased to be one. Introduced and caught on
+    # 2026-08-07 by rewriting `delivering` as "...in the repository: branch, PR,
+    # merge queue" -- the skill listing rendered it as the bare title `delivering:
+    # Delivering`, meaning the description was absent from context and the skill
+    # was untriggerable while still listing normally.
+    check(f"{d.name} has a non-empty description that is a STRING",
+          isinstance(desc, str) and bool(desc.strip()),
+          f"description parsed as {type(desc).__name__} -- an unquoted ': ' makes "
+          f"YAML read it as a mapping, and the skill silently loses its only "
+          f"trigger surface")
     check(f"{d.name} name matches directory", front.get("name") == d.name,
           f"name={front.get('name')!r}")
     raw = text.split("---", 2)[1]
@@ -126,6 +139,56 @@ for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
           not ({"Write", "Edit", "NotebookEdit"} & set(granted)),
           f"granted {sorted({'Write','Edit','NotebookEdit'} & set(granted))}")
 
+    # --- the three properties that decide whether a skill actually fires ------
+    #
+    # Descriptions are the ONLY trigger surface. Measured on 2026-08-07 across a
+    # multi-hour session that touched every stage in the chain: zero skills
+    # auto-fired. Not `capability-layer-maintenance` while the layer was being
+    # audited and rebuilt, not `systematic-debugging` across eight root-caused
+    # bugs, not `verifying-work` on repeated completion claims. Under-triggering
+    # is invisible from reading -- the skill simply never runs and the work
+    # happens without it -- so the properties correlated with firing are asserted
+    # rather than trusted.
+    if isinstance(desc, str) and desc:
+        DESCRIPTIONS[d.name] = desc
+
+        # 1. Capability first, not a narrative condition.
+        #
+        # Nine of fourteen opened with a story: "A unit of work finished and the
+        # persistent docs no longer match reality", "Work is finished and about to
+        # be called done". The matcher compares the task to the description, and a
+        # description whose capability arrives in clause three matches it weakly.
+        # Anthropic's own example leads with the capability ("Expert code review
+        # specialist. Use proactively after writing or modifying code.").
+        #
+        # A word cap on the first sentence is the mechanical proxy: a narrative
+        # condition does not fit in twelve words, and a capability does. Checking
+        # for "starts with a verb" was tried first and needs a verb list that is
+        # either incomplete or so broad it passes everything.
+        first = desc.split(".")[0]
+        check(f"{d.name} leads with its capability, not a condition",
+              len(first.split()) <= 12,
+              f"first sentence is {len(first.split())} words: {first[:70]!r} -- "
+              f"lead with what the skill DOES, then the triggers")
+
+        # 2. Enough of the words a person would actually type.
+        phrases = re.findall(r'"([^"]+)"', desc)
+        check(f"{d.name} lists at least 6 trigger phrases",
+              len(phrases) >= 6,
+              f"only {len(phrases)} -- these are the literal strings a user "
+              f"types, and they are what the description is matched on")
+
+        # 3. An explicit instruction to fire without being asked.
+        #
+        # `guide/how_to_create_subagents.md`: "Use proactively after X" and "use
+        # when Y" phrasing measurably improves automatic delegation. Six of
+        # fourteen had no such clause, and the documented consequence is the model
+        # doing the work inline instead -- which is what the session above did.
+        check(f"{d.name} says to fire without being asked",
+              re.search(r"Use this whenever|Use this proactively", desc) is not None,
+              "no proactive-use clause -- without one the model does the work "
+              "inline and the skill never competes")
+
     # --- a skill states an ordered procedure ---------------------------------
     #
     # The property, not the heading. `templates/Skills.md` asked for a literal
@@ -145,6 +208,29 @@ for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
           _ordered >= 3,
           f"only {_ordered} ordered step(s) -- a skill is a procedure, and a "
           f"reader cannot follow prose that never says what comes first")
+
+# --- no two skills claim the same trigger phrase ---------------------------
+#
+# The failure mode that gets WORSE as each description individually improves.
+# Two skills both listing "review this" do not each get a fair shot at it; they
+# compete, and competition suppresses both -- so the natural response, adding more
+# phrases to each, makes the collision more likely rather than less.
+#
+# Measured clean at the time this was written (84 phrases, zero collisions). It is
+# asserted so it stays that way: a phrase is cheap to add and the cost of adding
+# an already-claimed one is invisible.
+if DESCRIPTIONS:
+    _owner: dict[str, set[str]] = {}
+    for _name, _desc in DESCRIPTIONS.items():
+        for _phrase in re.findall(r'"([^"]+)"', _desc):
+            _owner.setdefault(_phrase.lower().strip(), set()).add(_name)
+    _clashes = {k: sorted(v) for k, v in _owner.items() if len(v) > 1}
+    check(f"no trigger phrase is claimed by two skills "
+          f"({len(_owner)} distinct phrase(s))",
+          not _clashes,
+          f"contested: {list(_clashes.items())[:3]} -- both skills lose, because "
+          f"the model has no basis to prefer either")
+
 
 # --- The chain resolves ---------------------------------------------------
 #
