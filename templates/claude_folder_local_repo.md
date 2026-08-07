@@ -10,7 +10,8 @@ your-project/
     │   ├── testing.md
     │   └── api-design.md
     ├── skills/                  # Reusable prompts/workflows, invoked as /name or auto-invoked
-    │   └── security-review/
+    │   └── code-review/          # references/ holds the security, supply-chain,
+    │                              # performance and accessibility lenses
     │       ├── SKILL.md
     │       └── checklist.md     # any bundled supporting files
     ├── commands/                # Single-file prompts (legacy mechanism, skills now preferred)

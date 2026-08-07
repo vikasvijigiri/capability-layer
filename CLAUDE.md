@@ -59,14 +59,11 @@ because unapproved push, merge and deploy are forbidden outright below.
 | `systematic-debugging` | — entered on any failure | root cause + `ISSUES.md` entry |
 | `capability-layer-maintenance` | — entered to change this layer | aligned contracts, wiring, hooks, and green validators |
 | `using-git-worktrees` | — entered before isolated implementation | verified worktree, branch, and base commit |
-| `security-review` | — entered for trust-boundary changes | threat surface, ranked findings, residual risk |
 | `artifact-review` | — entered before material spec/plan approval | independent artifact verdict |
+| `code-review` lenses | security · supply chain · performance · accessibility, in `code-review/references/` | loaded per diff, not per turn |
 | `designer` | — entered for user-facing product surfaces | design contract, token rules, states, and accessibility floor |
 | `test-driven-development` | — entered when behavior needs executable proof | red-green-refactor evidence |
-| `supply-chain-audit` | — entered for dependency, CI, or provenance risk | dependency and build-chain verdict |
-| `performance-engineering` | — entered for measurable performance risk | reproducible benchmark and regression guard |
 | `observability-sre` | — entered for production operations readiness | SLOs, signals, alerts, and runbook evidence |
-| `accessibility-audit` | — entered for inclusive interface evidence | automated plus manual accessibility verdict |
 
 **Skills trigger from their own `description:` frontmatter, and nothing else.**
 A `UserPromptSubmit` hook and a `routing/process-skills.md` keyword table were
@@ -111,9 +108,11 @@ doc sweeps and bulk edits, wrong for debugging), and **request shape**, which is
 the biggest and is the user's. Deliberation goes on resolving ambiguity, not
 solving problems; one goal per request cuts it directly.
 
-Descriptions are injected **every turn** (~2,050 tokens for twenty-two) and are the
-only trigger surface, so breadth has to be paid for there — ~380 chars each, with
-a `Do NOT use` clause on all twenty-two.
+Descriptions are injected **every turn** and are the only trigger surface, so
+breadth is paid for there. `tools/test_process_router.py` prints the running
+total; it measured 7,813 chars before the 2026-08-07 tightening, and is smaller
+now because framing was cut and four audit skills became `code-review` lenses. Every one carries a
+`Do NOT use` clause, and two checkers fail without it.
 `session-start/02-bootstrap-docs.py` is budgeted for the same reason: it injected
 26,990 chars before anyone typed, and now clips to ~5,500.
 
@@ -153,7 +152,7 @@ named seven of nineteen. Run `/verify` before declaring any work done.
 
 | Path | What it is |
 |---|---|
-| `.claude/skills/` | the 22 skills above, one directory each |
+| `.claude/skills/` | the 18 skills above, one directory each; `<skill>/references/` holds depth loaded on demand, not per turn |
 | `.claude/agents/` | ten agents: the fan-out set dispatched by skills, plus `Explore` overriding the built-in onto haiku |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
 | `.claude/hooks/<event>/` | hooks over several events that act, deny or measure; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |

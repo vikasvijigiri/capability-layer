@@ -71,11 +71,10 @@ repository workflow runner. Chat is not durable evidence.
 ## Cross-cutting capabilities
 
 Use `research` for external evidence, `systematic-debugging` for any failure,
-`security-review` for trust boundaries, `artifact-review` for material specs or
+`artifact-review` for material specs or
 plans, `designer` for user-facing design, `test-driven-development` for new
-behavior, `supply-chain-audit` for dependencies/CI, `performance-engineering`
-for measurable resource risk, `observability-sre` for production signals, and
-`accessibility-audit` for inclusive interaction evidence. Maintain the
+behavior, `observability-sre` for production signals, and `code-review`'s
+security, supply-chain, performance and accessibility lenses. Maintain the
 capability layer with `capability-layer-maintenance`; it may repair wiring but
 never authors product strategy.
 
@@ -108,11 +107,7 @@ These skills are reusable capabilities, not additional lifecycle stages:
 | Diagnose | `systematic-debugging` | root-cause and bounded recovery |
 | Maintain | `capability-layer-maintenance` | layer contracts and wiring |
 | Isolation | `using-git-worktrees` | worktree and branch safety |
-| Security | `security-review` | trust boundaries and sensitive changes |
 | Artifact review | `artifact-review` | independent spec/plan review |
 | Design | `designer` | user-facing design and visual QA |
 | Test first | `test-driven-development` | executable behavior proof |
-| Supply chain | `supply-chain-audit` | dependency, CI, and provenance review |
-| Performance | `performance-engineering` | measurable latency and resource risk |
 | Operations | `observability-sre` | production signals and runbooks |
-| Accessibility | `accessibility-audit` | inclusive interaction evidence |

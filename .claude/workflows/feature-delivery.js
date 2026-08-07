@@ -67,7 +67,7 @@ export async function run({ args: workflowArgs = {}, agent, pipeline }) {
   if (!complete(implementation)) return { status: 'blocked', stage: 'implement', reason: 'Implementation did not complete.', plan, transitions }
   move('IMPLEMENTING', 'VERIFYING', 'implementation report received')
   // at most two concurrent review agents. This workflow must never push, merge, deploy, or commit.
-  const reviewers = [['verification', '.claude/skills/verifying-work/SKILL.md'], ['security', '.claude/skills/security-review/SKILL.md']]
+  const reviewers = [['verification', '.claude/skills/verifying-work/SKILL.md'], ['security', '.claude/skills/code-review/references/security-review.md']]
   let reviews = await pipeline(reviewers, ([label, reference]) => agent(`Perform an independent ${label} review. Read ${reference}. Inspect the actual changed tree and acceptance criteria. Do not edit. Return pass/fail, findings with paths and lines, and evidence. Acceptance: ${acceptance} Implementation: ${json(implementation)}`, { label, schema: { type: 'object', required: ['passed', 'findings', 'missingEvidence'], properties: { passed: { type: 'boolean' }, findings: { type: 'array', items: { type: 'string' } }, missingEvidence: { type: 'array', items: { type: 'string' } } } } }))
   const usableReviews = reviews.filter(completed)
   if (usableReviews.length !== reviewers.length) return { status: 'blocked', stage: 'verify', reason: 'Required review did not complete.', reviews, incidents, transitions }

@@ -51,7 +51,7 @@ Return the tested change and evidence to `executing-plans`, then `verifying-work
 
 - Enter for new behavior, bug fixes, risky refactors, or acceptance criteria
   that need executable proof.
-- Pair with `designer` for UI behavior and `accessibility-audit` for interface
+- Pair with `designer` for UI behavior and `code-review` (accessibility lens) for interface
   semantics.
 - Do not use for a documentation-only change unless the documentation is an
   executable contract.

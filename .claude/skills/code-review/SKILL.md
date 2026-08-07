@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Inspect the actual branch diff before delivery for correctness, security, tests, scope and silent failures, returning a structured verdict. Do NOT use to implement fixes, to release, or to replace verification.
+description: Inspect the actual branch diff before delivery for correctness, security, tests, scope, silent failures, dependencies, accessibility and performance, returning a structured verdict. Triggers include "review this", "threat model this", "check auth", "audit dependencies", "is this accessible", "why is this slow". Do NOT use to implement fixes, to release, or to replace verification.
 when_to_use: when a verified change needs an independent review
 effort: high
 model: sonnet
@@ -33,6 +33,29 @@ untracked files. Never treat passing tests as a substitute for reading the diff.
 For a large change, the workflow may dispatch `diff-reviewer` for independent
 correctness, security, test-quality, and scope passes; merge duplicate findings
 before applying recovery.
+
+## Lenses — load one only when the diff earns it
+
+Four specialist reviews were separate skills until 2026-08-07. Each cost its own
+description on every turn, for depth that applies to a minority of diffs. They
+are now references: same content, read on demand, nothing charged when unused.
+
+| The diff touches | Read |
+|---|---|
+| auth, secrets, personal data, external input, trust boundaries | `references/security-review.md` |
+| dependencies, lockfiles, CI config, build scripts | `references/supply-chain-audit.md` |
+| user-facing markup, forms, focus, colour, motion | `references/accessibility-audit.md` |
+| hot paths, queries, bundle size, startup, anything with a budget | `references/performance-engineering.md` |
+
+Pick by what changed, not by habit — reading all four on a typo fix is the cost
+this consolidation exists to remove. A lens that produces a finding reports it
+through the same severity/`file:line`/evidence format as everything else.
+
+**A high-severity security finding is never auto-waived**, whichever lens found
+it: it blocks, and `_hooklib.classify_failure` gives its class a budget of zero.
+
+When the security lens needs an independent pass rather than a reading, dispatch
+`security-reviewer`; it reports, this skill still owns the verdict.
 
 ## Recovery
 

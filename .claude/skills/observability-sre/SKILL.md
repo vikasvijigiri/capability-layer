@@ -48,7 +48,7 @@ Hand implementation to `test-driven-development`; hand release evidence to
 
 - Enter before production launch, after incidents, or when ownership and
   failure detection are unclear.
-- Pair with `performance-engineering` for saturation and capacity risks.
+- Pair with `code-review` (performance lens) for saturation and capacity risks.
 - Do not use to replace incident response or a provider-specific operations
   runbook.
 
