@@ -20,9 +20,16 @@ it, so attempt four debugs damage the loop did rather than the original defect.
 The autocommit hook records `refs/uaios/green/<slug>` on every green fast tier,
 which gives this a verified tree to fall back to.
 
+A second, separate ladder covers one subagent dispatch, because a dispatch fails
+in ways a check does not: it can report that its brief was incomplete, or die
+before reporting anything. Its rungs are supply, escalate, serialize, diagnose --
+and `serialize`, pulling the task back into the main context, is the one that
+makes it terminate.
+
     python tools/loop.py                    # what to do next, one line
     python tools/loop.py --json
     python tools/loop.py --restore          # perform the reset (destructive)
+    python tools/loop.py --agent-status BLOCKED --attempt 1
 """
 
 from __future__ import annotations
@@ -128,6 +135,87 @@ def gate_rung(rejections: int, changed: bool,
     if rejections >= max_rejections:
         return "retreat"
     return "revise"
+
+
+AGENT_RUNG_NOTE = {
+    "accept": "Read the diff before ticking anything. An agent reporting DONE is "
+              "a claim; the diff and its test output are the evidence.",
+    "note": "Accept the work and record the concern verbatim where the reviewer "
+            "will read it. A concern paraphrased is a concern lost.",
+    "supply": "It named exactly what the brief lacked. Add that one fact and "
+              "re-dispatch. Do not add the whole plan -- the brief being small is "
+              "why this is cheap.",
+    "escalate": "Re-dispatch once on a stronger model with the failure attached. "
+                "Never retry BLOCKED unchanged on the same model: same input, "
+                "same weights, same answer.",
+    "serialize": "Stop dispatching this task. Run it inline, in the main context, "
+                 "where you can see what the agent could not.",
+    "diagnose": "This is no longer a dispatch problem. Hand the failure to "
+                "`systematic-debugging` with the reports from every attempt.",
+    "block": "Stop. Record every status, every brief, and what each attempt "
+             "changed. A human decides.",
+}
+
+# What an agent's own status means for the next dispatch. Kept beside the failure
+# ladder because it is the same kind of object -- a bounded ladder over an
+# unreliable step -- and deliberately NOT the same table, because the remedies
+# do not overlap: you cannot `rebase` a subagent, and `restore` is meaningless
+# for a worker that was isolated in its own worktree.
+#
+# Added 2026-08-07. Until then a dispatch had no ladder at all: `task-implementer`
+# said "never let a BLOCKED retry unchanged on the same model", which is a rule
+# the dispatcher had to remember, with nothing computing the alternative. Every
+# other unreliable step in this layer got a table; this one got a sentence.
+AGENT_BUDGETS = {
+    "DONE": 0,
+    "DONE_WITH_CONCERNS": 0,
+    # A named missing fact is not a defect, and supplying it is nearly free. Two,
+    # because a brief can genuinely lack two things; a third means the brief was
+    # never the problem.
+    "NEEDS_CONTEXT": 2,
+    # One escalation, then inline. A second stronger model on the same brief is
+    # the same bet twice.
+    "BLOCKED": 1,
+    # The dispatch itself died -- a terminal API error, a killed process. That is
+    # transient until it happens twice.
+    "DIED": 1,
+}
+
+
+def agent_rung(status: str, attempt: int = 0, serialized: bool = False) -> str:
+    """What to do about one subagent's result. Pure, total, order is the policy.
+
+    `serialized` records that the task has already been pulled back into the main
+    context. Without it the ladder would offer `serialize` forever, which is the
+    exact shape of non-termination `test_loop.py` exists to rule out.
+    """
+    normalised = (status or "").strip().upper().replace("-", "_")
+    if normalised == "DONE":
+        return "accept"
+    if normalised == "DONE_WITH_CONCERNS":
+        return "note"
+
+    budget = AGENT_BUDGETS.get(normalised, 1)
+
+    if normalised == "NEEDS_CONTEXT":
+        if attempt < budget:
+            return "supply"
+        return "diagnose" if serialized else "serialize"
+    if normalised == "BLOCKED":
+        if attempt < budget:
+            return "escalate"
+        return "diagnose" if serialized else "serialize"
+    if normalised == "DIED":
+        if attempt < budget:
+            return "escalate"
+        return "diagnose" if serialized else "serialize"
+
+    # An unrecognised status is a defect in the agent's own contract, not noise.
+    # It gets one clarifying re-dispatch and then stops, because a worker that
+    # cannot report its own state is not one to keep feeding work to.
+    if attempt < 1:
+        return "supply"
+    return "block"
 
 
 def green_sha(root: Path, slug: str) -> str | None:
@@ -249,10 +337,33 @@ def main(argv: list[str] | None = None) -> int:
                     help="perform the reset to the last green tree (destructive)")
     ap.add_argument("--mark-green", action="store_true", dest="mark",
                     help="record HEAD as verified-good; only after a green tier")
+    ap.add_argument("--agent-status", dest="agent_status",
+                    help="a subagent's reported status: DONE, DONE_WITH_CONCERNS, "
+                         "NEEDS_CONTEXT, BLOCKED or DIED")
+    ap.add_argument("--attempt", type=int, default=0,
+                    help="how many times this task has already been dispatched")
+    ap.add_argument("--serialized", action="store_true",
+                    help="the task has already been pulled back into the main context")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
     slug = args.slug or _rs.gather_facts(root)["slug"]
+
+    if args.agent_status:
+        which = agent_rung(args.agent_status, args.attempt, args.serialized)
+        payload = {
+            "status": args.agent_status.upper(),
+            "attempt": args.attempt,
+            "budget": AGENT_BUDGETS.get(args.agent_status.strip().upper(), 1),
+            "rung": which,
+            "note": AGENT_RUNG_NOTE[which],
+        }
+        if args.as_json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print(f"{payload['status']} attempt {args.attempt}"
+                  f"/{payload['budget']} -> {which}\n{payload['note']}")
+        return 0
 
     if args.mark:
         ok, detail = mark_green(root, slug)

@@ -5,7 +5,7 @@ when_to_use: when a plan is approved and execution begins
 effort: medium
 model: sonnet
 disable-model-invocation: false
-allowed-tools: Read Grep Glob Bash
+allowed-tools: Read Grep Glob Bash Task
 ---
 
 # Executing Plans
@@ -136,11 +136,29 @@ terminate.
 ## Subagent execution
 
 Only when the user chose it at `writing-plans` gate 3 — that choice is the ask;
-do not spawn agents otherwise. Then: one agent per task, never two in parallel,
-each given its task's text as a **file path** rather than pasted, plus the
-interfaces from earlier tasks and nothing else. Everything pasted into a
-dispatch stays in your context for the rest of the session. Review each task
-before dispatching the next.
+do not spawn agents otherwise.
+
+Then compute the schedule rather than guessing at it:
+
+```bash
+python tools/parallel_groups.py <plan>
+```
+
+It reads each task's declared `Files:` and `Depends on:` lines and prints rounds.
+Tasks inside a round have **disjoint file sets** and no dependency between them,
+so they run at once — one `task-implementer` each, all dispatched in the **same
+message**. Tasks touching a migration, a lockfile or CI config get a round to
+themselves. Exit non-zero means the plan is not schedulable; fix the plan.
+
+Give each agent its task's text as a **file path**, never pasted, plus the
+interfaces earlier rounds produced and nothing else. Everything pasted into a
+dispatch stays in your context for the rest of the session.
+
+Verify the **round** before starting the next: its tasks are independent of each
+other by construction, but the next round depends on all of them.
+
+Read `references/parallel-dispatch.md` before the first fan-out. It carries the
+three preconditions and the recovery ladder for an agent that comes back short.
 
 ## Repo gotchas that bite during execution
 
@@ -224,6 +242,7 @@ depth that applies to some tasks, not all. Same content, loaded on demand.
 |---|---|
 | new or changed behaviour that needs executable proof | `references/test-driven-development.md` |
 | multi-file, parallel or risky work that must not touch the checkout | `references/using-git-worktrees.md` |
+| more than one agent to dispatch, or one that came back `BLOCKED` | `references/parallel-dispatch.md` |
 
 Isolation is a decision made **before** the first edit, not after the diff grows.
 
@@ -235,18 +254,31 @@ its own output. Do not announce completion before that skill has run.
 
 ## Parallel work — `task-implementer`
 
-Subagent mode dispatches one **`task-implementer`** per task. **Never two at
-once** — plan tasks touch overlapping files far more often than they appear to,
-and two implementers editing the same file is a conflict you caused. Parallelism
-here is across *reviews*, not implementations: while one task is under review,
-the next may be dispatched.
+Subagent mode dispatches one **`task-implementer`** per task, **concurrently
+within a round** computed by `tools/parallel_groups.py`. Two implementers editing
+one file is a conflict you caused, so concurrency is licensed by declared
+disjointness rather than by judgement — and refused when the declaration is
+missing.
+
+This replaced a flat "never two at once" on 2026-08-07. The old rule's reason was
+right and its remedy was not: it cost a round per task forever, and it was a rule
+rather than a mechanism. `task-implementer` already carried `isolation: worktree`
+for exactly this.
 
 Give each: the path to its task text (never the whole plan, never pasted), the
-interfaces earlier tasks produced, the global constraints, and a report path.
-Read its status — `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, `BLOCKED` —
-and never let a `BLOCKED` retry unchanged on the same model.
+interfaces earlier rounds produced, the global constraints, and a report path.
+Read its status — `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, `BLOCKED` — and
+resolve it with the ladder, not improvisation:
 
-Verify each task before dispatching the next. An agent reporting success is not
+```bash
+python tools/loop.py --agent-status BLOCKED --attempt 1
+```
+
+`BLOCKED` escalates the model once, then the task comes back inline; it is never
+re-dispatched unchanged to the same model. Full table in
+`references/parallel-dispatch.md`.
+
+Verify the round before dispatching the next. An agent reporting success is not
 evidence; the diff is.
 
 ## Routing

@@ -67,12 +67,40 @@ tree and so cannot be derived from it.
 
 Parallel agents may work only on disjoint files or read-only review surfaces.
 Each implementation task gets its own worktree and branch. Shared interfaces,
-lockfiles, migrations, and release configuration are serialized. Candidate
-promotion is evidence-based: required checks, acceptance coverage, security,
-scope, rollback, performance, and conflict status; tie-break by smaller diff,
-fewer dependencies, stronger tests, and lower risk. Configure protected branches,
-required checks, and merge queue in the hosting service; the workflow never
-force-pushes or bypasses them.
+lockfiles, migrations, and release configuration are serialized.
+
+**That rule is now computed, not remembered.** It said the same thing from
+2026-08-06, and nothing implemented it: `executing-plans` resolved the ambiguity
+by banning concurrent implementers outright, which was safe, cost a round per
+task forever, and was still only a rule. Two scripts now decide:
+
+    python tools/parallel_groups.py <plan>   # which tasks may run together
+    python tools/recon.py --units            # which subsystems may be read together
+
+`parallel_groups.py` reads each task's declared `Files:` and `Depends on:` and
+prints rounds. It **refuses a plan rather than guessing**: a task with no declared
+file set, or a dependency written as prose instead of a task number, is
+unschedulable. Absent is never read as none — the convenient reading of a missing
+dependency is a concurrent dispatch over ordered work, which is the one failure
+worse than being slow. Depth is in
+`.claude/skills/executing-plans/references/parallel-dispatch.md`.
+
+A dispatch also needs a bounded ladder, because an agent fails in ways a check
+does not — it can report that its own brief was incomplete, or die before
+reporting at all:
+
+    python tools/loop.py --agent-status BLOCKED --attempt 1
+
+Rungs are supply, escalate, serialize and diagnose. `BLOCKED` escalates the model
+once and is never re-dispatched unchanged — same brief, same weights, same
+answer. The serialize rung pulls the task back into the main context and is
+offered exactly once, which is what makes the ladder terminate.
+
+Candidate promotion is evidence-based: required checks, acceptance coverage,
+security, scope, rollback, performance, and conflict status; tie-break by smaller
+diff, fewer dependencies, stronger tests, and lower risk. Configure protected
+branches, required checks, and merge queue in the hosting service; the workflow
+never force-pushes or bypasses them.
 
 ## Artifacts and ownership
 
@@ -118,12 +146,32 @@ The capability layer changed without a completed layer audit. Run the
 capability-layer-maintenance audit and the no-slop layer scan before delivery.
 [/state:layer-unreviewed]
 
+## The entry boundary
+
+The chain assumes a repository somebody has read. When it is dropped into one
+nobody has, that assumption is the first thing to fail, and it fails quietly:
+`task-brief` frames a *request*, so a brief written against an unread codebase
+looks exactly like a brief written against a known one.
+
+`repo-recon` owns that boundary. It runs before stage 1 when there is real code
+and no map, and never again once a map exists at `docs/recon/`. It is not a
+numbered stage — a repository this layer has been used in from the start never
+enters it.
+
+`tools/resume.py` derives the distinction, so nothing has to remember it: no plan
+plus 20 or more tracked code files plus no map is `RECON`, and no plan with
+anything less is `PLANNING`. Until 2026-08-07 both were `PLANNING` — measured
+against this repository, 104 commits of finished work reported as
+`state=PLANNING`, because every fact the engine reads is a fact about this layer's
+own artifacts and a repository that never used the layer has none of them.
+
 ## Off-chain capabilities
 
 These skills are reusable capabilities, not additional lifecycle stages:
 
 | Capability | Owner | Use |
 |---|---|---|
+| Comprehend | `repo-recon` | an unread or half-finished repository, at the entry boundary |
 | Research | `research` | external evidence |
 | Diagnose | `systematic-debugging` | root-cause and bounded recovery |
 | Maintain | `capability-layer-maintenance` | layer contracts and wiring |

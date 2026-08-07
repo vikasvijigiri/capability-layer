@@ -5,7 +5,7 @@ when_to_use: when an approved spec must be turned into executable tasks
 effort: high
 model: opus
 disable-model-invocation: false
-allowed-tools: Read Grep Glob
+allowed-tools: Read Grep Glob Task
 ---
 
 # Writing Plans
@@ -92,7 +92,7 @@ Each task MUST include:
 - Modify: `exact/path:relevant-symbol` — [change]
 - Test: `exact/path` — [coverage]
 
-**Dependencies:** [earlier task, interface, migration, or none]
+**Dependencies:** [earlier task BY NUMBER, or `none` — never prose, never blank]
 
 **Implementation notes:**
 - [exact symbols, data flow, invariants, and edge cases]
@@ -104,6 +104,29 @@ Each task MUST include:
 
 **Done when:** [a concrete, reviewable condition]
 ```
+
+**`Files:` and `Dependencies:` are machine-read, so write them for a parser as
+well as a reader.** `tools/parallel_groups.py` turns them into the rounds
+`executing-plans` dispatches, and it refuses a plan rather than guessing:
+
+```bash
+python tools/parallel_groups.py <this plan>
+```
+
+Run it before presenting the plan at Gate 1. Three rules it enforces, each of
+which is a real defect it has caught in a plan written here:
+
+- **Every path the task writes appears under `Files:`.** An undeclared path is
+  one the scheduler cannot see, and two tasks colliding on it look disjoint.
+- **`Dependencies:` is a task number or the word `none`.** Never blank, and never
+  prose — "the store's read API" is a real dependency this cannot resolve, and
+  reading it as independence dispatches ordered work concurrently.
+- **A task touching a migration, lockfile or CI config gets its own round**
+  automatically. You do not have to sequence those by hand; you do have to
+  declare them.
+
+A plan that is entirely serial is a fine answer. A plan that *reports* as
+entirely parallel because its dependencies were left implicit is not.
 
 Use test-first sequencing for behavior that can be tested: define the failing
 case, identify the minimal implementation required, then define the passing

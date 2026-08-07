@@ -144,6 +144,73 @@ check("the gate never returns a failure-ladder rung",
       "a rejection must not be treated as a defect")
 
 
+# --- the agent-dispatch ladder ----------------------------------------------
+#
+# A dispatch fails in ways a check cannot: it can report that its own brief was
+# incomplete, or die before reporting at all. Same property under test as the
+# failure ladder -- termination by exhaustion -- but a separate table, because
+# the remedies do not overlap. You cannot rebase a subagent.
+
+AGENT_TERMINAL = {"accept", "note", "diagnose", "block"}
+
+AGENT_CASES = [
+    # (status, attempt, serialized, want)
+    ("DONE", 0, False, "accept"),
+    ("DONE", 5, False, "accept"),
+    ("DONE_WITH_CONCERNS", 0, False, "note"),
+    ("NEEDS_CONTEXT", 0, False, "supply"),
+    ("NEEDS_CONTEXT", 1, False, "supply"),
+    ("NEEDS_CONTEXT", 2, False, "serialize"),
+    ("NEEDS_CONTEXT", 2, True, "diagnose"),
+    ("BLOCKED", 0, False, "escalate"),
+    ("BLOCKED", 1, False, "serialize"),
+    ("BLOCKED", 1, True, "diagnose"),
+    ("DIED", 0, False, "escalate"),
+    ("DIED", 1, True, "diagnose"),
+    # lowercase and hyphenated forms are the same status, not an unknown one
+    ("done_with_concerns", 0, False, "note"),
+    ("needs-context", 0, False, "supply"),
+]
+for status, attempt, serialized, want in AGENT_CASES:
+    got = lp.agent_rung(status, attempt, serialized)
+    check(f"agent: {status}/{attempt}{'/serialized' if serialized else ''} -> {want}",
+          got == want, f"got {got}")
+
+check("a success rung never depends on the attempt count",
+      all(lp.agent_rung("DONE", n) == "accept" for n in range(8)))
+check("BLOCKED is never retried unchanged -- the first rung escalates",
+      lp.agent_rung("BLOCKED", 0) == "escalate",
+      "same brief, same model, same weights is the same answer")
+check("serialize is offered once and only once",
+      lp.agent_rung("BLOCKED", 1, False) == "serialize"
+      and lp.agent_rung("BLOCKED", 1, True) == "diagnose",
+      "offering it twice is how this ladder would fail to terminate")
+
+_AGENT_STATUSES = ["DONE", "DONE_WITH_CONCERNS", "NEEDS_CONTEXT", "BLOCKED",
+                   "DIED", "", "WAT", "done", None]
+for reported in _AGENT_STATUSES:
+    for attempt in range(0, 10):
+        for serialized in (False, True):
+            got = lp.agent_rung(reported or "", attempt, serialized)
+            if got not in lp.AGENT_RUNG_NOTE:
+                check(f"unknown agent rung {got} from {reported!r}/{attempt}", False)
+check("every agent rung the ladder can produce has a note", True)
+
+for reported in _AGENT_STATUSES:
+    end = lp.agent_rung(reported or "", 9, serialized=True)
+    check(f"agent ladder terminates for {reported!r} once serialize is spent",
+          end in AGENT_TERMINAL, f"got {end}")
+
+check("an unreportable status stops rather than looping",
+      lp.agent_rung("WAT", 0) == "supply" and lp.agent_rung("WAT", 1) == "block",
+      "a worker that cannot report its own state is not one to keep feeding")
+check("the agent ladder never returns a failure-ladder rung",
+      not ({lp.agent_rung(s or "", n, z)
+            for s in _AGENT_STATUSES for n in range(6) for z in (False, True)}
+           & {"retry", "repair", "restore", "rebase", "retreat"}),
+      "a subagent result is not a red check and must not borrow its remedies")
+
+
 # --- restore against a real repository --------------------------------------
 
 
