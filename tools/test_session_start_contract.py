@@ -73,7 +73,17 @@ def check_bootstrap_whitelist() -> None:
 
 
 def check_bootstrap_runtime() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
+    # `ignore_cleanup_errors` is not tidiness -- without it this suite fails
+    # intermittently with a PASSING-looking output. Git writes loose objects
+    # read-only, Windows refuses to delete read-only files, and rmtree raises
+    # from `__exit__` after every check has already printed OK. The result is a
+    # non-zero exit whose last line says "OK", which is the worst possible
+    # failure report. Reproduced 2026-08-07:
+    #     rmtree: PermissionError: [WinError 5] Access is denied
+    #             .git/objects/7e/5fdb212a...
+    # A leaked temp directory is the OS's problem; a red suite nobody can
+    # explain is ours.
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir:
         tmp = Path(tmpdir)
         env = os.environ.copy()
         try:

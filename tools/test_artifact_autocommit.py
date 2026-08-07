@@ -168,7 +168,7 @@ check("attribution patterns would catch a planted trailer",
 # run_suites()... The guard protects the hook's own path; it cannot protect a
 # test that deliberately steps around it. Found by a 120s timeout on 2026-08-03.
 _saved_root = mod.REPO_ROOT
-with tempfile.TemporaryDirectory() as _empty:
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as _empty:
     mod.REPO_ROOT = Path(_empty)
     _probe = mod.run_suites()
 mod.REPO_ROOT = _saved_root
@@ -179,7 +179,7 @@ check("...and reports no test ran when nothing is detected",
 
 # ------------------------------------------------------------- behaviour, on git
 
-with tempfile.TemporaryDirectory() as d:
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     tmp = Path(d)
     new_repo(tmp)
     mod.REPO_ROOT = tmp
@@ -277,7 +277,7 @@ with tempfile.TemporaryDirectory() as d:
 # The gate that makes unattended committing mean anything. A repo with no test
 # command commits prose freely and refuses code, because "all checks passed" and
 # "no check ran" are the same boolean and completely different facts.
-with tempfile.TemporaryDirectory() as d2:
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d2:
     tmp2 = Path(d2)
     new_repo(tmp2)
     mod.REPO_ROOT = tmp2
@@ -325,7 +325,7 @@ with tempfile.TemporaryDirectory() as d2:
 # block, because the hook that blocked until a skill ran deadlocked and was
 # deleted on 2026-08-02.
 
-with tempfile.TemporaryDirectory() as d3:
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d3:
     tmp3 = Path(d3)
     mod.REPO_ROOT = tmp3
 

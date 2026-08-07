@@ -341,6 +341,38 @@ def tool_missing(command: str) -> bool:
     return shutil.which(exe) is None and not Path(exe).exists()
 
 
+# Markers a failing run actually uses. Deliberately anchored to the start of a
+# line rather than searched anywhere in it: this repo's suites print
+# `OK: a failing suite is red`, and a substring match on "fail" would report a
+# passing assertion as the reason a check failed.
+FAILURE_MARKERS = ("FAIL", "ERROR", "Error:", "E   ", "AssertionError")
+
+
+def failure_reason(proc) -> str:
+    """The line that explains a non-zero exit, not merely the last one printed.
+
+    This used to be `(proc.stdout or proc.stderr)[-1]`, so stdout won whenever it
+    was non-empty. A suite that prints its checks to stdout and then dies during
+    teardown -- traceback on stderr, `OK: ...` last on stdout -- was reported as
+
+        FAIL: test `python tools/test_session_start_contract.py`: OK: bootstrap whitelist is exactly the six known docs
+
+    which is a red build whose stated cause is a passing check. Diagnosing that
+    on 2026-08-07 took a reproduction and a read of this function; the cause was
+    a read-only git object defeating a temp-directory teardown, and none of that
+    was visible in the report.
+
+    Order: stderr (a traceback's last line IS the exception), then an explicit
+    failure marker in stdout, then the last line as a fallback.
+    """
+    err = [ln for ln in (proc.stderr or "").strip().splitlines() if ln.strip()]
+    out = [ln for ln in (proc.stdout or "").strip().splitlines() if ln.strip()]
+    marker = next((ln for ln in reversed(out)
+                   if ln.lstrip().startswith(FAILURE_MARKERS)), None)
+    reason = (err[-1] if err else None) or marker or (out[-1] if out else None)
+    return reason[:160] if reason else f"exit {proc.returncode}"
+
+
 def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
     """(ok, detail, ran_test) for one tier. Never raises.
 
@@ -404,9 +436,7 @@ def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
         if kind == "test":
             ran_test = True
         if proc.returncode != 0:
-            tail = (proc.stdout or proc.stderr or "").strip().splitlines()
-            failed.append(f"{kind} `{command}`: "
-                          f"{tail[-1][:160] if tail else 'exit ' + str(proc.returncode)}")
+            failed.append(f"{kind} `{command}`: {failure_reason(proc)}")
 
     if failed:
         return False, "; ".join(failed), ran_test

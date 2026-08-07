@@ -271,6 +271,39 @@ green = tree({"tools/test_ok.py": "print('fine')\n"})
 ok, detail, ran_test = pc.run_checks(green)
 check("a passing suite is green and counts as a test", ok and ran_test, detail)
 
+# --- a failing check must report WHY, not merely what was printed last -------
+#
+# The shape that defeated the old `(stdout or stderr)[-1]`: a suite whose checks
+# all print OK to stdout, which then dies during teardown with a traceback on
+# stderr. Reported as `OK: ...`, it is a red build whose stated cause is a
+# passing check -- and on 2026-08-07 that cost a full reproduction to diagnose.
+
+teardown = tree({"tools/test_teardown.py":
+                 "import sys\n"
+                 "print('OK: every check passed')\n"
+                 "print('OK: bootstrap whitelist is exactly the six known docs')\n"
+                 "sys.stderr.write('PermissionError: [WinError 5] Access is denied\\n')\n"
+                 "sys.exit(1)\n"})
+ok, detail, _ = pc.run_checks(teardown)
+check("a suite that dies after printing OK is still red", not ok, detail)
+check("...and the reported reason is the error, not the last OK line",
+      "PermissionError" in detail, detail)
+check("...so no failure is ever explained by a passing check",
+      not detail.rstrip().endswith("OK: bootstrap whitelist is exactly the six known docs"),
+      detail)
+
+marker_only = tree({"tools/test_marker.py":
+                    "import sys\n"
+                    "print('OK: a failing suite is red')\n"
+                    "print('FAIL: the real problem')\n"
+                    "print('2 finding(s).')\n"
+                    "sys.exit(1)\n"})
+ok, detail, _ = pc.run_checks(marker_only)
+check("with no stderr, an explicit FAIL line is preferred over the last line",
+      "the real problem" in detail, detail)
+check("...and an OK line mentioning the word 'failing' is not mistaken for one",
+      "a failing suite is red" not in detail, detail)
+
 red = tree({"tools/test_bad.py": "import sys\nprint('boom')\nsys.exit(1)\n"})
 ok, detail, ran_test = pc.run_checks(red)
 check("a failing suite is red", not ok, detail)

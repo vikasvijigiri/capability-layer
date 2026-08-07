@@ -178,6 +178,39 @@ def check_portability() -> int:
     return 0
 
 
+def check_temp_dir_cleanup() -> None:
+    """No suite may let a temp-directory teardown decide its exit code.
+
+    Git writes loose objects read-only; Windows refuses to delete read-only
+    files; `TemporaryDirectory.__exit__` calls `shutil.rmtree` and raises. The
+    failure lands AFTER every check has printed OK, so the suite exits non-zero
+    with an output whose last line reads `OK: ...` -- a red build with no
+    legible cause. It bit `test_session_start_contract.py` on 2026-08-07 and
+    four more sites in `test_artifact_autocommit.py` were one `git commit` away
+    from the same thing.
+
+    `ignore_cleanup_errors=True` (Python 3.10+, CI runs 3.11) makes it
+    impossible rather than unlikely. A leaked temp directory is the OS's
+    problem; an unexplainable red suite is ours.
+    """
+    # Assembled at runtime, never written contiguously: this file is scanned by
+    # the check it defines, and a literal here flags the guard itself. Same trap
+    # the credential patterns hit on 2026-08-03, and it fired again here on the
+    # first run of this check.
+    needle = "TemporaryDirectory" + "("
+    guard = "ignore_cleanup" + "_errors"
+    for path in sorted(ROOT.glob("tools/*.py")) + sorted(
+            (CLAUDE / "hooks").rglob("*.py")):
+        text = read_text(path)
+        if text is None:
+            continue
+        for num, line in enumerate(text.splitlines(), 1):
+            if needle in line and guard not in line and "def " not in line:
+                fail(f"{rel(path)}:{num} temp-dir context manager without "
+                     f"{guard}=True — a git object left read-only makes "
+                     f"teardown fail the suite after it has already passed")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--scope", choices=("layer", "repo", "portability"),
@@ -189,6 +222,8 @@ def main() -> int:
 
     if args.scope == "portability":
         return check_portability()
+
+    check_temp_dir_cleanup()
 
     files = tracked(None if args.scope == "repo" else ".claude")
     scannable = [p for p in files if p.name not in SELF_REFERENTIAL]
