@@ -1,0 +1,33 @@
+# Which paths a human must approve, as data rather than judgement at merge time.
+#
+# Shape from kubernetes/community's OWNERS: ownership is path-scoped and
+# machine-readable, so "may this land unattended" is a lookup, not a decision
+# someone makes while tired. GitHub applies the LAST matching pattern, so the
+# catch-all goes first and the protected paths override it.
+#
+# This repo has no application code. The risk here is different from a product's:
+# these files run automatically, on every turn, in every repo the layer reaches.
+
+*                               @NG-VikasV
+
+# --- runs unattended -----------------------------------------------------------
+# A hook fires on its own and its failure mode is silence. A wrong pattern in the
+# secret scanner blocks every commit; a wrong branch guard lets one onto main.
+/.claude/hooks/                 @NG-VikasV
+/.claude/settings.json          @NG-VikasV
+
+# --- decides what "green" means ------------------------------------------------
+# Weakening a check is indistinguishable from fixing one, in a diff.
+/.claude/project-checks.json    @NG-VikasV
+/.github/workflows/             @NG-VikasV
+/tools/run_checks.py            @NG-VikasV
+
+# --- the rules themselves ------------------------------------------------------
+/.claude/constitution.md        @NG-VikasV
+/CLAUDE.md                      @NG-VikasV
+
+# --- least reversible ----------------------------------------------------------
+# No migrations exist here yet. The pattern is listed so the answer is already
+# written down on the day one appears, rather than decided in the PR that adds it.
+/migrations/                    @NG-VikasV
+**/migrations/                  @NG-VikasV

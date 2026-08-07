@@ -35,30 +35,20 @@ re-enters `7 code-review` and `9 releasing` when the candidate is ready again.
 The contract also rechecks 1 `task-brief` and 2 `brainstormer` at the entry
 boundary.
 
-## State machine
+## State machine and failure loop
 
-The executable workflow records transitions among `DISCOVERING`, `PLANNING`,
-`WAITING_PLAN_APPROVAL`, `IMPLEMENTING`, `VERIFYING`, `DIAGNOSING`,
-`REPAIRING`, `REVERIFYING`, `REVIEWING`, `PR_READY`, `REBASING`,
-`RESOLVING_CONFLICT`, `MERGE_QUEUE`, `RELEASE_CANDIDATE`,
-`WAITING_SHIP_APPROVAL`, `RELEASING`, `OBSERVING`, `ROLLING_BACK`,
-`RECORDING`, `DONE`, and `BLOCKED`. A persisted run must include the current
-state, transitions, inputs, outputs, incidents, budgets, and evidence.
+**In code, not here.** `tools/resume.py` derives the state from git facts and
+`tools/loop.py` decides the rung; their tests are the specification. This section
+described 21 states and six budgets from 2026-08-06 to 2026-08-07, and a grep for
+those names returned exactly one file — this one. See
+`decisions/2026-08-07-derived-state-over-stored-state.md`.
 
-## Failure loop
+    python tools/resume.py     # where this unit of work is
+    python tools/loop.py       # what to do about the failure, and when to stop
 
-Every failure becomes an incident with `id`, `stage`, `category`, `symptom`,
-`evidence`, `rootCause`, `repair`, `verification`, `attempt`, `maxAttempts`,
-and `status`. The only recovery sequence is:
-
-`OBSERVE → CLASSIFY → REPRODUCE → DIAGNOSE → REPAIR → VERIFY → resume | replan | block`.
-
-Recovery is local to the failed stage. It never retries the whole workflow
-blindly and never hides a failed command. Budgets are transient 2, focused
-repair 3, merge conflict 2, re-entry 2, and rollback 1. Security findings,
-scope escape, specification mismatch, and repeated root causes block or return
-to Gate 1. A failed release rolls back once, verifies rollback stability, then
-diagnoses; it never reports success from a deploy exit code alone.
+State is never stored. Nothing to persist, nothing to migrate, nothing to
+desync — the only exception is an attempt counter, which is not a fact about the
+tree and so cannot be derived from it.
 
 ## Parallelism and integration
 
