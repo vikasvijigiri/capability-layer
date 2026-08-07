@@ -109,6 +109,41 @@ for kind in KINDS:
           end in TERMINAL_RUNGS, f"got {end}")
 
 
+# --- the gate ladder ---------------------------------------------------------
+#
+# A gate is not a failure and gets no retry budget -- there is no budget on a
+# person's judgement, and no rung here ever proceeds without the approval. What
+# IS bounded is re-asking: presenting the identical artifact again, and drafting
+# a fourth version when the objection was never about the draft.
+
+GATE_CASES = [
+    (0, True, "present"),
+    (1, True, "revise"),
+    (2, True, "revise"),
+    (3, True, "retreat"),
+    (5, True, "retreat"),
+    (1, False, "unchanged"),
+    (2, False, "unchanged"),
+    (3, False, "unchanged"),
+]
+for n, changed, want in GATE_CASES:
+    got = lp.gate_rung(n, changed)
+    check(f"gate: {n} rejection(s), {'changed' if changed else 'unchanged'} -> {want}",
+          got == want, f"got {got}")
+
+check("an unchanged plan is never re-presented, however few rejections",
+      all(lp.gate_rung(n, False) == "unchanged" for n in range(1, 9)),
+      "re-asking about an artifact the user already judged wastes the one "
+      "resource a gate is spending")
+check("every gate rung has a note", set(
+    lp.gate_rung(n, c) for n in range(0, 9) for c in (True, False)
+) <= set(lp.GATE_RUNG_NOTE))
+check("the gate never returns a failure-ladder rung",
+      not ({lp.gate_rung(n, c) for n in range(0, 9) for c in (True, False)}
+           & {"retry", "repair", "restore", "block"}),
+      "a rejection must not be treated as a defect")
+
+
 # --- restore against a real repository --------------------------------------
 
 

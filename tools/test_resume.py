@@ -236,6 +236,42 @@ check("...and a spent budget derives BLOCKED", rs.derive_state(f) == "BLOCKED")
 check("a corrupt ledger reads as fresh rather than raising",
       rs.gather_facts(repo, "checkout-retry")["attempts"] == 0)
 
+# --- a rejection is durable, and re-presenting is checkable -----------------
+#
+# Until 2026-08-07 `plan_approved` was one boolean, so "never shown", "rejected
+# once with a reason" and "rejected three times" were the same state. The reason
+# lived in chat, which is not durable evidence.
+
+PLAN_BODY = "# Checkout retry\n\n## Approved\n\nBody of the plan.\n"
+_h = rs.plan_body_hash(PLAN_BODY)
+
+check("a plan with no rejection log reports none", rs.rejections(PLAN_BODY) == [])
+check("...and counts as changed, so the first ask is allowed",
+      rs.derive_state(facts(rejections=0)) == "DONE")
+
+rejected = PLAN_BODY + (
+    f"\n## Rejected 2026-08-07 (plan {_h})\n"
+    "Rollback story is hand-waved -- say what happens to in-flight writes.\n")
+log = rs.rejections(rejected)
+check("a rejection is parsed", len(log) == 1, str(log))
+check("...carrying the user's words verbatim",
+      "in-flight writes" in log[0], log[0])
+check("...and the body hash it was rejected at", log[0].startswith(_h), log[0])
+
+check("recording a rejection does not itself count as changing the plan",
+      rs.plan_body_hash(rejected) == _h,
+      "otherwise every rejection instantly looks like a revision and the "
+      "unchanged check never fires")
+
+revised = PLAN_BODY.replace("Body of the plan.", "Body, now with rollback.") + (
+    f"\n## Rejected 2026-08-07 (plan {_h})\nsame reason\n")
+check("editing the plan body changes its hash",
+      rs.plan_body_hash(revised) != _h)
+
+two = rejected + f"\n## Rejected 2026-08-07 (plan {_h})\nStill not addressed.\n"
+check("rejections accumulate rather than overwrite", len(rs.rejections(two)) == 2)
+
+
 # --- the prose and the code agree on the two marker strings -----------------
 #
 # `derive_state` reads a plan file that a skill wrote. If the skill says

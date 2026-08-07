@@ -40,7 +40,10 @@ end of `writing-plans`, and the shipment approval in `releasing`. Both are asked
 with `AskUserQuestion`, never in prose: a prose question is answerable by silence
 and scrolls away, so approval must be a click the user made rather than something
 inferred from their next message. `test_process_router.py` holds the set to those
-two. This file said gate 2 was the `code-review` sign-off until 2026-08-07, which
+two. **A rejection is durable**: it appends `## Rejected <date> (plan <hash>)`
+plus the user's words verbatim to the artifact, and `loop.py` refuses to
+re-present a body whose hash has not changed, then retreats at three. A gate has
+no retry budget — there is none on a person's judgement — but re-asking does. This file said gate 2 was the `code-review` sign-off until 2026-08-07, which
 contradicted `workflow.md`, the suite, and `code-review` itself — it returns a
 verdict and asks nothing. Operational safety checks may still require
 confirmation, such as choosing a worktree or target; they do not grant approval

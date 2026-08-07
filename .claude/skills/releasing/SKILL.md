@@ -13,6 +13,18 @@ At the shipment gate, present the release candidate, smoke evidence, rollback,
 and target, then use `AskUserQuestion` for the single explicit shipment
 approval. Do not ask for approval earlier in the workflow.
 
+Offer ship, hold, and reject as real options, and **say in the question that
+hold and reject take the reason as free text** — the tool appends its own
+"Other" for that; never add one. Record the answer verbatim, including anything
+in its notes.
+
+A rejected candidate is not a failed check and gets no repair budget. Record why
+it was held, and route by what the reason actually says: a defect goes to
+`systematic-debugging`, a missing signal to this skill's observability
+reference, a changed mind to `knowledge-manager` so the decision not to ship is
+durable rather than a thing someone remembers. Never re-present an unchanged
+candidate — `tools/loop.py` refuses it.
+
 Put delivered work into a running environment, prove it is actually serving, and
 keep a way back. Workflow stage 9.
 

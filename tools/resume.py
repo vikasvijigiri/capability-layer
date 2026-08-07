@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -45,6 +46,23 @@ BRANCH_PREFIX = "feat/"
 PLANS_DIR = "docs/plans"
 APPROVAL_MARKER = "## Approved"
 CLARIFICATION_MARKER = "[NEEDS CLARIFICATION"
+
+# A rejection is a decision, and until 2026-08-07 it was the only decision in the
+# workflow that left no trace. `plan_approved` was one boolean, so "never shown to
+# anyone", "rejected once with a reason" and "rejected three times" were the same
+# state. The reason lived in chat, and chat is not durable evidence.
+#
+# Recorded in the plan itself rather than a sidecar: it belongs next to the thing
+# it is about, it survives in git, and a reviewer reading the plan reads the
+# objections to it in the same pass.
+#
+#     ## Rejected 2026-08-07 (plan 7f3a9c21)
+#     Rollback story is hand-waved -- say what happens to in-flight writes.
+#
+# The parenthesised hash is the plan's body at the moment it was rejected, which
+# is what makes "you have not changed anything" checkable instead of a judgement.
+REJECTION_MARKER = "## Rejected"
+MAX_REJECTIONS = 3
 STATE_DIR = Path(".claude") / "hooks" / "state"
 GREEN_REF = "refs/uaios/green/"
 
@@ -134,6 +152,28 @@ def plan_path(root: Path, slug: str) -> Path | None:
     return matches[-1] if matches else None
 
 
+def plan_body_hash(text: str) -> str:
+    """The plan minus its rejection log, hashed.
+
+    Rejections are excluded so that recording one does not itself count as
+    changing the plan -- otherwise every rejection would immediately look like a
+    revision and the "you have not changed anything" check would never fire.
+    """
+    import hashlib
+    body = re.split(rf"(?m)^{re.escape(REJECTION_MARKER)}\b", text)[0]
+    return hashlib.sha256(" ".join(body.split()).encode("utf-8", "replace")
+                          ).hexdigest()[:8]
+
+
+def rejections(text: str) -> list[str]:
+    """One entry per recorded rejection, newest last, each `hash: reason`."""
+    out = []
+    pattern = rf"(?m)^{re.escape(REJECTION_MARKER)}[^\n(]*(?:\(plan ([0-9a-f]+)\))?[^\n]*\n(.*?)(?=^## |\Z)"
+    for m in re.finditer(pattern, text, re.S):
+        out.append(f"{m.group(1) or '?'}: {' '.join((m.group(2) or '').split())[:200]}")
+    return out
+
+
 def ledger_path(root: Path, slug: str) -> Path:
     return root / STATE_DIR / f"resume-{slug}.json"
 
@@ -159,6 +199,9 @@ def gather_facts(root: Path, slug: str | None = None) -> dict:
             plan_text = plan.read_text(encoding="utf-8", errors="ignore")
         except OSError:
             plan_text = ""
+
+    _reject_log = rejections(plan_text)
+    _rejections = len(_reject_log)
 
     work_branch = f"{BRANCH_PREFIX}{slug}"
     branch_rc, _ = _git(root, "rev-parse", "--verify", "--quiet",
@@ -210,6 +253,14 @@ def gather_facts(root: Path, slug: str | None = None) -> dict:
         "plan_path": str(plan.relative_to(root)) if plan is not None else None,
         "plan_approved": APPROVAL_MARKER in plan_text,
         "clarifications": plan_text.count(CLARIFICATION_MARKER),
+        "rejections": _rejections,
+        "rejection_reasons": _reject_log,
+        # False means the plan is byte-for-byte what was rejected last time.
+        # Re-presenting it unchanged spends the user's attention on a question
+        # they have already answered.
+        "plan_changed_since_rejection": (
+            True if not _reject_log
+            else _reject_log[-1].split(":", 1)[0] != plan_body_hash(plan_text)),
         "branch_exists": branch_exists,
         "checks_green": checks_green,
         "last_green": green if green_rc == 0 else None,

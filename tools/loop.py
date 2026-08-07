@@ -93,6 +93,43 @@ def rung(kind: str, attempt: int, budget: int,
     return "retreat"
 
 
+GATE_RUNG_NOTE = {
+    "present": "Ask with AskUserQuestion. Offer approve, revise, and reject — and "
+               "say in the question that the revise/reject options take the "
+               "reason as free text. Record whatever comes back verbatim.",
+    "revise": "Rejected with a reason. Address it, change the plan, re-present. "
+              "The recorded reason is the brief for this revision.",
+    "unchanged": "REFUSE to re-present. The plan is byte-for-byte what was "
+                 "rejected last time, so asking again spends the user's "
+                 "attention on a question they have already answered. Change "
+                 "something or retreat.",
+    "retreat": "Three rejections of the same plan means the approach is wrong, "
+               "not the wording. Return to the design stage; a fourth draft of "
+               "a plan nobody wants is not convergence.",
+}
+
+
+def gate_rung(rejections: int, changed: bool,
+              max_rejections: int = 3) -> str:
+    """What to do at a human gate. Pure, and deliberately NOT the failure ladder.
+
+    A rejection is not a defect. There is no retry budget on a person's
+    judgement, and the gate stays terminal for automation however many times it
+    is answered -- nothing here ever proceeds without the approval.
+
+    What IS bounded is *re-asking*. Two things a loop can get wrong at a gate:
+    presenting the identical artifact again, and grinding out a fourth draft
+    when the objection was never about the draft.
+    """
+    if rejections == 0:
+        return "present"
+    if not changed:
+        return "unchanged"
+    if rejections >= max_rejections:
+        return "retreat"
+    return "revise"
+
+
 def green_sha(root: Path, slug: str) -> str | None:
     """The last verified-good commit for this unit, or None."""
     try:
@@ -128,6 +165,15 @@ def next_step(root: Path, slug: str | None = None) -> dict:
         "next": _rs.NEXT_ACTION.get(state, "?"),
         "last_green": sha,
     }
+    if state in ("WAITING_PLAN_APPROVAL", "WAITING_SHIP_APPROVAL"):
+        which = gate_rung(int(facts.get("rejections", 0)),
+                          bool(facts.get("plan_changed_since_rejection", True)))
+        step.update({
+            "gate_rung": which,
+            "rejections": facts.get("rejections", 0),
+            "last_reason": (facts.get("rejection_reasons") or [None])[-1],
+            "note": GATE_RUNG_NOTE[which],
+        })
     if state in ("REPAIR", "BLOCKED"):
         which = rung(kind, attempt, budget,
                      restored=bool(ledger.get("restored")), has_green=bool(sha))

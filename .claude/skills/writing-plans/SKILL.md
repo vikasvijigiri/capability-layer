@@ -235,8 +235,33 @@ known risks.
 **Then put every `[NEEDS CLARIFICATION]` marker into one `AskUserQuestion` call.**
 One batch, at the gate — not a question each time one arises. Scattered questions
 are what turned two gates into nine, and they interrupt at the moment the answer
-is least informed. Write the answers back into the plan, delete the markers, add
-`## Approved`, and stop.
+is least informed.
+
+The same call carries the approval, with three real options:
+
+| Option | Means |
+|---|---|
+| Approve | write `## Approved`, hand off to `executing-plans` |
+| Revise — say what to change | rejected, and the free text is the brief |
+| Reject — wrong approach | the plan is not the problem; return to `brainstormer` |
+
+**The revise and reject options take the user's own words.** Say so in the
+question. The tool appends its own "Other" for free text — never add one — and
+whatever comes back, including anything in the answer's notes, is recorded
+verbatim. A reason paraphrased is a reason lost.
+
+On anything but approve, append to the plan and stop:
+
+```markdown
+## Rejected 2026-08-07 (plan <8-char body hash>)
+<the user's words, verbatim>
+```
+
+`tools/resume.py` reads that log. Re-presenting a plan whose body hash is
+unchanged is refused — asking again about an artifact the user already judged
+spends their attention on a question they have answered. Three rejections and
+`tools/loop.py` says retreat: a fourth draft of a plan nobody wants is not
+convergence, and the objection was never about the wording.
 
 After the user approves the plan, invoke `executing-plans` and pass it the plan
 path. Until approval is explicit, stop here.
