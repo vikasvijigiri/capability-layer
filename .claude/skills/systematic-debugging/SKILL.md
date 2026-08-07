@@ -1,10 +1,11 @@
 ---
 name: systematic-debugging
-description: Any bug, test failure or unexpected behaviour, before proposing a fix. Triggers include "why is this failing", "this is broken", "it worked before", "root cause", a hook that produced no output, a check that passes when it should fail. Do NOT use for a failure already root-caused or a known-unimplemented feature.
+description: Any bug, test failure or unexpected behaviour, before proposing a fix. Triggers include "why is this failing", "this is broken", "it worked before", "root cause", a hook that produced no output, a check that passes when it should fail. Do NOT use for a failure already root-caused or a known-unimplemented feature. Use this whenever something fails unexpectedly, even if the user only reports the symptom.
 when_to_use: when a failure needs root-cause analysis
 effort: high
 model: opus
 disable-model-invocation: false
+allowed-tools: Read Grep Glob Bash
 ---
 
 # Systematic Debugging

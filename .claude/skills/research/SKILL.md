@@ -1,10 +1,11 @@
 ---
 name: research
-description: A decision needs evidence from outside your own knowledge, before designing or building. Triggers include "how do people usually handle this", "what is the prior art", "does this exist already", "compare the options", "investigate". Do NOT use for a single-fact lookup, a repo question Grep settles, or once the evidence is in hand.
+description: A decision needs evidence from outside your own knowledge, before designing or building. Triggers include "how do people usually handle this", "what is the prior art", "does this exist already", "compare the options", "investigate". Do NOT use for a single-fact lookup, a repo question Grep settles, or once the evidence is in hand. Use this whenever a claim needs outside evidence, even if the user does not ask for research.
 when_to_use: when external evidence is required
 effort: high
 model: opus
 disable-model-invocation: false
+allowed-tools: Read Grep Glob WebFetch WebSearch
 ---
 
 # Research

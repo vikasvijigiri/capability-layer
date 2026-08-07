@@ -5,6 +5,7 @@ when_to_use: when the repo needs a cleanup audit before shipping
 effort: high
 model: sonnet
 disable-model-invocation: false
+allowed-tools: Read Grep Glob
 ---
 
 # No-Slop

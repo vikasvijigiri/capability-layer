@@ -90,6 +90,42 @@ for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
     if isinstance(desc, str):
         DESC_BUDGET.append(len(desc))
 
+    # --- the official contract, from code.claude.com/docs/en/skills.md --------
+    #
+    # Checked here because getting any of these wrong is silent. The layer ran
+    # for months with `disable-model-invocation: true` on twelve of thirteen
+    # skills, which per the docs means "Claude can invoke: No" -- so every chain
+    # handoff was a blocked call and every description was absent from context.
+    # Nothing failed. The suite was green the whole time.
+    check(f"{d.name} is reachable by the model",
+          front.get("disable-model-invocation") is not True,
+          "disable-model-invocation: true blocks every handoff INTO this skill "
+          "and keeps its description out of context")
+
+    # description + when_to_use share one 1,536-char cap in the skill listing.
+    combined = len(str(desc or "")) + len(str(front.get("when_to_use") or ""))
+    check(f"{d.name} description+when_to_use under the listing cap",
+          combined <= 1536, f"{combined} chars -- the listing truncates at 1536")
+
+    # `context:` accepts `fork`. `false` is not a value, it is a typo that reads
+    # as configuration.
+    if "context" in front:
+        check(f"{d.name} context is a real value", front["context"] == "fork",
+              f"context: {front['context']!r} -- the docs define only `fork`")
+
+    check(f"{d.name} pre-approves the tools it needs",
+          isinstance(front.get("allowed-tools"), str) and front["allowed-tools"].strip(),
+          "without allowed-tools every invocation stops for permission on tools "
+          "the skill obviously needs")
+
+    # Pre-approving a write in a layer that installs into unfamiliar repositories
+    # means the first edit there lands unannounced. Reads and Bash are fine;
+    # Write and Edit should cost one prompt.
+    granted = str(front.get("allowed-tools") or "").replace(",", " ").split()
+    check(f"{d.name} does not pre-approve Write or Edit",
+          not ({"Write", "Edit", "NotebookEdit"} & set(granted)),
+          f"granted {sorted({'Write','Edit','NotebookEdit'} & set(granted))}")
+
 # --- The chain resolves ---------------------------------------------------
 #
 # This repo's most-repeated failure is a name in prose that resolves to

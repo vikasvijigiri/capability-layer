@@ -5,6 +5,7 @@ when_to_use: when a plan is approved and execution begins
 effort: medium
 model: sonnet
 disable-model-invocation: false
+allowed-tools: Read Grep Glob Bash
 ---
 
 # Executing Plans

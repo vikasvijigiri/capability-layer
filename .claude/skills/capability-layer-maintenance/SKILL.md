@@ -5,6 +5,7 @@ when_to_use: when the agent layer or its governing contracts need audit, repair,
 effort: high
 model: opus
 disable-model-invocation: false
+allowed-tools: Read Grep Glob Bash
 ---
 
 # Capability-layer maintenance

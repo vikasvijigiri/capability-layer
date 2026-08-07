@@ -5,6 +5,7 @@ when_to_use: when verified reviewed work is ready for repository integration
 effort: high
 model: sonnet
 disable-model-invocation: false
+allowed-tools: Read Grep Glob Bash
 ---
 
 # Delivering

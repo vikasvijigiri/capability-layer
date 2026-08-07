@@ -1,10 +1,11 @@
 ---
 name: brainstormer
-description: Creative work is starting and the approach is unsettled - a feature, a direction, a behaviour change, or the look and feel of a user-facing surface. Triggers include "any ideas", "what are our options", "how should we approach", "is there a better way", "I am stuck", "design this screen", "what should this look like". Do NOT use once a design exists (writing-plans) or when only scope is vague (task-brief).
+description: Creative work is starting and the approach is unsettled - a feature, a direction, or the look and feel of a surface. Triggers include "any ideas", "what are our options", "how should we approach", "is there a better way", "I am stuck", "design this screen", "what should this look like". Do NOT use once a design exists (writing-plans) or when only scope is vague (task-brief). Use this whenever the approach is genuinely open, even if the user does not ask for options.
 when_to_use: when a design is needed before implementation
 effort: high
 model: opus
 disable-model-invocation: false
+allowed-tools: Read Grep Glob
 ---
 
 # Brainstormer

@@ -6,6 +6,7 @@ when_to_use: when persistent docs must be updated
 effort: low
 model: sonnet
 disable-model-invocation: false
+allowed-tools: Read Grep Glob
 ---
 
 # Knowledge Manager

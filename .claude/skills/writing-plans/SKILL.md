@@ -5,6 +5,7 @@ when_to_use: when an approved spec must be turned into executable tasks
 effort: high
 model: opus
 disable-model-invocation: false
+allowed-tools: Read Grep Glob
 ---
 
 # Writing Plans
