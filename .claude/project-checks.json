@@ -30,7 +30,8 @@
     "python tools/test_loop.py",
     "python tools/test_constitution.py",
     "python tools/test_analyze.py",
-    "python tools/test_ci_shape.py"
+    "python tools/test_ci_shape.py",
+    "python tools/eval_triggers.py --list"
   ],
 
   "_why_test": "Every executable suite in the repository runs as the test tier, so `--require-test` distinguishes real evidence from a disabled check. No count is stated here on purpose -- the last one said eleven while there were seventeen, and a number nothing enforces is a number that rots.",

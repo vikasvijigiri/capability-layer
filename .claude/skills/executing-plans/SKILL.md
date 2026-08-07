@@ -63,8 +63,18 @@ checkboxes and `git log` over your own recollection.
 
 ## The task loop
 
-Per task: run its steps in order, tick each, then report **one line** and move
-on. Do not pause for approval between tasks — a task in a `writing-plans` plan
+Per task, in order:
+
+1. Read the task's **Files**, **Implementation notes** and **Verification**
+   before touching anything. The plan already names the symbols and the command.
+2. Write the failing test first when the task changes behaviour — see
+   `references/test-driven-development.md`.
+3. Make the change, limited to the files the task names. A file the plan did not
+   name is scope escape, not initiative.
+4. Run the task's own **Run:** command and compare against its **Expect:**.
+5. Tick the checkbox in the plan file, then report **one line** and move on.
+
+Do not pause for approval between tasks — Do not pause for approval between tasks — a task in a `writing-plans` plan
 already ends with an independently testable deliverable, which is where the
 seam belongs. Mid-task check-ins have no artefact to show.
 

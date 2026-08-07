@@ -100,6 +100,13 @@ State the procedure as clear, imperative steps. Say what to do, not why —
 this body stays in context for the rest of the session once invoked, so
 every line is a recurring token cost. Keep the whole file under 500 lines.
 
+**The heading name is yours; the ordered procedure is not optional.**
+`## Three preconditions, checked in order` or `## Phase 1 — Root cause` beats
+`## Instructions` when it tells the reader something, and Anthropic's published
+skills use that descriptive style throughout. What is checked
+(`tools/test_process_router.py`) is that a numbered or phased sequence exists at
+all — two skills here had none, and no heading rule would have caught it.
+
 1. <step one>
 2. <step two>
 3. <step three — what "done" looks like>

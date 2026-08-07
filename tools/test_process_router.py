@@ -126,6 +126,26 @@ for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
           not ({"Write", "Edit", "NotebookEdit"} & set(granted)),
           f"granted {sorted({'Write','Edit','NotebookEdit'} & set(granted))}")
 
+    # --- a skill states an ordered procedure ---------------------------------
+    #
+    # The property, not the heading. `templates/Skills.md` asked for a literal
+    # `## Instructions`, but six skills here carry headings that say more than
+    # that word does -- `## Three preconditions, checked in order`, `## Phase 1 —
+    # Root cause` -- and Anthropic's own published skills use the same descriptive
+    # style. Renaming them would trade information for conformance.
+    #
+    # What actually matters is that the reader can follow a sequence. Two skills
+    # had no ordered procedure at all when this was first measured, which is the
+    # defect a heading check would have missed while both passed.
+    _body = text.split("---", 2)[2]
+    _ordered = (len(re.findall(r"(?m)^\s{0,3}\d+\.\s", _body))
+                + len(re.findall(r"(?m)^#{2,3}\s+(?:Phase|Step)\s+\d+", _body))
+                + len(re.findall(r"(?m)^\*\*\d+\.", _body)))
+    check(f"{d.name} states an ordered procedure",
+          _ordered >= 3,
+          f"only {_ordered} ordered step(s) -- a skill is a procedure, and a "
+          f"reader cannot follow prose that never says what comes first")
+
 # --- The chain resolves ---------------------------------------------------
 #
 # This repo's most-repeated failure is a name in prose that resolves to

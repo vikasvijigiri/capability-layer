@@ -1,52 +1,62 @@
 # Capability Layer
 
-This repository contains a harness-neutral, production-oriented agent
-capability layer for software delivery. It provides skills, agents, commands,
-workflows, hooks, safety checks, and durable project documentation for Claude
-Code, Codex, Gemini, and VS Code agent hosts.
+A harness-neutral agent capability layer for software delivery: skills, hooks,
+commands and deterministic checks that carry a change from an idea to a released
+one, with exactly two places a human is asked.
 
-## Setup
+There is no application code here. This repository *is* the layer.
 
-Open the repository in the chosen agent host. Read [`AGENTS.md`](AGENTS.md),
-[`CLAUDE.md`](CLAUDE.md), and [`harnesses.json`](harnesses.json). Install the
-Node dependencies when using the optional repository runner:
+## What it does
 
-```text
-npm install
-```
+| | |
+|---|---|
+| **Two gates, and only two** | the finished plan, and the shipment approval. Both asked with `AskUserQuestion` so approval is a click, not an inference. Everything between them is automated |
+| **Resume from anywhere** | `tools/resume.py` derives the state from git facts. Nothing is stored, so nothing goes stale — it survives a cleared context, a crash, a week away |
+| **Bounded self-repair** | `tools/loop.py` classifies a failure before spending anything on it. Infrastructure noise is retried; a real defect gets three attempts; a security finding gets none |
+| **Green is a fact, not a claim** | every completion statement is backed by output from a check that actually ran |
 
-## Verification
-
-Run the complete local contract suite:
+## Start here
 
 ```text
-python tools/run_checks.py --tier all --require-test
+python tools/run_checks.py --tier all --require-test   # is the tree green
+python tools/resume.py                                 # where is this work
+python tools/loop.py                                   # what to do about a failure
 ```
 
-## Architecture
+No install step. Everything is Python 3.11+ and git.
 
-- `.claude/` — canonical skills, agents, commands, workflows, hooks, rules,
-  settings, and project checks.
-- `AGENTS.md` — harness-neutral operating contract.
-- `harnesses.json` — canonical path and host execution manifest.
-- `docs/` — baselines, pilots, plans, research, and specifications.
-- `tools/` — deterministic validators, runners, and test suites.
-- `templates/` and `guide/` — authoring standards for the capability layer.
+## How a change moves
 
-The normal execution model is host-managed: the IDE agent supplies the model
-session, while the repository supplies the workflow contract and evidence
-gates. The standalone SDK runner is optional.
+```text
+task-brief → brainstormer → writing-plans →[GATE 1]→ executing-plans
+    → verifying-work → no-slop → code-review → delivering →[GATE 2]→ releasing
+    → knowledge-manager
+```
 
-## Durable project documents
+`.claude/workflow.md` owns that order and is the file to read before adding a
+stage. Each skill states its own triggers and handoff; depth that used to be a
+separate skill now lives in `<skill>/references/` and loads only when the task
+calls for it.
 
-[`knowledge-manager`](.claude/skills/knowledge-manager/SKILL.md) owns
-`README.md`, `TASK.md`, `HANDOFF.md`, `MEMORY.md`, `LOG.md`, `ISSUES.md`, and
-`decisions/`. [`capability-layer-maintenance`](.claude/skills/capability-layer-maintenance/SKILL.md)
-owns the capability-layer contracts and wiring.
+## Layout
 
-## Related docs
+| Path | What it is |
+|---|---|
+| `.claude/skills/` | the thirteen skills, one directory each |
+| `.claude/hooks/` | what fires automatically — checkpoints, secret scan, branch guard, state report |
+| `.claude/commands/` | slash commands, including `/verify`, `/save` and `/publish` |
+| `.claude/constitution.md` | seven articles every plan ticks or justifies |
+| `.claude/workflow.md` | stage → owner → artefact, and the `[state:*]` blocks the session-start hook renders |
+| `tools/` | `run_checks.py`, `resume.py`, `loop.py`, `analyze.py`, and the suites that keep all of it honest |
+| `decisions/` | dated ADRs for the choices that were not obvious |
+| `templates/`, `guide/` | how to author a skill, hook, command or workflow here |
 
-- [Workflow policy](.claude/workflow.md)
-- [Universal agent contract](AGENTS.md)
-- [Harness manifest](harnesses.json)
-- [Project handoff](HANDOFF.md)
+## The rule the rest follows
+
+**Prefer a mechanism to a rule.** A sentence asking the model to remember
+something is the weakest thing in this repository; a test or a hook that makes
+the mistake impossible is the strongest. Where a rule exists without a mechanism,
+it says so.
+
+`AGENTS.md` carries the same contract for non-Claude hosts, and
+`harnesses.json` maps the canonical paths.

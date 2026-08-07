@@ -20,6 +20,16 @@ That is the gap this fills, and nothing now reminds you it is open.
 Cap visible output at ~500 tokens. The written entries are the deliverable; do
 not also narrate them back.
 
+## The order
+
+1. Gather evidence from the tree — `git log`, the diff, the checks that ran.
+   Never write from memory of the conversation.
+2. Decide which documents the change actually touches. Most units of work touch
+   one or two, not all six.
+3. Read the matching section of `formats.md` for each, and only that section.
+4. Write the entries, each anchored to something a reader can verify.
+5. State which files you wrote and what you deliberately left unchanged.
+
 ## Gather evidence before you write
 
 Do not write from memory. Memory is what produces a log entry that sounds right
