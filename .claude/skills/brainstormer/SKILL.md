@@ -4,7 +4,7 @@ description: Creative work is starting and the approach is unsettled - a feature
 when_to_use: when a design is needed before implementation
 effort: high
 model: opus
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Brainstormer

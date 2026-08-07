@@ -4,7 +4,7 @@ description: Delivered work needs to reach a running environment - deployed, pub
 when_to_use: when work must reach a running environment
 effort: low
 model: sonnet
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Releasing

@@ -4,7 +4,7 @@ description: Any bug, test failure or unexpected behaviour, before proposing a f
 when_to_use: when a failure needs root-cause analysis
 effort: high
 model: opus
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Systematic Debugging

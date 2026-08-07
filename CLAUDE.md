@@ -69,7 +69,15 @@ because unapproved push, merge and deploy are forbidden outright below.
 | `capability-layer-maintenance` | — entered to change this layer | aligned contracts, wiring, hooks, and green validators |
 | references | each stage keeps its depth in `<skill>/references/` — review lenses, worktrees, TDD, artifact review, design contract, SRE | loaded per task, not per turn |
 
-**Skills trigger from their own `description:` frontmatter, and nothing else.**
+**Skills trigger from their own `description:` frontmatter, and nothing else** —
+and that only became true on 2026-08-07. Twelve of thirteen carried
+`disable-model-invocation: true`, which per the official docs means *"Claude can
+invoke: No. Description not in context."* So no chain handoff could execute — a
+skill saying "invoke `executing-plans` next" had that call blocked — and the
+descriptions everything here optimises were not being loaded at all. All thirteen
+are now `false`. The gates are what keep that safe, not the flag:
+`releasing` still asks for shipment approval, and `test_process_router.py` pins
+the gate set to two.
 A `UserPromptSubmit` hook and a `routing/process-skills.md` keyword table were
 deleted on 2026-08-04. A hook whose only output is the name of a skill couples two
 independent things and duplicates a routing decision nothing validated -- pointing

@@ -4,7 +4,7 @@ description: Work is finished and about to be called done, before review or deli
 when_to_use: when results need validation after execution
 effort: medium
 model: sonnet
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Verifying Work

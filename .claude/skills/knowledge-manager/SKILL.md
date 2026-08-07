@@ -2,11 +2,10 @@
 name: knowledge-manager
 description: A unit of work finished and the persistent docs no longer match reality. Triggers include "update the README", "log this", "record this", "handoff", "where did we get to", or a hard-to-reverse decision. Owns README, TASK, MEMORY, HANDOFF, LOG, ISSUES and decisions/. Do NOT use for CLAUDE.md or layer contracts, or to restate a diff.
 when_to_use: when persistent docs must be updated
-context: false
   - formats.md
 effort: low
 model: sonnet
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Knowledge Manager

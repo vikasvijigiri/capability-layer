@@ -4,7 +4,7 @@ description: Sweep the whole repo before shipping and repair what the user appro
 when_to_use: when the repo needs a cleanup audit before shipping
 effort: high
 model: sonnet
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # No-Slop

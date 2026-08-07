@@ -4,7 +4,7 @@ description: A decision needs evidence from outside your own knowledge, before d
 when_to_use: when external evidence is required
 effort: high
 model: opus
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Research

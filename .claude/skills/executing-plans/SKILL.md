@@ -4,7 +4,7 @@ description: An approved plan or task list exists and the work is to carry it ou
 when_to_use: when a plan is approved and execution begins
 effort: medium
 model: sonnet
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Executing Plans

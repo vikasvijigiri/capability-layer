@@ -4,7 +4,7 @@ description: A request names work but leaves goal, constraints or scope unstated
 when_to_use: when a clear brief is needed for work
 effort: medium
 model: sonnet
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Task Brief

@@ -4,7 +4,7 @@ description: An approved spec must become a concrete implementation plan before 
 when_to_use: when an approved spec must be turned into executable tasks
 effort: high
 model: opus
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Writing Plans
@@ -43,9 +43,8 @@ For a material feature or architectural change, apply
 spec before drafting the plan. A REVISE verdict returns to `brainstormer`; do
 not plan around an independently identified spec gap.
 
-For cross-cutting boundaries, dispatch `architecture-reviewer` through
-`architecture-reviewer`; it reports risks while this skill owns the plan and approval
-gate.
+For cross-cutting boundaries, dispatch `architecture-reviewer`; it reports risks
+while this skill owns the plan and the approval gate.
 
 ### 2. Inspect the repository before designing tasks
 

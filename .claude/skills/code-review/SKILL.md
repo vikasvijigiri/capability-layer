@@ -4,7 +4,7 @@ description: Inspect the actual branch diff before delivery for correctness, sec
 when_to_use: when a verified change needs an independent review
 effort: high
 model: sonnet
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Code Review

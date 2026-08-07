@@ -4,7 +4,7 @@ description: Prepare a branch, PR and merge-queue handoff after verification and
 when_to_use: when verified reviewed work is ready for repository integration
 effort: high
 model: sonnet
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Delivering
