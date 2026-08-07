@@ -137,6 +137,7 @@ Raw equivalents, run from the repo root:
 
     python tools/run_checks.py --tier all --require-test   # both tiers
     python tools/resume.py            # which state this unit of work is in
+    python tools/analyze.py           # is the plan internally consistent (pre-Gate 1)
     python tools/loop.py              # what the escalation ladder says to do next
     python tools/loop.py --restore    # reset to the last verified-green tree
     python tools/new_skill_check.py <name>|--all   # is one skill actually reachable

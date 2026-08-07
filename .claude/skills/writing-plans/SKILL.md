@@ -185,9 +185,18 @@ reviewer's attention.
 
 ### 6. Self-review before handoff
 
-Before the approval gate, invoke `artifact-review` on the completed plan. Treat
-its verdict as independent evidence; do not silently repair a rejected plan in
-the same review pass.
+First run the mechanical pass — it is cheap and it finds what reading misses:
+
+```
+python tools/analyze.py --slug <slug>
+```
+
+It reports missing sections, unresolved markers, unjustified gate exceptions,
+tasks with no verification command, and `Modify` targets that do not exist. Fix
+every finding before spending a review on the plan.
+
+Then invoke `artifact-review` on the completed plan. Treat its verdict as
+independent evidence; do not silently repair a rejected plan in the same pass.
 
 Then review the completed plan against the spec, not against memory:
 
