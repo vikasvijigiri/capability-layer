@@ -101,7 +101,7 @@ requirement readable two ways. Fix inline, don't re-review.
 
 ## Design contract for user-facing surfaces
 
-The designer skill was separate until 2026-08-07; it is now
+The designer skill was separate; it is now
 `references/designer.md`. Read it when the spec covers a screen, a flow, or
 anything a person looks at - product feeling, voice, colour/type/spacing tokens,
 layout, components, motion, responsive states, and the accessibility floor.

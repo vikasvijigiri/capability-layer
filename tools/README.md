@@ -6,7 +6,11 @@ Helper scripts and the repo's test suites.
   Passes the payload via `HOOK_PAYLOAD`; scripts read it through
   `_hooklib.load_payload()`, which handles both that and stdin.
 
-Test suites — all six run by `/verify`:
+Test suites, all run by `/verify`. The count is not stated here on purpose — it
+was "six" while the real number quietly grew to 22, and a number nothing
+enforces is a number that rots. `.claude/project-checks.json`'s `test` array is
+the live list. Four worth knowing by name because they gate things other suites
+do not:
 
 - `test_hooks.py` — every hook script against realistic payloads.
 - `test_process_router.py` — skill routing: matching, fail-open, and that every

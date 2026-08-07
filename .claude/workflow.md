@@ -35,7 +35,13 @@ require its own platform permission prompt for an irreversible tool operation;
 that is execution control, not a lifecycle gate.
 
 `task-brief` branches from an idea to `brainstormer` when the direction is
-unknown, or proceeds to stage 3 when scope is already settled. 1 `task-brief` frames, 2 `brainstormer` designs, 3 `writing-plans` plans, 4 `executing-plans` builds, 5 `verifying-work` validates, 6 `no-slop` sweeps, 7 `code-review` reviews, 8 `delivering` integrates, 9 `releasing` observes, and 10 `knowledge-manager` records.
+unknown, or straight to the change when scope is already settled — never to
+`writing-plans`, which consumes an approved spec, not a six-line brief. The
+numbered stages below are labels for the rest of the chain, not task-brief's own
+options: 1 `task-brief` frames, 2 `brainstormer` designs, 3 `writing-plans`
+plans, 4 `executing-plans` builds, 5 `verifying-work` validates, 6 `no-slop`
+sweeps, 7 `code-review` reviews, 8 `delivering` integrates, 9 `releasing`
+observes, and 10 `knowledge-manager` records.
 These numbers are lifecycle labels, not additional approval gates.
 The recovery loop returns to `4 executing-plans` or `5 verifying-work`, then
 re-enters `7 code-review` and `9 releasing` when the candidate is ready again.

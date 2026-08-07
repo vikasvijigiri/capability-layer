@@ -37,7 +37,7 @@ before applying recovery.
 
 ## Lenses — load one only when the diff earns it
 
-Four specialist reviews were separate skills until 2026-08-07. Each cost its own
+Four specialist reviews were separate skills. Each cost its own
 description on every turn, for depth that applies to a minority of diffs. They
 are now references: same content, read on demand, nothing charged when unused.
 

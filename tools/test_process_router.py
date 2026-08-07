@@ -381,6 +381,18 @@ if _paras:
     check("workflow.md does not branch task-brief to `writing-plans`",
           not positive_mentions(_paras[0], "writing-plans"),
           "the chain owner contradicts both skills' own text")
+    # The literal-name check above has a proxy blind spot: "proceeds to stage 3"
+    # asserts the same forbidden handoff as "proceeds to `writing-plans`" without
+    # ever writing the name, and it slipped past every check until 2026-08-07's
+    # no-slop sweep caught it by reading the paragraph rather than grepping it.
+    # `stage_of["writing-plans"]` is the number this must never sit next to.
+    _wp_stage = stage_of.get("writing-plans")
+    if _wp_stage is not None:
+        check(f"workflow.md does not branch task-brief to 'stage {_wp_stage}' "
+              f"as a stand-in for `writing-plans`",
+              not re.search(rf"\bstage {_wp_stage}\b(?!\s*`writing-plans`)",
+                            _paras[0]),
+              "a stage number is the same claim as the name it labels")
 
 # Each skill states its own stage number, and it must be the table's number.
 for skill, num in stage_of.items():

@@ -218,7 +218,7 @@ health evidence is BLOCKED, not a successful release.
 
 ## Operating what you released
 
-The observability-sre skill was separate until 2026-08-07; it is now
+The observability-sre skill was separate; it is now
 `references/observability-sre.md`. Read it before the first release to a target,
 and after any incident - SLOs, alerts, dashboards, health checks, runbooks,
 capacity signals, rollback evidence.

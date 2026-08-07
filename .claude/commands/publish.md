@@ -54,7 +54,7 @@ confirmation in step 4 is the whole point, and showing a plan is not confirmatio
 
 This layer shipped an automatic version once: a `SessionStart` hook installed
 the whole capability layer into any git repository it found, unasked. It was
-removed on 2026-08-07 with `install.py`, and `session-start/02-bootstrap-docs.py`
+removed with `install.py`, and `session-start/02-bootstrap-docs.py`
 was reduced from authoring to detection —
 `tools/test_session_start_contract.py` now asserts it creates nothing.
 

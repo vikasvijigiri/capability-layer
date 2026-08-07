@@ -15,7 +15,7 @@ The fixture should contain at least these reviewable issues:
 - a button without a visible focus state;
 - a form error without an associated label or recovery action;
 - an empty state with no next action;
-- one debug log or TODO without an owner;
+- one debug log or unresolved to-do marker without an owner;
 - one swallowed dependency error;
 - one claim of completion without test or rendered evidence.
 

@@ -74,7 +74,7 @@ Per task, in order:
 4. Run the task's own **Run:** command and compare against its **Expect:**.
 5. Tick the checkbox in the plan file, then report **one line** and move on.
 
-Do not pause for approval between tasks — Do not pause for approval between tasks — a task in a `writing-plans` plan
+Do not pause for approval between tasks — a task in a `writing-plans` plan
 already ends with an independently testable deliverable, which is where the
 seam belongs. Mid-task check-ins have no artefact to show.
 
@@ -217,7 +217,7 @@ does not fix or approve the work. Then invoke `verifying-work`.
 
 ## Techniques — read one when the task calls for it
 
-Separate skills until 2026-08-07. Each charged a description on every turn for
+Separate skills until now. Each charged a description on every turn for
 depth that applies to some tasks, not all. Same content, loaded on demand.
 
 | The task involves | Read |

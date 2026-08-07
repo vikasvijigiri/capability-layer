@@ -220,7 +220,7 @@ earlier skill instead of filling the gap by assumption.
 
 ## Independent artifact review
 
-The artifact-review skill was separate until 2026-08-07; it is now
+The artifact-review skill was separate; it is now
 `references/artifact-review.md`. Read it when the spec or plan is material enough
 that an independent verdict is worth the pass — a cross-cutting change, a new
 boundary, anything hard to reverse. For architectural risk, dispatch
@@ -253,7 +253,7 @@ verbatim. A reason paraphrased is a reason lost.
 On anything but approve, append to the plan and stop:
 
 ```markdown
-## Rejected 2026-08-07 (plan <8-char body hash>)
+## Rejected <date> (plan <8-char body hash>)
 <the user's words, verbatim>
 ```
 
