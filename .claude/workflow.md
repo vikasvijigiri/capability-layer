@@ -1,9 +1,16 @@
 # Workflow policy
 
-This is the durable SDLC contract. The executable state machine is
-`.claude/workflows/feature-delivery.js`; its runtime is `tools/run_workflow.mjs`.
+This is the durable SDLC contract. **One engine implements it**: `tools/resume.py`
+derives the state from git and `tools/loop.py` decides the recovery rung. A second
+implementation in JavaScript — `.claude/workflows/feature-delivery.js` plus a
+251-line `tools/run_workflow.mjs` — was deleted on 2026-08-07; it kept its own
+budget table in a different vocabulary, held run state in memory so a crash lost
+it, and could not be invoked as `/feature-delivery` because it never matched the
+dynamic-workflow contract. See `decisions/2026-08-07-one-workflow-engine.md`.
+
 The policy is harness-agnostic: Claude Code, Codex, Gemini, and VS Code agents
-must use the same states, artifacts, evidence, and approval boundaries.
+must use the same states, artifacts, evidence, and approval boundaries. Both
+tools are plain scripts, so any harness can shell out to them.
 
 ## Product lifecycle
 
@@ -70,10 +77,10 @@ repository workflow runner. Chat is not durable evidence.
 
 ## Cross-cutting capabilities
 
-Use `research` for external evidence, `systematic-debugging` for any failure,
-`artifact-review` for material specs or
-plans. Depth that used to be its own skill now lives in `<skill>/references/`
-and is read per task. Maintain the
+Use `research` for external evidence and `systematic-debugging` for any failure.
+Depth that used to be its own skill now lives in `<skill>/references/` and is read
+per task — the artifact review that gates a material spec or plan is
+`writing-plans/references/artifact-review.md`, not a skill of its own. Maintain the
 capability layer with `capability-layer-maintenance`; it may repair wiring but
 never authors product strategy.
 

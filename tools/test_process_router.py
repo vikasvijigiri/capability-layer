@@ -168,6 +168,34 @@ NOT_SKILLS = {
     "test-quality",
 }
 
+# --- workflow.md's own names resolve --------------------------------------
+#
+# The resolution check below reads SKILL.md files. `workflow.md` was never in
+# scope, so when four audit skills became `code-review` lenses and
+# `artifact-review` moved under `writing-plans/references/`, the policy file kept
+# naming them and every suite stayed green. Found by hand on 2026-08-07 -- which
+# is exactly the failure mode this file exists to make impossible.
+#
+# Only names that look like a skill reference are checked: backticked,
+# lowercase-hyphenated, and not a known non-skill.
+_WF = ROOT / ".claude" / "workflow.md"
+if _WF.is_file():
+    _wf_text = _WF.read_text(encoding="utf-8")
+    _wf_names = {m for m in re.findall(r"`([a-z][a-z0-9-]{3,})`", _wf_text)}
+    _wf_unknown = sorted(
+        n for n in _wf_names
+        if n not in NOT_SKILLS
+        and not (SKILLS / n).is_dir()
+        and not (ROOT / ".claude" / "agents" / f"{n}.md").is_file()
+        # paths, filenames and prose compounds are not skill references
+        and "." not in n and "/" not in n
+    )
+    check("every skill named in workflow.md exists",
+          not _wf_unknown,
+          f"dead: {_wf_unknown} -- workflow.md is policy, and a policy naming a "
+          f"skill that was deleted routes work nowhere")
+
+
 CHAIN_SUCCESSOR = {
     "brainstormer": "writing-plans",
     "writing-plans": "executing-plans",

@@ -464,6 +464,14 @@ FAILURE_CLASSES = [
     (re.compile(r"(?i)connection reset by peer|network is unreachable"),
      "transient", "retry"),
     (re.compile(r"(?i)\b(?:read|connect|handshake) timed out\b"), "transient", "retry"),
+    # subprocess.TimeoutExpired, pytest-timeout, `timed out after Ns`. A command
+    # that normally finishes in a quarter of a second and then blows a 30s limit
+    # did not become wrong -- the machine got busy. Classifying this as a defect
+    # spends a repair budget editing code that was never at fault, which is the
+    # exact waste this table exists to prevent. Added 2026-08-07 after
+    # `test_session_start_contract.py` timed out behind twenty other suites.
+    (re.compile(r"(?i)TimeoutExpired|\btimed out\b|\btimeout expired\b"),
+     "transient", "retry"),
 ]
 
 # How many times each kind may be attempted before the ladder escalates.

@@ -5,11 +5,5 @@
   "engines": {
     "node": ">=20"
   },
-  "scripts": {
-    "workflow:dry-run": "node tools/run_workflow.mjs feature-delivery --dry-run",
-    "workflow:help": "node tools/run_workflow.mjs --help"
-  },
-  "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.1.0"
-  }
+  "_why": "Kept with no dependencies so `npm audit` still resolves for any JS a product adds later. It previously existed only for tools/run_workflow.mjs and the agent SDK, both deleted 2026-08-07 -- see decisions/2026-08-07-one-workflow-engine.md. An audit over zero dependencies passes trivially; that is an honest report of this repo's JS surface, not a weakened gate."
 }

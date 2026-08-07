@@ -42,7 +42,11 @@ for name in ("claude-code", "codex", "generic-agent"):
 require("manifest declares .claude canonical root", manifest.get("canonical_root") == ".claude")
 require("manifest forbids parallel sources", manifest.get("policy", {}).get("no_parallel_sources") is True)
 canonical = manifest.get("canonical_paths", {})
-for key in ("skills", "agents", "commands", "workflows", "workflow_policy", "rules", "hooks", "settings", "output_styles", "project_checks"):
+# `workflows` is deliberately absent. The repo shipped one dynamic workflow that
+# never matched the runtime contract and was deleted 2026-08-07 -- see
+# decisions/2026-08-07-one-workflow-engine.md. A manifest that promises a path
+# with nothing behind it is the same dead reference this suite exists to catch.
+for key in ("skills", "agents", "commands", "workflow_policy", "rules", "hooks", "settings", "output_styles", "project_checks"):
     require(f"canonical path exists in manifest: {key}", bool(canonical.get(key)))
 require("Claude adapter is native-canonical", adapters.get("claude-code", {}).get("status") == "native-canonical")
 require("Codex adapter uses canonical source", adapters.get("codex", {}).get("skills_path") == ".claude/skills")

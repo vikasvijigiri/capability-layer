@@ -103,7 +103,13 @@ def check_bootstrap_runtime() -> None:
         root_dirs_before = {p.name for p in tmp.iterdir() if p.is_dir()}
 
         proc = subprocess.run([sys.executable, str(contract.BOOTSTRAP_SCRIPT)],
-                              cwd=tmp, env=env, capture_output=True, text=True, timeout=30)
+                              cwd=tmp, env=env, capture_output=True, text=True,
+                              # The hook itself runs in ~0.25s. 30s still timed
+                              # out on 2026-08-07 with twenty suites' worth of
+                              # subprocesses ahead of it on Windows, so this
+                              # number was measuring machine contention, not the
+                              # hook. A timeout should catch a hang, not a queue.
+                              timeout=120)
         check("bootstrap hook exits cleanly in a fresh repo",
               proc.returncode == 0,
               proc.stderr.strip() or proc.stdout.strip() or f"exit {proc.returncode}")
