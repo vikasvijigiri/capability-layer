@@ -255,6 +255,7 @@ The skill is complete only when the plan is saved, self-reviewed, and presented
 for the plan approval gate. State the plan path, task count, key assumptions and
 known risks.
 
+<!-- GATE 1: plan approval. The chain has two; see .claude/workflow.md. -->
 **Then put every `[NEEDS CLARIFICATION]` marker into one `AskUserQuestion` call.**
 One batch, at the gate — not a question each time one arises. Scattered questions
 are what turned two gates into nine, and they interrupt at the moment the answer

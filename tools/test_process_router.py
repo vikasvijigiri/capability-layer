@@ -716,35 +716,74 @@ if AGENTS.exists():
 # The allowed set is small and each entry is a different KIND of thing:
 #   writing-plans   gate 1 -- the finished plan
 #   code-review     gate 2 -- sign-off on the change
-#   brainstormer    NOT a gate. Its clarify/converge calls supply information the
-#                   model does not have; removing them would make the spec the
-#                   model's own and label it the user's.
-#   capability-layer-maintenance is not a gate, and is off the delivery chain. Its ownership does not change
-#                   product stage numbering.
+#
+# `brainstormer` was the one exception, on the argument that clarify/converge are
+# not gates because they ask "which direction" rather than "may I proceed". True,
+# and it did not survive contact: ten blocking questions before any artefact
+# exists is the opposite of a two-gate chain whatever they are called. They are
+# `[NEEDS CLARIFICATION]` markers now, and `writing-plans` answers all of them in
+# ONE call at Gate 1 -- so the exception is gone and the set is exactly two.
 #
 # `delivering` and `releasing` are absent on purpose: they ask in prose, and their
 # approvals are a standing safety limit rather than a workflow gate.
 
 GATE_SKILLS = {"writing-plans", "releasing"}
-QUESTION_SKILLS = {"brainstormer"}
+# Deliberately empty. Any entry here is a third place that stops and waits.
+QUESTION_SKILLS: set[str] = set()
 
+# Declared, not inferred.
+#
+# The check was a substring test for "AskUserQuestion", which worked only while
+# the gate skills were the only files naming the tool. It broke the moment a
+# skill named it in order to FORBID it -- `brainstormer` now does so four times,
+# and the substring test read those prohibitions as a new gate, failing the build
+# for removing exactly the dialogue the build exists to keep out.
+#
+# Matching on syntax cannot fix it either. These two are the real gates:
+#
+#     into one `AskUserQuestion` call
+#     then use `AskUserQuestion` for the single explicit shipment
+#
+# and these four are prohibitions or references to somebody else's gate:
+#
+#     Never call `AskUserQuestion` from this skill
+#     It carried ten `AskUserQuestion` calls until 2026-08-08
+#     in **one** `AskUserQuestion` at Gate 1        <- describes writing-plans
+#     Not with `AskUserQuestion`, and not in prose
+#
+# The difference is negation and referent, not grammar, and a regex that tried to
+# read either would be a guess in a safety check. So a gate now DECLARES itself
+# with a marker somebody has to type on purpose -- which is also the property
+# wanted here, since a tenth gate should be hard to add by accident.
+GATE_MARKER = re.compile(r"<!--\s*GATE\s*\d", re.I)
 _prompting = {
     d.name for d in sorted(SKILLS.iterdir()) if d.is_dir()
-    and "AskUserQuestion" in (d / "SKILL.md").read_text(encoding="utf-8")
+    and GATE_MARKER.search((d / "SKILL.md").read_text(encoding="utf-8"))
 }
 _unexpected = sorted(_prompting - GATE_SKILLS - QUESTION_SKILLS)
-check("no skill prompts the user outside the two gates and two question skills",
+check("no skill prompts the user outside the two gates",
       not _unexpected,
       f"{_unexpected} added a gate -- the chain allows two, see workflow.md")
 
 for _g in sorted(GATE_SKILLS):
-    check(f"gate skill `{_g}` still has its prompt", _g in _prompting,
+    _gbody = (SKILLS / _g / "SKILL.md").read_text(encoding="utf-8")
+    check(f"gate skill `{_g}` declares its gate", _g in _prompting,
           "a gate was removed; the chain would then have no human checkpoint here")
+    # The marker is a claim; the call is the mechanism. A marker with no
+    # AskUserQuestion beside it is a gate that announces itself and never stops.
+    check(f"gate skill `{_g}` actually calls the tool it declares",
+          "AskUserQuestion" in _gbody,
+          "the marker says there is a gate here and nothing implements it")
 
-for _skill in ("task-brief", "no-slop"):
+for _skill in ("task-brief", "no-slop", "brainstormer"):
     _body = (SKILLS / _skill / "SKILL.md").read_text(encoding="utf-8")
-    check(f"`{_skill}` opens no dialogue", "AskUserQuestion" not in _body,
-          "its approval gate was removed on 2026-08-04; this re-adds it")
+    # Mentions are allowed -- these files explain what they must NOT do, and
+    # brainstormer names the tool three times to forbid it. A CALL is the thing
+    # being banned, so the check is for the invocation shape, not the word.
+    _calls = re.findall(r"(?<![`\w])AskUserQuestion\s*\(", _body)
+    check(f"`{_skill}` opens no dialogue", not _calls,
+          f"{len(_calls)} call(s) -- the chain stops in two places and this is "
+          f"not one of them")
 
 
 print()

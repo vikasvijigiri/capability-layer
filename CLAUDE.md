@@ -48,8 +48,22 @@ contradicted `workflow.md`, the suite, and `code-review` itself — it returns a
 verdict and asks nothing. Operational safety checks may still require
 confirmation, such as choosing a worktree or target; they do not grant approval
 to bypass either gate.
-`tools/test_process_router.py` fails if a tenth skill grows a dialogue. Delivery is
-separate and not counted: `delivering` and `releasing` still need an explicit yes,
+Each gate DECLARES itself with a `<!-- GATE n: ... -->` marker, and
+`test_process_router.py` checks three things: no third marker exists, both
+markers are still there, and each has an actual `AskUserQuestion` behind it. The
+check used to be a substring search for the tool name, which broke the moment a
+skill named it in order to forbid it — `brainstormer` now does, four times, and a
+substring test read those prohibitions as a new gate. A marker somebody has to
+type on purpose is also the right property: a tenth gate should be hard to add by
+accident.
+
+**`brainstormer` opened ten of these until 2026-08-08**, exempted on the argument
+that clarify/converge ask "which direction" rather than "may I proceed". The
+distinction is real and it did not survive contact — ten blocking questions before
+any artefact exists is the opposite of a two-gate chain. They are
+`[NEEDS CLARIFICATION]` markers now, resolved together in the Gate 1 call, and
+`tools/resume.py` will not leave `WAITING_PLAN_APPROVAL` while one is open.
+Delivery is separate and not counted: `delivering` and `releasing` still need an explicit yes,
 because unapproved push, merge and deploy are forbidden outright below.
 
 | Skill | Stage | Produces |

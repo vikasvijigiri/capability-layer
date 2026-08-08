@@ -11,6 +11,7 @@ allowed-tools: Read Grep Glob Bash Task
 # Releasing
 
 At the shipment gate, present the release candidate, smoke evidence, rollback,
+<!-- GATE 2: shipment approval. The chain has two; see .claude/workflow.md. -->
 and target, then use `AskUserQuestion` for the single explicit shipment
 approval. Do not ask for approval earlier in the workflow.
 
