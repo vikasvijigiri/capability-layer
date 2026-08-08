@@ -141,8 +141,9 @@ visible in `git show`.
 - Terminal handoff: none. This records and stops.
 - Invoked at the end of a unit of work, not at the end of a session — a session
   that ran four units owes four log entries, written as each finished.
-- Work that turns out to need doing, rather than recording, becomes its own task
-  via `task-brief`. Do not absorb it here.
+- Work that turns out to need doing, rather than recording, becomes its own unit
+  and enters the chain at `.claude/workflow.md` §Entry — `task-brief` when the
+  approach is settled, `brainstormer` when it is not. Do not absorb it here.
 
 ## Success
 

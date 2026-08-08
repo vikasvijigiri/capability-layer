@@ -802,6 +802,45 @@ for _skill in ("task-brief", "no-slop", "brainstormer"):
           f"not one of them")
 
 
+
+# --- the entry rule is owned in one place, or it is owned nowhere ------------
+#
+# `workflow.md` §Entry says of itself: "This section owns the entry rule. Nowhere
+# else states it." One question decides between `task-brief` and `brainstormer`,
+# and they are ALTERNATIVES -- a brief is not a predecessor of a design.
+#
+# The rule was found in seven places on 2026-08-08 and cut back to one. `no-slop`
+# was the eighth and survived, because it named only `task-brief` as the
+# destination for every structural finding -- restating the rule, and restating
+# half of it, so a finding whose approach was genuinely open got routed to a brief
+# that would bake in the first answer. `FORBIDDEN_SUCCESSOR` did not catch it: that
+# guards `task-brief` -> `writing-plans`, a different edge entirely.
+#
+# The property: a skill that sends work to the chain's entry must not name one
+# branch as though it were the whole rule. Naming BOTH is fine (that is the rule),
+# and so is pointing at the section that owns it.
+
+ENTRY_PAIR = ("task-brief", "brainstormer")
+_entry_failures = []
+
+for _path in sorted(SKILLS.glob("*/SKILL.md")):
+    _name = _path.parent.name
+    if _name in ENTRY_PAIR:
+        continue                      # the two branches may name themselves
+    _body = _path.read_text(encoding="utf-8")
+    _names_brief = "`task-brief`" in _body
+    _names_storm = "`brainstormer`" in _body
+    _defers = "workflow.md" in _body and "Entry" in _body
+    if _names_brief and not _names_storm and not _defers:
+        _entry_failures.append(_name)
+
+check("no skill states half the entry rule",
+      not _entry_failures,
+      f"{_entry_failures} name `task-brief` as the destination without naming "
+      f"`brainstormer` or deferring to workflow.md §Entry -- the two are "
+      f"alternatives decided by one question, and half a rule routes the other "
+      f"half wrong")
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

@@ -147,14 +147,24 @@ risk and the user is approving that risk:
 | Group | Examples | Disposition |
 |---|---|---|
 | **Local** | a hedge, a stray `TODO`, a missing `## Success`, a stale count, an over-budget description | Repairable here — contained in one file, mechanically checkable afterwards |
-| **Structural** | merging or splitting a skill, retiring one, re-cutting triggers, deleting a document | **`task-brief`, not an edit.** Routing decides which skill fires; re-cutting it mid-sweep ships a layer nobody reviewed |
+| **Structural** | merging or splitting a skill, retiring one, re-cutting triggers, deleting a document | **Its own unit of work, not an edit.** Routing decides which skill fires; re-cutting it mid-sweep ships a layer nobody reviewed |
 
 Then apply the local group. Do not ask — that group is defined by being
 contained in one file and mechanically checkable afterwards, which is exactly what
 makes it safe to apply unasked. Say what you changed after, with `file:line`.
 
-Structural findings are listed and left alone; name the `task-brief` each one
-would become.
+Structural findings are listed and left alone. Hand each one to the chain's
+entry, and **`.claude/workflow.md` §Entry decides which** — one question, *is the
+approach settled?* "Retire this dead document" is settled and needs a brief.
+"This skill overlaps its neighbour, so merge them or move the triggers" is not,
+and a brief
+written over an open question bakes in the first answer.
+
+This said `task-brief` unconditionally until 2026-08-08, which was wrong twice
+over: it restated a routing rule §Entry says it alone owns, and it restated only
+one of the two branches. The entry rule had already been found in seven places
+and cut back to one; this was the eighth, and it survived because the suite's
+`FORBIDDEN_SUCCESSOR` check only guards `task-brief` → `writing-plans`.
 
 ## Phase 2 — rectify
 
@@ -165,7 +175,8 @@ Only what was approved, and only the local group.
    and `test_referenced_paths.py`.** All of them, because repairs here move
    counts and paths the other two own — that broke twice while writing this.
 3. Quote the result. Still red is `systematic-debugging`'s trigger, not a retry.
-4. Report what changed, and what went to `task-brief` with the reason.
+4. Report what changed, and which structural findings were handed to the chain's
+   entry, with the reason and the destination §Entry gave.
 
 **You are editing the layer that is running.** An edited `SKILL.md` does not
 reload in this session, so do not verify by re-triggering it. An edited hook
