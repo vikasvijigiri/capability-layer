@@ -5,6 +5,8 @@ be put into a product repository without knowing a filesystem path.
 
 **Source spec:** `docs/specs/2026-08-08-pip-package-design.md`
 
+**Slug:** rebuild-capability-layer
+
 **Architecture:** Carrier, not library. The wheel holds the payload; `uaios
 install` copies it into the target's working tree, which is where `.claude/` has
 to live for hooks to resolve and for a team to share it. Runtime is unchanged.

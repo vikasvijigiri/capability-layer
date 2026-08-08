@@ -41,6 +41,12 @@ import urllib.request
 DEFAULT_TIMEOUT = 60
 POLL_INTERVAL = 0.5
 
+# Gateway statuses that mean "the thing behind me is not ready", as opposed to an
+# answer from the application. Kept narrow on purpose: a 500 is the app's own
+# reply and retrying it only delays the same failure, while a 404 means the route
+# does not exist and will not start existing.
+RETRYABLE_STATUS = frozenset({502, 503, 504, 429})
+
 
 def kill_tree(proc: subprocess.Popen) -> None:
     """Kill the server and anything it spawned.
@@ -118,8 +124,19 @@ def main() -> int:
                       file=sys.stderr)
                 return 1
             status, body = probe(args.url)
-            if status is not None:
+            # A response is not the same as THE response. `status is not None`
+            # used to break the loop, so a proxy answering 502 while the backend
+            # was still warming ended the poll at second one with the whole
+            # timeout unspent -- and reported it as "expected 200, got 502",
+            # which reads as a broken deploy rather than an impatient check.
+            #
+            # These four are the gateway's way of saying "not yet". Anything else,
+            # including a 500 from the app itself, is an answer and is taken as
+            # one: retrying a real error just delays the same failure.
+            if status is not None and status not in RETRYABLE_STATUS:
                 break
+            if status is not None:
+                print(f"  {status} -- retrying, {deadline - time.time():.0f}s left")
             time.sleep(POLL_INTERVAL)
 
         if status is None:

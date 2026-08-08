@@ -125,7 +125,11 @@ def analyze(text: str, exists=None, slug: str = "") -> list[dict]:
 
 
 def plan_text(root: Path, slug: str) -> tuple[Path | None, str]:
-    path = _rs.plan_path(root, slug)
+    # `plan_path` returns (path, why) since 2026-08-08 -- it had to, because
+    # "no plan exists" and "plans exist and none is this unit's" were the same
+    # answer and that hid an approved plan from the state engine. This caller
+    # wants only the path; the reason is `resume.py`'s to report.
+    path, _why = _rs.plan_path(root, slug)
     if path is None:
         return None, ""
     try:

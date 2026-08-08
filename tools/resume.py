@@ -166,14 +166,62 @@ def slug_from_branch(branch: str) -> str:
     return branch
 
 
-def plan_path(root: Path, slug: str) -> Path | None:
-    """The newest plan file for this slug, or None.
+# A plan may name the unit of work it belongs to, so its filename does not have
+# to encode it. `writing-plans` emits this line.
+SLUG_DECLARATION = re.compile(r"(?im)^\*\*Slug:\*\*\s*`?([a-z0-9][a-z0-9._-]*)`?\s*$")
 
-    Newest by name, which sorts correctly because the convention is a leading
-    ISO date. A replanned unit therefore reads its latest plan, not its first.
+
+def plan_candidates(root: Path) -> list[Path]:
+    """Every plan file, README excluded. Sorted, so selection is deterministic."""
+    plans = root / PLANS_DIR
+    if not plans.is_dir():
+        return []
+    return sorted(p for p in plans.glob("*.md") if p.name.lower() != "readme.md")
+
+
+def plan_path(root: Path, slug: str) -> tuple[Path | None, str]:
+    """(the plan for this unit, why that one). Newest wins within a match class.
+
+    Two ways a plan belongs to a unit, checked in that order:
+
+      1. It DECLARES the unit -- `**Slug:** checkout-retry` in its header.
+      2. Its filename contains the slug -- the original convention.
+
+    Declaration first, because the filename convention breaks the moment a plan
+    is named after the feature while the branch is named after something else.
+    That is not hypothetical: this repository's own branch is
+    `rebuild-capability-layer` and its approved plan is
+    `2026-08-08-pip-package.md`, so the glob matched nothing and `resume.py`
+    reported the unit as having NO PLAN -- while the plan sat in `docs/plans/`,
+    approved, with Gate 1 already passed.
+
+    The reason string matters as much as the path. "no plan exists" and "three
+    plans exist and none of them is this unit's" are different facts, and
+    collapsing them is what made the bug silent: the state line said `PLANNING`,
+    which is exactly what a fresh repository says.
     """
-    matches = sorted((root / PLANS_DIR).glob(f"*{slug}.md"))
-    return matches[-1] if matches else None
+    candidates = plan_candidates(root)
+    if not candidates:
+        return None, "no plan file exists"
+
+    declared = []
+    for path in candidates:
+        try:
+            head = path.read_text(encoding="utf-8", errors="ignore")[:4000]
+        except OSError:
+            continue
+        found = SLUG_DECLARATION.search(head)
+        if found and found.group(1) == slug:
+            declared.append(path)
+    if declared:
+        return declared[-1], "declared **Slug:**"
+
+    named = [p for p in candidates if slug and slug in p.stem]
+    if named:
+        return named[-1], "filename contains the slug"
+
+    return None, (f"{len(candidates)} plan(s) exist, none for slug {slug!r} -- "
+                  f"add `**Slug:** {slug}` to the right one, or use --slug")
 
 
 def plan_body_hash(text: str) -> str:
@@ -231,7 +279,7 @@ def gather_facts(root: Path, slug: str | None = None) -> dict:
     if not slug:
         slug = slug_from_branch(branch) if branch else ""
 
-    plan = plan_path(root, slug) if slug else None
+    plan, plan_reason = plan_path(root, slug) if slug else (None, "no slug")
     plan_text = ""
     if plan is not None:
         try:
@@ -312,6 +360,11 @@ def gather_facts(root: Path, slug: str | None = None) -> dict:
         "branch": branch,
         "plan_exists": plan is not None,
         "plan_path": str(plan.relative_to(root)) if plan is not None else None,
+        # WHY that plan, or why none. "no plan file exists" and "plans exist and
+        # none is this unit's" derive to the same state but are different
+        # problems, and reporting only the state is what hid the mismatch.
+        "plan_reason": plan_reason,
+        "plans_on_disk": len(plan_candidates(root)),
         "code_files": code_files,
         "recon_maps": recon_maps,
         "recon_exists": bool(recon_maps),
@@ -398,13 +451,16 @@ def state_line(facts: dict, state: str) -> str:
     """The one line the session-start hook prints. Kept short on purpose -- it is
     injected every session, so it is charged for every session."""
     pr = facts.get("pr_number")
+    orphan = ""
+    if not facts.get("plan_exists") and facts.get("plans_on_disk"):
+        orphan = f" | NOTE: {facts.get('plan_reason')}"
     return (
         f"slug={facts.get('slug') or '-'} "
         f"state={state} "
         f"branch={facts.get('branch') or '-'} "
         f"pr={pr if pr is not None else '-'} "
         f"attempt={facts.get('attempts', 0)}/{facts.get('max_attempts', MAX_ATTEMPTS)} "
-        f"next={NEXT_ACTION.get(state, '?')}"
+        f"next={NEXT_ACTION.get(state, '?')}{orphan}"
     )
 
 

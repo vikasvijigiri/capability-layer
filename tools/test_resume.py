@@ -325,6 +325,90 @@ check("brainstormer routes non-directional questions to a marker",
 check("writing-plans batches the markers into one question at the gate",
       "AskUserQuestion" in _plans and "One batch" in _plans)
 
+
+# --- which plan belongs to this unit -----------------------------------------
+#
+# The slug came from the FILENAME, so a plan named after its feature while the
+# branch was named after something else matched nothing -- and the engine then
+# reported the unit as having NO PLAN, which is the same answer a fresh
+# repository gives. Measured here on 2026-08-08: branch
+# `rebuild-capability-layer`, approved plan `2026-08-08-pip-package.md`, state
+# reported as RECON with Gate 1 already passed and the plan sitting in
+# docs/plans/.
+
+_r = Path(tempfile.mkdtemp())
+(_r / "docs" / "plans").mkdir(parents=True)
+
+
+def _plan(name: str, body: str) -> None:
+    (_r / "docs" / "plans" / name).write_text(body, encoding="utf-8")
+
+
+check("no plans at all is reported as exactly that",
+      rs.plan_path(_r, "anything") == (None, "no plan file exists"))
+
+_plan("README.md", "# plans\n")
+check("a README is not a plan", rs.plan_path(_r, "anything")[0] is None)
+
+_plan("2026-01-01-something-else.md", "# Plan\n\n**Goal:** x\n")
+_found, _why = rs.plan_path(_r, "checkout-retry")
+check("an unrelated plan does not become this unit's", _found is None)
+check("...and the reason distinguishes it from an empty directory",
+      "none for slug" in _why, _why)
+check("...naming how many exist, so it is not silently the fresh-repo answer",
+      "1 plan(s) exist" in _why, _why)
+
+_plan("2026-02-02-pip-package.md",
+      "# Plan\n\n**Goal:** y\n\n**Slug:** checkout-retry\n")
+_found, _why = rs.plan_path(_r, "checkout-retry")
+check("a plan that DECLARES the slug is found whatever it is called",
+      _found is not None and _found.name == "2026-02-02-pip-package.md", str(_found))
+check("...and says which rule matched", _why == "declared **Slug:**", _why)
+
+_plan("2026-03-03-checkout-retry.md", "# Plan\n\n**Goal:** z\n")
+_found, _why = rs.plan_path(_r, "checkout-retry")
+check("a declaration outranks the filename convention",
+      _found.name == "2026-02-02-pip-package.md" and _why == "declared **Slug:**",
+      f"{_found.name} via {_why}")
+
+(_r / "docs" / "plans" / "2026-02-02-pip-package.md").unlink()
+_found, _why = rs.plan_path(_r, "checkout-retry")
+check("...and the filename convention still works when nothing declares",
+      _found.name == "2026-03-03-checkout-retry.md"
+      and _why == "filename contains the slug", f"{_found.name} via {_why}")
+
+_plan("2026-04-04-checkout-retry.md", "# newer\n")
+check("the newest matching plan wins, so a replanned unit reads its latest",
+      rs.plan_path(_r, "checkout-retry")[0].name == "2026-04-04-checkout-retry.md")
+
+# The state line is the only thing the session-start hook prints, so a mismatch
+# that does not reach it is a mismatch nobody sees.
+_orphaned = facts(plan_exists=False, plans_on_disk=3,
+                  plan_reason="3 plan(s) exist, none for slug 'x'")
+check("an orphaned plan set is surfaced in the one line that gets printed",
+      "NOTE:" in rs.state_line(_orphaned, rs.derive_state(_orphaned)),
+      rs.state_line(_orphaned, rs.derive_state(_orphaned)))
+check("...and a repo with genuinely no plans stays quiet",
+      "NOTE:" not in rs.state_line(
+          facts(plan_exists=False, plans_on_disk=0), "PLANNING"))
+
+# The live repository must resolve its own approved plan -- but ONLY where there
+# is one to resolve. A freshly installed target has an empty `docs/plans/`, and
+# asserting otherwise there made a correct install report a red suite. That is the
+# third time a suite written here only passed at home; the layer travels, so its
+# checks have to ask whether they apply.
+_live_branch = rs.slug_from_branch(
+    rs._git(ROOT, "rev-parse", "--abbrev-ref", "HEAD")[1] or "")
+if rs.plan_candidates(ROOT) and _live_branch:
+    _live_plan, _live_why = rs.plan_path(ROOT, _live_branch)
+    if _live_plan is not None:
+        check("this repository resolves its own plan", True)
+    else:
+        print(f"NOTE: no plan declares slug {_live_branch!r} here ({_live_why}). "
+              f"Not a failure -- a branch may legitimately carry no plan.")
+else:
+    print("NOTE: no plans on disk, so the live-resolution case does not apply")
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

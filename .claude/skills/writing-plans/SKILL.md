@@ -158,6 +158,8 @@ Use a stable, descriptive feature name. The document MUST begin with:
 
 **Source spec:** [path to the approved spec]
 
+**Slug:** [the unit of work, matching the branch — see below]
+
 **Architecture:** [the chosen approach and why it fits the existing system]
 
 **Tech stack and constraints:** [versions, boundaries, conventions, and non-goals]
@@ -168,6 +170,14 @@ Use a stable, descriptive feature name. The document MUST begin with:
 ## Tasks
 ...
 ```
+
+**`**Slug:**` is machine-read and is not decoration.** `tools/resume.py` keys
+every derived fact off one slug — the plan, `refs/uaios/green/<slug>`, the attempt
+ledger — and it took the slug from the FILENAME until 2026-08-08. A plan named
+after its feature while the branch is named after something else therefore matched
+nothing, and the engine reported the unit as having no plan at all: the same
+answer a fresh repository gives. Declare the slug and the filename is free to say
+what the plan is about.
 
 Keep the plan self-contained. An engineer who has not participated in the
 conversation should be able to execute each task without guessing what a path,

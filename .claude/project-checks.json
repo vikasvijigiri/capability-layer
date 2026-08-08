@@ -41,5 +41,7 @@
   "timeout": 300,
   "max_files": 25,
   "build": "python tools/test_package.py",
-  "_why_build": "The slow tier resolved ZERO checks until 2026-08-08, and `run_checks --tier slow` printed `PASS: no checks detected` -- a green that asserted nothing about a tier whose whole job is proving the artifact works. This is its first real member: it builds the wheel, reads the built zip rather than the config that produced it, installs it into a clean venv and then into a fresh repo, and requires THAT repo's own tier to come back green. Slow tier and not fast because it creates two virtualenvs; the fast tier gates every auto-commit and must stay in seconds."
+  "_why_build": "The slow tier resolved ZERO checks until 2026-08-08, and `run_checks --tier slow` printed `PASS: no checks detected` -- a green that asserted nothing about a tier whose whole job is proving the artifact works. This is its first real member: it builds the wheel, reads the built zip rather than the config that produced it, installs it into a clean venv and then into a fresh repo, and requires THAT repo's own tier to come back green. Slow tier and not fast because it creates two virtualenvs; the fast tier gates every auto-commit and must stay in seconds.",
+  "smoke": "python tools/test_smoke.py",
+  "_why_smoke": "tools/smoke.py is the only check that starts a process, and it had never been exercised by anything. This boots a real server that answers 503 for three seconds and then 200, which is the exact shape the fix addresses: the poll loop treated ANY response as the answer, so a warming backend behind a proxy failed at second one with the whole timeout unspent. Slow tier because it spawns processes and binds ports."
 }
