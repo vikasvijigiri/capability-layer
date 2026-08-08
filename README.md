@@ -12,44 +12,97 @@ There is no application code here. This repository *is* the layer.
 |---|---|
 | **Two gates, and only two** | the finished plan, and the shipment approval. Both asked with `AskUserQuestion` so approval is a click, not an inference. Everything between them is automated |
 | **Resume from anywhere** | `tools/resume.py` derives the state from git facts. Nothing is stored, so nothing goes stale — it survives a cleared context, a crash, a week away |
+| **Enter a repo it has never seen** | `tools/recon.py` maps an unread codebase into disjoint subsystems and locates what is half-built, so the chain can pick up work rather than restart it |
 | **Bounded self-repair** | `tools/loop.py` classifies a failure before spending anything on it. Infrastructure noise is retried; a real defect gets three attempts; a security finding gets none |
 | **Green is a fact, not a claim** | every completion statement is backed by output from a check that actually ran |
+
+## Install it into your repo
+
+```bash
+pip install git+https://github.com/<owner>/capability-layer
+capability-layer install --into .        # `cl` is the same command, shorter
+```
+
+The package is a **carrier, not a library**. `.claude/` has to live in your
+repository's working tree and be committed there — that is where hooks resolve by
+path and where your team reads the skills they are governed by. Nothing is ever
+imported from `site-packages` at runtime.
+
+```bash
+cl install --into . --dry-run   # writes nothing, prints every path
+cl upgrade --into .             # refuses to overwrite anything you edited
+cl verify                       # the full tier, in your repo
+```
+
+`upgrade` names every file it kept rather than overwriting it; `--force` is how
+you say otherwise.
+
+Working from a clone instead? `python .claude/install.py --into <dir>` does the
+same thing, and everything else here runs with Python 3.11+ and git alone.
 
 ## Start here
 
 ```text
 python tools/run_checks.py --tier all --require-test   # is the tree green
 python tools/resume.py                                 # where is this work
+python tools/recon.py                                  # what is this repo
 python tools/loop.py                                   # what to do about a failure
+python tools/parallel_groups.py <plan>                 # which tasks may run at once
 ```
-
-No install step. Everything is Python 3.11+ and git.
 
 ## How a change moves
 
 ```text
-task-brief → brainstormer → writing-plans →[GATE 1]→ executing-plans
-    → verifying-work → no-slop → code-review → delivering →[GATE 2]→ releasing
-    → knowledge-manager
+                    ┌─ approach settled ──→ do the change ─┐
+repo-recon → task-brief                                    ├→ verifying-work
+                    └─ approach open ──→ brainstormer ──┐   │
+                                                        ↓   │
+                                        writing-plans →[GATE 1]→ executing-plans
+                                                                        │
+     ┌──────────────────────────────────────────────────────────────────┘
+     └→ verifying-work → no-slop → code-review → delivering
+                                                     └→[GATE 2]→ releasing
+                                                                    └→ knowledge-manager
 ```
 
-`.claude/workflow.md` owns that order and is the file to read before adding a
-stage. Each skill states its own triggers and handoff; depth that used to be a
-separate skill now lives in `<skill>/references/` and loads only when the task
-calls for it.
+**The numbers in `workflow.md` are labels, not a sequence.** `task-brief` and
+`brainstormer` are alternatives — one question decides which, *is the approach
+settled* — and neither reaches `writing-plans` directly, because six lines is not
+a spec. `repo-recon` runs only when the repository is unread. `releasing` runs
+only when there is somewhere to deploy.
+
+`.claude/workflow.md` §Entry owns that rule and is the only place it is stated.
+Read it before adding a stage. Each skill states its own triggers and handoff;
+depth that used to be a separate skill now lives in `<skill>/references/` and
+loads only when the task calls for it.
 
 ## Layout
 
 | Path | What it is |
 |---|---|
-| `.claude/skills/` | the thirteen skills, one directory each |
+| `.claude/skills/` | the 14 skills, one directory each |
+| `.claude/agents/` | 11 subagents — the read-only fan-out set, plus one implementer |
 | `.claude/hooks/` | what fires automatically — checkpoints, secret scan, branch guard, state report |
-| `.claude/commands/` | slash commands, including `/verify`, `/save` and `/publish` |
+| `.claude/commands/` | the 12 slash commands, including `/verify`, `/save` and `/publish` |
 | `.claude/constitution.md` | seven articles every plan ticks or justifies |
-| `.claude/workflow.md` | stage → owner → artefact, and the `[state:*]` blocks the session-start hook renders |
-| `tools/` | `run_checks.py`, `resume.py`, `loop.py`, `analyze.py`, and the suites that keep all of it honest |
+| `.claude/workflow.md` | stage → owner → artefact, the entry rule, and the `[state:*]` blocks the session-start hook renders |
+| `.claude/install.py` | copies the layer into another repository; merges `settings.json`, never overwrites a decision |
+| `tools/` | `run_checks.py`, `resume.py`, `loop.py`, `recon.py`, `parallel_groups.py`, and the 25 suites that keep all of it honest |
+| `capability_layer/` | the console entry points; `pyproject.toml` builds the wheel |
 | `decisions/` | dated ADRs for the choices that were not obvious |
 | `templates/`, `guide/` | how to author a skill, hook, command or workflow here |
+
+## Parallelism is computed, not assumed
+
+Concurrency is licensed by a property of the plan rather than by judgement.
+`tools/parallel_groups.py` reads each task's declared `Files:` and `Depends on:`
+and prints rounds; tasks in a round have disjoint file sets and no dependency
+between them. It **refuses a plan rather than guessing** — an undeclared file set
+or a dependency written as prose is unschedulable, because the convenient reading
+of a missing dependency is a concurrent dispatch over ordered work.
+
+Migrations, lockfiles and CI config get a round to themselves: the conflict is in
+the resource, not the path.
 
 ## The rule the rest follows
 
@@ -60,3 +113,18 @@ it says so.
 
 `AGENTS.md` carries the same contract for non-Claude hosts, and
 `harnesses.json` maps the canonical paths.
+
+## What is not proven yet
+
+Stated here rather than discovered later:
+
+- **The chain has never run end to end on a product.** No approved plan has gone
+  from spec to release in this repository. Both gates work; neither has fired in
+  anger.
+- **The slow tier resolves zero checks.** `audit` is `false` by decision and there
+  is no build, e2e or smoke command, so *green* currently means lint, typecheck
+  and unit tests. `tools/smoke.py` has never probed a running process.
+- **Skill trigger rates are unmeasured.** `tools/eval_triggers.py` holds 168
+  queries across all 14 skills and the harness is ready; no live run has been paid
+  for, so "it triggers" rests on description properties the suite checks rather
+  than on a measured rate.

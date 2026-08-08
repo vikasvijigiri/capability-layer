@@ -34,9 +34,21 @@ ROOT = Path(__file__).resolve().parents[1]
 HOOKS_DIR = ROOT / ".claude" / "hooks"
 
 # Prose that is checked. Anything a human or the model reads as instruction.
+#
+# The root `README.md` was NOT here until 2026-08-08, and it is the one file most
+# readers see first. It claimed "the thirteen skills" while there were fourteen,
+# and drew the entry as a linear `task-brief → brainstormer → writing-plans` chain
+# months after those became alternatives. Both were found by reading, not by this
+# suite -- and when the count was deliberately broken to 13 as a test, the suite
+# still exited 0, because the file was never scanned.
+#
+# `AGENTS.md` joins it for the same reason: it is the contract every non-Claude
+# host reads, so a stale claim there is wrong for every harness at once.
 SOURCES = [
     *(ROOT / ".claude").rglob("*.md"),
     ROOT / "CLAUDE.md",
+    ROOT / "README.md",
+    ROOT / "AGENTS.md",
     ROOT / "tools" / "README.md",
 ]
 
