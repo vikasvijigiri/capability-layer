@@ -128,7 +128,7 @@ brief, so an un-handed-off one is simply forgotten.
 
 `.claude/workflow.md` **Entry** owns which stage runs when, including why neither
 option is `writing-plans`. It is stated there and not repeated here — this file
-said it twice on its own until 2026-08-08, once in this section and once in
+once said it twice on its own, in this section and again in
 Routing, and two copies of one rule is how they come to disagree.
 
 ## Routing

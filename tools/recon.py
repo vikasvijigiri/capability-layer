@@ -206,8 +206,8 @@ def stack_of(root: Path, files: list[Path]) -> dict:
 def scan_unfinished(root: Path, files: list[Path]) -> tuple[dict, list[dict]]:
     """Count each marker kind and locate the first 40, so the report is actionable.
 
-    Only files with a code suffix are read. A TODO in a vendored changelog is
-    noise, and reading a 4MB bundle to find one is worse than noise.
+    Only files with a code suffix are read. A stray marker in a vendored
+    changelog is noise, and reading a 4MB bundle to find one is worse than noise.
     """
     counts: Counter[str] = Counter()
     hits: list[dict] = []

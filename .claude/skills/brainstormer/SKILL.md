@@ -28,7 +28,7 @@ chain has exactly two places that stop and wait for a person — the finished pl
 at the end of `writing-plans`, and the shipment approval in `releasing`. This is
 neither.
 
-It carried ten `AskUserQuestion` calls until 2026-08-08, defended as "not gates,
+It once carried ten `AskUserQuestion` calls, defended as "not gates,
 they only ask which direction". That distinction is real and it did not survive
 contact: to the person being interrupted, a blocking question is a blocking
 question, and ten of them before a single artefact exists is the opposite of a
@@ -118,7 +118,7 @@ requirement readable two ways. Fix inline, don't re-review.
 **9. Say where it landed, and keep going.** One line — the path, the direction
 chosen in one sentence, and the count of unresolved markers:
 
-> Spec at `docs/specs/2026-08-08-offline-edits-design.md`. Chose queued writes
+> Spec at `docs/specs/YYYY-MM-DD-offline-edits-design.md`. Chose queued writes
 > over read-only; 2 `[NEEDS CLARIFICATION]` markers for Gate 1.
 
 **Do not stop and wait for a reply.** This step used to say "Ask, then wait",

@@ -10,7 +10,7 @@ isolation: worktree
 only agent here that writes files, and "never two in parallel" was the rule
 precisely because two writers in one checkout corrupt each other.
 
-That rule was replaced on 2026-08-07 by `tools/parallel_groups.py`, which decides
+That rule was replaced by `tools/parallel_groups.py`, which decides
 concurrency from the plan's declared file sets instead of banning it outright.
 Isolation covers the two-writers half; the scheduler covers the half isolation
 does not -- frozen interfaces and shared surfaces like lockfiles and migrations,

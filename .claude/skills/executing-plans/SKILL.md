@@ -260,7 +260,7 @@ one file is a conflict you caused, so concurrency is licensed by declared
 disjointness rather than by judgement — and refused when the declaration is
 missing.
 
-This replaced a flat "never two at once" on 2026-08-07. The old rule's reason was
+This replaced a flat "never two at once". The old rule's reason was
 right and its remedy was not: it cost a round per task forever, and it was a rule
 rather than a mechanism. `task-implementer` already carried `isolation: worktree`
 for exactly this.

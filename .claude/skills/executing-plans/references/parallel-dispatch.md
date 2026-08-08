@@ -45,7 +45,7 @@ whole lockfile. `parallel_groups.py` gives these a round to themselves.
 ## Running it
 
 ```bash
-python tools/parallel_groups.py docs/plans/2026-08-07-thing.md
+python tools/parallel_groups.py docs/plans/YYYY-MM-DD-thing.md
 ```
 
 Exit 0 means schedulable. Anything else names the task and what it is missing —

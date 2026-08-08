@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Slop checks — the mechanically decidable subset, at two scopes.
 
-    python tools/test_no_slop.py                 # --scope layer  (default)
-    python tools/test_no_slop.py --scope repo    # everything git tracks
+    python tools/test_no_slop.py                  # --scope repo (default)
+    python tools/test_no_slop.py --scope layer    # .claude/ only
+    python tools/test_no_slop.py --scope portability   # safe to install elsewhere?
 
 Why two scopes
 --------------
@@ -250,11 +251,17 @@ def check_hook_spawn_stdin() -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
+    # `repo`, not `layer`. The default decides what a bare invocation sweeps in
+    # SOMEBODY ELSE'S repository, and there the layer is a guest -- sweeping it
+    # instead of the product answers a question nobody asked, while reporting
+    # clean about code it never read. This repo is the exception, not the rule,
+    # and `.claude/project-checks.json` passes `--scope layer` explicitly to say
+    # so.
     ap.add_argument("--scope", choices=("layer", "repo", "portability"),
-                    default="layer",
-                    help="layer = .claude/ only (default); repo = everything "
-                         "tracked; portability = is the layer safe to install "
-                         "into another repository")
+                    default="repo",
+                    help="repo = everything tracked (default); layer = .claude/ "
+                         "only; portability = is the layer safe to install into "
+                         "another repository")
     args = ap.parse_args()
 
     if args.scope == "portability":

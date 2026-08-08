@@ -173,7 +173,7 @@ Use a stable, descriptive feature name. The document MUST begin with:
 
 **`**Slug:**` is machine-read and is not decoration.** `tools/resume.py` keys
 every derived fact off one slug — the plan, `refs/uaios/green/<slug>`, the attempt
-ledger — and it took the slug from the FILENAME until 2026-08-08. A plan named
+ledger — and it once took the slug from the FILENAME. A plan named
 after its feature while the branch is named after something else therefore matched
 nothing, and the engine reported the unit as having no plan at all: the same
 answer a fresh repository gives. Declare the slug and the filename is free to say
