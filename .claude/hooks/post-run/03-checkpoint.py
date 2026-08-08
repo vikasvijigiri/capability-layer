@@ -37,7 +37,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from _hooklib import load_payload, write_log  # noqa: E402
+from _hooklib import load_payload  # noqa: E402
 
 CHECKPOINT_NS = "refs/checkpoints"
 MAX_CHECKPOINTS = 50
@@ -70,6 +70,10 @@ def prune(root):
 
 def main():
     payload = load_payload()
+    # Stop hooks can be re-entered while the runtime is continuing a stop
+    # decision. Never create a second checkpoint during that continuation.
+    if payload.get("stop_hook_active"):
+        return
     cwd = payload.get("cwd") or os.getcwd()
 
     root_proc = git(["rev-parse", "--show-toplevel"], cwd)
@@ -81,7 +85,6 @@ def main():
     # invent a root commit, which would put objects in a repo the user has not
     # yet chosen to populate.
     if git(["rev-parse", "--verify", "HEAD"], root).returncode != 0:
-        write_log("checkpoint.log", "CHECKPOINT-SKIP", {"reason": "unborn HEAD"})
         return
 
     tmp_index = tempfile.NamedTemporaryFile(prefix="ckpt-index-", delete=False)
@@ -116,8 +119,10 @@ def main():
         if git(["update-ref", ref, commit], root).returncode != 0:
             return
 
-        write_log("checkpoint.log", "CHECKPOINT",
-                  {"ref": ref, "commit": commit[:12], "pruned": prune(root)})
+        # The checkpoint ref IS the record -- `git for-each-ref` under
+        # CHECKPOINT_NS lists every one, with its commit and its time. A parallel
+        # `checkpoint.log` restated that less reliably and nothing read it.
+        prune(root)
     finally:
         try:
             os.unlink(tmp_index.name)

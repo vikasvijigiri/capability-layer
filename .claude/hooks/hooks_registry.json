@@ -1,41 +1,30 @@
 {
-  "_note": "Domain events and their subscriber scripts. Lifecycle wiring lives in .claude/settings.json; this file documents intent. Scripts read their payload via _hooklib.load_payload(), so both Claude Code (stdin) and tools/run_hook.py (HOOK_PAYLOAD) work.",
+  "_note": "Domain events and their subscriber scripts. Lifecycle wiring lives in .claude/settings.json; this file documents intent. Scripts read their payload via _hooklib.load_payload(), so both Claude Code (stdin) and a hand-set HOOK_PAYLOAD work. Every hook here ACTS or DENIES. Hooks whose only output was the name of a skill were deleted on 2026-08-04: hooks and skills are independent, a hook cannot invoke a skill, and a skill name written into hook source is an unvalidated second copy of a routing decision. Skills trigger from their own `description:` frontmatter.",
   "events": {
     "session-start": {
-      "description": "At session start; validates .claude/ structure and scaffolds knowledge docs",
+      "description": "At session start; loads the knowledge docs into context, then measures the repo against the branch point and renders the matching [state:<key>] block from workflow.md. Names no skill -- workflow.md owns what a state means.",
       "claude_code_event": "SessionStart",
       "subscribers": [
-        ".claude/hooks/session-start/01-env-check.py",
-        ".claude/hooks/session-start/02-bootstrap-docs.py"
-      ]
-    },
-    "pre-run": {
-      "description": "Before work starts on a turn; logs, routes capabilities, nudges task-intake",
-      "claude_code_event": "UserPromptSubmit",
-      "subscribers": [
-        ".claude/hooks/pre-run/01-log.py",
-        ".claude/hooks/pre-run/02-capability-router.py",
-        ".claude/hooks/pre-run/03-task-brief-nudge.py"
+        ".claude/hooks/session-start/02-bootstrap-docs.py",
+        ".claude/hooks/session-start/03-state-report.py"
       ]
     },
     "post-run": {
-      "description": "After a turn completes; audit, notify, checkpoint, doc-staleness check",
+      "description": "After a turn completes; snapshots recovery state, then commits the turn as a wip checkpoint if the artefact gates pass",
       "claude_code_event": "Stop",
       "subscribers": [
-        ".claude/hooks/post-run/01-audit.py",
-        ".claude/hooks/post-run/02-slack.py",
         ".claude/hooks/post-run/03-checkpoint.py",
-        ".claude/hooks/post-run/04-docs-sync.py"
+        ".claude/hooks/post-run/06-artifact-autocommit.py",
+        ".claude/hooks/post-run/07-layer-drift.py"
       ]
     },
     "pre-commit": {
-      "description": "Before a git commit/push finalizes; secrets, branch, review receipt, delivery gate",
+      "description": "Before a git commit/push finalizes; refuses credentials, protected-branch commits, and AI attribution in either the message or the target repo's configured author",
       "claude_code_event": "PreToolUse (Bash|PowerShell)",
       "subscribers": [
         ".claude/hooks/pre-commit/01-secret-scan.py",
         ".claude/hooks/pre-commit/02-branch-guard.py",
-        ".claude/hooks/pre-commit/03-review-gate.py",
-        ".claude/hooks/pre-commit/04-delivery-guard.py"
+        ".claude/hooks/pre-commit/03-attribution-guard.py"
       ]
     },
     "pre-edit": {
@@ -53,51 +42,10 @@
       ]
     },
     "on-artifact-create": {
-      "description": "When a new artifact is written; registers it, nudges hook self-tests",
-      "claude_code_event": "PostToolUse (Write, Edit)",
+      "description": "After a hook script is edited; demands it be fired against a real payload before being trusted",
+      "claude_code_event": "PostToolUse (Edit, Write)",
       "subscribers": [
-        ".claude/hooks/on-artifact-create/01-register.py",
         ".claude/hooks/on-artifact-create/02-hook-self-test-nudge.py"
-      ]
-    },
-    "on-error": {
-      "description": "When a tool call fails (user interrupts excluded)",
-      "claude_code_event": "PostToolUseFailure",
-      "subscribers": [
-        ".claude/hooks/on-error/01-log.py"
-      ]
-    },
-    "on-validate-fail": {
-      "description": "When a validator fails; self-filters failed tool calls down to validator commands",
-      "claude_code_event": "PostToolUseFailure",
-      "subscribers": [
-        ".claude/hooks/on-validate-fail/01-notify.py"
-      ],
-      "related_validators": [
-        "backend/oauth-validator",
-        "ai/hallucination-check",
-        "deployment/smoke-test"
-      ]
-    },
-    "on-deploy-failure": {
-      "description": "When an automated deploy fails (rollback candidate)",
-      "claude_code_event": "PostToolUseFailure",
-      "subscribers": [
-        ".claude/hooks/on-deploy-failure/01-rollback-notify.py"
-      ]
-    },
-    "on-human-approval-request": {
-      "description": "When a permission prompt is raised",
-      "claude_code_event": "Notification (permission_prompt)",
-      "subscribers": [
-        ".claude/hooks/on-human-approval-request/01-email-sim.py"
-      ]
-    },
-    "on-blueprint-promote": {
-      "description": "When a blueprint is promoted to canonical. No lifecycle event corresponds to this -- invoke via tools/run_hook.py",
-      "claude_code_event": null,
-      "subscribers": [
-        ".claude/hooks/on-blueprint-promote/02-git-tag.py"
       ]
     }
   }

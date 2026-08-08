@@ -14,10 +14,10 @@ forwarding a single-quoted argument to a native executable, silently turning
 JSON payloads into invalid ones. Either escape inner quotes with a backslash
 ('{\\"key\\":\\"value\\"}') or use `--file payload.json` to avoid the issue.
 """
+import os
+import subprocess
 import sys
 from pathlib import Path
-import subprocess
-import os
 
 ROOT = Path(__file__).resolve().parents[1]
 HOOKS_DIR = ROOT / '.claude' / 'hooks'
@@ -37,8 +37,11 @@ def run_event(event, payload):
         if s.suffix == '.py':
             p = subprocess.run([sys.executable, str(s)], env=env)
         else:
-            # try to execute with shell
-            p = subprocess.run([str(s)], env=env, shell=True)
+            # nosec B602 -- a non-.py hook is a shell script that only a shell can
+            # run, and `s` is a path this loop read out of `.claude/hooks/<event>/`.
+            # Anyone who can drop a file there can already run code. Annotated
+            # per-site so a new shell=True somewhere else still fails the lint.
+            p = subprocess.run([str(s)], env=env, shell=True)  # noqa: S602
         if p.returncode != 0:
             print('Hook failed:', s.name, 'exit', p.returncode)
             rc = p.returncode

@@ -1,10 +1,10 @@
 """
 SessionStart hook — global, runs once per session in every repo.
 
-Scope, by design: repository detection, one-time file scaffolding, and
-minimal context loading. Nothing here plans, writes source, reviews, or
-commits — that's the model's job during the actual session, not this
-deterministic script's.
+Scope, by design: repository detection, missing-scaffolding detection, and
+minimal context loading. Nothing here authors strategic documents, writes
+source, reviews, or commits — that's the model's job during the actual
+session, not this deterministic script's.
 
 Also subsumes the old inline "load HANDOFF.md" SessionStart command: this
 script loads HANDOFF.md itself (plus a few other minimal-context sources),
@@ -15,6 +15,11 @@ import json
 import os
 import re
 import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _hooklib import load_payload  # noqa: E402
 
 
 AI_APP_DEP_MARKERS = (
@@ -33,9 +38,9 @@ NOISE_DIRS = {
 }
 
 BOOTSTRAP_FILES = [
+    "README.md",
     "CLAUDE.md",
     "TASK.md",
-    "PLAN.md",
     "MEMORY.md",
     "HANDOFF.md",
     "LOG.md",
@@ -76,7 +81,7 @@ def detect_stack(root):
     pkg_json = read_json_if_file(os.path.join(root, "package.json"))
     if pkg_json is not None:
         languages.add("TypeScript" if exists("tsconfig.json") else "JavaScript")
-        deps = {}
+        deps: dict[str, str] = {}
         deps.update(pkg_json.get("dependencies", {}) or {})
         deps.update(pkg_json.get("devDependencies", {}) or {})
         for dep, label in (
@@ -93,7 +98,7 @@ def detect_stack(root):
     if exists("vercel.json") or os.path.isdir(os.path.join(root, ".vercel")):
         deployment = "Vercel"
     elif pkg_json is not None:
-        pkg_deps = {}
+        pkg_deps: dict[str, str] = {}
         pkg_deps.update(pkg_json.get("dependencies", {}) or {})
         pkg_deps.update(pkg_json.get("devDependencies", {}) or {})
         if "vercel" in pkg_deps:
@@ -176,7 +181,7 @@ def detect_stack(root):
                     monorepo_tool = f"multiple packages under {sub}/"
                     break
 
-    all_deps = {}
+    all_deps: dict[str, str] = {}
     if pkg_json is not None:
         all_deps.update(pkg_json.get("dependencies", {}) or {})
         all_deps.update(pkg_json.get("devDependencies", {}) or {})
@@ -369,28 +374,6 @@ entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
 """
 
-PLAN_MD_SKELETON = """# Plan
-
-<!-- Active implementation plan for the current task, if one exists. Overwrite in place.
-Execution Plan is a table, one row per step, and every row declares who executes it:
-Owner = a real registered skill/subagent/workflow name, Kind = skill|subagent|workflow|
-direct, Depends on = step numbers. Hooks are never Owners (they fire on events, a plan
-cannot invoke one). Use (resolve-at-runtime) when an owner honestly isn't knowable yet.
-Full spec: the PLAN.md section of knowledge-manager's formats.md. -->
-
-## Objective
-
-## Execution Plan
-
-| # | Step | Owner | Kind | Depends on |
-|---|------|-------|------|-----------|
-
-## Dependencies
-
-## Risks
-
-## Acceptance Criteria
-"""
 
 MEMORY_MD_SKELETON = """# Project Memory
 
@@ -434,9 +417,25 @@ ISSUES_MD_SKELETON = """# Issues
 
 <!-- Append-only, newest entry at the TOP, never rewrite old ones -- same discipline
 as LOG.md. One entry per incident (the whole diagnose/fix sequence), written by the
-error-recovery skill once a bounded recovery loop reaches a terminal state.
+Written once a bounded diagnose-fix-reverify loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
-of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
+one entry per incident, newest first. Not preloaded at SessionStart -- read on demand. -->
+"""
+
+README_MD_SKELETON = """# README
+
+<!-- Auto-bootstrapped stub. Fill in with a short project summary, how to run it,
+and any repository-specific conventions. -->
+
+## What this is
+
+## Getting started
+
+## Commands
+
+## Conventions
+
+## Notes
 """
 
 DECISIONS_README_SKELETON = """# Decisions
@@ -455,6 +454,17 @@ Rationale.
 
 ## Alternatives considered
 What else was on the table and why it lost.
+"""
+
+DOCS_PLANS_README_SKELETON = """# Plans
+
+Feature plans, delivery sequences, and implementation notes go in this
+folder. Create one file per feature under `docs/plans/`.
+"""
+
+DOCS_ARCHIVE_README_SKELETON = """# Archive
+
+Retired designs, archived decisions, and deprecated notes live here.
 """
 
 
@@ -514,14 +524,39 @@ def parse_handoff_status(handoff_path):
         text,
     )
     if tagged is not None:
-        return tagged.group(1).strip()
+        return _clip(tagged.group(1).strip(), HANDOFF_BUDGET, "HANDOFF.md")
     match = re.search(r"(?ms)^## Current Work\s*\n.*\Z", text)
     if match is None:
-        return text  # older/unrecognized format -- fall back to the whole file
-    return match.group(0).strip()
+        # Older/unrecognised format. Falling back to the whole file is right --
+        # something is better than nothing -- but it must still be budgeted, or
+        # an unmarked HANDOFF.md injects itself entirely.
+        return _clip(text, HANDOFF_BUDGET, "HANDOFF.md")
+    return _clip(match.group(0).strip(), HANDOFF_BUDGET, "HANDOFF.md")
 
 
-def parse_last_n_log_entries(log_path, n=5):
+# Character budgets for what this hook injects at session start.
+#
+# Measured 2026-08-02: the payload was 26,990 chars (~6,750 tokens) spent before
+# the user had typed anything, because both parsers below were uncapped -- five
+# whole LOG entries plus everything in HANDOFF.md from "Current Work" onward.
+# Long entries are good writing and bad context; the fix is a budget here, not
+# shorter entries.
+#
+# Truncation always names the file, so the full text stays one Read away. An
+# injected summary is a pointer, never a replacement.
+HANDOFF_BUDGET = 2400
+LOG_ENTRY_BUDGET = 700
+LOG_TOTAL_BUDGET = 2400
+LOG_ENTRIES = 3
+
+
+def _clip(text, budget, what):
+    if len(text) <= budget:
+        return text
+    return text[:budget].rstrip() + f"\n[... clipped, Read {what} for the rest]"
+
+
+def parse_last_n_log_entries(log_path, n=LOG_ENTRIES):
     if not os.path.isfile(log_path):
         return ""
     with open(log_path, encoding="utf-8") as f:
@@ -530,15 +565,15 @@ def parse_last_n_log_entries(log_path, n=5):
     entries = []
     i = 1
     while i < len(parts) - 1:
-        entries.append(parts[i] + parts[i + 1])
+        entries.append(_clip(parts[i] + parts[i + 1], LOG_ENTRY_BUDGET, "LOG.md"))
         i += 2
-    return "".join(entries[:n])
+    return _clip("".join(entries[:n]), LOG_TOTAL_BUDGET, "LOG.md")
 
 
 def _parse_env_file(path):
     """Return {key: value} for non-comment lines. Values are never logged
     or surfaced anywhere -- only key names and whether a value is blank."""
-    values = {}
+    values: dict[str, str] = {}
     if not os.path.isfile(path):
         return values
     with open(path, encoding="utf-8") as f:
@@ -584,32 +619,21 @@ def list_decisions(root):
 
 
 def main():
+    # Consume the standard Claude Code payload even though this hook's current
+    # policy is identical for startup, resume, and compact events.
+    load_payload()
     root = find_git_root(os.getcwd())
     if root is None:
         return
 
-    stack = detect_stack(root)
-    repo_name = os.path.basename(root)
-    created = []
-
-    skeletons = {
-        "CLAUDE.md": claude_md_skeleton(repo_name, stack),
-        "TASK.md": TASK_MD_SKELETON,
-        "PLAN.md": PLAN_MD_SKELETON,
-        "MEMORY.md": MEMORY_MD_SKELETON,
-        "HANDOFF.md": HANDOFF_MD_SKELETON,
-        "LOG.md": LOG_MD_SKELETON,
-        "ISSUES.md": ISSUES_MD_SKELETON,
-    }
-    for name in BOOTSTRAP_FILES:
-        if write_if_missing(os.path.join(root, name), skeletons[name]):
-            created.append(name)
-
-    decisions_dir = os.path.join(root, "decisions")
-    if not os.path.isdir(decisions_dir):
-        os.makedirs(decisions_dir, exist_ok=True)
-    if write_if_missing(os.path.join(decisions_dir, "README.md"), DECISIONS_README_SKELETON):
-        created.append("decisions/README.md")
+    missing_docs = [
+        name for name in BOOTSTRAP_FILES
+        if not os.path.isfile(os.path.join(root, name))
+    ]
+    missing_dirs = [
+        name for name in ("decisions", "docs", "docs/plans", "docs/archive")
+        if not os.path.isdir(os.path.join(root, name))
+    ]
 
     missing_env_keys = check_env_setup(root)
 
@@ -622,11 +646,13 @@ def main():
             + ". Remind the user at a convenient point (not necessarily now) -- "
             "never fill these in yourself, they're the user's own credentials."
         )
-    if created:
+    if missing_docs or missing_dirs:
         sections.append(
-            "--- Repo bootstrap (auto) ---\n"
-            f"Created missing doc scaffolding: {', '.join(created)}. "
-            "These are placeholder stubs -- fill in with real project specifics as work happens."
+            "--- Documentation drift detected (read-only) ---\n"
+            f"Missing strategic documents: {', '.join(missing_docs) or 'none'}. "
+            f"Missing directories: {', '.join(missing_dirs) or 'none'}. "
+            "Route the repair to the documented owner; this hook never writes "
+            "strategic content."
         )
 
     claude_md_path = os.path.join(root, "CLAUDE.md")
@@ -634,8 +660,8 @@ def main():
         sections.append(
             "--- CLAUDE.md is still a stub ---\n"
             "This repo's CLAUDE.md hasn't been filled in yet (still the auto-generated "
-            "skeleton). Once there's enough context about this repo, consider running the "
-            "repo-onboarding skill to flesh it out with real project specifics."
+            "skeleton). Once there's enough context about this repo, fill it in with "
+            "real project specifics — commands, layout, gotchas, and hard rules."
         )
     # Full CLAUDE.md content is deliberately NOT injected here -- Claude Code
     # already auto-loads project CLAUDE.md on its own for every session, so
@@ -658,9 +684,13 @@ def main():
             + handoff_status
         )
 
-    last_logs = parse_last_n_log_entries(os.path.join(root, "LOG.md"), n=5)
+    # No explicit n: the budget lives with the parser, next to the other three
+    # constants. Passing n=5 here silently overrode LOG_ENTRIES and shipped four
+    # entries under a header claiming five -- caught by running the hook.
+    last_logs = parse_last_n_log_entries(os.path.join(root, "LOG.md"))
     if last_logs.strip():
-        sections.append("--- LOG.md (last 5 entries) ---\n" + last_logs)
+        sections.append(
+            f"--- LOG.md (last {LOG_ENTRIES} entries, clipped) ---\n" + last_logs)
 
     decision_files = list_decisions(root)
     if decision_files:

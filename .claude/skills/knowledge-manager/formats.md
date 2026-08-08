@@ -4,6 +4,13 @@ The per-file specification for the seven docs `knowledge-manager` owns. Load
 this only for the file(s) actually being written — `SKILL.md`'s routing table
 says which section applies.
 
+## README.md
+
+Stable project truth for a new human or agent: purpose, setup, usage,
+architecture, repository map, conventions, and links to deeper docs. Do not put
+active work, handoff state, historical entries, or capability-layer contracts
+here. Update only when the project itself changes.
+
 ## TASK.md
 
 Two sections, two different rules — this file is the accountability trail
@@ -29,7 +36,7 @@ standard Markdown rendering (no blank line = no break) — bullets are the
 only formatting that reliably renders each field on its own line across
 renderers, without relying on trailing-space hard-break tricks. This
 applies to every field-shaped block in this file (`TASK.md`'s two
-formats, `PLAN.md`, decision records) — anywhere a fixed set of labeled
+formats, decision records) — anywhere a fixed set of labeled
 fields gets written, use bullets, not consecutive plain lines. If any
 single field's content itself needs sub-structure (e.g. `Input` listing
 several files), nest a sub-bullet list under that field rather than
@@ -60,63 +67,6 @@ history and the original commit/PR already carry that detail; the archive
 entry only needs enough to answer what was asked and what shipped.)
 `workflow-orchestrator`'s Knowledge Update stage is what performs this move.
 
-## PLAN.md
-
-The active implementation plan, if the current task has one:
-
-```
-## Objective
-## Execution Plan
-## Dependencies
-## Risks
-## Acceptance Criteria
-```
-
-Overwrite in place. This is a persistent, checked-in doc — distinct from
-Claude Code's own ephemeral plan-mode file under `~/.claude/plans/`, which
-is a per-session scratch artifact for getting the user's approval and
-isn't checked into the repo.
-
-### Execution Plan — one row per step, dispatch declared
-
-`## Execution Plan` is a table, not prose. Every step names **who executes it**
-before execution starts, so the dispatch choice is reviewable up front and
-auditable afterwards instead of being decided silently in the moment:
-
-```
-| # | Step | Owner | Kind | Depends on |
-|---|------|-------|------|-----------|
-| 1 | Draft the PRD | requirements-analyst | skill | — |
-| 2 | Pick stack + write ADR | stack-selector | skill | 1 |
-| 3 | Implement API | backend-engineer | subagent | 2 |
-| 4 | Implement UI | frontend-engineer | subagent | 2 |
-| 5 | Review the diff | code-review | skill | 3, 4 |
-| 6 | Deploy | (resolve-at-runtime) | — | 5 |
-```
-
-- **Owner** — the exact skill, subagent, or workflow that runs the step. Use the
-  real registered name (it must exist in the Skill Registry, the agent roster, or
-  `workflows/`), never a description of one.
-- **Kind** — `skill` · `subagent` · `workflow` · `direct`. `direct` means the main
-  context does it inline with ordinary tools; use it rather than inventing an owner
-  for a step too small to delegate.
-- **Depends on** — step numbers only. Two steps with disjoint dependencies *and*
-  disjoint files/APIs/schemas are the parallel-safe set; this column is what makes
-  that judgment checkable instead of asserted.
-
-**Hooks are never Owners.** They fire on events regardless of what any plan says, so
-a plan cannot invoke one. If a hook backstops a step, mention it in the Step text
-(e.g. "commit — `git-delivery-guard` will scan"), never in the Owner column.
-
-**`(resolve-at-runtime)` is a legitimate entry**, for steps whose owner genuinely
-can't be known until an earlier step produces output. Mark it explicitly. An honest
-unknown is fine; a confidently wrong Owner is not.
-
-**The tag binds execution.** Whoever executes the plan dispatches as tagged, or
-states the deviation and why *before* acting on it — see `workflow-orchestrator`
-§4. A plan whose Owners are quietly ignored is worse than one with no Owner column,
-because it reads as a guarantee it isn't keeping.
-
 ## MEMORY.md
 
 Long-term project conventions only — the things a new engineer or a fresh
@@ -128,7 +78,7 @@ it doesn't belong here.
 (Distinct from Claude Code's own auto-memory index under
 `~/.claude/projects/<slug>/memory/` — same filename, different file,
 different purpose: that one is about the user across all their projects,
-this one is about this repo.)
+this one is about the current project.)
 
 ## HANDOFF.md
 
@@ -140,12 +90,19 @@ section). Update at the end of any work session that changed real state.
 
 **`<!-- session-context:start -->` / `<!-- session-context:end -->`** wrap
 everything from `Current Work` through `Open Questions` (`Completed` stays
-outside, above the markers). The Repository Bootstrap hook injects only
-what's between these markers at `SessionStart` — not the whole file. This is
-a hard boundary, not a heading-name heuristic: whatever gets added to this
-file in the future, keep it outside the markers unless it's genuinely live
-status, since anything inside gets paid for on every session start. Never
-remove the markers when editing this file.
+outside, above the markers).
+
+These are currently inert. `session-start/02-bootstrap-docs.py` used to inject
+what sits between them at every `SessionStart`. It has been unregistered before
+for force-feeding ~20,000 bytes into every session, which
+made a fresh session impossible. The script is still on disk and can be
+re-registered, so keep the markers and keep honouring the boundary — anything
+inside is what a future re-registration would pay for on every session start.
+
+**With the injection off, nothing reads this file automatically.** It is now
+purely a cross-boundary document: written for a teammate, a CI agent, another
+machine, or a session that has to open it deliberately. Write it for a reader
+with none of your context.
 
 ## LOG.md
 
@@ -175,11 +132,12 @@ Append-only, newest entry at the top (same discipline as `LOG.md`) — one entry
 - **Status**: `Resolved` | `Escalated` | `Abandoned`
 ```
 
-Written by `error-recovery` once a bounded diagnose-fix-reverify loop reaches a
-terminal state. Not preloaded at `SessionStart` (unlike `LOG.md`'s last-5-entries
-treatment) — same "filenames only, read on demand" handling `decisions/` already gets,
-since it's consulted on-demand by `error-recovery` grepping for a matching prior
-symptom, not read cover-to-cover every session.
+Written by `systematic-debugging` once its four-phase loop reaches a terminal state.
+Read on demand by grepping for a matching prior symptom, never cover to cover.
+
+The **Attempts** field is the point of the entry, not padding: it records what was
+tried and failed, which is what stops the next person re-running the same three
+dead ends.
 
 **Promotion rule to `MEMORY.md`**: after a `Resolved` entry, apply `MEMORY.md`'s own
 durability question verbatim — "would this still be true in three months, independent
@@ -191,7 +149,7 @@ hypothesis.
 ## Decision records (`decisions/`)
 
 One file per non-obvious, hard-to-reverse decision — not a restatement of
-something already obvious from the code or from `PLAN.md`. Lightweight
+something already obvious from the code. Lightweight
 ADR shape:
 
 ```

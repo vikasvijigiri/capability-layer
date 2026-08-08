@@ -12,7 +12,6 @@ Exit code is still set on a finding, so `run_hook.py` keeps working for any
 caller that reads it.
 """
 
-import json
 import os
 import re
 import subprocess
@@ -20,16 +19,23 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from _hooklib import command_of, deny, load_payload, write_log  # noqa: E402
+from _hooklib import (  # noqa: E402
+    SECRET_PATTERNS,
+    command_of,
+    deny,
+    is_git_commit,
+    load_payload,
+)
 
-SECRET_PATTERNS = [
-    re.compile(r"AKIA[0-9A-Z]{16}"),                        # AWS access key
-    re.compile(r"-----BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY-----"),
-    re.compile(r"ghp_[A-Za-z0-9]{36}"),                     # GitHub PAT
-    re.compile(r"(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*[\"'][^\"']{8,}[\"']"),
-]
+# SECRET_PATTERNS moved to _hooklib on 2026-08-02 so that
+# post-run/06-artifact-autocommit.py enforces the identical rule. Its commits
+# are made from a subprocess and never reach PreToolUse, so this hook cannot see
+# them -- and a second copy of these patterns would eventually diverge from the
+# one guarding the unattended path.
 
-COMMIT_RE = re.compile(r"\bgit\s+(?:-[^\s]+\s+)*commit\b")
+# `is_git_commit` from _hooklib, not a regex: `-C` takes a value and no
+# repetition can consume it, so the old pattern silently skipped the scan on
+# every `git -C <dir> commit`.
 DRY_RUN_RE = re.compile(r"--dry-run\b")
 
 
@@ -54,7 +60,7 @@ def main():
     # Registered on every shell call, so confirm this is really a commit.
     # A payload with no command came from run_hook.py, which only invokes this
     # hook when a commit is genuinely happening -- so let that through.
-    if command and (not COMMIT_RE.search(command) or DRY_RUN_RE.search(command)):
+    if command and (not is_git_commit(command) or DRY_RUN_RE.search(command)):
         return
 
     files = staged_files(payload)
@@ -69,16 +75,15 @@ def main():
         if any(p.search(text) for p in SECRET_PATTERNS):
             findings.append(path)
 
-    write_log("pre-commit-scan.log", "SCAN",
-              {"files_checked": files, "findings": findings})
-
     if findings:
         deny(
             "pre-commit secret scan flagged a likely credential in: "
             + ", ".join(findings)
             + ". Remove the secret and re-stage before committing."
         )
-        sys.exit(1)
+        # `deny()` emits the structured PreToolUse decision. Structured hook
+        # output must return 0; exit 2 is reserved for stderr-only blocking.
+        return
 
 
 if __name__ == "__main__":

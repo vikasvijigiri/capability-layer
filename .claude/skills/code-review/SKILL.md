@@ -1,56 +1,82 @@
 ---
-name: code-review
-model: opus
-description: Independent Staff Engineer review of a pending git diff — requirements fit, correctness, architecture, maintainability, security, performance, naming, test coverage. Use for "review this", "check my code", "is this ready", "can I ship this", "code quality check", "audit diff", "find bugs in diff", "pre-commit check", before every commit, push, PR or release, and when asked about pending or recent changes. Prefer this over your own read of the diff - an independent pass is the entire value, and it is the step time pressure deletes first. Do NOT use for typos or single-line fixes.
-user-invocable: true
-allowed-tools:
-  - Bash(git status:*)
-  - Bash(git diff:*)
-  - Bash(git log:*)
-  - Bash(git branch:*)
-  - Bash(npm run:*)
-  - Bash(yarn:*)
-  - Bash(pnpm:*)
-  - Bash(pytest:*)
-  - Bash(go test:*)
-  - Bash(go build:*)
-  - Bash(go vet:*)
-  - Read
-  - Grep
-provides: [review]
-requires: [implementation]
-produces_artifact: false
-retryable: true
+name: code-review
+description: Review the actual branch diff and return a verdict. Triggers include "review this", "check the diff", "threat model this", "check auth", "audit dependencies", "is this accessible", "why is this slow", "is this safe to merge". Do NOT use to implement fixes, to release, or to replace verification. Use this whenever a diff is about to be delivered, even if the user does not ask for a review.
+when_to_use: when a verified change needs an independent review
+effort: high
+model: sonnet
+disable-model-invocation: false
+allowed-tools: Read Grep Glob Bash Task
 ---
 
-# /code-review — Independent Diff Review
+# Code Review
 
-Independent audit of pending git diffs against `engineering-policy` standards. Focus strictly on changed lines and their direct context.
+Perform an independent, evidence-based review of the actual delivery surface.
+This skill is automated by the feature workflow. The only human decisions are
+plan approval before implementation and shipment approval before release.
 
-## Review Steps
+<HARD-GATE>
+Never report a review without reading the complete relevant diff, including
+untracked files. Never treat passing tests as a substitute for reading the diff.
+</HARD-GATE>
 
-### 1. Gather Diff State
-- Inspect `git status --porcelain`, `git diff --cached` (staged), and `git diff` (unstaged).
-- Check current branch (`git branch --show-current`). If empty diff, stop.
+## Steps
 
-### 2. Audit Core Dimensions
-- **Requirements Fit**: Verify change fulfills acceptance criteria without scope creep or missing requirements.
-- **Correctness**: Audit for logic bugs, unhandled nulls/exceptions, off-by-one errors, and broken contracts.
-- **Architecture**: Enforce layer boundaries, existing conventions, and `decisions/` ADR alignment.
-- **Maintainability & Slop**: Check for dead code, duplicate logic, misleading comments, and inconsistent formatting.
-- **Security**: Audit boundary validation, secrets exposure, and env var consistency (`.env.example`).
-- **Performance**: Flag non-trivial computational or query bottlenecks.
-- **Test Coverage**: Ensure meaningful test verification for changed functionality.
+1. Establish the surface: working tree for a local change, or
+   `git diff <merge-base> HEAD` for a branch/PR. Include `git status --porcelain`
+   so untracked files are not missed.
+2. Inspect correctness, security, silent failures, test quality, scope drift,
+   dependency risk, and repository policy violations.
+3. Report every finding with severity, `file:line`, defect, impact, and evidence.
+4. Return `passed: true` only when no blocking finding remains. Return
+   `passed: false` when repair is required. Do not edit, commit, push, merge, or
+   ask the user a mid-run question.
 
-### 3. Verification Execution
-- Run existing project build/lint/test commands (`npm test`, `pytest`, etc.). Never invent fake test passes. Report unverified items explicitly.
+For a large change, the workflow may dispatch `diff-reviewer` for independent
+correctness, security, test-quality, and scope passes; merge duplicate findings
+before applying recovery.
 
-### 4. Verdict & Receipt
-- **Reject**: If any blocking defect exists. State exact fix requirements.
-- **Pass**: Run review gate receipt recorder:
-  ```bash
-  python ".claude/hooks/pre-commit/03-review-gate.py" --record
-  ```
+## Lenses — load one only when the diff earns it
 
-### 5. Draft Commit / PR Message
-- Match existing repo commit style (`git log -n 5`). Draft commit/PR message. Do not run `git commit` or `git push` directly.
+Four specialist reviews were separate skills. Each cost its own
+description on every turn, for depth that applies to a minority of diffs. They
+are now references: same content, read on demand, nothing charged when unused.
+
+| The diff touches | Read |
+|---|---|
+| auth, secrets, personal data, external input, trust boundaries | `references/security-review.md` |
+| dependencies, lockfiles, CI config, build scripts | `references/supply-chain-audit.md` |
+| user-facing markup, forms, focus, colour, motion | `references/accessibility-audit.md` |
+| hot paths, queries, bundle size, startup, anything with a budget | `references/performance-engineering.md` |
+
+Pick by what changed, not by habit — reading all four on a typo fix is the cost
+this consolidation exists to remove. A lens that produces a finding reports it
+through the same severity/`file:line`/evidence format as everything else.
+
+**A high-severity security finding is never auto-waived**, whichever lens found
+it: it blocks, and `_hooklib.classify_failure` gives its class a budget of zero.
+
+When the security lens needs an independent pass rather than a reading, dispatch
+`security-reviewer`; it reports, this skill still owns the verdict.
+
+## Recovery
+
+The workflow sends failed findings to `systematic-debugging`, applies one
+bounded repair at a time, and runs this review again. A repeated root cause,
+security finding, scope escape, or exhausted repair budget blocks the run or
+returns it to the plan gate.
+
+## Next step
+
+On `passed: true`, hand off to `delivering`. On failure, hand off to
+`systematic-debugging`; never deliver unresolved findings.
+
+## Routing
+
+- Mandatory validator: actual diff inspection plus evidence for every review claim.
+- Terminal handoff: `delivering` on pass; `systematic-debugging` on failure.
+- This skill never owns shipment approval or repository side effects.
+
+## Success
+
+The result is a structured, reproducible verdict tied to the actual diff, with
+no unlocated findings and no unresolved blocking issue hidden by prose.

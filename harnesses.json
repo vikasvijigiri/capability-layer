@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "source_contract": "AGENTS.md",
+  "canonical_root": ".claude",
+  "execution_model": "host-managed",
+  "supported_hosts": [
+    "Claude Code",
+    "Codex",
+    "Gemini",
+    "VS Code agent"
+  ],
+  "policy": {
+    "single_source_of_truth": ".claude",
+    "no_parallel_sources": true,
+    "generated_projections_are_artifacts": false,
+    "all_hosts_must_read": [
+      "AGENTS.md",
+      ".claude/workflow.md"
+    ]
+  },
+  "canonical_paths": {
+    "skills": ".claude/skills",
+    "agents": ".claude/agents",
+    "commands": ".claude/commands",
+    "workflow_policy": ".claude/workflow.md",
+    "rules": ".claude/rules",
+    "hooks": ".claude/hooks",
+    "settings": ".claude/settings.json",
+    "local_settings": ".claude/settings.local.json",
+    "output_styles": ".claude/output-styles",
+    "agent_memory": ".claude/agent-memory",
+    "project_checks": ".claude/project-checks.json",
+    "baselines": "docs/baselines",
+    "pilot_fixtures": "docs/pilots",
+    "workflow_state": ".claude/workflow-state"
+  },
+  "adapters": {
+    "claude-code": {
+      "instruction_file": "CLAUDE.md",
+      "source_paths": "canonical_paths",
+      "skills_path": ".claude/skills",
+      "agents_path": ".claude/agents",
+      "commands_path": ".claude/commands",
+      "workflow_policy_path": ".claude/workflow.md",
+      "rules_path": ".claude/rules",
+      "hooks_path": ".claude/hooks",
+      "settings_path": ".claude/settings.json",
+      "status": "native-canonical"
+    },
+    "codex": {
+      "instruction_file": "AGENTS.md",
+      "source_paths": "canonical_paths",
+      "skills_path": ".claude/skills",
+      "agents_path": ".claude/agents",
+      "commands_path": ".claude/commands",
+      "workflow_policy_path": ".claude/workflow.md",
+      "rules_path": ".claude/rules",
+      "hooks_path": ".claude/hooks",
+      "settings_path": ".claude/settings.json",
+      "status": "canonical-source-with-optional-projection",
+      "hooks_note": "Codex does not auto-discover Claude lifecycle registration; invoke the canonical hook checks explicitly."
+    },
+    "generic-agent": {
+      "instruction_file": "AGENTS.md",
+      "source_paths": "canonical_paths",
+      "skills_path": ".claude/skills",
+      "agents_path": ".claude/agents",
+      "commands_path": ".claude/commands",
+      "workflow_policy_path": ".claude/workflow.md",
+      "rules_path": ".claude/rules",
+      "hooks_path": ".claude/hooks",
+      "settings_path": ".claude/settings.json",
+      "status": "canonical-source-with-optional-projection",
+      "hooks_note": "Generic hosts must invoke canonical hook checks through their own lifecycle API."
+    }
+  },
+  "runner_modes": {
+    "host-managed": "IDE agent executes the workflow using the repository contract; no provider API key is required.",
+    "dry-run": "Deterministic offline contract validation; no repository edits or model execution.",
+    "sdk-live": "Optional standalone Claude Agent SDK execution; requires provider credentials."
+  }
+}

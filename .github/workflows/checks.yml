@@ -1,0 +1,132 @@
+# Runs the same checks the local commit gate runs, on a machine that is not yours.
+#
+# The single property that matters here: this workflow does NOT list the checks.
+# It calls `.claude/hooks/_projectchecks.py`, the same resolver the auto-commit
+# and `/verify` call, so CI and local cannot disagree about what "the checks
+# pass" means. A workflow with its own copy of the command list is how a green
+# local run starts coexisting with a red pipeline.
+#
+# It calls the resolver as a library rather than through a CLI wrapper. A
+# `tools/run_checks.py` wrapper did that job until 2026-08-04 and was deleted with
+# the rest of the repo-root `tools/` directory -- the resolver was always the real
+# thing and the wrapper only parsed `--tier`. Inlining it keeps the property above
+# while leaving `.claude/` as the only directory the layer needs.
+#
+# Two jobs, matching the two tiers: `fast` on every push, `slow` only on pull
+# requests, because a production build and a browser suite cost minutes.
+
+name: checks
+
+on:
+  push:
+    branches-ignore: []
+  pull_request:
+  # The merge queue tests `target + everything ahead of you + your change` and
+  # merges only if THAT is green. Without this trigger the queue has no checks to
+  # wait for and merges untested combinations -- the single most common way the
+  # feature is misconfigured. Two PRs that are each green against the target can
+  # still break it together: one renames a function, the other adds a call to it.
+  merge_group:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fast:
+    name: lint · typecheck · test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The resolver reads `git log` and `git diff` against the base, which an
+          # unfetched shallow clone cannot answer.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Best-effort: a repo with no package.json simply skips this, and
+      # `tool_missing` skips any command whose executable is absent.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+        continue-on-error: true
+
+      - name: Install this repo's own tooling
+        # pyyaml is NOT optional here. `test_process_router.py` breaks out of its
+        # frontmatter loop on ImportError, so without it the skill and agent
+        # contract checks silently do not run and CI reports green on a layer
+        # nobody validated. Caught by the first real CI run, 2026-08-07.
+        run: python -m pip install --quiet ruff mypy pyyaml
+
+      - name: Run the fast tier
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          python - <<'PY'
+          import importlib.util as u, sys
+          spec = u.spec_from_file_location("pc", ".claude/hooks/_projectchecks.py")
+          pc = u.module_from_spec(spec); spec.loader.exec_module(pc)
+          ok, detail, ran_test = pc.run_checks(kinds=pc.FAST_KINDS)
+          print(("PASS" if ok else "FAIL"), detail, "| test ran:", ran_test)
+          sys.exit(0 if ok else 1)
+          PY
+
+  slow:
+    name: build · audit · e2e · smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Also on merge_group: the queue is the last point at which the slow tier can
+    # catch an integration break, and it is the only run that sees the actual
+    # merged result.
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+        continue-on-error: true
+
+      - name: Run the slow tier
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          python - <<'PY'
+          import importlib.util as u, sys
+          spec = u.spec_from_file_location("pc", ".claude/hooks/_projectchecks.py")
+          pc = u.module_from_spec(spec); spec.loader.exec_module(pc)
+          ok, detail, _ = pc.run_checks(kinds=pc.SLOW_KINDS)
+          print(("PASS" if ok else "FAIL"), detail)
+          sys.exit(0 if ok else 1)
+          PY
+
+  # The ONE required check. Branch protection names this job and nothing else, so
+  # adding or renaming a tier never means editing repository settings -- the
+  # failure mode where a check silently stops being required.
+  #
+  # `if: !cancelled()` is load-bearing: a skipped job counts as SUCCESS to
+  # GitHub, so a plain `needs:` would report green when its dependencies were
+  # skipped. Shape taken from rust-lang/rust-analyzer's ci.yaml.
+  #
+  # EVERY JOB ABOVE MUST BE LISTED IN `needs:`.
+  conclusion:
+    name: conclusion
+    needs: [fast, slow]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check that every dependency passed or was legitimately skipped
+        run: |
+          jq -C <<< '${{ toJson(needs) }}'
+          jq --exit-status 'all(.result == "success" or .result == "skipped")' \
+            <<< '${{ toJson(needs) }}'

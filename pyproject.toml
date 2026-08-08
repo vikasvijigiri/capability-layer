@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "capability-layer"
+version = "0.1.0"
+description = "A harness-neutral agent capability layer for software delivery: skills, hooks, commands and deterministic checks, with exactly two places a human is asked."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+keywords = ["claude", "agent", "sdlc", "capability-layer"]
+
+# pyyaml is a HARD dependency, not an optional one. `tools/test_process_router.py`
+# reads every skill's frontmatter through it, and its absence used to print a NOTE
+# and exit 0 having skipped every per-skill check -- a green that means nothing.
+# Declaring it here is half the fix; Task 3 is the other half.
+dependencies = ["pyyaml>=6"]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.5", "mypy>=1.8", "build>=1.0", "pip-audit>=2.7"]
+# The authoring references. 1,978 lines a target never loads, so they are an
+# extra rather than payload.
+docs = []
+
+[project.scripts]
+# The full name is what `pip install` and the wheel carry; `cl` exists
+# because "capability-layer verify" is a lot to type twenty times a day.
+# Both are the same entry point, so they cannot drift.
+capability-layer = "capability_layer.cli:main"
+cl = "capability_layer.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["capability_layer"]
+
+# The payload: what `capability-layer install` copies into a target repository. It is data,
+# not importable code -- `.claude/` has to live in the target's working tree for
+# hooks to resolve by path and for a team to share the skills through version
+# control. Nothing here is ever imported from site-packages at runtime.
+[tool.hatch.build.targets.wheel.force-include]
+# ONE entry, pointing at a tree `tools/stage_payload.py` produced from
+# `.claude/install.py:payload_files()`.
+#
+# It used to be eleven entries naming `.claude`, `tools` and the rest directly,
+# with an `exclude` list beside them. Hatchling's force-include IGNORES exclude
+# -- "force" means force -- so that wheel shipped `.claude/settings.local.json`,
+# which grants `Bash(git push:*)`, plus `project-checks.json` and this repo's
+# runtime hook state. The build succeeded and the wheel installed cleanly; only
+# reading the built artifact found it.
+#
+# Staging first means the build config has no filtering left to get wrong.
+#
+# `hatch_build.py` produces this tree DURING the build. It used to be a manual
+# `python tools/stage_payload.py` beforehand, which meant `pip install git+...`
+# failed on a fresh clone with "Forced include not found: build/payload" -- the
+# tree is gitignored, so only a checkout that had already built once had it.
+# A build step nobody can forget is the only kind that holds.
+"build/payload" = "capability_layer/payload"
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"
+
+[tool.hatch.build.targets.sdist]
+include = ["capability_layer", ".claude", "tools", "AGENTS.md", "harnesses.json",
+           "hatch_build.py",
+           "ruff.toml", "mypy.ini", "README.md", "templates/target-CLAUDE.md",
+           "docs/pilots", "docs/baselines", "CODEOWNERS",
+           ".github/workflows/checks.yml"]

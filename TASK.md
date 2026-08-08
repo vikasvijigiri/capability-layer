@@ -4,11 +4,105 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Decide whether `/skills-doctor` still has a job
+
+- **Status:** Not started — raised by a `no-slop` sweep on 2026-08-03
+- **Goal:** Decide whether `/skills-doctor` is retired, narrowed, or kept as is.
+- **Why now:** `tools/test_no_slop.py` and `tools/test_process_router.py` between
+  them now cover the static half of what the command checks — description budget,
+  YAML parse, `name:`/directory mismatch, loose `.md` files. Three owners of one
+  question is the Duplicate Knowledge smell, and the routing keyword
+  "skill layer health" already points at `no-slop` rather than at the command
+  whose own description uses that exact phrase.
+- **The part that is NOT duplicated,** and the reason this is a decision rather
+  than a deletion: `/skills-doctor` compares the files on disk against what
+  **actually rendered in the live session's skill listing**, which is truncated
+  against a token budget. No file-reading script can see that. A skill can be
+  valid on disk and absent from the listing on the exact turn that needed it —
+  that has happened here.
+- **Done check:** either the command is deleted and `CLAUDE.md`'s command list
+  updated, or its text is narrowed to the live-listing measurement with the
+  static checks removed and a pointer to the suites that own them.
+- **Out of scope:** changing what the suites check. They are green and correct.
+
+### Decide which capability owns layer retirement
+
+- **Status:** Done — `capability-layer-maintenance` owns capability-layer audits, contract changes, migration, and retirement.
+- **Goal:** Keep one owner for retiring or replacing capability-layer components.
+- **Output:** Replaced `skill-authoring`, migrated active references, added hook-policy enforcement, and verified the complete suite.
+- **Done check:** Skill routing, hook registration, hook policy, and the full all-tier suite pass.
+- **Out of scope:** Product-code changes or project-history updates owned by `knowledge-manager`.
+### Implement world-class SessionStart bootstrap scaffolding
+- **Status:** In Progress
+- **Goal:** Implement a SessionStart bootstrap loader that scaffolds project skeleton files and a minimal, maintainable `docs/` structure without creating unnecessary subfolders or a copied `AGENTS.md`.
+- **Constraints:** Keep the hook in `.claude/hooks/session-start/02-bootstrap-docs.py`; do not auto-create `AGENTS.md` or copy `CLAUDE.md` into it; prefer a root `docs/` plus only justified category subfolders; follow the hook creation guidance in `guide/how_to_create_hooks.md` and the file-role guidance in `templates/project_docs.md`.
+- **Inputs:** current `02-bootstrap-docs.py`, `.claude/settings.json`, `templates/project_docs.md`, `guide/how_to_create_hooks.md`, the repo’s existing docs layout, and the session-start contract tests.
+- **Outputs:** updated bootstrap loader script and a documented scaffolding policy for `docs/` and `decisions/`; placeholder files created only where appropriate; task brief recorded.
+- **Done Checks:** `python tools/test_session_start_contract.py` exits 0; the loader creates only the intended placeholders; the task brief remains in `TASK.md` and is ready to implement.
+- **Out of scope:** generating full content for the skeleton files, creating actual `.claude/agents/` definitions, or changing hooks outside SessionStart.
+
 ## Completed
 
 <!-- Append-only, newest entry at the top. Never delete or rewrite an
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
+
+### 2026-08-02 — Delete the process-compliance gates
+
+- **Goal**: Cut the three hooks that gate process compliance rather than artefact
+  correctness, because they had deadlocked against each other and blocked their
+  own maintenance work for five sessions.
+- **Output**: `pre-commit/03-review-gate.py`, `pre-commit/05-docs-required.py`,
+  `post-run/05-docs-gate.py` and `tools/test_docs_gates.py` deleted;
+  `settings.json` and `hooks_registry.json` down to 25 hooks; `test_hooks.py`
+  sections 4-5 removed; `code-review`, `delivering`, `executing-plans` and
+  `knowledge-manager` rewritten to stop instructing a script that no longer
+  exists; `/verify`, `CLAUDE.md`, `.claude/workflow.md`, `tools/README.md`
+  corrected from seven suites to six.
+- **Status**: Done — supersedes the 2026-08-01 entry below, which was accurate
+  when written. The deadlock it could not see: `03-review-gate.py` fingerprinted
+  the whole working tree, so writing the log entry `05-docs-required.py` demanded
+  invalidated the receipt `03-review-gate.py` demanded. Measured, not inferred.
+  Five comparable GitHub repos gate artefacts, none gates process.
+
+### 2026-08-01 — Review gate that always asks before a commit or PR
+
+- **Goal**: A `code-review` skill that reviews the pending diff or PR, reports
+  findings, and requires explicit user sign-off — where that sign-off is the only
+  thing that writes the receipt `03-review-gate.py` checks, so an unreviewed
+  commit or PR is always interrupted.
+- **Input**: `03-review-gate.py` (working gate, `--record` mode, content
+  fingerprinting); `04-delivery-guard.py` (mechanical checks, already emits an
+  unverifiable "was this reviewed" note per commit);
+  `.claude/hooks/state/review-receipts.json`, holding one stale receipt;
+  `git diff` / `gh pr diff` / the GitHub MCP for PR content.
+- **Output**: `.claude/skills/code-review/SKILL.md`; a `## code-review` entry in
+  `.claude/workflow.md`; current review-gate coverage extended to match PR
+  actions; coverage for the new trigger in `tools/test_hooks.py`.
+- **Constraints**: Extend `03-review-gate.py` to match `gh pr create` / PR
+  actions — today it matches only `git commit` and `git push`. Write the receipt
+  through the existing `--record` mode; the fingerprint scheme and receipts file
+  are unchanged. Never self-record: no findings still requires sign-off, or the
+  every-time ask is lost. Needs a routing entry (`test_process_router.py`
+  enforces it). Follow the superpowers SKILL.md shape — trigger-only description
+  under 500 chars, Red Flags, Common Mistakes.
+- **Done Checks**:
+  1. `echo '{"tool_name":"Bash","tool_input":{"command":"gh pr create"}}' | python .claude/hooks/pre-commit/03-review-gate.py`
+     returns `permissionDecision: ask` on a dirty tree. Today it is silent.
+  2. After `--record`, the same payload is silent; after any further edit it
+     returns `ask` again.
+  3. `python tools/test_hooks.py` and `python tools/test_process_router.py` both
+     exit 0, the router reporting `4 entries routed`.
+- **Out of Scope**: The `\claude\` Windows false-positive in
+  `04-delivery-guard.py` (separate pending item). The secret-scan `deny` —
+  untouched. Posting review comments back to GitHub. Deleting the stale receipt
+  beyond what `--record` overwrites. Reviving any other deleted skill.
+- **Result**: All three Done Checks pass. Also fixed a latent bug the brief did
+  not anticipate: the receipts file is tracked, so `--record` changed the very
+  fingerprint it had just recorded under, and every receipt self-invalidated.
+  The gate had never been able to pass. Receipts path is now excluded from all
+  fingerprint inputs.
+- **Status**: Done
 
 ### 2026-07-30 — Wire repo hooks into Claude Code lifecycle events
 - **Goal**: Make `.claude/hooks/` fire automatically instead of only when something
