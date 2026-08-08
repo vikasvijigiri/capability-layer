@@ -157,14 +157,11 @@ Structural findings are listed and left alone. Hand each one to the chain's
 entry, and **`.claude/workflow.md` §Entry decides which** — one question, *is the
 approach settled?* "Retire this dead document" is settled and needs a brief.
 "This skill overlaps its neighbour, so merge them or move the triggers" is not,
-and a brief
-written over an open question bakes in the first answer.
+and a brief written over an open question bakes in the first answer.
 
-This said `task-brief` unconditionally until 2026-08-08, which was wrong twice
-over: it restated a routing rule §Entry says it alone owns, and it restated only
-one of the two branches. The entry rule had already been found in seven places
-and cut back to one; this was the eighth, and it survived because the suite's
-`FORBIDDEN_SUCCESSOR` check only guards `task-brief` → `writing-plans`.
+Naming one branch unconditionally is wrong twice over: it restates a routing rule
+§Entry alone owns, and it restates only half of it, so anything with an open
+approach gets a brief that bakes in the first answer.
 
 ## Phase 2 — rectify
 
@@ -209,10 +206,8 @@ was checked, never as a guarantee.
 |---|---|
 | Reviewing a diff instead of the tree | That is `code-review`; slop does not live in one change |
 | Fixing as you go | The report then describes a tree that no longer exists |
-| Applying a structural fix because it looked contained | Routing decides what fires; it ships a layer nobody reviewed |
-| Treating a structural fix as a local one | Routing decides what fires; it ships unreviewed |
+| Treating a structural fix as a local one | Routing decides what fires; it ships a layer nobody reviewed |
 | Skipping the re-run after repairs | Repairs move counts and paths two other suites assert |
-
 | Treating skill length as the god-skill signal | The longest skills here carry templates and are correct |
 
 ## Next step — you MUST take it
@@ -232,12 +227,14 @@ the sweep was clean — the reviewer needs to know it ran.
 - Terminal handoff: `code-review`, then `delivering`.
 - Also entered off-chain after a skill, agent or hook is added or removed. That
   entry uses `--scope layer` and returns to whatever was happening.
-- Structural findings become their own task via `task-brief`. A sweep worth
-  remembering goes to `LOG.md` via `knowledge-manager`.
+- Structural findings become their own unit, entering the chain at
+  `.claude/workflow.md` §Entry, which decides between `task-brief` and
+  `brainstormer`. A sweep worth remembering goes to `LOG.md` via
+  `knowledge-manager`.
 
 ## Success
 
 Every finding named a `file:line`, the script's output was quoted rather than
 re-derived, nothing was edited before the user approved it, structural findings
-went to `task-brief` instead of being applied, every suite named in phase 2 was
-re-run and quoted, and structural findings were routed rather than applied.
+were routed to the chain's entry rather than applied, and every suite named in
+phase 2 was re-run and quoted.

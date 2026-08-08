@@ -821,25 +821,53 @@ for _skill in ("task-brief", "no-slop", "brainstormer"):
 # and so is pointing at the section that owns it.
 
 ENTRY_PAIR = ("task-brief", "brainstormer")
-_entry_failures = []
+# A paragraph, or a single list item. A bullet is a standalone claim -- a reader
+# scanning `## Routing` reads one line and acts on it -- so it is checked alone
+# even when the bullets around it say more.
+_PARAGRAPH_SPLIT = re.compile(r"\n\s*\n|\n(?=\s*[-*] )")
+_entry_failures: list[str] = []
 
 for _path in sorted(SKILLS.glob("*/SKILL.md")):
     _name = _path.parent.name
     if _name in ENTRY_PAIR:
         continue                      # the two branches may name themselves
     _body = _path.read_text(encoding="utf-8")
-    _names_brief = "`task-brief`" in _body
-    _names_storm = "`brainstormer`" in _body
-    _defers = "workflow.md" in _body and "Entry" in _body
-    if _names_brief and not _names_storm and not _defers:
-        _entry_failures.append(_name)
+    # Scope: the sections that DECLARE handoffs, at paragraph granularity.
+    #
+    # Two wrong granularities were tried first, and each failed in the opposite
+    # direction. Per FILE asked whether `brainstormer` appeared anywhere, so one
+    # correct paragraph absolved every other -- `no-slop` deferred to §Entry in
+    # its body and went on routing unconditionally in `## Routing` and
+    # `## Success`, and the check passed. Per SENTENCE then flagged `repo-recon`,
+    # whose `## Next step` names `task-brief` in one sentence and explains the
+    # branch to `brainstormer` two sentences later, which is a complete and
+    # correct statement of the rule.
+    #
+    # Sections, because a handoff declared outside them is narrative -- line 17 of
+    # `repo-recon` says the chain "used to start at `task-brief`", which is
+    # history, not routing. `FORBIDDEN_SUCCESSOR` above scopes itself the same
+    # way for the same reason.
+    for _section in ("## Routing", "## Next step", "## Success"):
+        _start = _body.find(_section)
+        if _start < 0:
+            continue
+        _end = _body.find("\n## ", _start + len(_section))
+        _text = _body[_start:_end if _end > 0 else len(_body)]
+        for _para in _PARAGRAPH_SPLIT.split(_text):
+            if "`task-brief`" not in _para:
+                continue
+            if "`brainstormer`" in _para or "Entry" in _para:
+                continue      # names both, or defers to the section that owns it
+            if _NEGATED.search(_para):
+                continue      # "Alternative to `task-brief`, never a successor"
+            _entry_failures.append(
+                f"{_name} {_section}: {' '.join(_para.split())[:70]}")
 
 check("no skill states half the entry rule",
       not _entry_failures,
-      f"{_entry_failures} name `task-brief` as the destination without naming "
-      f"`brainstormer` or deferring to workflow.md §Entry -- the two are "
-      f"alternatives decided by one question, and half a rule routes the other "
-      f"half wrong")
+      f"{_entry_failures} route to `task-brief` without naming `brainstormer` "
+      f"or deferring to workflow.md §Entry -- the two are alternatives decided "
+      f"by one question, and half a rule routes the other half wrong")
 
 print()
 if failures:

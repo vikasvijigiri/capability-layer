@@ -137,7 +137,9 @@ pick the next piece of work from the candidate list without reading code first.
   `systematic-debugging`, with the `file:line` from the map.
 - The map itself is durable knowledge: `knowledge-manager` owns filing it
   alongside `HANDOFF.md` once a unit of work begins.
-- **Terminal handoff**: `task-brief`.
+- **Terminal handoff**: the chain's entry, which `.claude/workflow.md` §Entry
+  decides — `task-brief` when a candidate's approach is settled, `brainstormer`
+  when it is open. See **Next step** for why recon does not make that call.
 
 ## Next step — you MUST take it
 
