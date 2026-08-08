@@ -14,12 +14,13 @@ There is no application code here. This repository *is* the layer.
 | **Resume from anywhere** | `tools/resume.py` derives the state from git facts. Nothing is stored, so nothing goes stale — it survives a cleared context, a crash, a week away |
 | **Enter a repo it has never seen** | `tools/recon.py` maps an unread codebase into disjoint subsystems and locates what is half-built, so the chain can pick up work rather than restart it |
 | **Bounded self-repair** | `tools/loop.py` classifies a failure before spending anything on it. Infrastructure noise is retried; a real defect gets three attempts; a security finding gets none |
-| **Green is a fact, not a claim** | every completion statement is backed by output from a check that actually ran |
+| **Green is a fact, not a claim** | every completion statement is backed by output from a check that actually ran, and a check that could not run is **named** rather than counted as a pass |
+| **Two tiers, because cost differs by an order of magnitude** | fast (lint, typecheck, test) gates every auto-commit in seconds; slow builds the wheel and proves it installs into a fresh repo. `--tier all --require-test` runs both |
 
 ## Install it into your repo
 
 ```bash
-pip install git+https://github.com/<owner>/capability-layer
+pip install git+https://github.com/NG-VikasV/capability-layer
 capability-layer install --into .        # `cl` is the same command, shorter
 ```
 
@@ -34,8 +35,11 @@ cl upgrade --into .             # refuses to overwrite anything you edited
 cl verify                       # the full tier, in your repo
 ```
 
-`upgrade` names every file it kept rather than overwriting it; `--force` is how
-you say otherwise.
+Each install records a sha256 per file, so `upgrade` can tell **you edited this**
+from **upstream changed this**: an untouched file takes the update, an edited one
+is kept and named, and `--force` is how you say otherwise. Without that
+distinction an upgrade either discards your work or refuses every improvement —
+there is no safe third behaviour.
 
 Working from a clone instead? `python .claude/install.py --into <dir>` does the
 same thing, and everything else here runs with Python 3.11+ and git alone.
@@ -118,13 +122,23 @@ it says so.
 
 Stated here rather than discovered later:
 
-- **The chain has never run end to end on a product.** No approved plan has gone
-  from spec to release in this repository. Both gates work; neither has fired in
-  anger.
-- **The slow tier resolves zero checks.** `audit` is `false` by decision and there
-  is no build, e2e or smoke command, so *green* currently means lint, typecheck
-  and unit tests. `tools/smoke.py` has never probed a running process.
+- **The chain has never completed once.** Gate 1 has fired exactly once — on the
+  plan that built this package. Gate 2 never has. No approved plan has gone spec →
+  release in this repository, so the stages after review are specified and
+  unexercised.
+- **No subagent has ever completed a task.** The one fan-out — five
+  `task-implementer` agents dispatched together, as the scheduler licensed — got
+  worktrees based on the initial commit rather than the working branch. Three
+  returned `BLOCKED` correctly; two wrote into stranded trees. `isolation:
+  worktree` is unverified against *which commit* it bases on, so
+  `executing-plans/references/parallel-dispatch.md` documents a mechanism that has
+  not yet worked.
 - **Skill trigger rates are unmeasured.** `tools/eval_triggers.py` holds 168
-  queries across all 14 skills and the harness is ready; no live run has been paid
-  for, so "it triggers" rests on description properties the suite checks rather
-  than on a measured rate.
+  queries across all 14 skills, sandboxed and instrument-checked; no live run has
+  been paid for. "It triggers" rests on description properties the suite enforces,
+  not on a measured rate — and the one thing actually observed is that across a
+  long session touching every stage, none fired on their own.
+- **The slow tier proves the package, and nothing about a running system.** It has
+  one member, `tools/test_package.py`. `audit` is `false` by decision and there is
+  no e2e or smoke command, so `tools/smoke.py` has still never probed a running
+  process.
