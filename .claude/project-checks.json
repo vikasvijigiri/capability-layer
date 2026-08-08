@@ -1,14 +1,11 @@
 {
   "_note": "What `the checks pass` means here. Read by .claude/hooks/_projectchecks.py, which the auto-commit gates on and which /verify calls, so the two can never disagree. Each key takes a command string, a list of commands, or false to disable that check as a stated decision. An absent key means detect it.",
-
   "lint": [
     "python -m ruff check .",
     "python .claude/hooks/check_config_json.py",
     "python tools/new_skill_check.py --all"
   ],
-
   "_why_lint": "ruff.toml selects E,F,I,B,S,UP -- the S set is bandit's rules native to ruff, so shell=True is caught without a second tool. Enabling it on 2026-08-03 found four unused imports in shipped hooks. The JSON check is listed explicitly because a configured list REPLACES detection; it is here rather than in a test suite because a stray comma in settings.json silently turns the whole hook layer off.",
-
   "test": [
     "python tools/test_hooks.py",
     "python tools/test_process_router.py",
@@ -31,19 +28,16 @@
     "python tools/test_parallel_groups.py",
     "python tools/test_recon.py",
     "python tools/test_install.py",
+    "python tools/test_git_identity.py",
     "python tools/test_constitution.py",
     "python tools/test_analyze.py",
     "python tools/test_ci_shape.py",
     "python tools/eval_triggers.py --list"
   ],
-
   "_why_test": "Every executable suite in the repository runs as the test tier, so `--require-test` distinguishes real evidence from a disabled check. No count is stated here on purpose -- the last one said eleven while there were seventeen, and a number nothing enforces is a number that rots.",
-
   "_why_typecheck_absent": "Absent, not false: detection finds mypy.ini and runs it. It was disabled on the assumption an unannotated codebase would drown in findings -- measured instead, it was six errors across nineteen files, all one pattern, all real. A fresh clone without mypy installed skips the check with a note rather than failing.",
-
   "audit": false,
   "_why_audit_false": "Stated, not silent. Deleting tools/run_workflow.mjs on 2026-08-07 removed the only JavaScript dependency, and detection then resolved NO slow-tier check at all -- an absent gate that still read as coverage. `false` makes run_checks report it as disabled by decision. Restore a real command the moment this repo has a dependency tree worth auditing.",
-
   "timeout": 300,
   "max_files": 25
 }
