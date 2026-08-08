@@ -116,8 +116,71 @@ CHECKS_STUB = {
 }
 
 
+# Individual files inside an otherwise-shipping tree that must not travel.
+#
+# `SKIP_PARTS` matches whole directory components, which cannot express "this one
+# file". `.claude/rules/` is a payload tree and should be — a target wants the
+# rules mechanism — but `llm-env.md` is THIS repository's opinion: it mandates
+# groq and `opengpt oss 120B` for language-model workflows that do not exist here,
+# and a root `.env.example` that does not exist either. Installing an unenforced
+# mandate into somebody else's repo is worse than shipping nothing, because it
+# loads every session and reads as policy.
+#
+# Found by auditing a built wheel, not by reading this file.
+EXCLUDE_FILES = (
+    ".claude/rules/llm-env.md",
+)
+
+
 def skipped(rel: Path) -> bool:
+    if rel.as_posix() in EXCLUDE_FILES:
+        return True
     return any(part in SKIP_PARTS for part in rel.parts)
+
+
+# Files that travel in a distribution but are not in TREES/FILES/SEED, because
+# their install policy is not "copy".
+#
+# `.claude/settings.json` is the one that matters. It is MERGED into a target
+# rather than copied, so it never lands verbatim -- but the merge needs a source
+# to merge FROM, so it must be in the payload. The spec said "never ships", which
+# was ambiguous enough to have broken every install silently: an empty merge
+# registers no hooks and raises nothing.
+EXTRA_PAYLOAD = (
+    ".claude/settings.json",
+    "templates/target-CLAUDE.md",
+    "README.md",
+)
+
+
+def payload_files(source: Path = SOURCE) -> list[Path]:
+    """Every repo-relative path that belongs in a distribution of this layer.
+
+    **One owner, and it has to be.** This list existed twice for one build --
+    here, and as an `exclude` list in `pyproject.toml` -- and hatchling's
+    `force-include` ignores `exclude` entirely, so "force" meant force. The first
+    wheel shipped `.claude/settings.local.json`, which grants `Bash(git push:*)`,
+    along with `project-checks.json` and this repository's runtime hook state.
+
+    Nothing detected it: the wheel built cleanly and installed cleanly. It was
+    caught by a verification that reads the built artifact instead of trusting the
+    configuration that produced it, which is the only kind of check that can catch
+    a packaging bug at all.
+
+    `PRESERVE` is deliberately absent. `CLAUDE.md` asserts facts true only in the
+    repository that wrote it, and `project-checks.json` states what "the checks
+    pass" means there; a target gets a stub and a template, never these.
+    """
+    out: list[Path] = []
+    for tree in TREES:
+        out.extend(iter_tree(source, tree))
+    for name in (*FILES, *SEED, *EXTRA_PAYLOAD):
+        rel = Path(name)
+        if (source / rel).is_file() and not skipped(rel):
+            out.append(rel)
+    # Deduplicated and ordered so two runs produce byte-identical staging.
+    return sorted({p.as_posix(): p for p in out}.values(),
+                  key=lambda p: p.as_posix())
 
 
 def iter_tree(root: Path, tree: str) -> list[Path]:
@@ -365,6 +428,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--into", default=".", help="target directory (default: here)")
     ap.add_argument("--dry-run", action="store_true", dest="dry",
                     help="print every path and write nothing")
+    ap.add_argument("--upgrade", action="store_true",
+                    help="refresh an existing install without discarding local edits")
+    ap.add_argument("--force", action="store_true",
+                    help="with --upgrade, overwrite locally-modified files too")
     args = ap.parse_args(argv)
 
     target = Path(args.into).resolve()
@@ -381,6 +448,43 @@ def main(argv: list[str] | None = None) -> int:
     entry = entry_point(target)
 
     actions, warnings = plan(target)
+
+    # --- upgrade: never discard a local edit without being told to -----------
+    #
+    # `install` overwrites any file whose bytes differ from the source. That is
+    # right for a first install and wrong for the second: once a team customises
+    # a skill, re-running destroys that work silently, and the layer's whole
+    # premise is that silent is the worst failure mode available.
+    #
+    # This is the conservative version. It cannot yet tell "the team edited this"
+    # from "upstream changed it", because the manifest records which paths the
+    # layer owns but not their content at install time. So it treats EVERY
+    # difference as a local edit and refuses it. That over-refuses -- a genuine
+    # upstream improvement is also skipped, and named -- which is the safe
+    # direction to be wrong in. Recording a hash per file at install time is what
+    # makes the distinction possible and is the next change, not this one.
+    if args.upgrade:
+        kept, refreshed = [], []
+        adjusted: list[tuple[Path, str]] = []
+        for rel, action in actions:
+            if action == "overwrite" and not args.force:
+                kept.append(rel.as_posix())
+                adjusted.append((rel, "keep-local"))
+            else:
+                if action in ("create", "overwrite"):
+                    refreshed.append(rel.as_posix())
+                adjusted.append((rel, action))
+        actions = adjusted
+        print(f"upgrade: {len(refreshed)} file(s) to write, "
+              f"{len(kept)} kept because they differ locally")
+        for rel in kept[:10]:
+            print(f"  kept  {rel}")
+        if len(kept) > 10:
+            print(f"  ...and {len(kept) - 10} more")
+        if kept and not args.force:
+            print("  (--force overwrites these; without it they are never touched)")
+        print()
+
     counts: dict[str, int] = {}
     for _rel, action in actions:
         counts[action] = counts.get(action, 0) + 1

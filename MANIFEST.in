@@ -1,0 +1,21 @@
+# Belt-and-braces for the sdist. hatchling's `sdist.include` already covers this;
+# MANIFEST.in exists because a source distribution that silently omits the payload
+# produces a package that installs cleanly and then copies nothing -- the failure
+# mode with no symptom until someone runs `uaios install` in a fresh repo.
+recursive-include .claude *
+recursive-include tools *.py
+recursive-include docs/pilots *
+recursive-include docs/baselines *
+include AGENTS.md harnesses.json ruff.toml mypy.ini README.md CODEOWNERS
+include templates/target-CLAUDE.md
+include .github/workflows/checks.yml
+
+# Never, for the same reasons pyproject's exclude list gives.
+global-exclude __pycache__ *.pyc
+recursive-exclude .claude/hooks/state *
+recursive-exclude .claude/workflow-state *
+recursive-exclude .claude/worktrees *
+exclude .claude/settings.local.json
+exclude .claude/project-checks.json
+exclude .claude/rules/llm-env.md
+exclude CLAUDE.md

@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "uaios"
+version = "0.1.0"
+description = "A harness-neutral agent capability layer for software delivery: skills, hooks, commands and deterministic checks, with exactly two places a human is asked."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+keywords = ["claude", "agent", "sdlc", "capability-layer"]
+
+# pyyaml is a HARD dependency, not an optional one. `tools/test_process_router.py`
+# reads every skill's frontmatter through it, and its absence used to print a NOTE
+# and exit 0 having skipped every per-skill check -- a green that means nothing.
+# Declaring it here is half the fix; Task 3 is the other half.
+dependencies = ["pyyaml>=6"]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.5", "mypy>=1.8", "build>=1.0"]
+# The authoring references. 1,978 lines a target never loads, so they are an
+# extra rather than payload.
+docs = []
+
+[project.scripts]
+uaios = "uaios.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["uaios"]
+
+# The payload: what `uaios install` copies into a target repository. It is data,
+# not importable code -- `.claude/` has to live in the target's working tree for
+# hooks to resolve by path and for a team to share the skills through version
+# control. Nothing here is ever imported from site-packages at runtime.
+[tool.hatch.build.targets.wheel.force-include]
+# ONE entry, pointing at a tree `tools/stage_payload.py` produced from
+# `.claude/install.py:payload_files()`.
+#
+# It used to be eleven entries naming `.claude`, `tools` and the rest directly,
+# with an `exclude` list beside them. Hatchling's force-include IGNORES exclude
+# -- "force" means force -- so that wheel shipped `.claude/settings.local.json`,
+# which grants `Bash(git push:*)`, plus `project-checks.json` and this repo's
+# runtime hook state. The build succeeded and the wheel installed cleanly; only
+# reading the built artifact found it.
+#
+# Staging first means the build config has no filtering left to get wrong.
+# Run `python tools/stage_payload.py` before `python -m build`.
+"build/payload" = "uaios/payload"
+
+[tool.hatch.build.targets.sdist]
+include = ["uaios", ".claude", "tools", "AGENTS.md", "harnesses.json",
+           "ruff.toml", "mypy.ini", "README.md", "templates/target-CLAUDE.md",
+           "docs/pilots", "docs/baselines", "CODEOWNERS",
+           ".github/workflows/checks.yml"]

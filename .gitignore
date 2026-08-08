@@ -35,3 +35,10 @@ __pycache__/
 # Eval output is a run artefact, not source. An empty one -- which is what
 # `tee` leaves while a run is in flight -- fails the JSON linter.
 docs/evals/results-*.json
+
+# Build artifacts. `tools/stage_payload.py` rebuilds build/payload from scratch
+# every run, so nothing here is a source of truth.
+build/
+dist/
+*.egg-info/
+.claude/worktrees/

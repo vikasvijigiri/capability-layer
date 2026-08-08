@@ -23,6 +23,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / ".claude" / "skills"
 
+# Imported once, here, and its absence is a FAILURE rather than a note.
+#
+# It used to be imported at three sites inside `try/except ImportError`, and the
+# handler printed "NOTE: pyyaml missing -- frontmatter checks skipped, not
+# passed" and `break`. So on any machine without pyyaml this suite skipped every
+# per-skill frontmatter check -- description, trigger properties, tool grants,
+# gate markers -- and still EXITED 0. A green that means nothing is exactly what
+# `.claude/constitution.md` Article V forbids, and packaging made it reachable:
+# a fresh `pip install` into an environment without the dependency declared
+# would have produced a silent, confident pass.
+try:
+    import yaml
+except ImportError:  # pragma: no cover - the failure is the point
+    yaml = None
+
 failures: list[str] = []
 
 
@@ -67,12 +82,14 @@ DESC_BUDGET: list[int] = []
 DESCRIPTIONS: dict[str, str] = {}
 for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
     text = (d / "SKILL.md").read_text(encoding="utf-8")
-    try:
-        import yaml  # noqa: PLC0415 - optional dep, only needed for this block
-        front = yaml.safe_load(text.split("---", 2)[1])
-    except ImportError:
-        print("NOTE: pyyaml missing -- frontmatter checks skipped, not passed")
+    if yaml is None:
+        check("pyyaml is installed", False,
+              "run: pip install pyyaml -- without it every per-skill frontmatter "
+              "check below is unrunnable, and reporting that as a pass is the "
+              "silent degradation Article V forbids")
         break
+    try:
+        front = yaml.safe_load(text.split("---", 2)[1])
     except Exception as exc:  # noqa: BLE001 - any parse failure is the finding
         check(f"{d.name} frontmatter parses", False, str(exc)[:80])
         continue
@@ -562,12 +579,10 @@ agent_names: set[str] = set()
 if AGENTS.exists():
     for f in sorted(AGENTS.glob("*.md")):
         text = f.read_text(encoding="utf-8")
-        try:
-            import yaml  # noqa: PLC0415
-            front = yaml.safe_load(text.split("---", 2)[1])
-        except ImportError:
-            front = None
+        if yaml is None:
             break
+        try:
+            front = yaml.safe_load(text.split("---", 2)[1])
         except Exception as exc:  # noqa: BLE001
             check(f"agent {f.stem} frontmatter parses", False, str(exc)[:80])
             continue
@@ -637,7 +652,8 @@ if AGENTS.exists():
         """The skill's pre-approved tool set. An unparseable header yields the
         empty set, which fails the check below -- the right direction, since a
         header nothing can read grants nothing either."""
-        import yaml  # noqa: PLC0415
+        if yaml is None:
+            return set()
         parts = text.split("---", 2)
         if len(parts) < 3:
             return set()
