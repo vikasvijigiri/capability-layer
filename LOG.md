@@ -3,6 +3,53 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-08 (packaging, gates, triggering)
+
+**The layer became installable, and the first thing that verified an artifact
+rather than its source caught a credential leak.** `pip install git+…` →
+`capability-layer install --into .`. The first wheel shipped
+`.claude/settings.local.json` — which grants `Bash(git push:*)` — plus
+`project-checks.json` and this repo's runtime hook state, while `pyproject.toml`
+listed every one as excluded. Hatchling's `force-include` **ignores** `exclude`.
+It built clean and installed clean. Only reading the zip found it. The payload now
+has one owner (`install.py:payload_files()`), staged by `tools/stage_payload.py`,
+audited by a check that deliberately does not share its implementation.
+
+**The slow tier had zero members and printed `PASS: no checks detected`** — a
+green asserting nothing about the tier whose job is proving the artifact runs.
+`tools/test_package.py` is its first: wheel → clean venv → fresh repo → that
+repo's own tier green. Tier is 31.
+
+**Two gates were twelve.** `brainstormer` carried ten `AskUserQuestion` calls plus
+a prose "Ask, then wait", exempted because clarify/converge ask *which direction*
+rather than *may I proceed*. The distinction is real and did not survive contact.
+They are `[NEEDS CLARIFICATION]` markers now, answered together at Gate 1 — using
+machinery `writing-plans` and `resume.py` already had. Gates declare themselves
+with `<!-- GATE n -->`; the old substring check read brainstormer's *prohibitions*
+as a new gate.
+
+**Zero skills auto-fired across a multi-hour session touching every stage.** All
+14 descriptions rewritten capability-first with ≥6 trigger phrases and a proactive
+clause; four properties enforced, each proven red first. Per-turn cost went *down*
+(6074 → 5679 chars). The rate itself is still unmeasured.
+
+**The first subagent fan-out failed, and that is the finding.** Five
+`task-implementer` agents, one message, as `parallel_groups.py` licensed — and
+every worktree was based on `main` @ `4069f4b`, not the working branch. Three
+returned BLOCKED with accurate diagnoses; two did real work into stranded
+worktrees, salvaged and re-verified by hand. `isolation: worktree` was never
+checked against *which commit* it bases on. Ladder rung applied: serialize.
+
+**Things that were true and are no longer, corrected here because they were wrong
+in this file:** the repo has a remote and the branch is pushed; there are 14
+skills, not 13; `task-brief` and `brainstormer` are alternatives, not a sequence —
+the entry rule was written in seven places and now has one owner in
+`workflow.md` §Entry.
+
+**A full disk reports as a code defect.** mypy failed mid-run under 0 bytes free
+and the error read as a type error. `test_package.py` checks free space first so
+the failure says "no disk".
+
 ## 2026-08-04 03:40
 **Nine approval gates became two, and the distinction that made it safe is
 question vs gate.** Gate 1 is the finished plan at the end of `writing-plans`;
