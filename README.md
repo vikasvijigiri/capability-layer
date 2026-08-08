@@ -20,9 +20,23 @@ There is no application code here. This repository *is* the layer.
 ## Install it into your repo
 
 ```bash
-pip install git+https://github.com/NG-VikasV/capability-layer
-capability-layer install --into .        # `cl` is the same command, shorter
+pip install "git+https://github.com/NG-VikasV/capability-layer@rebuild-capability-layer"
+python -m capability_layer install --into .
 ```
+
+**The `@branch` is not optional yet.** `pip install git+…` takes the repository's
+default branch, and `main` here is still the pre-layer tree — no `pyproject.toml`,
+so pip stops with *"does not appear to be a Python project"*. Drop the suffix once
+this branch is merged.
+
+**`python -m capability_layer`, not the bare command**, unless you know
+`Scripts/` is on your PATH. When pip cannot write to site-packages it silently
+does a `--user` install, and on Windows those scripts land somewhere PATH does not
+look — the package installs, imports, and reports *"the term 'capability-layer' is
+not recognized"*. `capability-layer` and `cl` are the same entry point and are
+fine when PATH cooperates; the module form needs only the interpreter.
+
+The repository is **private**, so pip needs credentials that can read it.
 
 The package is a **carrier, not a library**. `.claude/` has to live in your
 repository's working tree and be committed there — that is where hooks resolve by
@@ -30,9 +44,9 @@ path and where your team reads the skills they are governed by. Nothing is ever
 imported from `site-packages` at runtime.
 
 ```bash
-cl install --into . --dry-run   # writes nothing, prints every path
-cl upgrade --into .             # refuses to overwrite anything you edited
-cl verify                       # the full tier, in your repo
+python -m capability_layer install --into . --dry-run   # writes nothing, lists every path
+python -m capability_layer upgrade --into .             # keeps what you edited
+python -m capability_layer verify                       # the full tier, in your repo
 ```
 
 Each install records a sha256 per file, so `upgrade` can tell **you edited this**

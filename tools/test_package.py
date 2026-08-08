@@ -178,6 +178,17 @@ try:
         check("pip installs the wheel into a clean venv",
               installed.returncode == 0, installed.stderr.strip()[-160:])
 
+        # The PATH-independent route, checked FIRST because it is the one that
+        # survives the common Windows case: pip cannot write site-packages, does
+        # a --user install, and the Scripts/ directory it uses is not on PATH.
+        # The package is then installed, importable and uninvocable. That is what
+        # happened to the first person who followed this project's README.
+        module = run([str(venv_bin(venv, "python")), "-m", "capability_layer",
+                      "--version"])
+        check("`python -m capability_layer` works without any PATH entry",
+              module.returncode == 0 and module.stdout.strip(),
+              (module.stdout + module.stderr).strip()[-160:])
+
         cl = venv_bin(venv, "capability-layer")
         short = venv_bin(venv, "cl")
         check("the console script is installed", cl is not None and cl.is_file(),
