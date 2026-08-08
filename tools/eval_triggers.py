@@ -51,6 +51,10 @@ def load_queries() -> dict:
     return {k: v for k, v in raw.items() if not k.startswith("_")}
 
 
+class InstrumentError(RuntimeError):
+    """The harness saw nothing, which is different from the skill not firing."""
+
+
 def validate(data: dict) -> list[str]:
     """Problems with the query set itself, checked before any money is spent.
 
@@ -128,7 +132,48 @@ def discrimination_pairs(data: dict) -> int:
     return sum(1 for q in positives if negatives.get(q))
 
 
-def run_query(query: str, timeout: int = 180) -> tuple[set[str], float]:
+def make_sandbox() -> tuple[Path, str]:
+    """A disposable clone with no remote, for the live queries to run inside.
+
+    **Not optional, and the reason is specific.** `.claude/settings.local.json`
+    pre-approves bare `Bash` and `Bash(git push:*)`. Its deny list stops
+    `gh pr merge` and force-push but not plain `git push` or `gh pr create`. The
+    query set deliberately contains "push this up", "open a PR and merge it" and
+    "deploy this to staging", because those are what a person types -- so running
+    them against this working repository invites a real push or a real pull
+    request from a measurement.
+
+    CLAUDE.md forbids exactly that, but a rule the child session must remember is
+    not a mechanism. Removing the remote is: with no origin there is nothing to
+    push to and no repository for `gh` to resolve, whatever the child decides.
+
+    `--local` shares object storage, so the clone is fast and cheap even on a
+    large history. Only committed state travels, which is the right scope: an
+    uncommitted experiment is not what is being measured.
+    """
+    import tempfile
+    sandbox = Path(tempfile.mkdtemp(prefix="trigger-eval-")) / "repo"
+    clone = subprocess.run(
+        ["git", "clone", "--local", "--no-hardlinks", "--quiet",
+         str(ROOT), str(sandbox)],
+        capture_output=True, text=True, encoding="utf-8",
+        errors="replace", timeout=300,
+    )
+    if clone.returncode != 0:
+        return ROOT, f"clone FAILED ({clone.stderr.strip()[:80]}) -- refusing"
+
+    remove = subprocess.run(["git", "remote", "remove", "origin"],
+                            cwd=str(sandbox), capture_output=True, text=True)
+    remaining = subprocess.run(["git", "remote"], cwd=str(sandbox),
+                               capture_output=True, text=True).stdout.strip()
+    if remaining:
+        return ROOT, f"remote still present ({remaining}) -- refusing"
+
+    return sandbox, (f"sandbox {sandbox} (no remote"
+                     f"{'' if remove.returncode == 0 else ', origin absent already'})")
+
+
+def run_query(query: str, timeout: int = 180, cwd: Path | None = None) -> tuple[set[str], float]:
     """(skills actually invoked, cost in USD) for one prompt.
 
     **`--output-format json` does not work for this and the first version of this
@@ -154,7 +199,15 @@ def run_query(query: str, timeout: int = 180) -> tuple[set[str], float]:
     try:
         proc = subprocess.run(
             ["claude", "-p", query, "--output-format", "stream-json", "--verbose"],
-            cwd=str(ROOT), capture_output=True, text=True,
+            cwd=str(cwd or ROOT), capture_output=True,
+            # NOT `text=True`. That decodes with the locale default, which is
+            # cp1252 on Windows, and the stream carries UTF-8 -- an em dash in
+            # any message kills the pipe reader thread, stdout arrives EMPTY,
+            # no tool_use is ever seen, and every skill scores 0.0. Measured
+            # 2026-08-07: a validation run reported trigger_rate 0.0 and
+            # cost_usd 0.0 together, which is the tell -- a real run that
+            # triggered nothing still costs money.
+            encoding="utf-8", errors="replace",
             stdin=subprocess.DEVNULL, timeout=timeout, env=env,
         )
     except (OSError, subprocess.SubprocessError):
@@ -193,7 +246,7 @@ def run_query(query: str, timeout: int = 180) -> tuple[set[str], float]:
 
 
 def evaluate(skill: str, cases: list[dict], repeats: int, dry: bool,
-             limit: int | None = None) -> dict:
+             limit: int | None = None, cwd: Path | None = None) -> dict:
     hits = misses = false_fires = correct_silence = 0
     spent = 0.0
     # Sample evenly across positives and negatives, so `--limit 4` is two of each
@@ -207,9 +260,30 @@ def evaluate(skill: str, cases: list[dict], repeats: int, dry: bool,
             if dry:
                 fired = case["should_trigger"]      # assume perfection, cost zero
             else:
-                invoked, cost = run_query(case["query"])
+                invoked, cost = run_query(case["query"], cwd=cwd)
                 fired = skill in invoked
                 spent += cost
+
+                # The instrument tell, checked on the FIRST live query rather than
+                # discovered in the summary. A `claude -p` invocation that reached
+                # the model always reports a cost, whatever it decided to do -- so
+                # "no tools observed AND no cost" is not a skill that failed to
+                # fire, it is a harness that saw nothing.
+                #
+                # This has now happened twice, both times silently: once via
+                # `--output-format json`, which carries no tool records at all
+                # ($29 to learn), and once via a decode error killing the pipe
+                # reader thread so stdout arrived empty. Both reported a
+                # confident, uniform 0.0. Aborting here caps the next instance at
+                # one query instead of the whole sweep.
+                if not invoked and cost == 0.0:
+                    raise InstrumentError(
+                        f"first live query returned no tool records AND no cost "
+                        f"({skill!r}: {case['query'][:60]!r}). A real invocation "
+                        f"always costs something, so this is the harness, not the "
+                        f"descriptions. Check that `claude` is on PATH, that the "
+                        f"stream decodes, and that a tool_use block still names "
+                        f"the skill. Nothing further was run.")
             if case["should_trigger"]:
                 hits += fired
                 misses += not fired
@@ -297,8 +371,22 @@ def main(argv: list[str] | None = None) -> int:
               f"--yes-i-accept-the-cost if that decision is yes.")
         return 1
 
-    results = [evaluate(t, data[t], args.repeats, dry, args.limit)
-               for t in targets if t in data]
+    sandbox: Path | None = None
+    if not dry:
+        sandbox, note = make_sandbox()
+        print(f"isolation: {note}")
+        if sandbox == ROOT:
+            print("REFUSED: could not isolate the run, and settings.local.json "
+                  "pre-approves `git push`. Not spending against this working "
+                  "repository.")
+            return 1
+
+    try:
+        results = [evaluate(t, data[t], args.repeats, dry, args.limit, sandbox)
+                   for t in targets if t in data]
+    except InstrumentError as exc:
+        print(f"ABORTED: {exc}")
+        return 1
     print(json.dumps(results, indent=2))
     if not dry:
         _total = sum(r["cost_usd"] for r in results)
