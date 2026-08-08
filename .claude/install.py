@@ -53,6 +53,22 @@ TREES = (
     # found by installing into a synthetic repo on 2026-08-07 and running them.
     "docs/pilots",
     "docs/baselines",
+    # The authoring documentation the layer's OWN suites and skills cite by path.
+    # Neither shipped until 2026-08-08, and the failure surfaced only in a target:
+    # `test_hook_standards.py`'s docstring opens "Check repository hooks against
+    # guide/how_to_create_hooks.md", `test_process_router.py` quotes
+    # `guide/how_to_create_subagents.md` and `templates/Skills.md` as the source of
+    # two rules, and `capability-layer-maintenance` tells the model to compare a
+    # new hook or skill against `templates/` and `guide/`. In an installed repo
+    # every one of those resolved to nothing.
+    #
+    # `test_referenced_paths.py` could not catch it twice over: it scans `.md`
+    # files, so citations in `.py` docstrings are invisible to it, and it is
+    # repo-scoped, so the `.md` citations resolve here where `guide/` exists.
+    # 124KB together -- cheap against a skill telling somebody to read a directory
+    # that is not there.
+    "guide",
+    "templates",
 )
 
 # Single files copied as-is when absent or stale.
@@ -153,10 +169,6 @@ def skipped(rel: Path) -> bool:
 # registers no hooks and raises nothing.
 EXTRA_PAYLOAD = (
     ".claude/settings.json",
-    "templates/target-CLAUDE.md",
-    # `designer` tells a target to fork this into its own DESIGN.md. A skill
-    # naming a template that did not travel would be a handoff to nothing.
-    "templates/DESIGN.md",
     "README.md",
 )
 

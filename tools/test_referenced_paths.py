@@ -317,5 +317,57 @@ if failures:
     print("Either fix the path, or say on the same line that it was deleted.")
     sys.exit(1)
 
-print("OK: every hook and tool path named in prose resolves, or is marked gone")
+# --- the authoring trees, and the docstrings that cite them ------------------
+#
+# `FULL_PATH_RE` above matches `.claude/hooks/**.py` and `tools/**.py` -- PYTHON
+# ONLY. So `guide/how_to_create_hooks.md` and `templates/Skills.md` were never
+# checked by anything, in any repository, and neither tree shipped in the payload
+# until 2026-08-08.
+#
+# The consequence showed up where every consequence here shows up: in a target.
+# `test_hook_standards.py` opens "Check repository hooks against
+# guide/how_to_create_hooks.md", `test_process_router.py` quotes
+# `guide/how_to_create_subagents.md` as the source of its proactive-clause rule,
+# and `capability-layer-maintenance` tells the model to compare a new hook against
+# `templates/` and `guide/`. In an installed repo all of it resolved to nothing,
+# and a person following the skill went looking for directories that were not
+# there.
+#
+# `.py` files are scanned too, which the `.md`-only pass above cannot do: the
+# first of those citations is a module docstring.
+DOC_PATH_RE = re.compile(r"(?<![\w./-])((?:guide|templates)/[\w.-]+\.md)\b")
+
+doc_sources = list(SOURCES) + [
+    p for p in sorted((ROOT / "tools").glob("*.py"))
+] + [
+    p for p in sorted((ROOT / ".claude").rglob("*.py"))
+    if "__pycache__" not in p.parts
+]
+
+doc_failures: list[str] = []
+for path in doc_sources:
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        continue
+    for number, line in enumerate(text.splitlines(), 1):
+        if TOMBSTONE.search(line):
+            continue
+        for match in DOC_PATH_RE.finditer(line):
+            rel = match.group(1)
+            if not (ROOT / rel).is_file():
+                doc_failures.append(
+                    f"{path.relative_to(ROOT).as_posix()}:{number} -> {rel}")
+
+if doc_failures:
+    for item in doc_failures[:20]:
+        print(f"FAIL: {item} does not exist")
+    print(f"{len(doc_failures)} dangling authoring-doc reference(s). These are "
+          f"cited by shipped files, so they must be in the payload as well as on "
+          f"disk here.")
+    sys.exit(1)
+
+print(f"OK: every hook and tool path named in prose resolves, or is marked gone; "
+      f"every guide/ and templates/ path cited by {len(doc_sources)} shipped "
+      f"files exists")
 print("All referenced-path tests passed")
