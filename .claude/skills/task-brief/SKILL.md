@@ -115,42 +115,30 @@ was too big — say so and go to `brainstormer`.
 
 ## Next step — you MUST take it
 
-The brief is not the deliverable; the work is. Once `TASK.md` is written, say
-which successor you are invoking and invoke it in the same turn: **straight to
-the change** (the normal case — a brief concrete enough to write is concrete
-enough to build), or **`brainstormer`** when a blank field showed the approach is
-still open.
+The brief is not the deliverable; the work is. Once `TASK.md` is written, name
+the successor and invoke it in the same turn. One of two, decided by the brief
+itself:
 
-**Never `writing-plans`.** It consumes an approved spec and six lines is not one
-— its own description refuses a brief by name, and `workflow.md`'s Consumes
-column says the same. Work that turns out to need real sequencing means the
-brief was too big: say so and go to `brainstormer`, which produces the spec
-`writing-plans` requires.
+1. **Six fields filled → do the change**, then `verifying-work`. The normal case.
+2. **A field stayed blank because the approach is undecided → `brainstormer`.**
+   Abandon the brief rather than guessing fields to keep it alive.
 
 Stopping here is the chain's most common break: nothing watches for a finished
-brief, so an un-handed-off brief is simply forgotten.
+brief, so an un-handed-off one is simply forgotten.
+
+`.claude/workflow.md` **Entry** owns which stage runs when, including why neither
+option is `writing-plans`. It is stated there and not repeated here — this file
+said it twice on its own until 2026-08-08, once in this section and once in
+Routing, and two copies of one rule is how they come to disagree.
 
 ## Routing
 
 - Mandatory validator: none, and no approval gate. The `(inferred)` markers in
   `TASK.md` are what a reader checks instead.
-- Terminal handoff, and you MUST take it once `TASK.md` is written — one of
-  **two**, decided by what the brief says:
-  1. The six fields are filled → do the change, then `verifying-work`.
-  2. A field could not be filled because the approach is undecided → invoke
-     `brainstormer`.
-  Name which one you are taking. Stopping after writing `TASK.md` leaves the
-  chain broken — nothing else will pick it up.
-- **`writing-plans` is not among them.** Stage 3 takes an approved spec, and six
-  lines is not one — its own description refuses a brief by name, and
-  `workflow.md`'s Consumes column agrees. Sequencing work reaches it through
-  `brainstormer`, never directly from here.
+- Terminal handoff: one of the two above, named out loud.
 - **Alternative to `brainstormer`, never a predecessor.** Brainstormer exists
   because the first idea becomes an anchor; a finished brief *is* that anchor,
   since Goal and Outputs commit to a solution shape.
-- The bailout is step 3's blank-field rule, not a handoff: if Outputs or
-  Done-check can't be filled because the approach is undecided, abandon the
-  brief and start at `brainstormer`. Don't guess fields to keep it alive.
 
 ## Success
 

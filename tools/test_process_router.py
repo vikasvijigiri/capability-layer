@@ -465,9 +465,24 @@ for _skill, (_bad, _why) in FORBIDDEN_SUCCESSOR.items():
 
 # The same invariant in the file that OWNS the chain. Asserted on the whole
 # paragraph, since the branch list wraps across lines.
+#
+# Anchored on the `## Entry` section since 2026-08-08. It used to look for a
+# paragraph containing "task-brief` branches", which was one of SEVEN places the
+# entry rule was written -- two of them inside task-brief's own file. Those copies
+# are now deleted and the rule has one owner, so the check follows it there.
+#
+# The three assertions below are unchanged. Only the anchor moved: the property is
+# still "the entry rule is stated, and it does not route a brief into stage 3",
+# which is exactly the drift this check was added for.
 _wf_text = WORKFLOW.read_text(encoding="utf-8")
-_paras = [p for p in _wf_text.split("\n\n") if "task-brief` branches" in p]
-check("workflow.md still describes how task-brief branches", bool(_paras))
+_paras = [_wf_text.split("## Entry", 1)[1].split("\n## ", 1)[0]] \
+    if "## Entry" in _wf_text else []
+check("workflow.md has the Entry section that owns the entry rule", bool(_paras),
+      "the rule has one owner; without the section it has none")
+if _paras:
+    check("...and the Entry section names both pre-plan alternatives",
+          "`task-brief`" in _paras[0] and "`brainstormer`" in _paras[0],
+          "an entry rule that names neither owner routes nothing")
 if _paras:
     check("workflow.md does not branch task-brief to `writing-plans`",
           not positive_mentions(_paras[0], "writing-plans"),

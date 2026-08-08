@@ -14,19 +14,24 @@ tools are plain scripts, so any harness can shell out to them.
 
 ## Product lifecycle
 
-| # | Stage | Owner | Output |
-|---|---|---|---|
-| 1 | Frame | `task-brief` | bounded goal, constraints, done-check, out-of-scope |
-| 2 | Design | `brainstormer` | decision/spec when ambiguity is material |
-| 3 | Plan | `writing-plans` | executable steps, ownership, checks, risks, rollback |
-| — | Gate 1 | user | plan approval only |
-| 4 | Execute | `executing-plans` | scoped implementation in an isolated worktree |
-| 5 | Validate | `verifying-work` | acceptance and test evidence |
-| 6 | Sweep | `no-slop` | prose, wiring, safety, and quality findings |
-| 7 | Review | `code-review` | automated diff verdict with file/line evidence |
-| 8 | Deliver | `delivering` | branch/PR/merge-queue handoff and conflict evidence |
-| 9 | Release | `releasing` | release candidate, shipment gate, observation, rollback |
-| 10 | Record | `knowledge-manager` | durable log, handoff, issues, memory, decisions |
+**The numbers are labels, not a sequence.** Stages 2 and 3 are conditional and
+most work skips both; a session that reads this table top-to-bottom and runs
+every row has misread it. The `Runs when` column is the whole entry rule — see
+**Entry** below, which is the only place it is stated.
+
+| # | Stage | Owner | Runs when | Output |
+|---|---|---|---|---|
+| 1 | Frame | `task-brief` | work is named but unscoped | bounded goal, constraints, done-check, out-of-scope |
+| 2 | Design | `brainstormer` | **only if the approach is open** | decision/spec when ambiguity is material |
+| 3 | Plan | `writing-plans` | **only after 2** — it consumes a spec | executable steps, ownership, checks, risks, rollback |
+| — | Gate 1 | user | a plan exists | plan approval only |
+| 4 | Execute | `executing-plans` | Gate 1 passed, or the change is small enough to skip 2–3 | scoped implementation in an isolated worktree |
+| 5 | Validate | `verifying-work` | completion is claimed, in any wording | acceptance and test evidence |
+| 6 | Sweep | `no-slop` | before a diff is reviewed | prose, wiring, safety, and quality findings |
+| 7 | Review | `code-review` | a diff is about to be delivered | automated diff verdict with file/line evidence |
+| 8 | Deliver | `delivering` | review signed off | branch/PR/merge-queue handoff and conflict evidence |
+| 9 | Release | `releasing` | **only if there is a deploy target** | release candidate, shipment gate, observation, rollback |
+| 10 | Record | `knowledge-manager` | always, to close the unit | durable log, handoff, issues, memory, decisions |
 
 There are exactly two human gates: approval of the plan after stage 3, and
 approval of the release candidate after stage 9 readiness. No review, delivery,
@@ -34,19 +39,35 @@ merge, or mid-run diagnostic may ask for another approval. A host may still
 require its own platform permission prompt for an irreversible tool operation;
 that is execution control, not a lifecycle gate.
 
-`task-brief` branches from an idea to `brainstormer` when the direction is
-unknown, or straight to the change when scope is already settled — never to
-`writing-plans`, which consumes an approved spec, not a six-line brief. The
-numbered stages below are labels for the rest of the chain, not task-brief's own
-options: 1 `task-brief` frames, 2 `brainstormer` designs, 3 `writing-plans`
-plans, 4 `executing-plans` builds, 5 `verifying-work` validates, 6 `no-slop`
-sweeps, 7 `code-review` reviews, 8 `delivering` integrates, 9 `releasing`
-observes, and 10 `knowledge-manager` records.
-These numbers are lifecycle labels, not additional approval gates.
+## Entry
+
+**This section owns the entry rule. Nowhere else states it.** It was written in
+seven places until 2026-08-08 — twice inside `task-brief` alone, in its
+`## Next step` and again in its `## Routing` — and the suite needed a
+special-case `FORBIDDEN_SUCCESSOR` check to stop the copies drifting apart,
+which is what a boundary looks like when it is being restated instead of owned.
+
+One question decides it: **is the approach settled?**
+
+| The request | Goes to | Because |
+|---|---|---|
+| names work, scope unclear, approach settled | 1 `task-brief`, then **do the change** | a brief concrete enough to write is concrete enough to build |
+| approach genuinely open | 2 `brainstormer` | the first idea becomes an anchor, and a finished brief *is* that anchor |
+| an approved spec already exists | 3 `writing-plans` | it consumes a spec |
+| repository nobody has read | `repo-recon` first | see **The entry boundary** below |
+
+1 `task-brief` and 2 `brainstormer` are **alternatives, in either direction** — a
+brief is not a predecessor of a design, and a design is not a successor to a
+brief. Neither reaches 3 `writing-plans` directly: six lines is not a spec, and
+work that turns out to need real sequencing means the brief was too big. Only
+2 `brainstormer` produces the spec 3 `writing-plans` consumes.
+
+The rest of the chain is linear: 4 `executing-plans` builds, 5 `verifying-work`
+validates, 6 `no-slop` sweeps, 7 `code-review` reviews, 8 `delivering`
+integrates, 9 `releasing` observes, 10 `knowledge-manager` records. These are
+lifecycle labels, not additional approval gates.
 The recovery loop returns to `4 executing-plans` or `5 verifying-work`, then
 re-enters `7 code-review` and `9 releasing` when the candidate is ready again.
-The contract also rechecks 1 `task-brief` and 2 `brainstormer` at the entry
-boundary.
 
 ## State machine and failure loop
 
