@@ -49,11 +49,20 @@ packages = ["capability_layer"]
 # reading the built artifact found it.
 #
 # Staging first means the build config has no filtering left to get wrong.
-# Run `python tools/stage_payload.py` before `python -m build`.
+#
+# `hatch_build.py` produces this tree DURING the build. It used to be a manual
+# `python tools/stage_payload.py` beforehand, which meant `pip install git+...`
+# failed on a fresh clone with "Forced include not found: build/payload" -- the
+# tree is gitignored, so only a checkout that had already built once had it.
+# A build step nobody can forget is the only kind that holds.
 "build/payload" = "capability_layer/payload"
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"
 
 [tool.hatch.build.targets.sdist]
 include = ["capability_layer", ".claude", "tools", "AGENTS.md", "harnesses.json",
+           "hatch_build.py",
            "ruff.toml", "mypy.ini", "README.md", "templates/target-CLAUDE.md",
            "docs/pilots", "docs/baselines", "CODEOWNERS",
            ".github/workflows/checks.yml"]

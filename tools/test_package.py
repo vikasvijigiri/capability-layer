@@ -105,16 +105,31 @@ if run([sys.executable, "-c", "import build"]).returncode != 0:
 
 # --- stage and build ---------------------------------------------------------
 
-stage = run([sys.executable, "tools/stage_payload.py"], cwd=ROOT)
-check("the payload stages, and its own audit passes",
-      stage.returncode == 0, last_line(stage))
+# Delete the staged payload FIRST, so the build hook has to produce it. This
+# suite used to run `tools/stage_payload.py` and then build -- the order a human
+# follows, and the opposite of what pip does. pip clones into a fresh directory
+# that has never been staged, so every check here passed while
+# `pip install git+https://...` died with
+#
+#     FileNotFoundError: Forced include not found: .../build/payload
+#
+# Building from an already-staged tree cannot detect that, by construction.
+payload_dir = ROOT / "build" / "payload"
+if payload_dir.exists():
+    shutil.rmtree(payload_dir)
+check("the staged payload is absent before the build starts",
+      not payload_dir.exists(),
+      "otherwise this proves nothing about a fresh clone")
 
 for old in glob.glob(str(ROOT / "dist" / "*.whl")):
     Path(old).unlink()
 built = run([sys.executable, "-m", "build", "--wheel"], cwd=ROOT)
 wheels = sorted(glob.glob(str(ROOT / "dist" / "*.whl")))
-check("a wheel is produced", built.returncode == 0 and bool(wheels),
-      last_line(built))
+check("a wheel builds from a tree with NO staged payload, as pip does",
+      built.returncode == 0 and bool(wheels), last_line(built))
+check("...because the build hook staged it, not a human",
+      payload_dir.is_dir() and any(payload_dir.rglob("*")),
+      "hatch_build.py:initialize() runs before force-include resolves")
 
 if not wheels:
     print(f"\n{len(failures)} failed: {', '.join(failures)}")
