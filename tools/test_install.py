@@ -378,6 +378,63 @@ check("a v1 manifest degrades to refusing every difference",
 for d in (up, v1):
     shutil.rmtree(d.parent, ignore_errors=True)
 
+
+# --- a target's lint configuration is its decision, not the layer's ----------
+#
+# `ruff.toml` and `mypy.ini` sat in FILES until 2026-08-08. FILES copies
+# unconditionally and overwrites anything that differs, so installing the layer
+# into a product repo silently replaced its tuned lint rules with this
+# repository's. They are SEED now: created when absent, untouched when present.
+
+cfg = fresh_repo()
+(cfg / "ruff.toml").write_text("line-length = 79\n", encoding="utf-8")
+(cfg / "mypy.ini").write_text("[mypy]\nstrict = True\n", encoding="utf-8")
+inst.apply(cfg, inst.plan(cfg)[0])
+
+check("an existing ruff.toml is NOT overwritten",
+      "79" in (cfg / "ruff.toml").read_text(encoding="utf-8"),
+      "a product's lint rules are a decision the layer must not discard")
+check("an existing mypy.ini is NOT overwritten",
+      "strict = True" in (cfg / "mypy.ini").read_text(encoding="utf-8"))
+
+seeded = fresh_repo()
+inst.apply(seeded, inst.plan(seeded)[0])
+check("...but a repo with none is given a working starting point",
+      (seeded / "ruff.toml").is_file() and (seeded / "mypy.ini").is_file(),
+      "otherwise the layer's own hooks and tools go unchecked in the target")
+
+# The seeded mypy config must cover the TARGET, not this repository's layout.
+# `files = .claude/hooks, tools` shipped for a day: a product installing the
+# layer typechecked the LAYER and never its own source, while run_checks
+# reported `typecheck` green -- a gate asserting something true about the wrong
+# code, which is worse than an absent one because it reads as coverage.
+seeded_mypy = (seeded / "mypy.ini").read_text(encoding="utf-8")
+check("the seeded mypy config is repository-level",
+      "files = ." in seeded_mypy,
+      "review and verification are repo-level or they are theatre")
+# The DIRECTIVE, not the commentary. This file explains the old value in a
+# comment in order to explain the fix, and a check that cannot tell an
+# explanation from a declaration fails on its own documentation -- the same trap
+# `test_referenced_paths.py` records about its budget-word scan.
+_mypy_directives = [ln.strip() for ln in seeded_mypy.splitlines()
+                    if ln.strip() and not ln.strip().startswith("#")]
+check("...and does not hardcode this repository's directories",
+      not any(".claude/hooks" in ln for ln in _mypy_directives),
+      str([ln for ln in _mypy_directives if ".claude" in ln]))
+check("...while still excluding the staged payload, which duplicates tools/",
+      "build" in seeded_mypy, "mypy refuses two modules with one name")
+
+# Lint is repo-level already, and must stay that way: `ruff check .` takes the
+# whole tree, so the only thing that could narrow it is an `include` key.
+seeded_ruff = (seeded / "ruff.toml").read_text(encoding="utf-8")
+check("the seeded ruff config does not narrow itself to the layer",
+      "include" not in seeded_ruff.split("[lint]")[0],
+      "an include list here would scope linting to whatever this repo happens "
+      "to contain")
+
+for _d in (cfg, seeded):
+    shutil.rmtree(_d.parent, ignore_errors=True)
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

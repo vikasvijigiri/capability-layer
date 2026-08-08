@@ -64,8 +64,6 @@ FILES = (
     ".claude/install.py",
     "AGENTS.md",
     "harnesses.json",
-    "ruff.toml",
-    "mypy.ini",
 )
 
 # Written only when absent, never overwritten, but not in PRESERVE because a
@@ -74,6 +72,13 @@ FILES = (
 # two cannot drift.
 SEED = (
     ".github/workflows/checks.yml",
+    # A target's lint and typecheck configuration is ITS decision, and these were
+    # in FILES until 2026-08-08 -- copied unconditionally, so installing the layer
+    # silently overwrote a product's tuned `ruff.toml` with this repository's.
+    # Seeded instead: a repo with none gets a working starting point, a repo with
+    # its own keeps every rule in it.
+    "ruff.toml",
+    "mypy.ini",
     # `test_ci_shape.py` asserts both, and it travels with the layer. Seeding the
     # workflow without the ownership file it is checked against left exactly one
     # red suite in an otherwise-clean install -- found by running the fast tier in
