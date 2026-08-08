@@ -258,6 +258,23 @@ def _layer_owned(target: Path) -> set[str]:
     return {str(p).replace("\\", "/") for p in paths} if isinstance(paths, list) else set()
 
 
+def _layer_hashes(target: Path) -> dict[str, str]:
+    """`{path: sha256}` recorded at the last install, or empty.
+
+    Empty is the honest answer for a v1 manifest and makes `upgrade` fall back to
+    refusing every difference -- over-cautious rather than silently overwriting a
+    file it has no baseline for.
+    """
+    try:
+        data = json.loads((target / MANIFEST).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    files = data.get("files") if isinstance(data, dict) else None
+    if not isinstance(files, dict):
+        return {}
+    return {str(k).replace("\\", "/"): str(v) for k, v in files.items()}
+
+
 def _noise(path: Path, root: Path) -> bool:
     parts = set(path.relative_to(root).parts)
     return bool(parts & {"node_modules", ".venv", "venv", "dist", "build",
@@ -358,6 +375,21 @@ def plan(target: Path) -> tuple[list[tuple[Path, str]], list[str]]:
 
 
 MANIFEST = Path(".claude") / "layer-manifest.json"
+MANIFEST_VERSION = 2
+
+
+def file_hash(path: Path) -> str:
+    """sha256 of a file's bytes, or '' when it cannot be read.
+
+    Content, not mtime. A checkout, a clone or a `touch` all move mtime without
+    changing a byte, and an upgrade that refused on mtime would refuse on every
+    fresh clone.
+    """
+    import hashlib
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return ""
 
 
 def write_manifest(target: Path, actions: list[tuple[Path, str]]) -> int:
@@ -381,10 +413,23 @@ def write_manifest(target: Path, actions: list[tuple[Path, str]]) -> int:
         if action in ("create", "overwrite", "unchanged", "create-stub", "merge")
         and rel.as_posix() not in PRESERVE
     } | {MANIFEST.as_posix()})
+    # The hash of what was INSTALLED, per file. This is what lets `upgrade` tell
+    # "the team edited this" from "upstream changed it" -- without it the only
+    # safe reading of any difference is "local edit", so every genuine upstream
+    # improvement is refused too. Recorded from the source at install time, not
+    # from the target, so a file that fails to copy does not get a hash claiming
+    # it succeeded.
+    hashes = {
+        rel: file_hash(SOURCE / rel)
+        for rel in owned
+        if rel != MANIFEST.as_posix() and (SOURCE / rel).is_file()
+    }
+
     path = target / MANIFEST
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({
-        "version": 1,
+        "version": MANIFEST_VERSION,
+        "files": hashes,
         "_why": (
             "Paths owned by the capability layer, not by this repository. Read by "
             "_hooklib.layer_paths() so that tools/recon.py and tools/resume.py "
@@ -456,33 +501,61 @@ def main(argv: list[str] | None = None) -> int:
     # a skill, re-running destroys that work silently, and the layer's whole
     # premise is that silent is the worst failure mode available.
     #
-    # This is the conservative version. It cannot yet tell "the team edited this"
-    # from "upstream changed it", because the manifest records which paths the
-    # layer owns but not their content at install time. So it treats EVERY
-    # difference as a local edit and refuses it. That over-refuses -- a genuine
-    # upstream improvement is also skipped, and named -- which is the safe
-    # direction to be wrong in. Recording a hash per file at install time is what
-    # makes the distinction possible and is the next change, not this one.
+    # Three outcomes, decided by comparing the target's CURRENT bytes against the
+    # hash recorded when the layer was last installed:
+    #
+    #   current == recorded   nobody here touched it, so an upstream change is
+    #                         safe to take. This is the case a hashless upgrade
+    #                         had to refuse, which made it useless for its actual
+    #                         purpose -- you upgrade to GET the upstream changes.
+    #   current != recorded   somebody edited it. Never overwritten without
+    #                         --force, and named either way.
+    #   no recorded hash      a v1 manifest, or a file new to the payload. Treated
+    #                         as a local edit, because "I do not know" and "it is
+    #                         unchanged" must not be the same answer.
     if args.upgrade:
-        kept, refreshed = [], []
+        recorded = _layer_hashes(target)
+        kept: list[str] = []
+        refreshed: list[str] = []
+        added: list[str] = []
         adjusted: list[tuple[Path, str]] = []
+
         for rel, action in actions:
-            if action == "overwrite" and not args.force:
-                kept.append(rel.as_posix())
+            posix = rel.as_posix()
+            if action != "overwrite":
+                if action == "create":
+                    added.append(posix)
+                adjusted.append((rel, action))
+                continue
+
+            known = recorded.get(posix)
+            local_now = file_hash(target / rel)
+            edited_here = known is None or known != local_now
+
+            if edited_here and not args.force:
+                kept.append(posix + ("" if known else "  (no recorded hash)"))
                 adjusted.append((rel, "keep-local"))
             else:
-                if action in ("create", "overwrite"):
-                    refreshed.append(rel.as_posix())
+                refreshed.append(posix)
                 adjusted.append((rel, action))
+
         actions = adjusted
-        print(f"upgrade: {len(refreshed)} file(s) to write, "
-              f"{len(kept)} kept because they differ locally")
+        source = ("recorded hashes" if recorded
+                  else "NO recorded hashes -- a v1 manifest, so every difference "
+                       "reads as a local edit")
+        print(f"upgrade: {len(added)} new, {len(refreshed)} updated, "
+              f"{len(kept)} kept ({source})")
         for rel in kept[:10]:
-            print(f"  kept  {rel}")
+            print(f"  kept    {rel}")
         if len(kept) > 10:
             print(f"  ...and {len(kept) - 10} more")
+        for rel in refreshed[:5]:
+            print(f"  updated {rel}")
+        if len(refreshed) > 5:
+            print(f"  ...and {len(refreshed) - 5} more")
         if kept and not args.force:
-            print("  (--force overwrites these; without it they are never touched)")
+            print("  (--force overwrites the kept files; without it they are "
+                  "never touched)")
         print()
 
     counts: dict[str, int] = {}

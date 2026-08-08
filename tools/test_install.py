@@ -312,6 +312,72 @@ check("the installed layer passes its own router check in the target",
 for d in (target, keeper, dry, big, planned_repo):
     shutil.rmtree(d.parent, ignore_errors=True)
 
+
+# --- upgrade: the three outcomes, and which one is safe to be wrong about -----
+#
+# `install` overwrites any file whose bytes differ. Right the first time, wrong
+# the second: once a team customises a skill, re-running destroys it silently.
+# `upgrade` compares the target's CURRENT bytes to the hash recorded at install
+# and splits the difference three ways -- unchanged-here (take the upstream
+# change), edited-here (never overwrite without --force), and no-baseline (treat
+# as edited, because "I do not know" and "unchanged" must not be one answer).
+
+up = fresh_repo()
+inst.apply(up, inst.plan(up)[0])
+
+manifest = json.loads((up / ".claude" / "layer-manifest.json").read_text(encoding="utf-8"))
+check("the manifest records a version", manifest.get("version") == inst.MANIFEST_VERSION,
+      str(manifest.get("version")))
+check("...and a hash per owned file", isinstance(manifest.get("files"), dict)
+      and len(manifest["files"]) > 100, str(len(manifest.get("files") or {})))
+check("...hashed from the SOURCE, so a failed copy cannot claim success",
+      manifest["files"].get(".claude/workflow.md")
+      == inst.file_hash(inst.SOURCE / ".claude/workflow.md"))
+check("the manifest does not hash itself", 
+      inst.MANIFEST.as_posix() not in manifest["files"])
+
+edited = up / ".claude" / "skills" / "no-slop" / "SKILL.md"
+MARK = "<!-- ours -->"
+edited.write_text(edited.read_text(encoding="utf-8") + "\n" + MARK + "\n",
+                  encoding="utf-8")
+untouched = up / ".claude" / "workflow.md"
+before_untouched = untouched.read_text(encoding="utf-8")
+
+recorded = inst._layer_hashes(up)
+check("a recorded hash is readable back", bool(recorded), str(len(recorded)))
+check("an edited file no longer matches its recorded hash",
+      recorded[".claude/skills/no-slop/SKILL.md"] != inst.file_hash(edited))
+check("...while an untouched one still does",
+      recorded[".claude/workflow.md"] == inst.file_hash(untouched))
+
+rc = quiet(["--into", str(up), "--upgrade"])
+check("upgrade exits 0", rc == 0, str(rc))
+check("the local edit SURVIVES an upgrade",
+      MARK in edited.read_text(encoding="utf-8"),
+      "this is the whole point of the mode")
+check("...and the untouched file is still correct",
+      untouched.read_text(encoding="utf-8") == before_untouched)
+
+rc = quiet(["--into", str(up), "--upgrade", "--force"])
+check("--force overwrites the edit, because that is what it means",
+      MARK not in edited.read_text(encoding="utf-8"), str(rc))
+
+# A v1 manifest has no hashes. Every difference must then read as a local edit --
+# refusing an upstream change is recoverable; discarding a team's work is not.
+v1 = fresh_repo()
+inst.apply(v1, inst.plan(v1)[0])
+(v1 / ".claude" / "layer-manifest.json").write_text(
+    json.dumps({"version": 1, "paths": []}), encoding="utf-8")
+v1_edited = v1 / ".claude" / "skills" / "no-slop" / "SKILL.md"
+v1_edited.write_text("replaced entirely", encoding="utf-8")
+quiet(["--into", str(v1), "--upgrade"])
+check("a v1 manifest degrades to refusing every difference",
+      v1_edited.read_text(encoding="utf-8") == "replaced entirely",
+      "with no baseline, overwriting is a guess with someone else's work")
+
+for d in (up, v1):
+    shutil.rmtree(d.parent, ignore_errors=True)
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

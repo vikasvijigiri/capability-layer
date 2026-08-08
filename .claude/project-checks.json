@@ -39,5 +39,7 @@
   "audit": false,
   "_why_audit_false": "Stated, not silent. Deleting tools/run_workflow.mjs on 2026-08-07 removed the only JavaScript dependency, and detection then resolved NO slow-tier check at all -- an absent gate that still read as coverage. `false` makes run_checks report it as disabled by decision. Restore a real command the moment this repo has a dependency tree worth auditing.",
   "timeout": 300,
-  "max_files": 25
+  "max_files": 25,
+  "build": "python tools/test_package.py",
+  "_why_build": "The slow tier resolved ZERO checks until 2026-08-08, and `run_checks --tier slow` printed `PASS: no checks detected` -- a green that asserted nothing about a tier whose whole job is proving the artifact works. This is its first real member: it builds the wheel, reads the built zip rather than the config that produced it, installs it into a clean venv and then into a fresh repo, and requires THAT repo's own tier to come back green. Slow tier and not fast because it creates two virtualenvs; the fast tier gates every auto-commit and must stay in seconds."
 }
