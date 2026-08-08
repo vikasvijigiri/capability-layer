@@ -172,8 +172,11 @@ Raw equivalents, run from the repo root:
     python tools/smoke.py --url <url> --expect-status 200   # is it actually serving
     python tools/run_hook.py <event> '<json-payload>'   # fire one hook manually
 
-Individual suites live in `.claude/project-checks.json` — the copy that sat here
-named seven of nineteen. Run `/verify` before declaring any work done.
+Individual suites live in `.claude/project-checks.json`, which is the only place
+they are listed. A copy sat here once and named a fraction of them; the correction
+then carried its own count and went stale in turn, which is the argument against
+restating a number anywhere but the file that owns it. Run `/verify` before
+declaring any work done — it resolves every kind, and names any it had to skip.
 
 ---
 
