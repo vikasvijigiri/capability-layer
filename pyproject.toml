@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "uaios"
+name = "capability-layer"
 version = "0.1.0"
 description = "A harness-neutral agent capability layer for software delivery: skills, hooks, commands and deterministic checks, with exactly two places a human is asked."
 readme = "README.md"
@@ -24,12 +24,16 @@ dev = ["ruff>=0.5", "mypy>=1.8", "build>=1.0"]
 docs = []
 
 [project.scripts]
-uaios = "uaios.cli:main"
+# The full name is what `pip install` and the wheel carry; `cl` exists
+# because "capability-layer verify" is a lot to type twenty times a day.
+# Both are the same entry point, so they cannot drift.
+capability-layer = "capability_layer.cli:main"
+cl = "capability_layer.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["uaios"]
+packages = ["capability_layer"]
 
-# The payload: what `uaios install` copies into a target repository. It is data,
+# The payload: what `capability-layer install` copies into a target repository. It is data,
 # not importable code -- `.claude/` has to live in the target's working tree for
 # hooks to resolve by path and for a team to share the skills through version
 # control. Nothing here is ever imported from site-packages at runtime.
@@ -46,10 +50,10 @@ packages = ["uaios"]
 #
 # Staging first means the build config has no filtering left to get wrong.
 # Run `python tools/stage_payload.py` before `python -m build`.
-"build/payload" = "uaios/payload"
+"build/payload" = "capability_layer/payload"
 
 [tool.hatch.build.targets.sdist]
-include = ["uaios", ".claude", "tools", "AGENTS.md", "harnesses.json",
+include = ["capability_layer", ".claude", "tools", "AGENTS.md", "harnesses.json",
            "ruff.toml", "mypy.ini", "README.md", "templates/target-CLAUDE.md",
            "docs/pilots", "docs/baselines", "CODEOWNERS",
            ".github/workflows/checks.yml"]

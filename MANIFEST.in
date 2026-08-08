@@ -1,7 +1,7 @@
 # Belt-and-braces for the sdist. hatchling's `sdist.include` already covers this;
 # MANIFEST.in exists because a source distribution that silently omits the payload
 # produces a package that installs cleanly and then copies nothing -- the failure
-# mode with no symptom until someone runs `uaios install` in a fresh repo.
+# mode with no symptom until someone runs `capability-layer install` in a fresh repo.
 recursive-include .claude *
 recursive-include tools *.py
 recursive-include docs/pilots *

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""`uaios <verb>` -- console entry point, replacing `python tools/x.py`.
+"""`capability-layer <verb>` -- console entry point, replacing `python tools/x.py`.
 
 This module dispatches; it never reimplements. Every verb loads the real
 target module by path with `importlib.util.spec_from_file_location`, the
@@ -7,16 +7,16 @@ idiom already used throughout this repo (see the top of `tools/loop.py` and
 `tools/run_checks.py`'s own `load_projectchecks()`), then calls its
 `main(argv)`.
 
-    uaios install [--into DIR] [--dry-run]
-    uaios upgrade [--into DIR] [--dry-run]
-    uaios verify  [--tier fast|slow|all] [--require-test]
-    uaios resume | loop | recon | schedule <plan> | identity
-    uaios --version
+    capability-layer install [--into DIR] [--dry-run]
+    capability-layer upgrade [--into DIR] [--dry-run]
+    capability-layer verify  [--tier fast|slow|all] [--require-test]
+    capability-layer resume | loop | recon | schedule <plan> | identity
+    capability-layer --version
 
 Two different resolution rules, on purpose
 -------------------------------------------
 `install` and `upgrade` always load `.claude/install.py` from the **bundled
-payload** (`uaios/payload/`), never from the current directory. That script
+payload** (`capability_layer/payload/`), never from the current directory. That script
 computes its own `SOURCE` as `Path(__file__).resolve().parents[1]` -- the
 tree it copies *from*. Loading a copy that a previous install already placed
 in the target repo would make `SOURCE` the target itself, turning "install"
@@ -29,7 +29,7 @@ Every other verb (`verify`, `resume`, `loop`, `recon`, `schedule`,
 current working tree (`./tools/<name>.py`), because those scripts compute
 their own repository root the same way, and that root has to be the caller's
 repo, not the installed package's payload. It falls back to the bundled
-payload copy only when no local copy exists yet -- e.g. running `uaios
+payload copy only when no local copy exists yet -- e.g. running `capability-layer
 recon` against a repository the layer has never touched.
 """
 
@@ -41,7 +41,7 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
-from uaios import __version__
+from capability_layer import __version__
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 PAYLOAD_ROOT = PACKAGE_ROOT / "payload"
@@ -68,7 +68,7 @@ def _resolve(verb: str, rel: str) -> Path:
     bundled = PAYLOAD_ROOT / rel
     if verb in _PAYLOAD_ONLY:
         if not bundled.is_file():
-            raise SystemExit(f"uaios: bundled payload is missing {rel}")
+            raise SystemExit(f"capability-layer: bundled payload is missing {rel}")
         return bundled
 
     local = Path.cwd() / rel
@@ -77,14 +77,14 @@ def _resolve(verb: str, rel: str) -> Path:
     if bundled.is_file():
         return bundled
     raise SystemExit(
-        f"uaios: cannot find {rel} in {Path.cwd()} or in the bundled payload"
+        f"capability-layer: cannot find {rel} in {Path.cwd()} or in the bundled payload"
     )
 
 
 def _load(path: Path) -> ModuleType:
     spec = importlib.util.spec_from_file_location(path.stem, path)
     if spec is None or spec.loader is None:
-        raise SystemExit(f"uaios: cannot load {path}")
+        raise SystemExit(f"capability-layer: cannot load {path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -102,7 +102,7 @@ def _call_main(module: ModuleType, argv: list[str]) -> int:
     if len(inspect.signature(module.main).parameters) >= 1:
         return module.main(argv)
     saved_argv = sys.argv
-    sys.argv = [getattr(module, "__file__", "uaios")] + argv
+    sys.argv = [getattr(module, "__file__", "capability-layer")] + argv
     try:
         return module.main()
     finally:
@@ -121,22 +121,22 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args or args[0] in ("-h", "--help"):
         verbs = ", ".join(sorted(_TARGETS))
-        print(f"usage: uaios <verb> [args...]\n"
-              f"       uaios --version\n"
+        print(f"usage: capability-layer <verb> [args...]   (alias: cl)\n"
+              f"       capability-layer --version\n"
               f"verbs: {verbs}")
         return 0 if args else 2
 
     verb, rest = args[0], args[1:]
     rel = _TARGETS.get(verb)
     if rel is None:
-        print(f"uaios: unknown verb {verb!r}. Choose from: "
+        print(f"capability-layer: unknown verb {verb!r}. Choose from: "
               f"{', '.join(sorted(_TARGETS))}", file=sys.stderr)
         return 2
 
     if verb == "upgrade":
         # `install.py` gains its `upgrade` classification in Task 5 of the
         # same plan; this is the flag that plan names its CLI surface with
-        # (`uaios upgrade [--into DIR] [--dry-run]`, same flags as install).
+        # (`capability-layer upgrade [--into DIR] [--dry-run]`, same flags).
         rest = ["--upgrade", *rest]
 
     module = _load(_resolve(verb, rel))

@@ -1,4 +1,4 @@
-"""uaios: the capability layer, packaged.
+"""capability-layer: the agent capability layer, packaged.
 
 Single source of the version string. `pyproject.toml`'s hatchling backend is
 expected to read `__version__` from this file rather than duplicating it
