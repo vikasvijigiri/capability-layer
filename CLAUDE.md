@@ -80,6 +80,7 @@ because unapproved push, merge and deploy are forbidden outright below.
 | `releasing` | 9 release | the change serving at a named target + a quoted smoke check |
 | `knowledge-manager` | 10 record | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `decisions/` |
 | `research` | — entered from any stage | `docs/research/YYYY-MM-DD-<topic>.md` |
+| `designer` | — entered before surface work | `DESIGN.md`, forked from `templates/DESIGN.md` |
 | `systematic-debugging` | — entered on any failure | root cause + `ISSUES.md` entry |
 | `capability-layer-maintenance` | — entered to change this layer | aligned contracts, wiring, hooks, and green validators |
 | references | each stage keeps its depth in `<skill>/references/` — review lenses, worktrees, TDD, artifact review, design contract, SRE | loaded per task, not per turn |
@@ -184,7 +185,7 @@ declaring any work done — it resolves every kind, and names any it had to skip
 
 | Path | What it is |
 |---|---|
-| `.claude/skills/` | the 14 skills above, one directory each; `<skill>/references/` holds depth loaded on demand, not per turn |
+| `.claude/skills/` | the 15 skills above, one directory each; `<skill>/references/` holds depth loaded on demand, not per turn |
 | `.claude/agents/` | eleven agents: the fan-out set dispatched by skills, plus `Explore` overriding the built-in onto haiku |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
 | `.claude/hooks/<event>/` | hooks over several events that act, deny or measure; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |

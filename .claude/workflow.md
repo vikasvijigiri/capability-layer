@@ -194,5 +194,6 @@ These skills are reusable capabilities, not additional lifecycle stages:
 |---|---|---|
 | Comprehend | `repo-recon` | an unread or half-finished repository, at the entry boundary |
 | Research | `research` | external evidence |
+| Design | `designer` | a user-facing surface with no design contract; produces `DESIGN.md` |
 | Diagnose | `systematic-debugging` | root-cause and bounded recovery |
 | Maintain | `capability-layer-maintenance` | layer contracts and wiring |

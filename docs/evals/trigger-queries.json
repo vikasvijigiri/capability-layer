@@ -699,5 +699,59 @@
       "query": "the stripe webhook is timing out",
       "should_trigger": false
     }
+  ],
+  "designer": [
+    {
+      "query": "design this settings screen",
+      "should_trigger": true
+    },
+    {
+      "query": "what should this dashboard look like",
+      "should_trigger": true
+    },
+    {
+      "query": "set up a design system for the app",
+      "should_trigger": true
+    },
+    {
+      "query": "pick the colors for the new page",
+      "should_trigger": true
+    },
+    {
+      "query": "our UI is inconsistent across screens",
+      "should_trigger": true
+    },
+    {
+      "query": "define the color tokens",
+      "should_trigger": true
+    },
+    {
+      "query": "make the landing page look better",
+      "should_trigger": true
+    },
+    {
+      "query": "write DESIGN.md for this project",
+      "should_trigger": true
+    },
+    {
+      "query": "implement the settings screen from the plan",
+      "should_trigger": false,
+      "owner": "executing-plans"
+    },
+    {
+      "query": "clean up the repo before shipping",
+      "should_trigger": false,
+      "owner": "no-slop"
+    },
+    {
+      "query": "should we build a settings screen at all",
+      "should_trigger": false,
+      "owner": "brainstormer"
+    },
+    {
+      "query": "review this diff for accessibility problems",
+      "should_trigger": false,
+      "owner": "code-review"
+    }
   ]
 }

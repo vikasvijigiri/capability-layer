@@ -1,7 +1,8 @@
 ---
 name: designer
-description: Create or audit a product design contract before UI work - feeling, voice, color/type/spacing tokens, layout, components, motion, accessibility, responsive states, anti-patterns. For new screens, redesigns, design-system decisions, visual polish. Do NOT use for implementation-only coding or generic code review.
+description: Decide a surface's visual and interaction rules, and write them into DESIGN.md. Triggers include "design this screen", "what should this look like", "set up a design system", "pick the colors", "make this look better", "our UI is inconsistent", "define the color tokens". Do NOT use to build the screen (executing-plans), sweep a finished repo (no-slop), or choose between product approaches (brainstormer). Use this whenever work touches a user-facing surface with no design contract.
 when_to_use: when a product surface needs a coherent design system or visual/UX audit
+allowed-tools: Read Grep Glob
 effort: high
 model: sonnet
 disable-model-invocation: false
@@ -13,6 +14,11 @@ Create or audit the design contract before implementation. **Off-chain
 capability:** enter from `task-brief`, `brainstormer`, or `writing-plans` when
 the task changes a user-facing surface. Do not turn design decisions into
 untracked chat context; write the contract or a dated design decision.
+
+The output is `DESIGN.md` at the repository root, forked from
+`templates/DESIGN.md` and referenced from `CLAUDE.md` so it loads before any
+surface work. A contract that lives in a conversation is not a contract: the next
+session cannot read it, and `no-slop` checks the implemented surface against it.
 
 ## Inputs and output
 
@@ -108,18 +114,22 @@ mobile overflow, fake empty states, and copy that hides the next action.
 - Keep the design contract concise and reusable. Move long platform-specific
   guidance into a referenced document owned by the project.
 
-## Next step
+## Next step — you MUST take it
 
-Hand a complete contract to `brainstormer` for an open product decision,
-`writing-plans` for an approved design, or `executing-plans` when the design is
-already settled. If the task is implementation-only and the contract is already
-complete, return to the requesting stage.
+**Write the contract to `DESIGN.md`, then hand it back to the stage that entered
+here** — `brainstormer` when the product decision is still open, `writing-plans`
+when the design is approved and needs tasks, `executing-plans` when it was already
+settled and only the rules were missing. If the contract was already complete and
+nothing changed, say so and return; a design pass that produces no artefact and no
+verdict has produced reading, not work.
 
 ## Routing
 
 - Enter from `task-brief`, `brainstormer`, or `writing-plans` for user-facing
   product work.
-- Use `artifact-review` for an independent review of a material design contract.
+- For an independent review of a material contract, read
+  `writing-plans/references/artifact-review.md` — it is a reference, not a skill,
+  and invoking it as one is a handoff to nothing.
 - Use `no-slop` after implementation for token, state, accessibility, and
   anti-pattern checks; do not duplicate its repository-wide sweep here.
 

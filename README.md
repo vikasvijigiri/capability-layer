@@ -98,7 +98,7 @@ loads only when the task calls for it.
 
 | Path | What it is |
 |---|---|
-| `.claude/skills/` | the 14 skills, one directory each |
+| `.claude/skills/` | the 15 skills, one directory each |
 | `.claude/agents/` | 11 subagents — the read-only fan-out set, plus one implementer |
 | `.claude/hooks/` | what fires automatically — checkpoints, secret scan, branch guard, state report |
 | `.claude/commands/` | the 12 slash commands, including `/verify`, `/save` and `/publish` |
@@ -147,8 +147,8 @@ Stated here rather than discovered later:
   worktree` is unverified against *which commit* it bases on, so
   `executing-plans/references/parallel-dispatch.md` documents a mechanism that has
   not yet worked.
-- **Skill trigger rates are unmeasured.** `tools/eval_triggers.py` holds 168
-  queries across all 14 skills, sandboxed and instrument-checked; no live run has
+- **Skill trigger rates are unmeasured.** `tools/eval_triggers.py` holds 180
+  queries across all 15 skills, sandboxed and instrument-checked; no live run has
   been paid for. "It triggers" rests on description properties the suite enforces,
   not on a measured rate — and the one thing actually observed is that across a
   long session touching every stage, none fired on their own.

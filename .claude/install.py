@@ -154,6 +154,9 @@ def skipped(rel: Path) -> bool:
 EXTRA_PAYLOAD = (
     ".claude/settings.json",
     "templates/target-CLAUDE.md",
+    # `designer` tells a target to fork this into its own DESIGN.md. A skill
+    # naming a template that did not travel would be a handoff to nothing.
+    "templates/DESIGN.md",
     "README.md",
 )
 
