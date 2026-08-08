@@ -230,4 +230,4 @@ payload one declarative table.
 
 Gate 1 passed. Execution mode: subagent, round 1 dispatched as five concurrent
 `task-implementer` agents per `tools/parallel_groups.py`. Both clarifications
-resolved above; no `[NEEDS CLARIFICATION]` markers remain.
+resolved above; none remain open.
