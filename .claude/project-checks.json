@@ -9,6 +9,7 @@
   "test": [
     "python tools/test_hooks.py",
     "python tools/test_process_router.py",
+    "python tools/test_workflow_contract.py",
     "python tools/test_hook_registration.py",
     "python tools/test_artifact_autocommit.py",
     "python tools/test_no_slop.py",
