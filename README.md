@@ -53,8 +53,28 @@ imported from `site-packages` at runtime.
 ```bash
 python -m capability_layer install --into . --dry-run   # writes nothing, lists every path
 python -m capability_layer upgrade --into .             # keeps what you edited
+python -m capability_layer uninstall --into .           # removes only what it installed
 python -m capability_layer verify                       # the full tier, in your repo
 ```
+
+### Taking it back out
+
+`uninstall` reads the same manifest `upgrade` does and asks the same question —
+does this file's sha256 still match what was installed — but uses the answer to
+decide delete-vs-keep. It is deliberately timid, because a wrong `upgrade` keeps
+a file it could have refreshed and a wrong uninstall deletes your work:
+
+| Kept, and named in the report | Why |
+|---|---|
+| Anything you edited after install | Your work, not the layer's. A file with no recorded hash counts as edited |
+| `.claude/settings.json` | Merged into whatever hooks you already had, and nothing recorded what those were |
+| `CLAUDE.md`, `.claude/project-checks.json` | Never written by the installer in the first place |
+| Seeded lint and CI config | Written only if you lacked them, so you have been running on them since — removing the layer should not break `ruff` and CI in the same step. The exact set is `SEED` in `.claude/install.py`, and the run names every file it kept |
+
+Everything kept is printed with its reason — silence about a leftover file is the
+failure this verb exists to avoid. Run `--dry-run` first; it writes nothing.
+Without a `.claude/layer-manifest.json` it refuses outright rather than deleting
+by pattern, which is also what makes running it twice safe.
 
 Each install records a sha256 per file, so `upgrade` can tell **you edited this**
 from **upstream changed this**: an untouched file takes the update, an edited one

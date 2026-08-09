@@ -4,6 +4,33 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Add an `uninstall` verb, mirroring `install`
+
+- **Status:** In Progress
+- **Goal:** `capability-layer uninstall [--into DIR] [--dry-run]` removes the
+  layer it installed, keyed off the v2 manifest, without destroying local edits.
+- **Constraints:** Mirror `install`/`upgrade` — dispatch in
+  `capability_layer/cli.py`, implement in `.claude/install.py`. Remove only
+  manifest-recorded paths whose current sha256 matches the recorded one; keep and
+  **name** anything edited, unrecorded, `PRESERVE` or `MERGE`. Never delete
+  `.claude/settings.json` — it is merged host configuration, and the manifest
+  records it as layer-owned only because `write_manifest` counts `merge` actions.
+  `--dry-run` writes nothing. Refuse with a message when no manifest exists.
+- **Input:** `.claude/install.py` (`_layer_owned`, `_layer_hashes`, `file_hash`,
+  `MANIFEST`, `PRESERVE`, `MERGE`, `SEED`); `capability_layer/cli.py` (`_TARGETS`,
+  `_PAYLOAD_ONLY`); `tools/test_install.py` (`fresh_repo` harness, 60 checks); an
+  installed `.claude/layer-manifest.json` (v2: `paths` list + `files` sha256 map).
+- **Output:** `uninstall` verb in `cli.py`; an `--uninstall` path in
+  `install.py`'s `main()`; new assertions in `tools/test_install.py`; the README
+  install section updated to name the verb.
+- **Done Checks:** `python tools/test_install.py` exits 0 with new assertions
+  proving each of: an untouched installed file is removed; an edited installed
+  file survives and is named in the report; `--dry-run` leaves the tree
+  byte-identical; `.claude/settings.json` still exists after an uninstall.
+- **Out of Scope:** Changing `install`/`upgrade` semantics; un-merging
+  `settings.json` hook-by-hook; removing `PRESERVE` files; uninstalling from a
+  repository that has no manifest.
+
 ### Decide whether `/skills-doctor` still has a job
 
 - **Status:** Not started — raised by a `no-slop` sweep on 2026-08-03
