@@ -112,8 +112,26 @@ Two rungs carry the weight:
 
 ## Constraints
 
-- **A worktree per writing agent.** `task-implementer` carries
-  `isolation: worktree`; it costs ~200–500ms and disk, and is removed
+- **A worktree per writing agent, and CHECK THE BASE FIRST.**
+  `isolation: worktree` bases the agent's tree on the repository's **default
+  branch**, not on the branch this session has checked out. Measured, not
+  assumed: a probe agent dispatched from `rebuild-capability-layer` (at
+  `4abf946`) landed in a worktree at `af3cdda` on a fresh branch
+  `worktree-agent-<id>`.
+
+  That is the whole explanation for the first fan-out failing. `main` was the
+  initial commit at the time, so the whole round was handed a tree with none of the
+  work they were asked to extend. Three returned BLOCKED; two wrote into trees
+  nobody could see. Nothing reported a stale base, because from inside the
+  worktree nothing is wrong -- it is a clean checkout of a real commit.
+
+  **Before dispatching any worktree agent, confirm the work is on the default
+  branch.** `git merge-base --is-ancestor HEAD origin/<default>` answers it. If
+  it is not, do not use worktrees: dispatch serially in-tree, or merge first.
+  A worktree agent on an unmerged branch is not slower or riskier, it is
+  building against a different repository.
+
+  It costs ~200-500ms and disk, and is removed
   automatically when nothing changed. Two writers in one checkout is the
   corruption the whole check exists to prevent.
 - **Never let an agent commit, push or merge.** The dispatcher owns integration,
