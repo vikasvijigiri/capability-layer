@@ -277,13 +277,38 @@ def evaluate(skill: str, cases: list[dict], repeats: int, dry: bool,
                 # confident, uniform 0.0. Aborting here caps the next instance at
                 # one query instead of the whole sweep.
                 if not invoked and cost == 0.0:
-                    raise InstrumentError(
-                        f"first live query returned no tool records AND no cost "
-                        f"({skill!r}: {case['query'][:60]!r}). A real invocation "
-                        f"always costs something, so this is the harness, not the "
-                        f"descriptions. Check that `claude` is on PATH, that the "
-                        f"stream decodes, and that a tool_use block still names "
-                        f"the skill. Nothing further was run.")
+                    # Retry ONCE, with a longer timeout, before condemning the
+                    # harness. The tell above cannot separate "the instrument is
+                    # broken" from "the first invocation of a cold CLI took longer
+                    # than the per-query timeout" -- and both present identically,
+                    # as no tools and no cost.
+                    #
+                    # Measured 2026-08-09: `--skill research` succeeded (cost
+                    # $0.8837) while `--all` aborted twice on its first query, the
+                    # difference being that the single-skill run followed a manual
+                    # invocation and inherited a warm CLI. A cold start that
+                    # exceeds 180s raises TimeoutExpired, which `run_query` catches
+                    # and reports as (no tools, no cost).
+                    #
+                    # One retry, not three: a genuinely broken instrument fails
+                    # both times and still costs one query instead of a sweep,
+                    # which is the property this check was written for.
+                    print("  first query saw nothing -- retrying once with a "
+                          "longer timeout before blaming the instrument")
+                    invoked, cost = run_query(
+                        case["query"], timeout=600, cwd=cwd)
+                    spent += cost
+                    fired = skill in invoked
+                    if not invoked and cost == 0.0:
+                        raise InstrumentError(
+                            f"first live query returned no tool records AND no "
+                            f"cost TWICE, the second time with a 600s timeout "
+                            f"({skill!r}: {case['query'][:60]!r}). A real "
+                            f"invocation always costs something, so this is the "
+                            f"harness, not the descriptions. Check that `claude` "
+                            f"is on PATH, that the stream decodes, and that a "
+                            f"tool_use block still names the skill. Nothing "
+                            f"further was run.")
             if case["should_trigger"]:
                 hits += fired
                 misses += not fired
