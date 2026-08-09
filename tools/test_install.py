@@ -719,6 +719,24 @@ shutil.rmtree(_fdir.parent, ignore_errors=True)
 # wheel into a fresh repo and runs the repo's own tier. Skipping with a reason is
 # this repo's convention for a check whose subject is absent; failing would make
 # every installed target red for a file it is not supposed to have.
+# `cli.py` does `from capability_layer import __version__`, so loading it by path
+# needs the package importable, not merely present. Those are different facts and
+# the first guard here checked the wrong one: in CI the file EXISTS (it is the
+# source repo) while the package is not installed and the repo root is not on
+# `sys.path`, so the load raised `ModuleNotFoundError` and the whole suite exited
+# 1. Locally it passed, because the working directory happened to be on the path.
+#
+# That is the exact local-green/CI-red split this repository's CI exists to make
+# impossible -- `.github/workflows/checks.yml` calls the same resolver so the two
+# cannot disagree about WHAT runs, and this disagreed about whether it could run
+# at all. Reproduce with `python -I tools/test_install.py`.
+#
+# Putting ROOT on `sys.path` fixes the cause rather than widening the skip: the
+# package is right there, and an installed target still has no `capability_layer/`
+# at all, which is what the file check below is genuinely for.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 if not (ROOT / "capability_layer" / "cli.py").is_file():
     print("SKIP: no capability_layer/cli.py -- the console entry point is part "
           "of the package, not of the installed payload, so the uninstall verb's "
