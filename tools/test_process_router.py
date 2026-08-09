@@ -859,6 +859,99 @@ for _g in sorted(GATE_SKILLS):
           "AskUserQuestion" in _gbody,
           "the marker says there is a gate here and nothing implements it")
 
+# --- anything that leaves the machine asks with the tool ---------------------
+#
+# The two-gate rule is about LIFECYCLE approvals, and it was read for months as
+# "only two skills may ever call AskUserQuestion". `delivering` -- whose triggers
+# are "push this up", "merge it", "ship it" -- therefore had none, and said so
+# outright: "No separate delivery approval exists; shipment approval is owned by
+# `releasing`." But `releasing` runs AFTER delivery, so the click authorising a
+# push arrived after the push, while `CLAUDE.md` forbade pushing without explicit
+# approval and `/publish` gated the same action with two calls. One action, two
+# rules, decided by which entry point you took.
+#
+# An outward-facing operation is an operational safety check, not a gate: no
+# `<!-- GATE n -->` marker, so the gate set below is still exactly two.
+OUTWARD_SKILLS = {
+    "delivering": "push, PR and merge",
+    "releasing": "deploy",
+}
+# --- the stage that hands off to a merge says who actually merges ------------
+#
+# No skill in this layer runs `gh pr merge`; a human presses the button. That was
+# only ever implied -- `delivering` said "prepare the PR or merge-queue handoff"
+# and `/publish` said "landing is delivering's business and the queue's", so each
+# pointed at the other and at a merge queue that answers 403 on a free private
+# repository. A step handed to a mechanism that may not exist is nobody's.
+#
+# Also pinned: the squash-vs-stack incompatibility. `CLAUDE.md` says `wip:`
+# checkpoints exist because squash-merge collapses them, which is true for one PR
+# and is exactly what breaks a stack -- squashing the base gives `main` a new SHA
+# and every child then re-proposes its parent's files as conflicts. Discovered
+# with five stacked PRs already open.
+_del = (SKILLS / "delivering" / "SKILL.md").read_text(encoding="utf-8")
+check("`delivering` says no skill merges",
+      re.search(r"no skill.{0,40}merge|human presses the button", _del, re.I | re.S)
+      is not None,
+      "deferring to a merge queue that may not exist leaves the merge unowned")
+check("`delivering` warns that squash breaks a stacked PR",
+      "squash" in _del.lower() and "stack" in _del.lower(),
+      "the layer assumes squash-merge and says nothing about what that does to a "
+      "stack, which is the one place the two interact badly")
+
+# Nothing may quietly acquire the ability to merge. `_MERGE_VERBS` are checked
+# across every skill and command, and a mention only passes where it is negated.
+_MERGE_VERBS = re.compile(r"(?<![`\w])gh pr merge(?![\w])")
+for _p in sorted([*SKILLS.glob("*/SKILL.md"),
+                  *(ROOT / ".claude" / "commands").glob("*.md")]):
+    _t = _p.read_text(encoding="utf-8")
+    _hits = [ln for ln in _t.splitlines() if _MERGE_VERBS.search(ln)
+             and not re.search(r"\b(never|not|no|nor)\b", ln, re.I)]
+    check(f"{_p.parent.name}/{_p.name} does not merge", not _hits,
+          f"{_hits[:1]} -- merging is the human's, and it is the one action "
+          f"the chain deliberately does not automate")
+
+
+for _skill, _what in sorted(OUTWARD_SKILLS.items()):
+    _body = (SKILLS / _skill / "SKILL.md").read_text(encoding="utf-8")
+    check(f"`{_skill}` confirms {_what} with AskUserQuestion",
+          "AskUserQuestion" in _body,
+          "a prose question is answerable by silence and scrolls away; this "
+          "operation is irreversible and outward-facing")
+    # The prohibition has to be explicit, or the next editor reads the call as
+    # optional politeness and drops it during a tidy-up.
+    check(f"...and `{_skill}` says a prose question does not count",
+          re.search(r"prose question", _body, re.I) is not None,
+          "the rule is the tool, not the asking")
+# --- a skill's claim about another skill's output must be true ---------------
+#
+# `executing-plans` says: "Tick `- [ ]` -> `- [x]` as each step lands.
+# `writing-plans` mandates that syntax expressly for tracking." It did not. The
+# task template emitted `**Done when:**` and no checkbox, so every plan in
+# docs/plans/ had zero of them and the executor's whole progress mechanism had
+# never once had anything to tick. Every suite stayed green, because nothing
+# checked that one skill's claim ABOUT another was accurate -- only that the
+# names it used resolved to real skills.
+#
+# The general property is untestable (arbitrary prose about arbitrary prose).
+# This pins the instance in the direction that matters: a consumer naming a
+# syntax must have a producer that actually emits it.
+_ep = (SKILLS / "executing-plans" / "SKILL.md").read_text(encoding="utf-8")
+_wp_all = "\n".join(
+    p.read_text(encoding="utf-8")
+    for p in [SKILLS / "writing-plans" / "SKILL.md",
+              *sorted((SKILLS / "writing-plans" / "references").glob("*.md"))])
+
+if "- [ ]" in _ep:
+    check("the checkbox `executing-plans` ticks is one `writing-plans` emits",
+          "- [ ]" in _wp_all,
+          "the consumer names a progress syntax the producer never writes")
+    check("...and `writing-plans` emits it as a per-task progress block",
+          re.search(r"- \[ \]\s+Task\s+\d", _wp_all) is not None,
+          "a checkbox somewhere is not a checkbox per task; tools/analyze.py "
+          "counts them against the task headings")
+
+
 for _skill in ("no-slop", "brainstormer"):
     _body = (SKILLS / _skill / "SKILL.md").read_text(encoding="utf-8")
     # Mentions are allowed -- these files explain what they must NOT do, and
