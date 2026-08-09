@@ -34,8 +34,36 @@ rollback, and then the smallest lower-risk diff.
    return a structured conflict incident to `systematic-debugging`.
 4. Prepare the PR or merge-queue handoff. Do not bypass protected-branch rules,
    required checks, or merge queue. Do not deploy.
-5. Return `clean`, `conflict`, or `blocked` with changed paths, base, checks,
+5. **Before anything leaves the machine, confirm with `AskUserQuestion`.**
+   See below — a prose question does not count.
+6. Return `clean`, `conflict`, or `blocked` with changed paths, base, checks,
    conflict files, and evidence.
+
+## The push confirmation
+
+<HARD-GATE>
+`git push`, `gh pr create`, and any merge are outward-facing and are **never**
+performed on an inferred yes. Ask with `AskUserQuestion`, naming the remote, the
+branch and the base in the question itself, with real options — push and open a
+PR, keep it local, cancel.
+
+A prose question is answerable by silence and it scrolls away in a long turn.
+"Say the word and I'll push" is not approval; it is a sentence that looks like
+one.
+</HARD-GATE>
+
+**This is an operational safety check, not a third lifecycle gate**, and the
+distinction is what keeps the chain at two gates. Gate 1 approves a plan and
+Gate 2 approves a shipment; this authorises one irreversible operation on the
+tree in front of you. It carries no `<!-- GATE n -->` marker for that reason,
+and `test_process_router.py` still pins the gate set to exactly two.
+
+**This file once said the opposite.** `## Routing` read *"No separate
+delivery approval exists; shipment approval is owned by `releasing`"* — but
+`releasing` runs **after** this stage, so the only click authorising a push
+arrived after the push. Meanwhile `CLAUDE.md` forbids pushing without explicit
+approval and `/publish` gated the same action with two `AskUserQuestion` calls.
+One action, two rules, decided by which entry point you happened to take.
 
 ## Recovery
 
@@ -52,7 +80,9 @@ approval gate. On conflict or failed checks, invoke `systematic-debugging`.
 
 - Mandatory validator: all-tier checks, secret scan, review receipt, and base-branch evidence.
 - Terminal handoff: `releasing` on clean; `systematic-debugging` on failure.
-- No separate delivery approval exists; shipment approval is owned by `releasing`.
+- Delivery is not a lifecycle gate, and it still requires one `AskUserQuestion`
+  before any push, PR or merge — an operational safety check, per **The push
+  confirmation** above. Shipment approval remains Gate 2, owned by `releasing`.
 
 ## Success
 

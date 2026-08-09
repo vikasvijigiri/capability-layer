@@ -859,6 +859,35 @@ for _g in sorted(GATE_SKILLS):
           "AskUserQuestion" in _gbody,
           "the marker says there is a gate here and nothing implements it")
 
+# --- anything that leaves the machine asks with the tool ---------------------
+#
+# The two-gate rule is about LIFECYCLE approvals, and it was read for months as
+# "only two skills may ever call AskUserQuestion". `delivering` -- whose triggers
+# are "push this up", "merge it", "ship it" -- therefore had none, and said so
+# outright: "No separate delivery approval exists; shipment approval is owned by
+# `releasing`." But `releasing` runs AFTER delivery, so the click authorising a
+# push arrived after the push, while `CLAUDE.md` forbade pushing without explicit
+# approval and `/publish` gated the same action with two calls. One action, two
+# rules, decided by which entry point you took.
+#
+# An outward-facing operation is an operational safety check, not a gate: no
+# `<!-- GATE n -->` marker, so the gate set below is still exactly two.
+OUTWARD_SKILLS = {
+    "delivering": "push, PR and merge",
+    "releasing": "deploy",
+}
+for _skill, _what in sorted(OUTWARD_SKILLS.items()):
+    _body = (SKILLS / _skill / "SKILL.md").read_text(encoding="utf-8")
+    check(f"`{_skill}` confirms {_what} with AskUserQuestion",
+          "AskUserQuestion" in _body,
+          "a prose question is answerable by silence and scrolls away; this "
+          "operation is irreversible and outward-facing")
+    # The prohibition has to be explicit, or the next editor reads the call as
+    # optional politeness and drops it during a tidy-up.
+    check(f"...and `{_skill}` says a prose question does not count",
+          re.search(r"prose question", _body, re.I) is not None,
+          "the rule is the tool, not the asking")
+
 for _skill in ("no-slop", "brainstormer"):
     _body = (SKILLS / _skill / "SKILL.md").read_text(encoding="utf-8")
     # Mentions are allowed -- these files explain what they must NOT do, and

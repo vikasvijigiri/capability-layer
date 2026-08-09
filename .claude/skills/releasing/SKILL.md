@@ -20,6 +20,13 @@ hold and reject take the reason as free text** — the tool appends its own
 "Other" for that; never add one. Record the answer verbatim, including anything
 in its notes.
 
+**A prose question does not count**, however plainly it is worded. "Say the word
+and I'll deploy" is answerable by silence, it scrolls away in a long turn, and a
+later message that happens to sound agreeable is not a decision anybody made.
+The approval has to be a click. `test_process_router.py` asserts this skill both
+calls the tool and states this rule, because a call with no rule beside it gets
+dropped in the next tidy-up as optional politeness.
+
 A rejected candidate is not a failed check and gets no repair budget. Record why
 it was held, and route by what the reason actually says: a defect goes to
 `systematic-debugging`, a missing signal to this skill's observability
