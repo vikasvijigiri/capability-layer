@@ -65,6 +65,54 @@ arrived after the push. Meanwhile `CLAUDE.md` forbids pushing without explicit
 approval and `/publish` gated the same action with two `AskUserQuestion` calls.
 One action, two rules, decided by which entry point you happened to take.
 
+## Nothing here merges, and that is deliberate
+
+**No skill in this layer runs `gh pr merge`.** Grep for it and the only hits are
+prohibitions. This stage prepares the candidate and stops; a human presses the
+button. `/publish` says the same from the other side — *"Landing is
+`delivering`'s business and the queue's"* — and what that resolves to is: open
+the PR, report it, stop.
+
+Say so plainly in the report. Deferring to "the merge queue" is worse than
+saying "a human merges this", because a merge queue is a paid GitHub feature and
+`gh api repos/<o>/<r>/branches/main/protection` answers `403 Upgrade to GitHub
+Pro or make this repository public` on a free private repository. Handing off to
+a mechanism that may not exist is how a step becomes nobody's.
+
+## Stacked PRs — state the merge strategy before you open the second one
+
+A branch opened against another open PR's branch is a **stack**, and stacks
+interact badly with the squash-merge this layer otherwise assumes.
+`CLAUDE.md` says `wip:` checkpoints are deliberate *"because squash-merge
+collapses them"* — true for one PR, and the thing that breaks a stack:
+
+| Step | What happens |
+|---|---|
+| Squash-merge the base PR | `main` gets a **new** SHA; the base's original commits never land |
+| GitHub retargets the child | Its history now references commits absent from `main` |
+| The child's diff | Re-proposes its parent's files, as conflicts that are not real |
+
+Three rules, in order of preference:
+
+1. **Prefer no stack.** Independent branches off `main` merge in any order.
+   Trunk-based practice keeps branches short-lived and parallel for exactly this
+   reason; a stack is a scheduling constraint you are choosing to take on.
+2. **If you stack, merge with merge commits, not squash** — the base's SHAs must
+   survive for the children to stay clean. Decide this and say it out loud
+   *before* opening the second PR, not when the first one is ready to land.
+3. **Keep the stack shallow.** Past two or three the ordering constraint costs
+   more than the review granularity buys, and the industry answer at that depth
+   is tooling (Graphite, `ghstack`, `spr`) rather than discipline.
+
+**Check the base you declare against the base you cut from.** A PR opened with
+`--base X` from a branch cut off `Y` shows every one of `Y`'s files as its own.
+One command, and it is the whole check:
+
+```bash
+[ "$(git merge-base origin/<base> origin/<head>)" = "$(git rev-parse origin/<base>)" ] \
+  && echo aligned || echo MISMATCH
+```
+
 ## Recovery
 
 Conflict recovery is limited to two attempts. A failed required check returns to

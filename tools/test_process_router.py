@@ -876,6 +876,42 @@ OUTWARD_SKILLS = {
     "delivering": "push, PR and merge",
     "releasing": "deploy",
 }
+# --- the stage that hands off to a merge says who actually merges ------------
+#
+# No skill in this layer runs `gh pr merge`; a human presses the button. That was
+# only ever implied -- `delivering` said "prepare the PR or merge-queue handoff"
+# and `/publish` said "landing is delivering's business and the queue's", so each
+# pointed at the other and at a merge queue that answers 403 on a free private
+# repository. A step handed to a mechanism that may not exist is nobody's.
+#
+# Also pinned: the squash-vs-stack incompatibility. `CLAUDE.md` says `wip:`
+# checkpoints exist because squash-merge collapses them, which is true for one PR
+# and is exactly what breaks a stack -- squashing the base gives `main` a new SHA
+# and every child then re-proposes its parent's files as conflicts. Discovered
+# with five stacked PRs already open.
+_del = (SKILLS / "delivering" / "SKILL.md").read_text(encoding="utf-8")
+check("`delivering` says no skill merges",
+      re.search(r"no skill.{0,40}merge|human presses the button", _del, re.I | re.S)
+      is not None,
+      "deferring to a merge queue that may not exist leaves the merge unowned")
+check("`delivering` warns that squash breaks a stacked PR",
+      "squash" in _del.lower() and "stack" in _del.lower(),
+      "the layer assumes squash-merge and says nothing about what that does to a "
+      "stack, which is the one place the two interact badly")
+
+# Nothing may quietly acquire the ability to merge. `_MERGE_VERBS` are checked
+# across every skill and command, and a mention only passes where it is negated.
+_MERGE_VERBS = re.compile(r"(?<![`\w])gh pr merge(?![\w])")
+for _p in sorted([*SKILLS.glob("*/SKILL.md"),
+                  *(ROOT / ".claude" / "commands").glob("*.md")]):
+    _t = _p.read_text(encoding="utf-8")
+    _hits = [ln for ln in _t.splitlines() if _MERGE_VERBS.search(ln)
+             and not re.search(r"\b(never|not|no|nor)\b", ln, re.I)]
+    check(f"{_p.parent.name}/{_p.name} does not merge", not _hits,
+          f"{_hits[:1]} -- merging is the human's, and it is the one action "
+          f"the chain deliberately does not automate")
+
+
 for _skill, _what in sorted(OUTWARD_SKILLS.items()):
     _body = (SKILLS / _skill / "SKILL.md").read_text(encoding="utf-8")
     check(f"`{_skill}` confirms {_what} with AskUserQuestion",
