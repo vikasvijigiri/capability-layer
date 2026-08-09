@@ -22,7 +22,9 @@ Run: python tools/test_install.py
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
 import shutil
 import subprocess
@@ -435,6 +437,224 @@ check("the seeded ruff config does not narrow itself to the layer",
       "include" not in seeded_ruff.split("[lint]")[0],
       "an include list here would scope linting to whatever this repo happens "
       "to contain")
+
+# --- uninstall: what may be removed, and what must never be -----------------
+#
+# `uninstall` mirrors `upgrade`: same manifest, same hash comparison, opposite
+# consequence. The risk is not symmetric though -- a wrong `upgrade` keeps a file
+# it could have refreshed, a wrong `uninstall` deletes somebody's work. So the
+# protected set is asserted by name, and the edited case is asserted with a real
+# edit rather than a fixture flag.
+
+un = fresh_repo()
+inst.apply(un, inst.plan(un)[0])
+
+_removable = ".claude/workflow.md"
+_edited = ".claude/skills/no-slop/SKILL.md"
+(un / _edited).write_text("locally edited\n", encoding="utf-8")
+
+remove, kept_edited, kept_protected = inst.uninstall_plan(un)
+
+check("uninstall_plan offers to remove an untouched installed file",
+      _removable in remove, f"remove={len(remove)} paths")
+check("uninstall_plan keeps a file edited since install",
+      _edited in kept_edited and _edited not in remove,
+      f"edited file must survive; kept_edited={_edited in kept_edited}")
+
+# The trap this whole verb has to avoid. `write_manifest` counts `merge` actions
+# as layer-owned, so settings.json IS in the manifest -- but it may carry hooks
+# the host had before the layer arrived, and nothing recorded what those were.
+check("uninstall_plan never offers to remove the merged settings.json",
+      ".claude/settings.json" not in remove,
+      "merged host configuration; deleting it destroys hooks nobody recorded")
+
+# Resolved at Gate 1: a repo that adopted the layer's lint config now depends on
+# it, so removing the layer must not break ruff and CI in the same step.
+for _seed in ("ruff.toml", "mypy.ini"):
+    if (un / _seed).is_file():
+        check(f"uninstall_plan keeps the seeded {_seed}",
+              _seed not in remove, "SEED files are kept and named")
+
+check("uninstall_plan keeps the manifest out of the removable set",
+      inst.MANIFEST.as_posix() not in remove,
+      "the caller removes it last, so an interrupted run stays resumable")
+
+check("uninstall_plan's three lists are disjoint",
+      not (set(remove) & set(kept_edited))
+      and not (set(remove) & set(kept_protected))
+      and not (set(kept_edited) & set(kept_protected)),
+      "a path in two lists means the caller's behaviour depends on iteration order")
+
+check("uninstall_plan writes nothing",
+      (un / _removable).is_file() and (un / ".claude" / "settings.json").is_file(),
+      "it plans; applying is main()'s job")
+
+# A target the layer never touched has no manifest, and the honest answer is
+# three empty lists -- not "remove everything I can see".
+_virgin = fresh_repo()
+check("uninstall_plan refuses a target with no manifest",
+      inst.uninstall_plan(_virgin) == ([], [], []),
+      "no manifest means nothing here was installed by this layer")
+
+# --- uninstall: applying it ---------------------------------------------------
+#
+# End to end on a real temp repo, because the whole verb is filesystem effects
+# and `uninstall_plan` deliberately has none. Exit code proves nothing here; each
+# check reads the tree back.
+
+def _installed_repo():
+    d = fresh_repo()
+    (d / "src").mkdir()
+    (d / "src" / "app.py").write_text("def main():\n    return 1\n", encoding="utf-8")
+    inst.apply(d, inst.plan(d)[0])
+    return d
+
+
+# A dry run must leave the tree byte-identical. Measured by hashing every file
+# before and after, not by trusting the flag.
+dry = _installed_repo()
+_before = {p.relative_to(dry).as_posix(): inst.file_hash(p)
+           for p in dry.rglob("*") if p.is_file() and ".git" not in p.parts}
+rc_dry = inst.main(["--uninstall", "--into", str(dry), "--dry-run"])
+_after = {p.relative_to(dry).as_posix(): inst.file_hash(p)
+          for p in dry.rglob("*") if p.is_file() and ".git" not in p.parts}
+check("uninstall --dry-run exits 0", rc_dry == 0, f"rc={rc_dry}")
+check("uninstall --dry-run leaves the tree byte-identical",
+      _before == _after,
+      f"changed: {sorted(set(_before) ^ set(_after))[:3]}")
+
+# The real thing.
+gone = _installed_repo()
+(gone / ".claude" / "skills" / "no-slop" / "SKILL.md").write_text(
+    "locally edited\n", encoding="utf-8")
+rc = inst.main(["--uninstall", "--into", str(gone)])
+check("uninstall exits 0", rc == 0, f"rc={rc}")
+check("uninstall removed an untouched installed file",
+      not (gone / ".claude" / "workflow.md").is_file())
+check("uninstall kept the file that was edited after install",
+      (gone / ".claude" / "skills" / "no-slop" / "SKILL.md").is_file(),
+      "an edited file is the user's work, not the layer's")
+check("uninstall never removed the merged settings.json",
+      (gone / ".claude" / "settings.json").is_file(),
+      "merged host configuration")
+check("uninstall left the host's own code alone",
+      (gone / "src" / "app.py").is_file(), "the host's code is not the layer's")
+check("uninstall removed the manifest last",
+      not (gone / inst.MANIFEST).is_file(),
+      "with it gone the verb is idempotent by construction")
+check("uninstall pruned the directories it emptied",
+      not (gone / ".claude" / "agents").is_dir(),
+      "an empty tree of directories is residue")
+
+# Safe to run twice: the manifest is gone, so the second run has nothing to
+# claim and must refuse rather than delete by pattern.
+rc2 = inst.main(["--uninstall", "--into", str(gone)])
+check("a second uninstall refuses instead of guessing", rc2 == 2, f"rc={rc2}")
+
+# --upgrade and --uninstall are opposite operations; asking for both is a
+# mistake that must fail loudly rather than doing half of each.
+_both = _installed_repo()
+try:
+    inst.main(["--uninstall", "--upgrade", "--into", str(_both)])
+    _rejected = False
+except SystemExit as exc:
+    _rejected = exc.code != 0
+check("--uninstall and --upgrade together are refused", _rejected,
+      "argparse must reject the combination, not silently pick one")
+
+# --- the report must describe what actually happened -------------------------
+#
+# Both of these were found by `verifying-work`, not by this suite, and both are
+# the same class: the verb behaved correctly and said something else.
+#
+# `TASK.md`'s Done Check is "an edited installed file survives AND is named in
+# the report". Survival was asserted above; naming was not, so a regression that
+# silenced the kept-list would have shipped green.
+
+_rep = _installed_repo()
+_rep_edited = ".claude/skills/no-slop/SKILL.md"
+(_rep / _rep_edited).write_text("locally edited\n", encoding="utf-8")
+_buf = io.StringIO()
+with contextlib.redirect_stdout(_buf):
+    inst.main(["--uninstall", "--into", str(_rep)])
+_report = _buf.getvalue()
+
+check("the report names the file it kept as edited",
+      _rep_edited in _report,
+      "silence about a kept file is the failure this verb exists to avoid")
+check("the report names the protected settings.json",
+      ".claude/settings.json" in _report)
+check("the report names a kept SEED file",
+      "ruff.toml" in _report)
+
+# The manifest IS deleted, and deliberately -- it is what makes a second run
+# refuse. Reporting it under "kept" told the reader the opposite.
+#
+# EVERY line mentioning it, not the first. The first version of this check read
+# only the text before the first occurrence, and red-green proved it worthless:
+# reintroducing the defect produced BOTH `removed last  .claude/layer-manifest.json`
+# AND `kept (edited) .claude/layer-manifest.json`, the correct line came first,
+# and the suite stayed green. A check that passes on the defect it names is worse
+# than no check, because it is counted as coverage.
+_manifest_lines = [ln for ln in _report.splitlines()
+                   if inst.MANIFEST.as_posix() in ln]
+check("the report mentions the manifest exactly once",
+      len(_manifest_lines) == 1, f"lines: {_manifest_lines}")
+check("the report does not claim the manifest was kept",
+      not any("kept" in ln for ln in _manifest_lines),
+      f"it is removed last; calling it kept contradicts the tree. {_manifest_lines}")
+check("...and says it was removed last",
+      any("removed last" in ln for ln in _manifest_lines),
+      f"lines: {_manifest_lines}")
+check("...and the manifest is genuinely gone",
+      not (_rep / inst.MANIFEST).is_file())
+
+shutil.rmtree(_rep.parent, ignore_errors=True)
+
+
+# --- uninstall reaches the CLI ----------------------------------------------
+#
+# The verb must resolve AND be payload-only. Payload-only is the load-bearing
+# half: a target being uninstalled still has `.claude/install.py` in it, and
+# loading that copy would make `SOURCE` the target -- the module would be
+# deleting the file it is running from.
+
+# `capability_layer/` is the PACKAGE, and the payload is `.claude/` plus
+# `tools/`. An installed target therefore has this suite but no CLI module to
+# load, and `test_package.py` runs exactly that combination -- it installs the
+# wheel into a fresh repo and runs the repo's own tier. Skipping with a reason is
+# this repo's convention for a check whose subject is absent; failing would make
+# every installed target red for a file it is not supposed to have.
+if not (ROOT / "capability_layer" / "cli.py").is_file():
+    print("SKIP: no capability_layer/cli.py -- the console entry point is part "
+          "of the package, not of the installed payload, so the uninstall verb's "
+          "CLI wiring is unmeasured here")
+else:
+    _cli = load("capability_layer/cli.py", "cl_cli_mod")
+    check("the CLI knows the uninstall verb", "uninstall" in _cli._TARGETS,
+          f"verbs: {sorted(_cli._TARGETS)}")
+    check("uninstall dispatches to the installer module",
+          _cli._TARGETS.get("uninstall") == ".claude/install.py")
+    check("uninstall is payload-only, never the target's own copy",
+          "uninstall" in _cli._PAYLOAD_ONLY,
+          "loading the target's copy would alias SOURCE to the target")
+    check("uninstall reaches install.py through --uninstall",
+          _cli._MODE_FLAG.get("uninstall") == "--uninstall",
+          f"mode flags: {_cli._MODE_FLAG}")
+    check("...and upgrade still reaches it through --upgrade",
+          _cli._MODE_FLAG.get("upgrade") == "--upgrade",
+          "the map replaced an if-chain; the first entry must still work")
+    check("the CLI usage text names the verb",
+          "uninstall" in (_cli.__doc__ or ""),
+          "a verb absent from the usage block is a verb nobody runs")
+
+for _d in (dry, gone, _both):
+    shutil.rmtree(_d.parent, ignore_errors=True)
+
+
+for _d in (un, _virgin):
+    shutil.rmtree(_d.parent, ignore_errors=True)
+
 
 for _d in (cfg, seeded):
     shutil.rmtree(_d.parent, ignore_errors=True)

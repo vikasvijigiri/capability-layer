@@ -7,16 +7,17 @@ idiom already used throughout this repo (see the top of `tools/loop.py` and
 `tools/run_checks.py`'s own `load_projectchecks()`), then calls its
 `main(argv)`.
 
-    capability-layer install [--into DIR] [--dry-run]
-    capability-layer upgrade [--into DIR] [--dry-run]
-    capability-layer verify  [--tier fast|slow|all] [--require-test]
+    capability-layer install   [--into DIR] [--dry-run]
+    capability-layer upgrade   [--into DIR] [--dry-run]
+    capability-layer uninstall [--into DIR] [--dry-run]
+    capability-layer verify    [--tier fast|slow|all] [--require-test]
     capability-layer resume | loop | recon | schedule <plan> | identity
     capability-layer --version
 
 Two different resolution rules, on purpose
 -------------------------------------------
-`install` and `upgrade` always load `.claude/install.py` from the **bundled
-payload** (`capability_layer/payload/`), never from the current directory. That script
+`install`, `upgrade` and `uninstall` always load `.claude/install.py` from the
+**bundled payload** (`capability_layer/payload/`), never from the current directory. That script
 computes its own `SOURCE` as `Path(__file__).resolve().parents[1]` -- the
 tree it copies *from*. Loading a copy that a previous install already placed
 in the target repo would make `SOURCE` the target itself, turning "install"
@@ -50,6 +51,7 @@ PAYLOAD_ROOT = PACKAGE_ROOT / "payload"
 _TARGETS: dict[str, str] = {
     "install": ".claude/install.py",
     "upgrade": ".claude/install.py",
+    "uninstall": ".claude/install.py",
     "verify": "tools/run_checks.py",
     "resume": "tools/resume.py",
     "loop": "tools/loop.py",
@@ -60,7 +62,17 @@ _TARGETS: dict[str, str] = {
 
 # Verbs whose module must always come from the bundled payload -- see the
 # module docstring for why `install`/`upgrade` cannot use a local copy.
-_PAYLOAD_ONLY = {"install", "upgrade"}
+#
+# `uninstall` is here for the sharper version of the same reason: its target
+# still contains `.claude/install.py` right up until the moment it does not, and
+# loading that copy would make `SOURCE` the target. It would also be deleting the
+# module it is executing from.
+_PAYLOAD_ONLY = {"install", "upgrade", "uninstall"}
+
+# Verbs that reach `install.py`'s single `main()` through a flag rather than a
+# subcommand. A map rather than a chain of `if verb ==` -- the second entry is
+# where that chain would have started growing.
+_MODE_FLAG = {"upgrade": "--upgrade", "uninstall": "--uninstall"}
 
 
 def _resolve(verb: str, rel: str) -> Path:
@@ -133,11 +145,8 @@ def main(argv: list[str] | None = None) -> int:
               f"{', '.join(sorted(_TARGETS))}", file=sys.stderr)
         return 2
 
-    if verb == "upgrade":
-        # `install.py` gains its `upgrade` classification in Task 5 of the
-        # same plan; this is the flag that plan names its CLI surface with
-        # (`capability-layer upgrade [--into DIR] [--dry-run]`, same flags).
-        rest = ["--upgrade", *rest]
+    if verb in _MODE_FLAG:
+        rest = [_MODE_FLAG[verb], *rest]
 
     module = _load(_resolve(verb, rel))
     return _call_main(module, rest)

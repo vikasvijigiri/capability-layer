@@ -6,6 +6,29 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-09 — the plan checkbox nothing has ever produced
+
+- **Symptom**: `executing-plans` could not tick anything. Its progress record is
+  the plan file's `- [ ]` boxes, and the approved plan for `uninstall-verb` had
+  none.
+- **Root cause**: `executing-plans/SKILL.md:54` states *"Tick `- [ ]` → `- [x]`
+  as each step lands. `writing-plans` mandates that syntax expressly for
+  tracking."* `writing-plans` mandates no such thing. Its task template, now at
+  `writing-plans/references/task-decomposition.md:42`, emits `**Done when:**` and
+  no checkbox at all.
+- **Measured, not inferred**: `grep -c '^- \[ \]'` over every file in
+  `docs/plans/` returns 0 task checkboxes across all three real plans. The
+  mechanism has never once had anything to tick.
+- **Class**: the same one this layer keeps finding in itself — a stated mechanism
+  with no implementation behind it, passing every suite because nothing asserts
+  the two files agree. `test_process_router.py` checks that skills name each
+  other; it does not check that one skill's claim about another is true.
+- **Status**: Open. Worked around in the `uninstall-verb` plan with a hand-added
+  `## Progress` block. The real fix is a decision — either
+  `task-decomposition.md` emits a checkbox per task, or `executing-plans` stops
+  claiming it does — and it belongs to `capability-layer-maintenance`, not to a
+  mid-execution patch.
+
 ## 2026-08-07 — the trigger eval measured its own instrument, and it cost $29
 
 - **Symptom**: `tools/eval_triggers.py` reported `trigger_rate 0.1` for both

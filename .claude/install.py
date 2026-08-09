@@ -488,13 +488,103 @@ def apply(target: Path, actions: list[tuple[Path, str]]) -> list[str]:
     return notes
 
 
+def uninstall_plan(target: Path) -> tuple[list[str], list[str], list[str]]:
+    """What an uninstall may remove, must keep, and must never touch.
+
+    Returns `(remove, kept_edited, kept_protected)`, each a sorted list of posix
+    relative paths, and the three are disjoint. Writes nothing -- applying is
+    `main()`'s job, so a dry run and a real run compute the same answer from the
+    same code rather than from two implementations that can disagree.
+
+    The rule is `upgrade`'s, with the opposite consequence. `upgrade` compares
+    each file's current sha256 against the hash `write_manifest` recorded and
+    uses the answer to decide overwrite-vs-keep; this uses it to decide
+    delete-vs-keep. One manifest, one comparison, no second notion of ownership.
+
+    The asymmetry that matters: a wrong `upgrade` keeps a file it could have
+    refreshed, and a wrong uninstall deletes somebody's work. So every uncertain
+    case resolves to keep. A file with no recorded hash -- a v1 manifest, or one
+    added after the install -- counts as edited, because "I do not know" and "it
+    is unchanged" must not be the same answer.
+
+    `MANIFEST` appears in none of the three lists. The caller removes it last, so
+    calling it "kept" would be the report contradicting the tree -- which is
+    precisely what the kept-list exists to prevent, and what it did until
+    `verifying-work` caught it.
+
+    Three categories are protected outright, and each is read from its own
+    constant rather than listed here, so a fourth entry in any of them is
+    protected automatically:
+
+    `MERGE`
+        `.claude/settings.json` is merged into whatever the host already had, and
+        nothing recorded what that was. It is in the manifest because
+        `write_manifest` counts `merge` actions -- that is the trap this function
+        exists to not fall into. Deleting it destroys hooks nobody can restore.
+    `PRESERVE`
+        Never written by the installer at all, and already excluded from the
+        manifest. Checked anyway: the exclusion lives in `write_manifest` and a
+        regression there would otherwise make them deletable.
+    `SEED`
+        Written only when the target lacked them, which means the repository has
+        been running on them ever since. Removing the layer must not also break
+        `ruff` and CI in the same step.
+    """
+    owned = _layer_owned(target)
+    if not owned:
+        # No manifest, or an unreadable one. Nothing here is provably the
+        # layer's, and guessing from directory names is how an uninstaller
+        # deletes a host's own `tools/`.
+        return [], [], []
+
+    recorded = _layer_hashes(target)
+    protected_names = {*PRESERVE, *MERGE, *SEED}
+
+    remove: list[str] = []
+    kept_edited: list[str] = []
+    kept_protected: list[str] = []
+
+    for rel in sorted(owned):
+        # The manifest is in NONE of the three lists, and that is the whole
+        # correction here. It was in `kept_protected`, so the report printed
+        # `kept (yours)  .claude/layer-manifest.json` and `main()` then deleted
+        # it -- a report contradicting the tree it describes, which is the exact
+        # failure mode the kept-list exists to prevent. It is removed last, by
+        # the caller, and reported on its own line.
+        if rel == MANIFEST.as_posix():
+            continue
+        if rel in protected_names:
+            kept_protected.append(rel)
+            continue
+
+        path = target / rel
+        known = recorded.get(rel)
+        if not path.is_file():
+            # Already gone. Reported as kept rather than removed: the caller's
+            # report should describe what it did, and it did not do this.
+            kept_edited.append(rel)
+            continue
+        if known is None or known != file_hash(path):
+            kept_edited.append(rel)
+            continue
+        remove.append(rel)
+
+    return remove, kept_edited, kept_protected
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--into", default=".", help="target directory (default: here)")
     ap.add_argument("--dry-run", action="store_true", dest="dry",
                     help="print every path and write nothing")
-    ap.add_argument("--upgrade", action="store_true",
-                    help="refresh an existing install without discarding local edits")
+    # Mutually exclusive: they are opposite operations over the same manifest,
+    # and a run asking for both must fail loudly rather than silently doing half
+    # of each. argparse refuses the pair before any path is resolved.
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--upgrade", action="store_true",
+                      help="refresh an existing install without discarding local edits")
+    mode.add_argument("--uninstall", action="store_true",
+                      help="remove the layer's own files, keeping anything edited")
     ap.add_argument("--force", action="store_true",
                     help="with --upgrade, overwrite locally-modified files too")
     args = ap.parse_args(argv)
@@ -506,6 +596,84 @@ def main(argv: list[str] | None = None) -> int:
     if target == SOURCE or SOURCE in target.parents:
         print(f"refusing: {target} is the source layer or inside it", file=sys.stderr)
         return 2
+
+    # --- uninstall: remove what the layer owns, keep what anyone touched -----
+    #
+    # Returns before the install machinery below: `plan()` computes what to COPY,
+    # and an uninstall has nothing to copy. Sharing that path would mean an
+    # uninstall's report was assembled from the install's action list, which is a
+    # different question about a different tree.
+    if args.uninstall:
+        remove, kept_edited, kept_protected = uninstall_plan(target)
+        if not remove and not kept_edited and not kept_protected:
+            print(f"no {MANIFEST.as_posix()} in {target} -- nothing here was "
+                  f"installed by this layer, and nothing will be removed. "
+                  f"Deleting by pattern instead would take the host's own files.",
+                  file=sys.stderr)
+            return 2
+
+        verb = "would remove" if args.dry else "removed"
+        print(f"target {target}\n")
+        for rel in remove:
+            print(f"  {verb:<13} {rel}")
+
+        # The manifest goes too, and a dry run has to say so. It was announced
+        # only on the real run until a no-slop sweep measured the two side by
+        # side -- so `--dry-run`, the safety mechanism for a destructive verb,
+        # under-reported by exactly the file whose removal makes the verb
+        # irreversible. The real run announces it after the deletion succeeds,
+        # because there it is a fact rather than an intention.
+        if args.dry:
+            print(f"  would remove  {MANIFEST.as_posix()}  (last)")
+
+        removed = 0
+        if not args.dry:
+            for rel in remove:
+                path = target / rel
+                try:
+                    path.unlink()
+                    removed += 1
+                except OSError as exc:
+                    print(f"  FAILED        {rel}: {exc}", file=sys.stderr)
+
+            # Directories the removals emptied. Deepest first, so a parent is
+            # considered only after its children are gone; `rmdir` refuses a
+            # non-empty directory, which is the guard rather than a check here.
+            for d in sorted({(target / rel).parent for rel in remove},
+                            key=lambda p: len(p.parts), reverse=True):
+                while d != target and d.is_dir():
+                    try:
+                        d.rmdir()
+                    except OSError:
+                        break
+                    d = d.parent
+
+            # The manifest last. Until it goes the run is resumable, and once it
+            # goes a second run refuses instead of guessing -- which is what
+            # makes this verb safe to repeat.
+            try:
+                (target / MANIFEST).unlink()
+                print(f"  removed last  {MANIFEST.as_posix()}")
+            except OSError:
+                pass
+
+        # Every kept file is named. Silence here is the failure mode: the user
+        # must know the layer is not fully gone and exactly what is left.
+        for rel in kept_edited:
+            print(f"  kept (edited) {rel}")
+        for rel in kept_protected:
+            print(f"  kept (yours)  {rel}")
+
+        print(f"\n{verb} {len(remove) if args.dry else removed} file(s); "
+              f"kept {len(kept_edited)} edited, {len(kept_protected)} protected")
+        if kept_edited or kept_protected:
+            print("Those are yours to delete or keep. Edited files were changed "
+                  "after install; protected files are merged configuration, "
+                  "preserved documents, or seeded lint/CI config this repository "
+                  "has been running on since.")
+        if args.dry:
+            print("\n--dry-run: nothing was written.")
+        return 0
 
     # Read the target's shape BEFORE writing to it. Otherwise the report describes
     # a repository that now contains the layer, which is not the repository the
