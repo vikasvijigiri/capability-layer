@@ -218,6 +218,41 @@ def main() -> int:
           mod.BREADTH_WORDS > longest,
           "re-measure the corpus before lowering the floor")
 
+    # --- layer vocabulary is qualified, not bare -----------------------------
+    #
+    # `HARD_STAGE` carried bare `\bhooks?\b` and `\bskills?\b` until a review
+    # caught them. Two of the commonest words in product vocabulary, unqualified,
+    # in the pass that runs first: ordinary framing work was silently swallowed
+    # before it could reach the TASK pass.
+    #
+    # The corpus could not catch this and still cannot -- it has no non-layer use
+    # of either word, so every label stayed green. That is the whole reason these
+    # cases are written out here instead: an over-broad pattern is only ever
+    # visible against inputs nobody thought to label.
+    for _q in ("build a skill tree for the RPG character screen",
+               "add a git hook that blocks commits without tests"):
+        check(f"[not swallowed] {_q[:46]}", mod.classify(_q) is not None,
+              "product vocabulary must not match the agent-layer pass")
+
+    # The same words WITH agent-layer context still belong to that pass. Both
+    # directions are asserted: a fix that merely deleted the patterns would pass
+    # the two checks above and lose the behaviour they were added for.
+    for _q in ("my new skill never fires, figure out what is wrong with the wiring",
+               "the post-run hook produces no output at all",
+               "audit .claude for drift"):
+        check(f"[layer, silent] {_q[:46]}", mod.classify(_q) is None,
+              "the agent layer is not framed as product work")
+
+    # Known and deliberately not fixed here: TASK matches `we need a way to` but
+    # not a bare `we need <noun>`, so "we need react hooks for the new state
+    # management" is still silent. That is narrowness in the TASK pass, not the
+    # suppression this section pins -- widening it is its own change with its own
+    # false-positive budget. Recorded so the two are never confused again.
+    check("the residual TASK gap is still the TASK gap, not a HARD_STAGE match",
+          not mod._hit(mod.HARD_STAGE,
+                       "we need react hooks for the new state management"),
+          "if this fails, layer vocabulary has gone bare again")
+
     # --- the rendered blocks exist -------------------------------------------
     #
     # The hook keeps no fallback text, so a missing block degrades to a generic

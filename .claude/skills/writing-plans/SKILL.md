@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: Turn named work into a bounded brief, then an ordered verifiable plan. Triggers include "add X", "we need a way to", "users should be able to", "make it so that", "write the implementation plan", "break this down", "what order should we build this in", "does this cover everything". Do NOT use to implement it (executing-plans), to diagnose a failure (systematic-debugging), or for a direct question. Use this whenever work is named and needs scoping or sequencing, even if the user does not ask.
+description: Turn named work into a bounded brief, then an ordered verifiable plan. Triggers include "add X", "we need a way to", "users should be able to", "make it so that", "write the implementation plan", "break this down", "what order to build this in", or anything if "PLAN" word is present. Do NOT use to implement it (executing-plans), to diagnose a failure (systematic-debugging), or for a direct question. Use this whenever work is named and needs scoping or sequencing, even if the user does not ask.
 when_to_use: when named work must be scoped and turned into executable tasks
 effort: high
 model: opus
@@ -172,6 +172,7 @@ Use test-first sequencing where behavior can be tested. Replace every vague step
 ("add validation", "handle edge cases") with the exact file, symbol, test input,
 expected result and command. No task commits, pushes, merges or deploys — those
 are later stages.
+
 ### C4. Write the plan document
 
 Save it at `docs/plans/YYYY-MM-DD-<feature-name>.md`.
@@ -189,6 +190,7 @@ stated here too:
 - **Run `python tools/analyze.py --slug <slug>` before presenting anything.** It
   finds missing sections, unresolved markers, unjustified gate exceptions, tasks
   with no verification command, and `Modify` targets that do not exist.
+
 ## Completion and handoff
 
 The skill is complete only when the plan is saved, self-reviewed, and presented

@@ -180,12 +180,29 @@ HARD_STAGE = [
     # the agent layer itself rather than the product. These read as ordinary
     # feature work -- "add a subagent and wire it up" is framing vocabulary
     # applied to `.claude/`, and framing it as product work is the wrong stage.
+    #
+    # "hook" and "skill" were bare here until a review caught it, and bare was
+    # wrong in the most ordinary way: they are two of the commonest words in
+    # product vocabulary. "we need react hooks for the new state management" and
+    # "build a skill tree for the RPG character screen" were both silently
+    # swallowed by pass 1 -- settled framing work that never reached the TASK
+    # pass. The 180-query corpus has no non-layer use of either word, so nothing
+    # went red; it was found by probing invented prompts, which is the only way
+    # an over-broad pattern ever shows up.
+    #
+    # They are qualified now: the word plus agent-layer context, in either order
+    # and within one clause. `\bhook\b` never matched "webhook" (no word
+    # boundary inside it), so that case was never affected either way.
     r"\bsub-?agent\b",
     r"\bslash command\b",
     r"\bcapability layer\b",
     r"\.claude\b",
-    r"\bhooks?\b",
-    r"\bskills?\b",
+    r"\bSKILL\.md\b",
+    r"\b(post-run|pre-commit|session-start|pre-edit|pre-deploy|user-prompt)\b",
+    r"\b(hook|skill)s?\b[^.]{0,40}\b(fires?|firing|triggers?|wir(e|ing)|"
+    r"registered|registry|never runs|no output)\b",
+    r"\b(fires?|firing|triggers?|wir(e|ing)|registered|registry)\b[^.]{0,40}"
+    r"\b(hook|skill)s?\b",
 ]
 
 # --- pass 4: a question about the world, not a request to change it ----------
