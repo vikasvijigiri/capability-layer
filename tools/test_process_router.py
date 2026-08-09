@@ -923,6 +923,34 @@ for _skill, _what in sorted(OUTWARD_SKILLS.items()):
     check(f"...and `{_skill}` says a prose question does not count",
           re.search(r"prose question", _body, re.I) is not None,
           "the rule is the tool, not the asking")
+# --- a skill's claim about another skill's output must be true ---------------
+#
+# `executing-plans` says: "Tick `- [ ]` -> `- [x]` as each step lands.
+# `writing-plans` mandates that syntax expressly for tracking." It did not. The
+# task template emitted `**Done when:**` and no checkbox, so every plan in
+# docs/plans/ had zero of them and the executor's whole progress mechanism had
+# never once had anything to tick. Every suite stayed green, because nothing
+# checked that one skill's claim ABOUT another was accurate -- only that the
+# names it used resolved to real skills.
+#
+# The general property is untestable (arbitrary prose about arbitrary prose).
+# This pins the instance in the direction that matters: a consumer naming a
+# syntax must have a producer that actually emits it.
+_ep = (SKILLS / "executing-plans" / "SKILL.md").read_text(encoding="utf-8")
+_wp_all = "\n".join(
+    p.read_text(encoding="utf-8")
+    for p in [SKILLS / "writing-plans" / "SKILL.md",
+              *sorted((SKILLS / "writing-plans" / "references").glob("*.md"))])
+
+if "- [ ]" in _ep:
+    check("the checkbox `executing-plans` ticks is one `writing-plans` emits",
+          "- [ ]" in _wp_all,
+          "the consumer names a progress syntax the producer never writes")
+    check("...and `writing-plans` emits it as a per-task progress block",
+          re.search(r"- \[ \]\s+Task\s+\d", _wp_all) is not None,
+          "a checkbox somewhere is not a checkbox per task; tools/analyze.py "
+          "counts them against the task headings")
+
 
 for _skill in ("no-slop", "brainstormer"):
     _body = (SKILLS / _skill / "SKILL.md").read_text(encoding="utf-8")

@@ -17,6 +17,32 @@ documentation. A task is the smallest independently reviewable change that
 has its own verification cycle; split tasks when a reviewer could accept one
 part and reject another.
 
+## The `## Progress` block — emit it, or the executor has nothing to tick
+
+Every plan carries one, directly above `## Tasks`, with **one checkbox per
+task**:
+
+```markdown
+## Progress
+
+Ticked by `executing-plans` as each task's own **Verification** command is run
+and quoted. Nothing here is ticked on a clean diff or a zero exit code.
+
+- [ ] Task 1 — <title>
+- [ ] Task 2 — <title>
+```
+
+**This block did not exist until a plan needed it and had none.**
+`executing-plans` says *"Tick `- [ ] → - [x]` as each step lands. `writing-plans`
+mandates that syntax expressly for tracking"* — and it did not. The task template
+below emits `**Done when:**` and no checkbox, so across every plan in
+`docs/plans/` there were zero task checkboxes and the executor's entire progress
+mechanism had never once had anything to tick.
+
+`tools/analyze.py` now counts the boxes against the `### Task N` headings and
+reports a mismatch, so a plan that adds a task without adding its box is a
+finding rather than a silent drift.
+
 Each task MUST include:
 
 ```markdown
