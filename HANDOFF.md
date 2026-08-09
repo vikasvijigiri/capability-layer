@@ -15,31 +15,47 @@ Three units landed as stacked pull requests. See `LOG.md` 2026-08-09 20:48.
 
 ## Current Work
 
-Nothing in flight. Branch `fix/delivering-approval-gate`, pushed. Three PRs are
-open and **none is merged**:
+Nothing in flight. Five PRs are open and **none is merged**:
 
 | PR | Branch | Base |
 |---|---|---|
 | #7 | `merge-framing-into-planning` | `main` |
-| #5 | `feat/uninstall-verb` | `merge-framing-into-planning` |
-| #6 | `fix/delivering-approval-gate` | `merge-framing-into-planning` |
+| #5 | `feat/uninstall-verb` | #7 |
+| #6 | `fix/delivering-approval-gate` | #5 |
+| #8 | `docs/session-2026-08-09` | #5 |
+| #9 | `fix/unenforceable-claims` | #6 |
 
-**#7 must land first** — the other two are stacked on it. #5 and #6 are siblings
-and touch disjoint files. 39 files, +2580/-625 against `main`.
+**Merge order: #7 → #5 → then #6 and #8 in either order → #9.** Each PR's
+declared base is its actual branch point, verified — #6 was opened against #7
+while cut from #5, which made it show all ten of #5's files; corrected to base
+`feat/uninstall-verb` and it now shows three.
 
 `TASK.md` `## Active` holds three older items, none of them today's work.
 
 ## Pending
 
-- **Branch protection on `main` is still unconfigured.** No required checks, no
-  merge queue. `/publish` prints the settings; an agent never sets its own merge
-  gates, so this needs a human in the GitHub UI.
-- **`ISSUES.md` 2026-08-09 (plan checkbox) is Open.** `executing-plans` says
-  *"`writing-plans` mandates that syntax expressly"* about `- [ ]` checkboxes,
-  and it does not — the task template emits `**Done when:**` and no checkbox.
-  Zero task checkboxes exist across every plan in `docs/plans/`. Worked around
-  by hand in one plan. The real fix is a decision about which file is wrong, and
-  it belongs to `capability-layer-maintenance`.
+- **Branch protection on `main` is unavailable, not merely unset.** The API
+  answers `403 Upgrade to GitHub Pro or make this repository public` — neither
+  protection nor rulesets are offered on a free private repository. This was
+  carried here as an actionable task and it never was one.
+
+  What holds the line instead: `.github/workflows/checks.yml` runs on every pull
+  request and resolves the same `.claude/project-checks.json` the local gate
+  does, so a red branch is **visible** on the PR; and
+  `pre-commit/02-branch-guard.py` refuses commits on `main` in any tree with the
+  layer installed. What is genuinely uncovered: nothing prevents a direct
+  `git push` to `main` from a clone without the layer.
+
+  A real decision, for a human: make the repository public, upgrade the plan, or
+  accept the gap knowingly. `/publish` now probes and reports this rather than
+  printing instructions that cannot be followed.
+- **`ISSUES.md` 2026-08-09 (plan checkbox) — fixed in #9, entry still says
+  Open.** `executing-plans` claimed `writing-plans` mandated `- [ ]` checkboxes;
+  it did not, and zero existed across every plan. #9 makes the template emit a
+  `## Progress` block, has `analyze.py` count the boxes against the task
+  headings, and adds the check that closes the *class* — a consumer naming a
+  syntax must have a producer that emits it. Update the `ISSUES.md` entry to
+  Resolved when #9 merges.
 - **Commit `154b66a` was pushed** and holds the pre-fix path-traversal state.
   Private repo, not rewritten — flagged in #5's body.
 
