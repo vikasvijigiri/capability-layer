@@ -488,13 +488,42 @@ def apply(target: Path, actions: list[tuple[Path, str]]) -> list[str]:
     return notes
 
 
-def uninstall_plan(target: Path) -> tuple[list[str], list[str], list[str]]:
-    """What an uninstall may remove, must keep, and must never touch.
+def _contained(target: Path, rel: str) -> bool:
+    """Is `rel` a path that stays inside `target` once resolved?
 
-    Returns `(remove, kept_edited, kept_protected)`, each a sorted list of posix
-    relative paths, and the three are disjoint. Writes nothing -- applying is
-    `main()`'s job, so a dry run and a real run compute the same answer from the
-    same code rather than from two implementations that can disagree.
+    **The manifest is untrusted input.** `.claude/layer-manifest.json` is a
+    tracked file: it is committed, it travels with every clone, and `uninstall`
+    is most useful precisely on a repository somebody else wrote. Until this
+    existed, a manifest carrying `"paths": ["../PRECIOUS.txt"]` made the verb
+    delete a file in the target's PARENT directory -- demonstrated against a
+    fixture, not theorised, and found by `code-review` after three passes of
+    `verifying-work` and an eight-mutation sweep had all reported clean.
+
+    `resolve()` before comparing, because the check has to survive `..`
+    segments, an absolute path (`target / "/etc/x"` is `/etc/x` under pathlib
+    join semantics), and a symlinked component. `is_relative_to` is the
+    containment test; `strict=False` because the path may already be gone.
+    """
+    try:
+        return (target / rel).resolve(strict=False).is_relative_to(target.resolve())
+    except (OSError, ValueError):
+        return False
+
+
+def uninstall_plan(target: Path) -> tuple[list[str], list[str], list[str], list[str]]:
+    """What an uninstall may remove, must keep, must never touch, and refuses.
+
+    Returns `(remove, kept_edited, kept_protected, refused)`, each a sorted list
+    of posix relative paths, and the four are disjoint. Writes nothing --
+    applying is `main()`'s job, so a dry run and a real run compute the same
+    answer from the same code rather than from two implementations that can
+    disagree.
+
+    `refused` holds manifest entries that do not resolve inside the target. They
+    are **reported, never silently skipped**: a manifest naming a path outside
+    the repository is either corrupt or hostile, and both are things the person
+    running a destructive verb needs told. Dropping them quietly would make a
+    partial uninstall look complete.
 
     The rule is `upgrade`'s, with the opposite consequence. `upgrade` compares
     each file's current sha256 against the hash `write_manifest` recorded and
@@ -535,7 +564,7 @@ def uninstall_plan(target: Path) -> tuple[list[str], list[str], list[str]]:
         # No manifest, or an unreadable one. Nothing here is provably the
         # layer's, and guessing from directory names is how an uninstaller
         # deletes a host's own `tools/`.
-        return [], [], []
+        return [], [], [], []
 
     recorded = _layer_hashes(target)
     protected_names = {*PRESERVE, *MERGE, *SEED}
@@ -543,8 +572,15 @@ def uninstall_plan(target: Path) -> tuple[list[str], list[str], list[str]]:
     remove: list[str] = []
     kept_edited: list[str] = []
     kept_protected: list[str] = []
+    refused: list[str] = []
 
     for rel in sorted(owned):
+        # Containment first, before any other classification. A path that
+        # escapes the target must never reach the hash comparison, because a
+        # crafted manifest can supply a matching hash for a file it wants gone.
+        if not _contained(target, rel):
+            refused.append(rel)
+            continue
         # The manifest is in NONE of the three lists, and that is the whole
         # correction here. It was in `kept_protected`, so the report printed
         # `kept (yours)  .claude/layer-manifest.json` and `main()` then deleted
@@ -569,7 +605,7 @@ def uninstall_plan(target: Path) -> tuple[list[str], list[str], list[str]]:
             continue
         remove.append(rel)
 
-    return remove, kept_edited, kept_protected
+    return remove, kept_edited, kept_protected, refused
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -604,13 +640,44 @@ def main(argv: list[str] | None = None) -> int:
     # uninstall's report was assembled from the install's action list, which is a
     # different question about a different tree.
     if args.uninstall:
-        remove, kept_edited, kept_protected = uninstall_plan(target)
-        if not remove and not kept_edited and not kept_protected:
+        # `--force` means "overwrite local edits" and belongs to `--upgrade`. It
+        # does nothing here, and saying so matters more than usual: on a
+        # destructive verb it reads as "yes, really delete the kept files too",
+        # so a user reaching for it would otherwise get a success exit code and
+        # no indication the flag was ignored.
+        if args.force:
+            print("note: --force has no effect with --uninstall. Files edited "
+                  "since install are always kept; delete them yourself if you "
+                  "mean to.", file=sys.stderr)
+
+        remove, kept_edited, kept_protected, refused = uninstall_plan(target)
+
+        # "The manifest is missing" and "the manifest classified nothing" are
+        # different facts and used to share one message, which sent a reader
+        # looking for a file that was sitting in front of them.
+        if not _layer_owned(target):
             print(f"no {MANIFEST.as_posix()} in {target} -- nothing here was "
                   f"installed by this layer, and nothing will be removed. "
                   f"Deleting by pattern instead would take the host's own files.",
                   file=sys.stderr)
             return 2
+        if not remove and not kept_edited and not kept_protected and not refused:
+            print(f"{MANIFEST.as_posix()} in {target} names no removable path -- "
+                  f"it exists but lists nothing this can act on.", file=sys.stderr)
+            return 2
+
+        # Refused entries are reported BEFORE anything is deleted, and on stderr,
+        # because a manifest naming a path outside the repository is either
+        # corrupt or hostile and the run should not scroll past it.
+        if refused:
+            print(f"REFUSED: {len(refused)} manifest entr(ies) resolve outside "
+                  f"{target} and will not be touched:", file=sys.stderr)
+            for rel in refused:
+                print(f"  refused       {rel}", file=sys.stderr)
+            print("  A manifest naming paths outside its own repository is "
+                  "corrupt or hostile. Nothing outside the target is ever "
+                  "removed; check where this repository came from.",
+                  file=sys.stderr)
 
         verb = "would remove" if args.dry else "removed"
         print(f"target {target}\n")

@@ -453,7 +453,7 @@ _removable = ".claude/workflow.md"
 _edited = ".claude/skills/no-slop/SKILL.md"
 (un / _edited).write_text("locally edited\n", encoding="utf-8")
 
-remove, kept_edited, kept_protected = inst.uninstall_plan(un)
+remove, kept_edited, kept_protected, refused = inst.uninstall_plan(un)
 
 check("uninstall_plan offers to remove an untouched installed file",
       _removable in remove, f"remove={len(remove)} paths")
@@ -493,7 +493,7 @@ check("uninstall_plan writes nothing",
 # three empty lists -- not "remove everything I can see".
 _virgin = fresh_repo()
 check("uninstall_plan refuses a target with no manifest",
-      inst.uninstall_plan(_virgin) == ([], [], []),
+      inst.uninstall_plan(_virgin) == ([], [], [], []),
       "no manifest means nothing here was installed by this layer")
 
 # --- uninstall: applying it ---------------------------------------------------
@@ -610,6 +610,100 @@ check("...and the manifest is genuinely gone",
       not (_rep / inst.MANIFEST).is_file())
 
 shutil.rmtree(_rep.parent, ignore_errors=True)
+
+
+# --- the manifest is untrusted input ----------------------------------------
+#
+# `.claude/layer-manifest.json` is tracked, committed, and travels with every
+# clone, and `uninstall` is most useful on a repository somebody else wrote. A
+# crafted manifest deleted a file in the target's PARENT directory until
+# `code-review` demonstrated it -- after three `verifying-work` passes and an
+# eight-mutation sweep had all reported clean, none of which asked whether the
+# input could be hostile.
+#
+# The fixture supplies a MATCHING sha256 for the outside file, so the hash
+# comparison would happily call it "installed and untouched". Containment has to
+# be checked before classification, not after.
+
+_evil_root = Path(tempfile.mkdtemp())
+_precious = _evil_root / "PRECIOUS.txt"
+_precious.write_text("outside the target\n", encoding="utf-8")
+_evil = _evil_root / "repo"
+_evil.mkdir()
+(_evil / ".claude").mkdir()
+(_evil / ".claude" / "layer-manifest.json").write_text(json.dumps({
+    "version": 2,
+    "paths": ["../PRECIOUS.txt", "/etc/passwd", ".claude/workflow.md"],
+    "files": {"../PRECIOUS.txt": inst.file_hash(_precious)},
+}), encoding="utf-8")
+
+_er, _ek, _ep, _eref = inst.uninstall_plan(_evil)
+check("a manifest entry escaping the target is refused, not removed",
+      "../PRECIOUS.txt" not in _er and "../PRECIOUS.txt" in _eref,
+      f"remove={_er} refused={_eref}")
+check("an absolute manifest entry is refused too",
+      "/etc/passwd" not in _er and "/etc/passwd" in _eref,
+      "target / '/etc/passwd' is '/etc/passwd' under pathlib join semantics")
+check("refused entries are reported, never silently dropped",
+      len(_eref) == 2,
+      "a silent skip makes a partial uninstall look complete")
+
+_eerr = io.StringIO()
+with contextlib.redirect_stderr(_eerr):
+    inst.main(["--uninstall", "--into", str(_evil)])
+_estderr = _eerr.getvalue()
+
+check("the file outside the target still exists after a real uninstall",
+      _precious.is_file(),
+      "this is the defect code-review demonstrated; it must stay dead")
+
+# Classifying an entry as refused and TELLING the user are two properties, and
+# a mutation sweep proved the second had no assertion behind it: silencing the
+# whole refused block left the suite green. Silence is how a partial uninstall
+# looks complete.
+check("refused entries are named on stderr, not just classified",
+      "../PRECIOUS.txt" in _estderr and "REFUSED" in _estderr,
+      f"stderr was: {_estderr[:120]!r}")
+
+# `--force` on a destructive verb reads as "yes, really" and does nothing here.
+# Also unasserted until the same sweep.
+_ferr = io.StringIO()
+_fdir = _installed_repo()
+with contextlib.redirect_stderr(_ferr), contextlib.redirect_stdout(io.StringIO()):
+    inst.main(["--uninstall", "--force", "--into", str(_fdir)])
+check("--force with --uninstall says it has no effect",
+      "--force has no effect" in _ferr.getvalue(),
+      f"stderr was: {_ferr.getvalue()[:120]!r}")
+
+# "The manifest is missing" and "the manifest names nothing actionable" are
+# different facts. They shared one message, so a user was told to look for a
+# file that was in front of them. Both messages are asserted, because a single
+# assertion on the exit code cannot tell them apart -- both return 2.
+_nomani = fresh_repo()
+_e1 = io.StringIO()
+with contextlib.redirect_stderr(_e1):
+    inst.main(["--uninstall", "--into", str(_nomani)])
+check("a target with no manifest is told the manifest is missing",
+      f"no {inst.MANIFEST.as_posix()}" in _e1.getvalue(),
+      f"stderr: {_e1.getvalue()[:100]!r}")
+
+_empty = fresh_repo()
+(_empty / ".claude").mkdir()
+(_empty / ".claude" / "layer-manifest.json").write_text(json.dumps({
+    "version": 2, "paths": [inst.MANIFEST.as_posix()], "files": {}}), encoding="utf-8")
+_e2 = io.StringIO()
+with contextlib.redirect_stderr(_e2):
+    inst.main(["--uninstall", "--into", str(_empty)])
+check("a manifest that names nothing actionable says so, not 'missing'",
+      "names no removable path" in _e2.getvalue()
+      and f"no {inst.MANIFEST.as_posix()}" not in _e2.getvalue(),
+      f"stderr: {_e2.getvalue()[:110]!r}")
+
+for _d in (_nomani, _empty):
+    shutil.rmtree(_d.parent, ignore_errors=True)
+
+shutil.rmtree(_evil_root, ignore_errors=True)
+shutil.rmtree(_fdir.parent, ignore_errors=True)
 
 
 # --- uninstall reaches the CLI ----------------------------------------------
