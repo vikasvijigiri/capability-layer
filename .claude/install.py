@@ -315,7 +315,7 @@ def entry_point(target: Path) -> str:
 
     # The layer's own files are not the host's code. `main` also calls this BEFORE
     # writing anything, so the dry run and the real run describe the same target
-    # -- they disagreed until 2026-08-07 ("empty, start at task-brief" then "an
+    # -- they disagreed until 2026-08-07 ("empty, start at framing" then "an
     # existing codebase" for one unchanged repo), because the second reading
     # counted the ~33 tool scripts the first one had just installed.
     owned = _layer_owned(target)
@@ -334,8 +334,8 @@ def entry_point(target: Path) -> str:
         return ("an existing codebase with no plan -- start at `repo-recon`, "
                 "which reads the repo and writes the brief")
     if has_task:
-        return "TASK.md exists -- start at `writing-plans`"
-    return "empty or near-empty -- start at `task-brief`"
+        return "TASK.md exists -- resume `writing-plans` at its planning stage"
+    return "empty or near-empty -- start at `writing-plans`"
 
 
 def plan(target: Path) -> tuple[list[tuple[Path, str]], list[str]]:

@@ -35,7 +35,7 @@ that are specific enough to fix and evidence that is specific enough to verify.
 - Do not call a change secure because no issue was found; state what was and was
   not assessed.
 - Do not substitute secret scanning for threat modeling or dependency scanning.
-- Route actionable findings to `task-brief`; keep this review independent.
+- Route actionable findings to `writing-plans`; keep this review independent.
 
 ## Routing
 
@@ -45,7 +45,7 @@ not fix findings or provide sign-off.
 
 - Entered from any stage when a trust boundary or security-sensitive asset is
   involved; recommended before `writing-plans` approval and before `code-review`.
-- Terminal handoff: the requesting stage, or `task-brief` when remediation is
+- Terminal handoff: the requesting stage, or `writing-plans` when remediation is
   required.
 
 ## Success

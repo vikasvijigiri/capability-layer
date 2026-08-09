@@ -9,6 +9,13 @@
         ".claude/hooks/session-start/03-state-report.py"
       ]
     },
+    "user-prompt": {
+      "description": "Before a turn begins; classifies the prompt's entry shape -- work named with a settled approach, work named with an open one, or neither -- and renders the matching [state:<key>] block from workflow.md. Names no skill: it measures prompt shape, workflow.md's Entry table owns what that shape routes to. A hook cannot invoke a skill, so this raises the entry rule's visibility and does not guarantee a handoff.",
+      "claude_code_event": "UserPromptSubmit",
+      "subscribers": [
+        ".claude/hooks/user-prompt/01-entry-classifier.py"
+      ]
+    },
     "post-run": {
       "description": "After a turn completes; snapshots recovery state, then commits the turn as a wip checkpoint if the artefact gates pass",
       "claude_code_event": "Stop",

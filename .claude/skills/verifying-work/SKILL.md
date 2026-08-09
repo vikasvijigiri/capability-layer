@@ -10,7 +10,7 @@ allowed-tools: Read Grep Glob Bash Task
 
 # Verifying Work
 
-Decide whether the work actually did what it was asked to do. Workflow stage 5.
+Decide whether the work actually did what it was asked to do. Workflow stage 4.
 
 Two different questions live here, and passing one does not pass the other:
 
@@ -141,9 +141,10 @@ gaps rather than verified, hand the gaps to the chain's entry instead and say so
 - Terminal handoff: `no-slop` when the result is a change to be delivered, then
   `code-review`; `delivering` once review has signed off.
 - Gaps that need real work become their own unit, entering at
-  `.claude/workflow.md` §Entry — `task-brief` if the approach is settled,
-  `brainstormer` if it is not. A gap like "rollback is unproven" is often the
-  second. A failure whose cause is unknown goes to `systematic-debugging`.
+  `.claude/workflow.md` §Entry — one door, `writing-plans`, which dispatches
+  `brainstormer` itself when the approach is open. A gap like "rollback is
+  unproven" usually is. A failure whose cause is unknown goes to
+  `systematic-debugging`.
 - The verdict and its evidence belong in `LOG.md` via `knowledge-manager` —
   the coverage table is the most reusable thing this skill produces.
 

@@ -1,6 +1,7 @@
-# Baseline: task-brief
+# Baseline: framing (formerly the `task-brief` skill)
 
 Date: 2026-08-06  
+Superseded: 2026-08-09 — the skill this measured was merged into `writing-plans` as its Stage A. The measurement stands as a dated record of the framing contract; the skill directory it names no longer exists.  
 Campaign: [capability-layer-audit](capability-layer-audit.md)
 
 ## Same task

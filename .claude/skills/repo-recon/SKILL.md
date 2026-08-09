@@ -14,8 +14,7 @@ Turn an unread repository into a written map and a candidate work list. **Entry
 capability, not a lifecycle stage** — it runs before stage 1 when the repo is
 unknown, and never runs again once its map exists.
 
-The failure this exists to prevent: the chain used to start at `task-brief`,
-which frames a *request*. Dropped into a half-built repo, nothing owned the
+The failure this exists to prevent: the chain starts by framing a *request*. Dropped into a half-built repo, nothing owned the
 prior question — *what is this and what stopped halfway*. `tools/resume.py`
 could not answer it either; it derives state from this layer's own plan files
 and branch names, so a repository that has never used the layer reports
@@ -138,13 +137,13 @@ pick the next piece of work from the candidate list without reading code first.
 - The map itself is durable knowledge: `knowledge-manager` owns filing it
   alongside `HANDOFF.md` once a unit of work begins.
 - **Terminal handoff**: the chain's entry, which `.claude/workflow.md` §Entry
-  decides — `task-brief` when a candidate's approach is settled, `brainstormer`
-  when it is open. See **Next step** for why recon does not make that call.
+  owns — one door, `writing-plans`. See **Next step** for why recon does not
+  decide what happens behind it.
 
 ## Next step — you MUST take it
 
-**The terminal state is invoking `task-brief`** with the map written and the
+**The terminal state is invoking `writing-plans`** with the map written and the
 candidates listed. Recon that ends in a summary and no brief has produced
 reading, not work. If the direction the repo should go is genuinely open rather
-than merely unstated, `task-brief` branches onward to `brainstormer` itself —
-that is its decision, not this skill's.
+than merely unstated, `writing-plans` dispatches `brainstormer` itself before it
+frames anything — that is its decision, not this skill's.

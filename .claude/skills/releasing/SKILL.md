@@ -28,7 +28,7 @@ durable rather than a thing someone remembers. Never re-present an unchanged
 candidate — `tools/loop.py` refuses it.
 
 Put delivered work into a running environment, prove it is actually serving, and
-keep a way back. Workflow stage 9.
+keep a way back. Workflow stage 8.
 
 Cap visible output at ~500 tokens.
 

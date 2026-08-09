@@ -142,8 +142,8 @@ visible in `git show`.
 - Invoked at the end of a unit of work, not at the end of a session — a session
   that ran four units owes four log entries, written as each finished.
 - Work that turns out to need doing, rather than recording, becomes its own unit
-  and enters the chain at `.claude/workflow.md` §Entry — `task-brief` when the
-  approach is settled, `brainstormer` when it is not. Do not absorb it here.
+  and enters the chain at `.claude/workflow.md` §Entry, which is one door:
+  `writing-plans`. Do not absorb it here.
 
 ## Success
 

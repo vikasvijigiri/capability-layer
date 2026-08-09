@@ -14,27 +14,32 @@ tools are plain scripts, so any harness can shell out to them.
 
 ## Product lifecycle
 
-**The numbers are labels, not a sequence.** Stages 2 and 3 are conditional and
-most work skips both; a session that reads this table top-to-bottom and runs
-every row has misread it. The `Runs when` column is the whole entry rule — see
-**Entry** below, which is the only place it is stated.
+**The numbers are labels, not a sequence.** Stage 2 is conditional and most work
+skips it; a session that reads this table top-to-bottom and runs every row has
+misread it. The `Runs when` column is the whole entry rule — see **Entry** below,
+which is the only place it is stated.
 
 | # | Stage | Owner | Runs when | Output |
 |---|---|---|---|---|
-| 1 | Frame | `task-brief` | work is named but unscoped | bounded goal, constraints, done-check, out-of-scope |
-| 2 | Design | `brainstormer` | **only if the approach is open** | decision/spec when ambiguity is material |
-| 3 | Plan | `writing-plans` | **only after 2** — it consumes a spec | executable steps, ownership, checks, risks, rollback |
+| 1 | Frame and plan | `writing-plans` | work is named, at any scope | `TASK.md`'s six fields, then executable steps, ownership, checks, risks, rollback |
+| 2 | Design | `brainstormer` | **only if the approach is open** — dispatched by stage 1, not entered beside it | decision/spec when ambiguity is material |
 | — | Gate 1 | user | a plan exists | plan approval only |
-| 4 | Execute | `executing-plans` | Gate 1 passed, or the change is small enough to skip 2–3 | scoped implementation in an isolated worktree |
-| 5 | Validate | `verifying-work` | completion is claimed, in any wording | acceptance and test evidence |
-| 6 | Sweep | `no-slop` | before a diff is reviewed | prose, wiring, safety, and quality findings |
-| 7 | Review | `code-review` | a diff is about to be delivered | automated diff verdict with file/line evidence |
-| 8 | Deliver | `delivering` | review signed off | branch/PR/merge-queue handoff and conflict evidence |
-| 9 | Release | `releasing` | **only if there is a deploy target** | release candidate, shipment gate, observation, rollback |
-| 10 | Record | `knowledge-manager` | always, to close the unit | durable log, handoff, issues, memory, decisions |
+| 3 | Execute | `executing-plans` | Gate 1 passed, or the change was too small to plan | scoped implementation in an isolated worktree |
+| 4 | Validate | `verifying-work` | completion is claimed, in any wording | acceptance and test evidence |
+| 5 | Sweep | `no-slop` | before a diff is reviewed | prose, wiring, safety, and quality findings |
+| 6 | Review | `code-review` | a diff is about to be delivered | automated diff verdict with file/line evidence |
+| 7 | Deliver | `delivering` | review signed off | branch/PR/merge-queue handoff and conflict evidence |
+| 8 | Release | `releasing` | **only if there is a deploy target** | release candidate, shipment gate, observation, rollback |
+| 9 | Record | `knowledge-manager` | always, to close the unit | durable log, handoff, issues, memory, decisions |
 
-There are exactly two human gates: approval of the plan after stage 3, and
-approval of the release candidate after stage 9 readiness. No review, delivery,
+**The stages renumbered on 2026-08-09**, when framing and planning merged into
+one owner and stage 1 absorbed the old stage 1. Ten became nine. Any document
+still saying "stage 3 is the plan" predates that and is wrong; the table here is
+the only authority, and `tools/test_process_router.py` fails on a gap or a
+repeat in the left column.
+
+There are exactly two human gates: approval of the plan after stage 1, and
+approval of the release candidate after stage 8 readiness. No review, delivery,
 merge, or mid-run diagnostic may ask for another approval. A host may still
 require its own platform permission prompt for an irreversible tool operation;
 that is execution control, not a lifecycle gate.
@@ -42,32 +47,45 @@ that is execution control, not a lifecycle gate.
 ## Entry
 
 **This section owns the entry rule. Nowhere else states it.** It was written in
-seven places until 2026-08-08 — twice inside `task-brief` alone, in its
-`## Next step` and again in its `## Routing` — and the suite needed a
-special-case `FORBIDDEN_SUCCESSOR` check to stop the copies drifting apart,
-which is what a boundary looks like when it is being restated instead of owned.
+seven places until 2026-08-08 and the suite needed a special-case
+`FORBIDDEN_SUCCESSOR` check to stop the copies drifting apart, which is what a
+boundary looks like when it is being restated instead of owned.
 
-One question decides it: **is the approach settled?**
+**On 2026-08-09 the boundary was removed rather than guarded.** Framing and
+planning are one skill now, so the question the old rule asked — brief or design
+— is no longer answered at the door. It is answered inside stage 1, against the
+six fields, where the evidence for it actually exists.
 
 | The request | Goes to | Because |
 |---|---|---|
-| names work, scope unclear, approach settled | 1 `task-brief`, then **do the change** | a brief concrete enough to write is concrete enough to build |
-| approach genuinely open | 2 `brainstormer` | the first idea becomes an anchor, and a finished brief *is* that anchor |
-| an approved spec already exists | 3 `writing-plans` | it consumes a spec |
+| names work, at any scope | 1 `writing-plans` | it frames, fetches what is missing, then plans |
 | repository nobody has read | `repo-recon` first | see **The entry boundary** below |
+| a current failure | `systematic-debugging` | a cause is not a plan |
 
-1 `task-brief` and 2 `brainstormer` are **alternatives, in either direction** — a
-brief is not a predecessor of a design, and a design is not a successor to a
-brief. Neither reaches 3 `writing-plans` directly: six lines is not a spec, and
-work that turns out to need real sequencing means the brief was too big. Only
-2 `brainstormer` produces the spec 3 `writing-plans` consumes.
+One entry, one owner. The old rule's real content did not disappear — it moved
+into stage 1's Stage B table, which decides per blank field rather than per
+request:
 
-The rest of the chain is linear: 4 `executing-plans` builds, 5 `verifying-work`
-validates, 6 `no-slop` sweeps, 7 `code-review` reviews, 8 `delivering`
-integrates, 9 `releasing` observes, 10 `knowledge-manager` records. These are
+- **Goal or Outputs blank because the approach is undecided** → stage 1
+  dispatches 2 `brainstormer` *before* writing `TASK.md`, because a finished
+  brief commits to one solution shape and that anchor is what stage 2 exists to
+  prevent.
+- a constraint turning on outside evidence → `research`;
+- a user-facing surface with no contract → `designer`;
+- an unread repository → `repo-recon`;
+- a blocking failure of unknown cause → `systematic-debugging`.
+
+Each returns to stage 1. **None of them is a handoff**, and that is the
+difference from the old chain: a dispatch resumes where it left off, so there is
+no seam for the work to fall through. The seam was real — an un-handed-off brief
+was the chain's most common break, and nothing watched for one.
+
+The rest of the chain is linear: 3 `executing-plans` builds, 4 `verifying-work`
+validates, 5 `no-slop` sweeps, 6 `code-review` reviews, 7 `delivering`
+integrates, 8 `releasing` observes, 9 `knowledge-manager` records. These are
 lifecycle labels, not additional approval gates.
-The recovery loop returns to `4 executing-plans` or `5 verifying-work`, then
-re-enters `7 code-review` and `9 releasing` when the candidate is ready again.
+The recovery loop returns to `3 executing-plans` or `4 verifying-work`, then
+re-enters `6 code-review` and `8 releasing` when the candidate is ready again.
 
 ## State machine and failure loop
 
@@ -125,8 +143,8 @@ never force-pushes or bypasses them.
 
 ## Artifacts and ownership
 
-`TASK.md` — `task-brief` · `docs/specs/` — `brainstormer` · `docs/plans/` —
-`writing-plans` · `ISSUES.md` — `systematic-debugging` · `LOG.md`, `HANDOFF.md`,
+`TASK.md` and `docs/plans/` — `writing-plans` · `docs/specs/` — `brainstormer`
+· `ISSUES.md` — `systematic-debugging` · `LOG.md`, `HANDOFF.md`,
 `MEMORY.md`, and `decisions/` — `knowledge-manager` · workflow run state — the
 repository workflow runner. Chat is not durable evidence.
 
@@ -167,12 +185,30 @@ The capability layer changed without a completed layer audit. Run the
 capability-layer-maintenance audit and the no-slop layer scan before delivery.
 [/state:layer-unreviewed]
 
+[state:entry-unframed]
+This prompt names work with a done-state, and the **Entry** table above routes
+named work at any scope to stage 1 `writing-plans`. Frame it first: six fields,
+every inferred one marked, no dialogue -- Gate 1 is the plan, not the brief. Then
+continue through its Stage B and Stage C in the same turn. If the work turns out
+too small to plan, say "too small to plan" and just do it.
+[/state:entry-unframed]
+
+[state:entry-open]
+This prompt names work whose approach is **not settled**. It still enters at
+stage 1 `writing-plans` -- there is one door as of 2026-08-09 -- but the first
+thing that skill does with an undecided approach is dispatch 2 `brainstormer`,
+*before* `TASK.md` is written. Order matters and is the whole point: a finished
+brief commits Goal and Outputs to one solution shape, and that anchor is what
+stage 2 exists to prevent. `brainstormer` returns here; it is a dispatch, not a
+handoff.
+[/state:entry-open]
+
 ## The entry boundary
 
 The chain assumes a repository somebody has read. When it is dropped into one
 nobody has, that assumption is the first thing to fail, and it fails quietly:
-`task-brief` frames a *request*, so a brief written against an unread codebase
-looks exactly like a brief written against a known one.
+stage 1 frames a *request*, so a brief written against an unread codebase looks
+exactly like a brief written against a known one.
 
 `repo-recon` owns that boundary. It runs before stage 1 when there is real code
 and no map, and never again once a map exists at `docs/recon/`. It is not a

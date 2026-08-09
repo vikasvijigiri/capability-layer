@@ -15,7 +15,7 @@ Implementation starts only in a verified worktree. Follow
 when the current checkout is not already the explicitly chosen isolated branch;
 record the worktree path and base commit before task 1.
 
-Carry out an approved plan and produce the thing it describes. Workflow stage 4.
+Carry out an approved plan and produce the thing it describes. Workflow stage 3.
 
 Cap visible output at ~500 tokens. One line per task boundary; the plan file
 and the tool results carry the record.

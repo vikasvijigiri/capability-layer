@@ -1,6 +1,6 @@
 ---
 name: brainstormer
-description: Generate and choose between genuinely different approaches. Triggers include "any ideas", "let us brainstorm", "what are our options", "how should we approach", "is there a better way", "I am stuck", "should we build this at all", "compare these two designs". Do NOT use once a design exists (writing-plans) or when only scope is vague (task-brief). Use this whenever the approach is open, even if the user does not ask for options.
+description: Generate and choose between genuinely different approaches. Triggers include "any ideas", "let us brainstorm", "what are our options", "how should we approach", "is there a better way", "I am stuck", "should we build this at all", "compare these two designs". Do NOT use once a design exists, or when only the scope is vague rather than the approach (writing-plans). Use this whenever the approach is open, even if the user does not ask for options.
 when_to_use: when a design is needed before implementation
 effort: high
 model: opus
@@ -220,9 +220,11 @@ says what to build, never in what order or how each piece is proved.
   code. Step 8's self-review is the only check here; the human checkpoint is
   Gate 1, in `writing-plans`, and it is not this skill's to hold.
 - Terminal handoff: `writing-plans`.
-- Alternative to `task-brief`, never a successor. Use this when the solution is
-  open; a finished brief already commits to one, which would reduce
-  brainstorming to variations on an answer already given.
+- **Dispatched by `writing-plans`, and it returns there.** Not a stage entered
+  beside stage 1: there is one door, and stage 1 calls this skill when Goal or
+  Outputs cannot be filled because the approach is open. It must run *before*
+  the brief is written — a finished brief already commits to a solution, which
+  would reduce brainstorming to variations on an answer already given.
 - Out of scope: writing code, scaffolding, invoking an implementation skill,
   continuing into execution. Designing and committing the spec are in scope;
   building is not.

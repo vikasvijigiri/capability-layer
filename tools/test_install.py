@@ -287,8 +287,12 @@ planned_repo = fresh_repo()
 check("a target that already has a plan is routed to the state engine",
       "resume.py" in inst.entry_point(planned_repo), inst.entry_point(planned_repo))
 
+# Framing and planning merged into one owner on 2026-08-09, so the empty-repo
+# entry point and the has-TASK.md one now name the same skill at different
+# stages of it. Both are asserted: a merge that collapsed them into one string
+# would lose the distinction the message exists to draw.
 check("an empty target starts at the framing stage",
-      "task-brief" in inst.entry_point(fresh_repo()),
+      "writing-plans" in inst.entry_point(fresh_repo()),
       inst.entry_point(fresh_repo()))
 
 

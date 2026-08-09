@@ -7,7 +7,7 @@
 
 Why this exists
 ---------------
-The chain's entry was `task-brief`, which frames a *request*. Nothing owned the
+The chain's entry frames a *request*. Nothing owned the
 question a dropped-in layer actually faces first: *what is this repo and what is
 half-built in it*. The audit on 2026-08-07 found the gap by running
 `tools/resume.py` against this repository after 104 commits of finished work and
