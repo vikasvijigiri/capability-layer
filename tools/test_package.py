@@ -90,6 +90,24 @@ def venv_bin(venv: Path, name: str) -> Path | None:
 
 # --- prerequisites, each named if missing -----------------------------------
 
+# THIS SUITE IS ABOUT THE LAYER'S OWN PACKAGING, and it travels in the payload,
+# so it lands in repositories that are not the layer. There it tried to build a
+# wheel from a tree with no `pyproject.toml` and no `hatch_build.py`, failed on
+# "the build hook staged it, not a human", and turned a correct install into a
+# red tier -- measured on 2026-08-09 by installing from `main` into a fresh repo.
+#
+# Detected by the two files that make a repository the SOURCE of this layer, not
+# by a name or a path: a fork under any name still packages itself, and a product
+# repo with its own `pyproject.toml` still is not this package.
+if not (ROOT / "hatch_build.py").is_file() or not (ROOT / "capability_layer").is_dir():
+    print("NOTE: skipped the whole suite -- this repository is not the capability "
+          "layer's source (no hatch_build.py + capability_layer/), so there is no "
+          "wheel of it to build. The suite ships here because the layer ships its "
+          "own checks; it has nothing to say about a repository that merely uses "
+          "the layer.")
+    print("\n1 step(s) skipped, 0 failed")
+    sys.exit(0)
+
 free = shutil.disk_usage(ROOT).free
 if free < MIN_FREE_BYTES:
     skip("the whole suite",

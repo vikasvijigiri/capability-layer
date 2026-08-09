@@ -20,14 +20,13 @@ There is no application code here. This repository *is* the layer.
 ## Install it into your repo
 
 ```bash
-pip install "git+https://github.com/NG-VikasV/capability-layer@rebuild-capability-layer"
+pip install "git+https://github.com/NG-VikasV/capability-layer"
 python -m capability_layer install --into .
 ```
 
-**The `@branch` is not optional yet.** `pip install git+…` takes the repository's
-default branch, and `main` here is still the pre-layer tree — no `pyproject.toml`,
-so pip stops with *"does not appear to be a Python project"*. Drop the suffix once
-this branch is merged.
+Verified end to end from `main` into a fresh repository: 218 payload files land,
+the target's own tier comes back `PASS: 30 check(s) green (lint, test,
+typecheck)`, and none of the files that must never travel do.
 
 **`python -m capability_layer`, not the bare command**, unless you know
 `Scripts/` is on your PATH. When pip cannot write to site-packages it silently
@@ -37,6 +36,14 @@ not recognized"*. `capability-layer` and `cl` are the same entry point and are
 fine when PATH cooperates; the module form needs only the interpreter.
 
 The repository is **private**, so pip needs credentials that can read it.
+
+Already have it installed? `upgrade`, never `install` — the second overwrites
+whatever you have edited:
+
+```bash
+pip install --upgrade "git+https://github.com/NG-VikasV/capability-layer"
+python -m capability_layer upgrade --into .
+```
 
 The package is a **carrier, not a library**. `.claude/` has to live in your
 repository's working tree and be committed there — that is where hooks resolve by
@@ -57,6 +64,42 @@ there is no safe third behaviour.
 
 Working from a clone instead? `python .claude/install.py --into <dir>` does the
 same thing, and everything else here runs with Python 3.11+ and git alone.
+
+### What lands, and what it decides for you
+
+Nothing about your repository. The install writes the layer and gets out of the
+way:
+
+| | |
+|---|---|
+| **Copied** | `.claude/` (skills, agents, commands, hooks), `tools/`, `guide/`, `templates/`, `AGENTS.md`, `harnesses.json` |
+| **Seeded only if absent** | `ruff.toml`, `mypy.ini`, `.github/workflows/checks.yml`, `CODEOWNERS` — your own are never overwritten |
+| **Merged, never replaced** | `.claude/settings.json` — every hook you already had survives |
+| **Never touched** | `CLAUDE.md`, `.claude/project-checks.json` |
+
+`.claude/project-checks.json` arrives as a **stub with no `test` key**, on
+purpose. A repository with no tests has to say so deliberately — `"test": false`
+with a reason — because *the tests passed* and *there were none* are different
+facts, and the auto-commit gate distinguishes them. Until you decide, it refuses
+to check in any change containing code.
+
+**Commit `.claude/` to your repository.** The package is a carrier, not a
+runtime: hooks resolve by path from the working tree, and your team reads the
+skills they are governed by.
+
+Then, in your repo:
+
+```bash
+python tools/run_checks.py --tier all --require-test   # what green means here
+python tools/resume.py                                 # where is this work
+python tools/recon.py                                  # what is this repo
+```
+
+**The hooks fire from the moment `.claude/settings.json` is in place** — the most
+visible being an auto-commit that checkpoints passing work at the end of every
+turn, on a branch, never on `main`, and never pushing. If that is not what you
+want, remove the `post-run` block from `settings.json` before your first session.
+
 
 ## Start here
 
@@ -140,13 +183,15 @@ Stated here rather than discovered later:
   plan that built this package. Gate 2 never has. No approved plan has gone spec →
   release in this repository, so the stages after review are specified and
   unexercised.
-- **No subagent has ever completed a task.** The one fan-out — five
-  `task-implementer` agents dispatched together, as the scheduler licensed — got
-  worktrees based on the initial commit rather than the working branch. Three
-  returned `BLOCKED` correctly; two wrote into stranded trees. `isolation:
-  worktree` is unverified against *which commit* it bases on, so
-  `executing-plans/references/parallel-dispatch.md` documents a mechanism that has
-  not yet worked.
+- **Parallel dispatch is diagnosed but still unproven.** One subagent has now
+  completed a task correctly — a read-only probe — so the mechanism is not dead.
+  What that probe established is why the first fan-out died: `isolation: worktree`
+  bases an agent's tree on the repository's **default branch**, not the branch the
+  session has checked out, and at the time `main` was the initial commit. The
+  round was handed a tree without the work it was asked to extend, and nothing
+  reported it, because from inside a worktree a stale base looks like a clean
+  checkout. `parallel-dispatch.md` now states the precondition. **A writing
+  fan-out has still never completed** — one read-only agent is not a round.
 - **Skill trigger rates are unmeasured.** `tools/eval_triggers.py` holds 180
   queries across all 15 skills, sandboxed and instrument-checked; no live run has
   been paid for. "It triggers" rests on description properties the suite enforces,
