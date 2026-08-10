@@ -48,6 +48,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 import time
@@ -73,6 +74,12 @@ HUMAN_STATES = {"WAITING_PLAN_APPROVAL", "WAITING_SHIP_APPROVAL", "BLOCKED",
 
 # Terminal. A unit that reached DONE and stays there is finished, not stuck.
 TERMINAL_STATES = {"DONE"}
+
+# A ticked task box in a plan's `## Progress` block. Deliberately requires
+# `Task <n>` after the box: the constitution gate uses the same `- [x]` syntax
+# with roman numerals, and counting those as progress would report every plan as
+# advancing seven steps the moment it was written.
+PROGRESS_TICK = re.compile(r"(?m)^- \[[xX]\]\s+Task\s+\d+")
 
 
 def _load(rel: str, name: str):
@@ -114,6 +121,67 @@ def tree_fingerprint(root: Path) -> str | None:
     return f"{head}:{hash(status) & 0xffffffff:08x}"
 
 
+def plan_progress(root: Path) -> int | None:
+    """Ticked `## Progress` boxes in the active plan, or None if unaskable.
+
+    Reuses `_hooklib.active_plans` so this counts THIS unit's plan rather than
+    every plan ever written -- the same narrowing the minimal-diff gate needed,
+    and for the same reason: a closed unit's ticks are not this one's progress.
+
+    None, never 0, when there is no active plan. Zero ticked boxes is a real
+    measurement; no plan to read is not, and collapsing them would make every
+    plan-less repository look permanently stalled.
+    """
+    mod = _load(".claude/hooks/_hooklib.py", "hooklib_for_chain")
+    if mod is None or not hasattr(mod, "active_plans"):
+        return None
+    try:
+        plans = mod.active_plans(root)
+    except Exception:
+        return None
+    if not plans:
+        return None
+    ticked = 0
+    for plan in plans:
+        try:
+            text = Path(plan).read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        ticked += len(re.findall(PROGRESS_TICK, text))
+    return ticked
+
+
+def record_gate(gate: int, decision: str, reason: str, plan_hash: str = "",
+                path: Path | None = None) -> bool:
+    """Append a GATE decision to the same append-only ledger.
+
+    Both gates take a decision and neither recorded it as data -- the plan file
+    carried Gate 1's approval as prose and Gate 2's was only ever in a
+    transcript. One shape for both, so "what was decided, when, and why" is one
+    query rather than an archaeology exercise.
+
+    `reason` is stored **verbatim**. `tools/loop.py` refuses to re-present a plan
+    body whose hash has not changed, so a summarised rejection produces a second
+    submission that looks new and is not.
+    """
+    entry = {
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "kind": "gate",
+        "gate": int(gate),
+        "decision": decision,
+        "reason": reason,
+        "plan_hash": plan_hash,
+    }
+    path = path or LEDGER
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry, sort_keys=True) + "\n")
+    except OSError:
+        return False
+    return True
+
+
 def read_ledger(path: Path | None = None) -> list[dict]:
     """Every recorded turn, oldest first. A corrupt line is skipped, not fatal."""
     path = path or LEDGER
@@ -134,10 +202,26 @@ def read_ledger(path: Path | None = None) -> list[dict]:
     return entries
 
 
-def assess(entries: list[dict], state: str | None, fingerprint: str | None) -> dict:
+def assess(entries: list[dict], state: str | None, fingerprint: str | None,
+           progress: int | None = None) -> dict:
     """Pure. Is this unit advancing, stalled, waiting, done, or unknown?
 
-    `entries` is the ledger oldest-first; `state` and `fingerprint` are now.
+    `entries` is the ledger oldest-first; `state`, `fingerprint` and `progress`
+    are now. `progress` is the count of ticked `## Progress` boxes in the active
+    plan.
+
+    **Three limbs, not two, and the third was learned the hard way.** The first
+    version asked only *has the state changed?* and *has the tree changed?* — and
+    then reported `stalled` on four consecutive turns of a healthy twelve-task
+    execution, because a long plan legitimately sits in `BUILD` for many turns
+    while files change constantly. It was crying wolf on the very run that built
+    it, which is the failure `test_chain.py`'s own docstring warns about: a
+    detector nobody believes is worse than no detector.
+
+    The missing signal was already on disk. A plan ticks a checkbox as each task
+    lands, so a rising count is proof the unit is advancing whatever the state
+    machine says. A stall now needs all three: the state pinned, the tree
+    churning, **and** the plan's progress not moving.
     """
     if state is None:
         return {"chain": "unknown", "turns_in_state": 0,
@@ -168,11 +252,29 @@ def assess(entries: list[dict], state: str | None, fingerprint: str | None) -> d
         prints.add(fingerprint)
     tree_moved = len(prints) > 1
 
-    if same >= STALL_TURNS and tree_moved:
+    # Has the plan's own progress moved? Compared against the OLDEST entry in
+    # the same window, so a single tick anywhere across it counts as advancing.
+    # `None` on either side means the question could not be asked -- an absent
+    # plan is not evidence of a stall, so it falls back to the two-limb rule.
+    prior = [p for p in (e.get("progress") for e in recent)
+             if isinstance(p, int)]
+    progress_moved = bool(progress is not None and prior and progress > min(prior))
+
+    if same >= STALL_TURNS and tree_moved and not progress_moved:
         return {"chain": "stalled", "turns_in_state": same,
                 "reason": f"state has been {state} for {same} recorded turn(s) "
-                          f"while the tree kept changing -- a stage finished and "
-                          f"its successor was never invoked"}
+                          f"while the tree kept changing and the plan's progress "
+                          f"did not -- a stage finished and its successor was "
+                          f"never invoked"}
+
+    if progress_moved:
+        # `progress_moved` is only true when both are real ints, but the type
+        # checker cannot see that through the guard, and a bare `# type: ignore`
+        # would hide a genuine None slipping in later.
+        landed = int(progress or 0) - min(prior)
+        return {"chain": "advancing", "turns_in_state": same,
+                "reason": f"{state}, and the plan ticked {landed} "
+                          f"more task(s) across the last {len(recent)} turn(s)"}
 
     return {"chain": "advancing", "turns_in_state": same,
             "reason": f"{state}, {same} recorded turn(s) in this state"}
@@ -217,6 +319,7 @@ def gather(root: Path | None = None, ledger: Path | None = None,
         "state": state,
         "slug": slug,
         "fingerprint": tree_fingerprint(root),
+        "progress": plan_progress(root),
         "entries": read_ledger(ledger or (root / ".claude/hooks/state/chain-ledger.jsonl")),
     }
 
@@ -234,6 +337,7 @@ def record(facts: dict, path: Path | None = None, note: str = "") -> bool:
         "slug": facts.get("slug"),
         "state": facts.get("state"),
         "fingerprint": facts.get("fingerprint"),
+        "progress": facts.get("progress"),
     }
     if note:
         entry["note"] = note
@@ -252,20 +356,57 @@ def main(argv: list[str] | None = None) -> int:
                     help="append this turn's state to the ledger")
     ap.add_argument("--note", default="", help="a note to store with --record")
     ap.add_argument("--ledger", action="store_true", help="print the ledger")
+    ap.add_argument("--gate", type=int, choices=(1, 2),
+                    help="record a gate decision: 1 plan approval, 2 shipment")
+    ap.add_argument("--decision", default="",
+                    help="approve|revise|reject, or ship|hold|reject for gate 2")
+    ap.add_argument("--reason", default="",
+                    help="the user's own words, stored verbatim")
+    ap.add_argument("--plan-hash", default="",
+                    help="the plan body hash, so a rejection is traceable")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--root", default=".")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
+
+    if args.gate:
+        # A decision with no reason is not a record -- "approve" alone tells a
+        # later reader nothing they could not have guessed from the fact that
+        # work continued.
+        if not args.decision:
+            print("a gate decision needs --decision", file=sys.stderr)
+            return 2
+        ok = record_gate(args.gate, args.decision, args.reason, args.plan_hash)
+        print(f"gate {args.gate}: {args.decision}"
+              + (f" -- {args.reason}" if args.reason else "")
+              + ("" if ok else "  (NOT RECORDED: the ledger could not be written)"))
+        return 0 if ok else 1
+
     facts = gather(root)
 
     if args.ledger:
+        # Gate rows and turn rows are different shapes and must render
+        # differently. The first version printed both through the turn format,
+        # so every gate decision -- the rows a reader actually opens this file
+        # for -- came out as `None  -`, and the audit trail was unreadable at
+        # precisely the point it was worth having.
         for entry in facts["entries"]:
-            print(f"{entry.get('ts','?'):20} {str(entry.get('state')):24} "
-                  f"{entry.get('slug') or '-'}")
+            ts = entry.get("ts", "?")
+            if entry.get("kind") == "gate":
+                reason = entry.get("reason") or ""
+                print(f"{ts:20} GATE {entry.get('gate')}  "
+                      f"{entry.get('decision', '?'):10}"
+                      + (f"  {reason[:60]}" if reason else ""))
+            else:
+                ticked = entry.get("progress")
+                print(f"{ts:20} {str(entry.get('state')):24} "
+                      f"{entry.get('slug') or '-':22}"
+                      + (f"  {ticked} task(s) done" if ticked is not None else ""))
         return 0
 
-    verdict = assess(facts["entries"], facts["state"], facts["fingerprint"])
+    verdict = assess(facts["entries"], facts["state"], facts["fingerprint"],
+                     facts.get("progress"))
 
     if args.record:
         record(facts, note=args.note)

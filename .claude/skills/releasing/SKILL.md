@@ -21,6 +21,13 @@ clause that forced it. A reader deciding whether to ship needs to know that this
 change touches a migration or the installer, and that fact is computed rather
 than remembered.
 
+**Record the decision**, whichever way it went:
+
+    python tools/chain.py --gate 2 --decision ship|hold|reject --reason "<their words>"
+
+Same ledger, same shape as Gate 1, reason verbatim. A shipment decision that
+exists only in a transcript is not a record anybody can audit afterwards.
+
 **The tier never waives this gate.** A low-risk shipment still asks. Nothing in
 this layer may push, merge, publish or deploy on an inferred yes, and a tier
 computed by the system that wants to ship is not the thing that gets to waive

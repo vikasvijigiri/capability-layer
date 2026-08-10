@@ -53,6 +53,21 @@ exist — which is this repository's most-repeated defect, prose asserting what
 the wiring does not implement. If planning needs to happen in plan mode, a person
 enters it.
 
+## Record the decision, whichever it was
+
+    python tools/chain.py --gate 1 --decision approve|revise|reject --reason "<their words>"
+
+Appended to the same append-only ledger the chain instrument writes, so "what
+was decided, when, and why" is one query rather than an archaeology exercise
+across a transcript nobody kept.
+
+**The reason is stored verbatim.** `tools/loop.py` refuses to re-present a plan
+body whose hash has not changed, so a rejection that was summarised rather than
+quoted produces a second submission that looks new and is not.
+
+Record a rejection as readily as an approval. A gate log holding only approvals
+answers the easy question and loses the one worth having.
+
 ## The three outcomes must all stay reachable
 
 Approval is not the only door, and a plan presented as though it were is a gate

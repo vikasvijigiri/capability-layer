@@ -95,7 +95,7 @@ Ticked by `executing-plans` as each task's own **Verification** command is run
 and quoted. Nothing here is ticked on a clean diff or a zero exit code.
 
 - [x] Task 1 — `WAITING_DELIVERY`, derived not stored
-- [ ] Task 2 — the gate log, appended to the ledger
+- [x] Task 2 — the gate log, appended to the ledger
 - [x] Task 3 — the kill switch
 - [x] Task 4 — agent file scope, enforced by a hook
 - [x] Task 5 — SAST on the diff

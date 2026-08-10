@@ -185,6 +185,97 @@ check("every state resume calls terminal is classified here",
       not uncovered,
       f"{uncovered} would be treated as ordinary work and could report stalled")
 
+# --- the third limb: plan progress ---------------------------------------------
+#
+# The calibration that stopped this instrument crying wolf. It reported
+# `stalled` on four consecutive turns of a healthy twelve-task execution,
+# because a long plan legitimately sits in BUILD while files change constantly.
+# A rising count of ticked task boxes is proof of advance whatever the state
+# machine says, and a stall now needs all three limbs.
+
+
+def pentries(*triples) -> list[dict]:
+    """(state, fingerprint, progress) -> ledger entries, oldest first."""
+    return [{"ts": f"2026-08-10T00:00:{i:02d}", "slug": "u", "state": s,
+             "fingerprint": f, "progress": p}
+            for i, (s, f, p) in enumerate(triples)]
+
+
+moving_plan = chain.assess(
+    pentries(("BUILD", "a", 1), ("BUILD", "b", 2), ("BUILD", "c", 3)),
+    "BUILD", "d", 4)
+check("a pinned state with RISING plan progress is advancing",
+      moving_plan["chain"] == "advancing", str(moving_plan))
+check("...and the reason says how many tasks landed",
+      "more task" in moving_plan["reason"], moving_plan["reason"])
+
+stuck_plan = chain.assess(
+    pentries(("BUILD", "a", 3), ("BUILD", "b", 3), ("BUILD", "c", 3)),
+    "BUILD", "d", 3)
+check("a pinned state with FLAT progress and a churning tree is still stalled",
+      stuck_plan["chain"] == "stalled", str(stuck_plan))
+check("...and the reason names all three limbs",
+      "progress" in stuck_plan["reason"] and "tree kept changing" in stuck_plan["reason"],
+      stuck_plan["reason"])
+
+# An absent plan must not read as a stall. `plan_progress` returns None rather
+# than 0 for exactly this: no plan to read is not the same as no progress.
+no_plan = chain.assess(
+    entries(("BUILD", "a"), ("BUILD", "b"), ("BUILD", "c")), "BUILD", "d", None)
+check("an absent plan falls back to the two-limb rule rather than erroring",
+      no_plan["chain"] == "stalled", str(no_plan))
+
+check("plan_progress returns None, not 0, when there is no plan to read",
+      chain.plan_progress(Path(tempfile.gettempdir())) is None,
+      "0 ticked boxes is a measurement; no plan is not")
+
+# The constitution gate uses the same `- [x]` syntax with roman numerals.
+# Counting those would report every plan as instantly advancing seven steps.
+check("the progress pattern ignores constitution-gate boxes",
+      len(chain.PROGRESS_TICK.findall(
+          "- [x] I Evidence — something\n- [x] Task 1 — real\n")) == 1)
+
+live_progress = chain.plan_progress(ROOT)
+check("plan_progress reads the ACTIVE plan against the real tree",
+      isinstance(live_progress, int) and live_progress >= 0, str(live_progress))
+
+# --- the gate log ---------------------------------------------------------------
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as gd:
+    gled = Path(gd) / "chain-ledger.jsonl"
+    chain.record({"slug": "u", "state": "BUILD", "fingerprint": "a"}, gled)
+    check("a gate decision is recorded",
+          chain.record_gate(1, "approve", "the plan was right", "abc123", gled))
+    chain.record_gate(2, "reject", "not ready to ship", "", gled)
+    log = chain.read_ledger(gled)
+
+    gates = [e for e in log if e.get("kind") == "gate"]
+    check("gate rows are distinguishable from state rows",
+          len(gates) == 2 and len(log) == 3, str(log))
+    check("...and carry the decision and the verbatim reason",
+          gates[0]["decision"] == "approve"
+          and gates[0]["reason"] == "the plan was right", str(gates[0]))
+    check("...and the plan hash, so a rejection is traceable to what was rejected",
+          gates[0]["plan_hash"] == "abc123", str(gates[0]))
+    check("both gates use one entry shape",
+          {"gate", "decision", "reason", "plan_hash", "ts", "kind"} <= set(gates[1]),
+          str(gates[1]))
+
+    # Append-only holds for gate rows too: the audit trail is worthless if a
+    # later decision can quietly replace an earlier one.
+    before = gled.read_text(encoding="utf-8")
+    chain.record_gate(2, "approve", "changed my mind", "", gled)
+    after = gled.read_text(encoding="utf-8")
+    check("a later gate decision never overwrites an earlier one",
+          after.startswith(before) and len(after) > len(before))
+    check("...so both decisions survive for the record",
+          len([e for e in chain.read_ledger(gled) if e.get("kind") == "gate"]) == 3)
+
+    # A gate row must not be mistaken for a turn. `assess` counts trailing
+    # entries by state, and a gate row has no state at all.
+    mixed = chain.assess(chain.read_ledger(gled), "BUILD", "z", None)
+    check("gate rows do not corrupt the stall count",
+          mixed["chain"] in {"advancing", "stalled"}, str(mixed))
+
 # --- the per-turn cost, which is a correctness property here ------------------
 #
 # This runs from a hook on EVERY turn. `resume.gather_facts` makes two
