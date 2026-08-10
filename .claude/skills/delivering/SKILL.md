@@ -29,12 +29,35 @@ rollback, and then the smallest lower-risk diff.
    work, use one worktree per task and serialize shared-interface changes.
 2. Run the repository's required all-tier checks and secret scan on the actual
    candidate. Preserve command, exit code, and relevant output as evidence.
-3. Rebase or merge the latest base. If conflicts occur, classify them. Resolve
-   only mechanical, non-security conflicts with bounded attempts; otherwise
-   return a structured conflict incident to `systematic-debugging`.
-4. Prepare the PR or merge-queue handoff. Do not bypass protected-branch rules,
-   required checks, or merge queue. Do not deploy.
-5. **Run the preflight and quote it. Exit `1` is a stop, not a note.**
+3. **Before rebasing, know what it would do.**
+
+       python tools/git_ops.py rebase-plan --base <base> --head <head>
+
+   `rebase_plan()` never runs `git rebase` — it simulates the merge with
+   `git merge-tree --write-tree`, which composes a tree object and reports,
+   touching neither the index nor the working tree. It returns "no-op",
+   `clean`, `conflict`, or `unknown`; `unknown` is not `clean` and is not
+   licence to proceed as if it were.
+4. If it reports `conflict`, classify the conflicting paths mechanically —
+   never by eye:
+
+       python -c "import sys; sys.path.insert(0,'tools'); import git_ops, json; \
+       print(json.dumps(git_ops.classify_conflict(sys.argv[1:]), indent=2))" <paths>
+
+   `classify_conflict()` reads `_hooklib.MIGRATION_PATH_PATTERNS` and
+   `parallel_groups.SHARED_PATTERNS`: a lockfile or generated file is
+   `mechanical`; a migration or auth path, or anything matching neither table,
+   is `substantive` and **escalates** — resolve only a `mechanical` verdict
+   with bounded attempts; a `substantive` one returns a structured conflict
+   incident to `systematic-debugging` rather than being resolved by guess.
+5. Prepare the PR or merge-queue handoff. **The body comes from `git_ops.pr_body()`,
+   never from `gh pr create --fill`** — a fill reads the merged `wip:` checkpoint
+   subjects, which are squash-commit noise by this repository's own design, not
+   a description of the work. `pr_body()` composes from the plan's `**Goal:**`
+   line, its ticked `## Progress` boxes, the risk tier, and review findings.
+   Do not bypass protected-branch rules, required checks, or merge queue. Do
+   not deploy.
+6. **Run the preflight and quote it. Exit `1` is a stop, not a note.**
 
        python tools/delivery_check.py --base <base> --head <head>
 
@@ -48,10 +71,10 @@ rollback, and then the smallest lower-risk diff.
    has said "confirm the base is known" throughout, and a PR was still opened
    with a base that was not its branch point, by an agent that had read this
    file that morning. The prose is the reason; the command is the mechanism.
-6. **Before anything leaves the machine, confirm with `AskUserQuestion`.**
+7. **Before anything leaves the machine, confirm with `AskUserQuestion`.**
    See below — a prose question does not count.
-7. Return `clean`, `conflict`, or `blocked` with changed paths, base, checks,
-   conflict files, and evidence. Never `clean` without step 5's output quoted.
+8. Return `clean`, `conflict`, or `blocked` with changed paths, base, checks,
+   conflict files, and evidence. Never `clean` without step 6's output quoted.
 
 ## The push confirmation
 

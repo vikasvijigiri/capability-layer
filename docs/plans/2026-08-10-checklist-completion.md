@@ -94,15 +94,15 @@ Nothing acquires `gh pr merge`. Every rule added gets a test or a hook, not pros
 Ticked by `executing-plans` as each task's own **Verification** command is run
 and quoted. Nothing here is ticked on a clean diff or a zero exit code.
 
-- [ ] Task 1 — `WAITING_DELIVERY`, derived not stored
+- [x] Task 1 — `WAITING_DELIVERY`, derived not stored
 - [ ] Task 2 — the gate log, appended to the ledger
-- [ ] Task 3 — the kill switch
-- [ ] Task 4 — agent file scope, enforced by a hook
-- [ ] Task 5 — SAST on the diff
+- [x] Task 3 — the kill switch
+- [x] Task 4 — agent file scope, enforced by a hook
+- [x] Task 5 — SAST on the diff
 - [ ] Task 6 — licence compliance and SBOM
 - [ ] Task 7 — the release candidate, with rollback executed
-- [ ] Task 8 — rollback and preconditions in the task shape
-- [ ] Task 9 — git operations
+- [x] Task 8 — rollback and preconditions in the task shape
+- [x] Task 9 — git operations
 - [ ] Task 10 — a per-unit budget ceiling
 - [ ] Task 11 — Gate 1 is reachable, and the plan-mode claim is corrected
 - [ ] Task 12 — contracts and policy
@@ -130,6 +130,15 @@ this morning cries wolf on its own repository.
   next action is one `resume.py` prints an empty instruction for.
 - The wording of the next action is the deliverable a reader acts on: it should
   say a delivery decision is owed, not "waiting".
+
+**Amended during execution (2026-08-10):** adding the state to `resume.py`
+turned `tools/test_chain.py` red immediately — its cross-check asserts that every
+state `resume.py` calls terminal is classified in `chain.py`, or a new terminal
+state falls through to the stall path and the instrument cries wolf. That
+one-line classification is nominally Task 2's file, but leaving the tier red
+between rounds would disable the auto-commit gate for every later round, so it
+landed here. **The cross-check working is the point**: two agents' work
+integrated wrongly and a suite caught it in the same round.
 
 **Verification:**
 - Run: `PYTHONIOENCODING=utf-8 python tools/test_resume.py && PYTHONIOENCODING=utf-8 python tools/resume.py`
@@ -197,6 +206,16 @@ stops work from any state and leaves the tree resumable.
 - Run: `PYTHONIOENCODING=utf-8 python tools/test_halt.py`
 - Expect: exit 0, including a case that fires the guard hook under a halt and
   reads `permissionDecision: deny`, and one hashing the tree before and after
+
+**Amended during execution (2026-08-10):** the guard is registered against
+`Bash|PowerShell|Edit|Write|NotebookEdit|Task`, not every tool. `test_hook_standards.py`
+requires a narrow matcher on `PreToolUse`, and pushing back on that produced a
+better design than the task specified: **a halt that blocks `Read` and `Grep`
+cannot be investigated** — the person who hit it needs to read the flag and the
+tree before deciding to resume. Work is blocked; diagnosis stays available.
+Registration also landed here rather than in Task 12, because a new event
+directory makes `test_hook_registration.py` red immediately and the tier gates
+every later round.
 
 **Done when:** a halt denies the next tool call, names how to resume, and leaves
 the tree unchanged.

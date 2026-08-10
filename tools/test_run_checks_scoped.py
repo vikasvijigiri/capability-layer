@@ -80,17 +80,63 @@ run_cmds = [c for _k, c in to_run]
 skip_cmds = [c for _k, c in skipped]
 
 check("the mapped suite runs", "python tools/test_scope.py" in run_cmds, str(run_cmds))
-check("the unmapped suites are skipped, not silently dropped",
-      set(skip_cmds) == {"python tools/test_loop.py", "python tools/test_worktree.py"},
+check("the unmapped test suites are skipped, not silently dropped",
+      {"python tools/test_loop.py", "python tools/test_worktree.py"} <= set(skip_cmds),
       str(skip_cmds))
-check("every resolved check is either run or named as skipped",
-      len(to_run) + len(skipped) == len(RESOLVED),
-      f"{len(to_run)} + {len(skipped)} != {len(RESOLVED)}")
-check("lint and typecheck are never narrowed",
-      "python -m ruff check ." in run_cmds and "python -m mypy" in run_cmds,
-      "whole-tree checks cost seconds; narrowing them saves nothing and hides "
-      "findings")
+check("typecheck is never narrowed -- whole-tree checks that stay whole-tree "
+      "cost seconds; narrowing them saves nothing and hides findings",
+      "python -m mypy" in run_cmds)
+# `VERDICT["paths"]` names `tools/scope.py`, a real python file -- so this
+# fixture exercises lint narrowing too, not just test narrowing.
+check("lint IS narrowed here, because the changed path is a real python file",
+      "python -m ruff check tools/scope.py" in run_cmds
+      and "python -m ruff check ." not in run_cmds,
+      str(run_cmds))
+check("the tree-wide lint command it replaced is named as skipped, not "
+      "silently dropped",
+      "python -m ruff check ." in skip_cmds, str(skip_cmds))
+check("every resolved check is either run or named as skipped, plus the "
+      "narrowed lint's own tree-wide remainder",
+      len(to_run) + len(skipped) == len(RESOLVED) + 1,
+      f"{len(to_run)} + {len(skipped)} != {len(RESOLVED)} + 1")
 check("nothing is unmapped when every path is mapped", unmapped == [], str(unmapped))
+
+# --- lint narrowing: a subset of the tree-wide run, and its remainder named --
+#
+# ruff's own S rules run over the whole tree; the point here is a narrower
+# VIEW for a `small` change, not a replacement of that gate -- the tree-wide
+# command must stay exactly what the full tier runs.
+py_files_here = {
+    str(p.relative_to(ROOT)).replace("\\", "/")
+    for p in ROOT.rglob("*.py")
+    if ".git" not in p.relative_to(ROOT).parts
+    and ".worktrees" not in p.relative_to(ROOT).parts
+}
+lint_targets = rc.scoped_lint_targets(
+    ["tools/run_checks.py", "tools/test_run_checks_scoped.py",
+     "docs/notes.txt", "does/not/exist.py"])
+check("scoped lint keeps only changed paths that are real python source",
+      set(lint_targets) == {"tools/run_checks.py", "tools/test_run_checks_scoped.py"},
+      str(lint_targets))
+check("the scoped lint set is a subset of the tree-wide one",
+      set(lint_targets) <= py_files_here, str(set(lint_targets) - py_files_here))
+
+to_run_l, skipped_l, _ = rc.scoped_selection(
+    pc, [("lint", "python .claude/hooks/check_config_json.py")],
+    {"paths": ["tools/run_checks.py"], "test_map": VERDICT["test_map"]})
+check("a lint command with no tree-wide `.` marker cannot be narrowed and "
+      "still runs in full, rather than vanishing",
+      ("lint", "python .claude/hooks/check_config_json.py") in to_run_l
+      and not skipped_l,
+      f"to_run={to_run_l} skipped={skipped_l}")
+
+to_run_nopy, skipped_nopy, _ = rc.scoped_selection(
+    pc, [("lint", "python -m ruff check .")],
+    {"paths": ["docs/notes.txt"], "test_map": VERDICT["test_map"]})
+check("with no changed python files, lint runs tree-wide rather than "
+      "vanishing silently",
+      ("lint", "python -m ruff check .") in to_run_nopy and not skipped_nopy,
+      f"to_run={to_run_nopy} skipped={skipped_nopy}")
 
 # --- the map's gaps fail safe -------------------------------------------------
 #

@@ -69,6 +69,11 @@ DONE_FACTS = {
     "deploy_healthy": True,
     "attempts": 0,
     "max_attempts": 3,
+    # Both default to "not ready to hand off", so every existing case above --
+    # none of which mentions either key -- keeps deriving exactly what it did
+    # before this pair existed.
+    "plan_tasks_done": False,
+    "commits_ahead": 0,
 }
 
 
@@ -87,6 +92,7 @@ CASES = [
     ("BUILD", facts(branch_exists=False)),
     ("REPAIR", facts(checks_green=False)),
     ("LAND", facts(pr_number=None)),
+    ("WAITING_DELIVERY", facts(pr_number=None, plan_tasks_done=True, commits_ahead=2)),
     ("QUEUED", facts(pr_merged=False)),
     ("WAITING_SHIP_APPROVAL", facts(release_pr=7)),
     ("ROLLING_BACK", facts(deploy_healthy=False)),
@@ -162,6 +168,28 @@ check("...but an unspent budget still repairs",
       rs.derive_state(facts(attempts=2, checks_green=False)) == "REPAIR")
 check("a blocking review label sends a green PR back to repair",
       rs.derive_state(facts(pr_labels=["review:blocked"], pr_merged=False)) == "REPAIR")
+
+
+# --- WAITING_DELIVERY: a reviewed, unpushed branch is a human wait ----------
+#
+# `tools/chain.py` reported this as a stall -- the same shape as an unresolved
+# gate, but with no state for it. `derive_state` is the one place the loop
+# distinguishes "waiting on a person" from "broken", so this belongs here, not
+# in chain.py's reading of the state.
+
+check("a fully-ticked plan with unpushed commits and no PR awaits a delivery decision",
+      rs.derive_state(facts(pr_number=None, plan_tasks_done=True,
+                            commits_ahead=1)) == "WAITING_DELIVERY")
+check("...but an unfinished plan still just needs landing, not a decision",
+      rs.derive_state(facts(pr_number=None, plan_tasks_done=False,
+                            commits_ahead=1)) == "LAND")
+check("...and a fully-ticked plan with nothing to deliver is not owed a decision either",
+      rs.derive_state(facts(pr_number=None, plan_tasks_done=True,
+                            commits_ahead=0)) == "LAND")
+check("WAITING_DELIVERY is a human gate, not something automatic moves out of",
+      "WAITING_DELIVERY" in rs.TERMINAL)
+check("...and it has a next action naming the decision, not just 'waiting'",
+      "decision" in rs.NEXT_ACTION.get("WAITING_DELIVERY", "").lower())
 
 
 # --- three-valued checks_green ----------------------------------------------
@@ -255,6 +283,60 @@ subprocess.run(["git", "commit", "--quiet", "-m", "work"],
 f = rs.gather_facts(repo, "checkout-retry")
 check("work after the green ref makes the tree unverified again",
       f["checks_green"] is None, f"green={f['last_green']}")
+
+# --- WAITING_DELIVERY is derived from git/disk facts, not a stored flag -----
+#
+# `decisions/2026-08-07-derived-state-over-stored-state.md` binds this file: a
+# flag file recording "waiting for delivery" would be the duplicate owner that
+# ADR forbids. The facts it needs -- the plan's checkboxes and commits ahead of
+# the base branch -- are read fresh every call, exactly like every other fact
+# `gather_facts` produces.
+
+
+def temp_repo_with_base(name: str) -> Path:
+    d = Path(tempfile.mkdtemp())
+    for args in (
+        ["init", "--quiet", "--initial-branch=main"],
+        ["config", "user.email", "t@example.com"],
+        ["config", "user.name", "t"],
+    ):
+        subprocess.run(["git", *args], cwd=str(d), capture_output=True, text=True)
+    (d / "README.md").write_text("# t\n", encoding="utf-8")
+    subprocess.run(["git", "add", "-A"], cwd=str(d), capture_output=True, text=True)
+    subprocess.run(["git", "commit", "--quiet", "-m", "init"],
+                   cwd=str(d), capture_output=True, text=True)
+    subprocess.run(["git", "checkout", "--quiet", "-b", f"feat/{name}"],
+                   cwd=str(d), capture_output=True, text=True)
+    plans = d / "docs" / "plans"
+    plans.mkdir(parents=True)
+    (plans / f"2026-08-10-{name}.md").write_text(
+        "# Plan\n\n## Approved\n\n## Progress\n\n"
+        "- [x] Task 1 -- done\n- [x] Task 2 -- done\n",
+        encoding="utf-8")
+    subprocess.run(["git", "add", "-A"], cwd=str(d), capture_output=True, text=True)
+    subprocess.run(["git", "commit", "--quiet", "-m", "work"],
+                   cwd=str(d), capture_output=True, text=True)
+    subprocess.run(["git", "update-ref", f"refs/uaios/green/{name}", "HEAD"],
+                   cwd=str(d), capture_output=True, text=True)
+    return d
+
+
+_wd_repo = temp_repo_with_base("delivery-check")
+_wd = rs.gather_facts(_wd_repo, "delivery-check")
+check("gather_facts reads the plan's checkboxes rather than a stored flag",
+      _wd["plan_tasks_done"] is True, _wd)
+check("...and counts commits ahead of the base branch from git, not a stored counter",
+      _wd["commits_ahead"] == 1, _wd)
+check("...so a fully-verified, fully-ticked branch with no PR derives WAITING_DELIVERY",
+      rs.derive_state(_wd) == "WAITING_DELIVERY", rs.derive_state(_wd))
+
+_partial_plan = _wd_repo / "docs" / "plans" / "2026-08-10-delivery-check.md"
+_partial_plan.write_text(
+    "# Plan\n\n## Approved\n\n## Progress\n\n- [x] Task 1 -- done\n- [ ] Task 2\n",
+    encoding="utf-8")
+check("an unticked task reads as not done straight from the plan file, not a cache",
+      rs.gather_facts(_wd_repo, "delivery-check")["plan_tasks_done"] is False)
+
 
 # The ledger is the only stored state, and it holds counters, nothing else.
 state_dir = repo / ".claude" / "hooks" / "state"

@@ -50,8 +50,29 @@ PROGRESS_RE = re.compile(r"(?m)^- \[( |x|X)\]\s+Task\s+(\d+)\b")
 FILE_RE = re.compile(r"(?m)^\s*-\s+(Create|Modify|Test|Delete|Move):\s*`([^`]+)`")
 
 
+COMPLEXITY_HEADING_RE = re.compile(r"(?m)^##\s+Complexity tracking\s*$")
+
+
 def _line_of(text: str, index: int) -> int:
     return text.count("\n", 0, index) + 1
+
+
+def _rollback_fields_exempt(text: str) -> bool:
+    """Whether this plan's own `## Complexity tracking` states, in words, an
+    exemption from the per-task `**Rollback:**`/`**Preconditions:**` fields.
+
+    A bare "we have a Complexity tracking section" is not enough here -- unlike
+    the constitution-gate check, silence about these two fields must not read
+    as an exemption, or every future plan quietly inherits this plan's pass.
+    The section must name both fields.
+    """
+    m = COMPLEXITY_HEADING_RE.search(text)
+    if not m:
+        return False
+    nxt = re.search(r"(?m)^##\s+", text[m.end():])
+    section = text[m.end(): m.end() + nxt.start() if nxt else len(text)]
+    lowered = section.lower()
+    return "rollback" in lowered and "precondition" in lowered
 
 
 def analyze(text: str, exists=None, slug: str = "") -> list[dict]:
@@ -114,6 +135,7 @@ def analyze(text: str, exists=None, slug: str = "") -> list[dict]:
     # --- tasks
     if not tasks:
         add(1, "tasks", "no `### Task N:` sections")
+    rollback_exempt = _rollback_fields_exempt(text)
     for i, m in enumerate(tasks):
         body = text[m.end(): tasks[i + 1].start() if i + 1 < len(tasks) else len(text)]
         label = f"Task {m.group(1)}"
@@ -126,6 +148,13 @@ def analyze(text: str, exists=None, slug: str = "") -> list[dict]:
             add(line, "untestable", f"{label} has no `Done when:` condition")
         if not FILE_RE.search(body):
             add(line, "tasks", f"{label} names no file to create, modify or test")
+        # Per task, not per plan: one task's `**Rollback:**` must not be read
+        # as covering another, so this checks each task's own body only.
+        if not rollback_exempt:
+            if "**Rollback:**" not in body:
+                add(line, "untestable", f"{label} has no `Rollback:` strategy")
+            if "**Preconditions:**" not in body:
+                add(line, "untestable", f"{label} has no `Preconditions:` check")
 
     # --- paths. A Modify target that does not exist is the single most common
     # way a plan is wrong in a way that only surfaces mid-implementation.

@@ -92,11 +92,12 @@ CODE_SUFFIXES = (
 # queue treats it as blocking, and so does this.
 BLOCKING_LABELS = {"review:blocked", "do-not-merge", "do-not-merge/hold"}
 
-# States nothing automatic may move out of. Two are human gates, two are stops.
+# States nothing automatic may move out of. Three are human gates, two are stops.
 TERMINAL = {
     "DONE",
     "BLOCKED",
     "WAITING_PLAN_APPROVAL",
+    "WAITING_DELIVERY",
     "WAITING_SHIP_APPROVAL",
 }
 
@@ -110,6 +111,8 @@ NEXT_ACTION = {
     "BUILD": "implement against the plan's acceptance tests",
     "REPAIR": "classify the failure and repair it (see the escalation ladder)",
     "LAND": "open the PR and enable auto-merge",
+    "WAITING_DELIVERY": "human: a delivery decision is owed -- push the branch and "
+                        "open the PR, or say why not",
     "QUEUED": "wait -- the merge queue owns it now",
     "WAITING_SHIP_APPROVAL": "human: merge the release PR",
     "ROLLING_BACK": "roll back, verify the rolled-back version is healthy, then diagnose",
@@ -261,6 +264,61 @@ def _layer_owned(root: Path) -> set[str]:
     return {str(p).replace("\\", "/") for p in paths} if isinstance(paths, list) else set()
 
 
+# The plan's own `## Progress` list, matched against `**Done when:**` boxes the
+# plan already writes as `- [ ]` / `- [x]` (see the plan template). Reading it
+# fresh from the file is the point: a stored "delivery ready" flag is exactly
+# the duplicate `decisions/2026-08-07-derived-state-over-stored-state.md`
+# forbids, so this walks the same text `rejections()` and `plan_body_hash()`
+# already walk rather than caching a verdict anywhere.
+_PROGRESS_SECTION = re.compile(r"(?ms)^## Progress\s*\n(.*?)(?=^## |\Z)")
+_CHECKBOX = re.compile(r"^- \[([ xX])\]", re.M)
+
+# The two branch names this repository and its installs actually use. Not a
+# configurable base: `resume.py` already hardcodes its own conventions
+# (`BRANCH_PREFIX`, `PLANS_DIR`) rather than reading them from a config file
+# nothing writes, and a base branch is the same kind of fact.
+_BASE_CANDIDATES = ("main", "master")
+
+
+def plan_tasks_done(plan_text: str) -> bool:
+    """True only when the plan's own Progress checklist exists and every box in
+    it is ticked. No section, or a section with nothing ticked, is False -- an
+    absent checklist is not evidence of completion."""
+    section = _PROGRESS_SECTION.search(plan_text)
+    if not section:
+        return False
+    boxes = _CHECKBOX.findall(section.group(1))
+    return bool(boxes) and all(b.lower() == "x" for b in boxes)
+
+
+def _base_branch(root: Path, branch: str) -> str | None:
+    """The branch this unit was cut from, or None when neither convention name
+    exists here. Never guesses past that -- an unknown base makes
+    `commits_ahead` unknown too, which `derive_state` treats as "not yet
+    established" rather than zero."""
+    for candidate in _BASE_CANDIDATES:
+        if candidate == branch:
+            continue
+        rc, _ = _git(root, "rev-parse", "--verify", "--quiet",
+                    f"refs/heads/{candidate}")
+        if rc == 0:
+            return candidate
+    return None
+
+
+def commits_ahead_of_base(root: Path, branch: str) -> int | None:
+    """How many commits HEAD carries that the base branch does not, or None
+    when there is no base branch to compare against. Read from git on every
+    call -- nothing here is written anywhere."""
+    base = _base_branch(root, branch)
+    if base is None:
+        return None
+    rc, out = _git(root, "rev-list", "--count", f"{base}..HEAD")
+    if rc != 0 or not out.strip().isdigit():
+        return None
+    return int(out.strip())
+
+
 def ledger_path(root: Path, slug: str) -> Path:
     return root / STATE_DIR / f"resume-{slug}.json"
 
@@ -370,6 +428,8 @@ def gather_facts(root: Path, slug: str | None = None) -> dict:
         "recon_exists": bool(recon_maps),
         "plan_approved": APPROVAL_MARKER in plan_text,
         "clarifications": plan_text.count(CLARIFICATION_MARKER),
+        "plan_tasks_done": plan_tasks_done(plan_text),
+        "commits_ahead": commits_ahead_of_base(root, branch),
         "rejections": _rejections,
         "rejection_reasons": _reject_log,
         # False means the plan is byte-for-byte what was rejected last time.
@@ -410,6 +470,10 @@ def derive_state(facts: dict) -> str:
         against a codebase nobody has read produces a plan against an imagined
         one. Only reachable when there is real code and no map, so a repository
         this layer has been used in from the start never sees it.
+      - WAITING_DELIVERY outranks LAND, but only when the plan's own checklist
+        is fully ticked and there are commits to hand off. A verified branch
+        nobody has pushed is a person's decision to make, not a stall -- the
+        same shape as the two named gates, and reported the same way.
     """
     if not facts.get("plan_exists"):
         if (facts.get("code_files", 0) >= RECON_THRESHOLD
@@ -434,6 +498,13 @@ def derive_state(facts: dict) -> str:
         return "BUILD"
 
     if facts.get("pr_number") is None:
+        # A verified branch nobody has pushed is not broken and not automatic --
+        # it is waiting on a person, exactly like the two named gates. That is
+        # only true once there is something to deliver (commits_ahead > 0, not
+        # None or 0) and the plan itself says the work is finished; short of
+        # both this is still an ordinary LAND -- open the PR and move on.
+        if facts.get("plan_tasks_done") and (facts.get("commits_ahead") or 0) > 0:
+            return "WAITING_DELIVERY"
         return "LAND"
     if set(facts.get("pr_labels") or []) & BLOCKING_LABELS:
         return "REPAIR"

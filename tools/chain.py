@@ -68,7 +68,8 @@ STALL_TURNS = 2
 
 # States a unit can sit in indefinitely without anything being wrong, because
 # something outside the loop is what moves them. Never stalled.
-HUMAN_STATES = {"WAITING_PLAN_APPROVAL", "WAITING_SHIP_APPROVAL", "BLOCKED", "QUEUED"}
+HUMAN_STATES = {"WAITING_PLAN_APPROVAL", "WAITING_SHIP_APPROVAL", "BLOCKED",
+                "QUEUED", "WAITING_DELIVERY"}
 
 # Terminal. A unit that reached DONE and stays there is finished, not stuck.
 TERMINAL_STATES = {"DONE"}

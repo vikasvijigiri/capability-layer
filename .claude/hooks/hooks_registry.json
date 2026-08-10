@@ -39,7 +39,8 @@
       "description": "Before a file write; refuses generated, vendored and lockfile targets",
       "claude_code_event": "PreToolUse (Edit|Write|NotebookEdit)",
       "subscribers": [
-        ".claude/hooks/pre-edit/01-forbidden-change-guard.py"
+        ".claude/hooks/pre-edit/01-forbidden-change-guard.py",
+        ".claude/hooks/pre-edit/02-agent-scope-guard.py"
       ]
     },
     "pre-deploy": {
@@ -54,6 +55,13 @@
       "claude_code_event": "PostToolUse (Edit, Write)",
       "subscribers": [
         ".claude/hooks/on-artifact-create/02-hook-self-test-nudge.py"
+      ]
+    },
+    "pre-run": {
+      "description": "Before any tool that changes state or spawns work; refuses while a halt is in force. Reads stay allowed on purpose, so a halt can be investigated",
+      "claude_code_event": "PreToolUse (Bash|PowerShell|Edit|Write|NotebookEdit|Task)",
+      "subscribers": [
+        ".claude/hooks/pre-run/01-halt-guard.py"
       ]
     }
   }

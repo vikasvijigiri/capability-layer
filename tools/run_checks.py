@@ -31,6 +31,14 @@ is cheap, and every rule below exists so cheap never becomes *unmeasured*:
     `tools/loop.py` — neither of which calls this flag — so the guarantee is
     structural rather than a promise made here.
 
+`--scoped` also narrows **lint** the same way it narrows tests: a whole-tree
+ruff invocation is rewritten to check only the changed python files, never by
+disabling a rule, and the tree-wide command it replaced is printed as skipped
+rather than dropped. The tree-wide run itself is untouched and is still what
+the full tier runs — this adds a narrower view for a `small` change, it does
+not replace the gate. A lint command with no changed python file to narrow to,
+or no recognisable tree-wide shape, still runs in full.
+
 "Fast" must mean "ran fewer checks and said which". It must never mean "reported
 green on less evidence".
 """
@@ -51,6 +59,12 @@ MODULE = ROOT / ".claude" / "hooks" / "_projectchecks.py"
 # line a reader actually copies into a report.
 PARTIAL_VERDICT = "PARTIAL PASS"
 
+# ruff only understands python. Narrowing it to a changed non-python path
+# would either error or silently check nothing, so lint narrowing looks for
+# this suffix regardless of what `scope.py`'s CODE_SUFFIXES lists for other
+# purposes.
+LINT_SUFFIXES = {".py"}
+
 
 def load_scope():
     spec = importlib.util.spec_from_file_location("scope_mod", ROOT / "tools" / "scope.py")
@@ -64,6 +78,36 @@ def load_scope():
     return mod
 
 
+def scoped_lint_targets(paths: list) -> list:
+    """Which changed paths are worth handing to ruff directly.
+
+    Only real python files that still exist qualify -- a deleted file cannot
+    be linted, and handing ruff a path that is gone is an error, not a
+    narrower run.
+    """
+    return [p for p in paths
+            if Path(p).suffix.lower() in LINT_SUFFIXES and (ROOT / p).is_file()]
+
+
+def narrow_lint_cmd(cmd: str, targets: list):
+    """Rewrite a whole-tree ruff invocation to check only `targets`.
+
+    Only a command ending in the tree-wide `.` marker is recognised --
+    `python .claude/hooks/check_config_json.py` and
+    `python tools/new_skill_check.py --all` take no path argument in a form
+    this function understands, and guessing at their shape risks silently
+    dropping a check rather than narrowing one. Returns `None` when it cannot
+    narrow, and the caller keeps running the command in full rather than
+    losing it.
+    """
+    if not targets:
+        return None
+    stripped = cmd.rstrip()
+    if not stripped.endswith(" ."):
+        return None
+    return stripped[: -len(" .")] + " " + " ".join(targets)
+
+
 def scoped_selection(pc, resolved: list, verdict: dict) -> tuple[list, list, list]:
     """(to_run, skipped, unmapped) for a scoped run.
 
@@ -71,9 +115,18 @@ def scoped_selection(pc, resolved: list, verdict: dict) -> tuple[list, list, lis
     without running a suite. `test_map` maps a path glob to the check command
     that covers it; a changed path matching no glob is `unmapped`, and an
     unmapped path means the caller must escalate rather than narrow.
+
+    Lint is narrowed too, the same way test is: a recognisable tree-wide ruff
+    invocation is rewritten to the changed python files, and the tree-wide
+    command it replaced is appended to `skipped` -- named, not dropped. That
+    tree-wide command is untouched in `resolved` itself and is exactly what
+    the full tier still runs; this only changes what THIS scoped run does
+    with it. A lint command with nothing to narrow to, or no `.` shape this
+    function recognises, runs in full rather than vanishing.
     """
     test_map = verdict.get("test_map") or {}
     paths = verdict.get("paths") or []
+    lint_targets = scoped_lint_targets(paths)
 
     wanted: set = set()
     unmapped: list = []
@@ -86,10 +139,17 @@ def scoped_selection(pc, resolved: list, verdict: dict) -> tuple[list, list, lis
 
     to_run, skipped = [], []
     for kind, cmd in resolved:
-        # Only the test kind is narrowed. Lint and typecheck are whole-tree by
-        # construction and cost seconds; narrowing them would save nothing and
-        # would be the first place a scoped run started missing real findings.
-        if kind != "test" or cmd in wanted:
+        if kind == "lint":
+            narrowed = narrow_lint_cmd(cmd, lint_targets)
+            if narrowed:
+                to_run.append((kind, narrowed))
+                skipped.append((kind, cmd))
+            else:
+                to_run.append((kind, cmd))
+        # Typecheck is whole-tree by construction and costs seconds; narrowing
+        # it would save nothing and would be the first place a scoped run
+        # started missing real findings.
+        elif kind != "test" or cmd in wanted:
             to_run.append((kind, cmd))
         else:
             skipped.append((kind, cmd))
