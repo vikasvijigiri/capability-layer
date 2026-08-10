@@ -99,7 +99,7 @@ and quoted. Nothing here is ticked on a clean diff or a zero exit code.
 - [x] Task 3 — the kill switch
 - [x] Task 4 — agent file scope, enforced by a hook
 - [x] Task 5 — SAST on the diff
-- [ ] Task 6 — licence compliance and SBOM
+- [x] Task 6 — licence compliance and SBOM
 - [ ] Task 7 — the release candidate, with rollback executed
 - [x] Task 8 — rollback and preconditions in the task shape
 - [x] Task 9 — git operations
@@ -161,6 +161,21 @@ append-only, so it is the right home rather than a second file.
 - Modify: `.claude/skills/releasing/SKILL.md` — Gate 2 records
 
 **Depends on:** 1
+
+**Added during execution (2026-08-10): the stall rule needs a progress signal.**
+Executing this very plan made the detector fire wrongly. A 12-task plan sits in
+`BUILD` for many turns by design, and `assess()` reads only *state changed?* and
+*tree changed?* — so a long, healthy execution is indistinguishable from a
+dropped handoff. It reported `stalled` six turns running while rounds were
+landing normally.
+
+That is the cry-wolf failure `test_chain.py`'s own docstring warns about, and a
+detector nobody believes is worse than none. The plan file already carries the
+missing signal: **ticked `## Progress` checkboxes**. If the count of ticked boxes
+has risen since the last ledger entry, the unit is advancing whatever the state
+says. Record the count in each ledger entry and use it in `assess()`; only a
+state that is pinned AND a tree that is churning AND a progress count that has
+not moved is a stall. Add a case for each of the three limbs.
 
 **Implementation notes:**
 - One entry shape for both gates: `gate`, `decision`, `reason` verbatim, and the
