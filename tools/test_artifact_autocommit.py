@@ -452,6 +452,27 @@ _real = _hooklib.declared_paths(root=ROOT)
 check("declared_paths harvests no bare directory token",
       not [t for t in _real if t.endswith("/")],
       str(sorted(t for t in _real if t.endswith("/"))[:8]))
+
+# --- the gate reads THIS unit's plan, never every plan ever written --------
+#
+# It read `docs/plans/*.md` wholesale until 2026-08-10, so a path any closed
+# unit had named stayed declared forever and every merged plan permanently
+# widened what may be committed unreviewed. The refusal text said "the active
+# plan" throughout, which is the defect class this repo names most: prose
+# asserting a scoping the wiring does not implement.
+_active = _hooklib.active_plans(ROOT)
+_all_plans = sorted(p for p in (ROOT / "docs" / "plans").glob("*.md")
+                    if p.name.lower() != "readme.md")
+check("active_plans selects a subset, not every plan",
+      len(_active) < len(_all_plans) or len(_all_plans) <= 1,
+      f"{len(_active)} of {len(_all_plans)} -- reading all of them is the defect")
+check("...and the refusal message's 'active plan' is now true",
+      "active plan" in (_hooklib.minimal_diff_refusal(["zz/undeclared.py"], _real) or ""))
+# Selection follows `tools/resume.py`: a `**Slug:**` declaration, then the
+# filename. Asserted as a pattern match rather than by importing resume, which
+# `_hooklib` must not depend on.
+check("the slug pattern matches what writing-plans emits",
+      bool(_hooklib.PLAN_SLUG.search("**Slug:** target-workflow\n")))
 check("a file no plan names is a violation against the REAL declared set",
       _hooklib.minimal_diff_violations(
           ["tools/_no_plan_names_this.py"], _real) == ["tools/_no_plan_names_this.py"],
@@ -498,12 +519,18 @@ check("many unnamed paths are truncated but the count is stated",
 
 with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d4:
     tmp4 = Path(d4)
+    # A real repo on a real branch. `declared_paths` now reads only the plan(s)
+    # belonging to THIS unit, resolved from the branch the way `tools/resume.py`
+    # resolves it -- so a fixture with no branch reads no plan at all, which is
+    # correct behaviour and useless as a fixture. Every plan below declares
+    # `**Slug:** work` to match.
+    new_repo(tmp4)
     write(tmp4, "TASK.md",
           "Prose naming `tools/prose_only.py` declares nothing.\n"
           "- Modify: `tools/scope.py` — this one is a declaration\n")
     (tmp4 / "docs" / "plans").mkdir(parents=True)
     write(tmp4, "docs/plans/2026-08-10-x.md",
-          "- Modify: `.claude/hooks/_hooklib.py`\n")
+          "**Slug:** work\n\n- Modify: `.claude/hooks/_hooklib.py`\n")
     _declared = _hooklib.declared_paths(root=tmp4)
     check("declared_paths reads a declaration line in TASK.md",
           "tools/scope.py" in _declared)
@@ -518,7 +545,8 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d4:
     # `CLAUDE.md`, `README.md` and `.gitignore` undeclarable, so the gate
     # refused three files the plan explicitly named. Found by firing the hook.
     write(tmp4, "docs/plans/2026-08-10-z.md",
-          "- Modify: `CLAUDE.md` — policy\n- Modify: `.gitignore` — ignore it\n")
+          "**Slug:** work\n\n- Modify: `CLAUDE.md` — policy\n"
+          "- Modify: `.gitignore` — ignore it\n")
     _declared2 = _hooklib.declared_paths(root=tmp4)
     check("a root-level file can be declared", "CLAUDE.md" in _declared2,
           str(sorted(_declared2)))
@@ -527,6 +555,26 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d4:
     check("...while a bare directory still is not",
           _hooklib.minimal_diff_violations(["docs/x.md"], _declared2)
           == ["docs/x.md"])
+
+    # The File map TABLE is a declaration. `writing-plans` C2 calls it the
+    # frozen file map, and it is not always a subset of the per-task bullets:
+    # `.gitignore` was declared only there and was refused on that basis, while
+    # `README.md` looked covered purely because an unrelated older plan named
+    # it -- coverage right by accident, which is the hardest kind to notice
+    # going wrong.
+    write(tmp4, "docs/plans/2026-08-10-tbl.md",
+          "**Slug:** work\n\n"
+          "| File | Action | Responsibility |\n"
+          "|---|---|---|\n"
+          "| `src/only_in_table.py` | Create | nothing else names it |\n"
+          "| `a.md`, `b.md` | Modify | two in one row |\n")
+    _tbl = _hooklib.declared_paths(root=tmp4)
+    check("a File map table row declares its file",
+          "src/only_in_table.py" in _tbl, str(sorted(_tbl)))
+    check("...including every file in a multi-file row",
+          {"a.md", "b.md"} <= _tbl, str(sorted(_tbl)))
+    check("...while the Responsibility column is not harvested",
+          not [t for t in _tbl if " " in t], str(sorted(_tbl)))
     check("declared_paths always covers the knowledge docs",
           {"LOG.md", "HANDOFF.md", "TASK.md"} <= _declared)
     check("declared_paths is silent, not raising, on a root with no plans dir",

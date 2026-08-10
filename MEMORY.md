@@ -48,6 +48,17 @@ in HANDOFF.md; chronological events belong in LOG.md. -->
   dependency audit.
 - A dry-run or host handoff is not evidence of a live product implementation;
   live IDE-hosted execution must be reported separately.
+- A check proved only on synthetic input is not proved. Two mechanisms shipped
+  green and completely inert this way, and both were found by running them
+  against the real input rather than by any test. Assert at least one case
+  against what the function actually returns here. See `ISSUES.md` 2026-08-10.
+- Hook runtime is a correctness property. A reporting hook runs on every turn,
+  and one shipped at 5.2s because nothing measured it; a per-turn tax that size
+  is how a mechanism gets switched off.
+- `isolation: worktree` bases an agent's tree on the **default** branch, not the
+  branch in play. Create the worktree explicitly with `tools/worktree.py`, naming
+  the base, and prove it with `git merge-base --is-ancestor` read from the tree —
+  never from the agent's own report.
 
 ## MCP and local configuration
 

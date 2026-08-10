@@ -6,6 +6,82 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-10 18:30 — A commit gate passed 76 assertions while doing nothing
+
+- **Phase/Context**: `verifying-work` on the target-workflow plan, immediately
+  after `code-review` returned `passed: true` on the minimal-diff gate.
+- **Symptom**: none. That is the whole entry. The gate reported nothing, the
+  suite was green, and an undeclared file committed cleanly.
+- **Diagnosis**: `_hooklib.declared_paths` harvested every backticked token
+  containing `/` from `TASK.md` and the plans. Plan prose mentions directories,
+  so `.claude/`, `tools/` and `decisions/` all became declarations, and
+  directory-prefix matching then covered the whole repository.
+  `minimal_diff_violations(["tools/_probe.py"], declared)` returned `[]`.
+  Every test drove a synthetic declared set like `{"tools/scope.py"}`; not one
+  used what the function actually returns. Found by firing the hook against one
+  deliberately unrelated file, which committed it (`a737818` -> `7de48bc`).
+- **Attempts**:
+  - 1. Drop directory-shaped tokens → still inert: `tools/**` and `.claude/**`
+    survived, harvested out of a *reason clause* after an em-dash.
+  - 2. Cut the reason clause before reading backticks → correct, then
+    over-refused: the `/` requirement meant no root-level file could ever be
+    declared, so `CLAUDE.md`, `README.md` and `.gitignore` were all refused
+    while the plan declared all three.
+  - 3. Drop the `/` requirement on a declaration line → correct.
+  - 4. Parse only `- Create:` / `- Modify:` / `**Files:**` lines instead of
+    scanning prose → the shape the plan format already defines. 173 harvested
+    tokens became 44, zero directories, zero blanket globs.
+- **Fix**: declarations come from declaration lines with the reason clause
+  removed; directory-prefix coverage is gone (an explicit glob still works); the
+  gate applies only where something is actually declared, so a repo with no plan
+  is not blocked. Live: `Auto-commit REFUSED: ... tools/_minimal_diff_probe.py`
+  with HEAD unmoved. A later hardening narrowed it further to the *active*
+  plan -- reading `docs/plans/*.md` wholesale meant every merged plan
+  permanently widened what could be committed unreviewed.
+- **Status**: `Resolved`
+
+## 2026-08-10 18:20 — A reporting hook cost 5.2 seconds of every turn
+
+- **Phase/Context**: `code-review` over the whole branch, reviewing
+  `post-run/08-chain-continuity.py` written earlier the same session.
+- **Symptom**: nothing visible. The hook worked correctly and was registered on
+  every turn.
+- **Diagnosis**: it calls `chain.gather`, which calls `resume.gather_facts`,
+  which makes two `gh pr list` network calls. `time` on the hook: `real
+  0m5.170s`. With `_gh_json` stubbed: `real 0m1.005s`, and the derived state was
+  identical (`BUILD`) either way — stall detection turns on whether the state
+  *moved*, never on which state it is.
+- **Attempts**:
+  - 1. Looked for an existing offline flag on `resume.gather_facts` → none.
+  - 2. Made `chain.gather(offline=True)` the default, stubbing only the network
+    probe → 1.3s.
+- **Fix**: offline by default, with the reason at the seam. Two assertions now
+  pin it: the default must be `True`, and elapsed time must stay under 3s.
+  Nothing had ever measured hook runtime, which is why a 5s regression could
+  ship green.
+- **Status**: `Resolved`
+
+## 2026-08-10 17:50 — Two regexes silently corrupted by a literal 0x08 byte
+
+- **Phase/Context**: building `tools/memory.py`'s count-rot check via a bash
+  heredoc.
+- **Symptom**: `COUNT_CLAIM.findall("has 22 skills and 10 agents")` returned
+  `[]` while the same pattern typed directly matched both. `grep` showed the
+  pattern as correct.
+- **Diagnosis**: the heredoc turned an intended `` into an actual backspace
+  byte. `repr(pattern)` ended `...(suites?)` — invisible to `grep`, and it
+  silently anchored the pattern to a character that never appears.
+- **Attempts**:
+  - 1. Rewrite the line through another heredoc → same corruption.
+  - 2. Build the backslash as `chr(92)` → fixed `COUNT_CLAIM`, but a second
+    constant on an adjacent line kept its own two bad bytes.
+  - 3. Byte-level scan of every changed file during `code-review` → found the
+    survivor in dead code that nothing referenced.
+- **Fix**: the corrupt constant was deleted (it was unused), and the live one is
+  built without heredoc escaping. A byte scan for control characters is now part
+  of reviewing a diff here.
+- **Status**: `Resolved`
+
 ## 2026-08-09 19:30 — uninstall deleted a file outside the target
 
 - **Phase/Context**: `code-review` of the `uninstall` verb, after three

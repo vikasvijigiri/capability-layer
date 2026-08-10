@@ -3,6 +3,51 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-10 18:40
+
+**The layer's own workflow ran end to end on itself, and three mechanisms it
+gained today caught defects in the work that built them.** 9 commits,
+`c21763b..1a1abc0`, `37 files changed, 4065 insertions(+), 51 deletions(-)`
+against `main`. Full tier at close: `PASS: 42 check(s) green (audit, build,
+lint, smoke, test, typecheck)`. Nothing pushed, nothing merged.
+
+**The target-workflow plan, all 9 tasks.** `normalise()` used `strip(",;.")`
+where it meant `rstrip`, so every dotted path was invisible to the scheduler --
+`.claude/settings.json` read as `claude/settings.json` and matched no shared
+surface. Reverting the one character takes this plan from `2 must not run
+concurrently` back to `0`. Also `tools/worktree.py` (base is a required
+positional; the convenient default *is* the bug), `tools/scope.py` as a veto
+list rather than a score, `run_checks --scoped` printing `PARTIAL PASS` and
+never `PASS`, and Gate 1 becoming `ExitPlanMode`. Three amendments are recorded
+in the plan file, each with the reason.
+
+**Parallel dispatch worked for the first time.** `HANDOFF.md` at `0c45d2f`:
+*"No subagent has ever completed a task."* Two agents, one message, disjoint
+declared files, `git merge-base --is-ancestor` exit 0 read from each worktree
+rather than from either agent's report. Two narrowings matter more than the
+success: the harness's own `isolation: worktree` bases on the **default** branch
+and not the working one, then refuses to launch citing a git failure that does
+not reproduce from a shell. The recipe that works is `tools/worktree.py` plus an
+agent that does not force its own isolation.
+
+**Three checklist gaps closed.** `tools/chain.py` + `post-run/08-chain-continuity.py`
+detect a stalled chain and make a missed handoff loud -- it cannot force the
+handoff, and says so. Its append-only ledger is also the audit trail. Risk
+tiering (`scope.py --plan`) is computed from a plan's declared paths before any
+diff exists; `**Risk:**` is now a required section. `tools/memory.py` gives
+`MEMORY.md` a read side -- it was written by every unit of work and read by
+nothing, which makes it a diary.
+
+**Auto-approving Gate 2 for low-risk work was refused.** The checklist asked for
+it. A tier computed by the system that wants to ship must not be able to waive
+the one rule with no exceptions, so the tier decides what Gate 2 *shows*, never
+whether it is *asked*. `test_process_router.py` asserts the refusal.
+
+**Every defect worth recording today was found by running the thing, not by a
+test.** Four separate calibrations of the minimal-diff gate, three of the memory
+rot detector, two regexes silently corrupted by literal `0x08` bytes, and a hook
+that shipped at 5.2s per turn. See `ISSUES.md`.
+
 ## 2026-08-09 20:48
 
 **Three units shipped as stacked PRs (#7 base, #5 and #6 on it); 39 files,

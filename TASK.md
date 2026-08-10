@@ -6,7 +6,9 @@
 
 ### Make the layer match the target workflow architecture
 
-- **Status:** In Progress
+- **Status:** Done — 9/9 tasks, reviewed, `PASS: 42 check(s) green`. Moved to
+  Completed below; the remaining checklist scope is a NEW unit and enters at
+  `writing-plans`.
 - **Goal:** The chain the user specified, running end to end: decompose into
   independent tasks, a workflow per task, plan in plan mode, Gate 1, execute
   with minimal diffs, verify, bounded retry, scoped sweep and review, a
@@ -41,7 +43,8 @@
 
 ### Add `tools/delivery_check.py` — delivery facts, computed not asserted
 
-- **Status:** In Progress
+- **Status:** Done — merged to `main` as PR #10; it has since blocked two of its
+  own unsafe deliveries, which is the evidence it works.
 - **Goal:** One script that computes seven delivery facts about a branch and its
   PR, reports them, and refuses to decide — in the shape of `resume.py`,
   `analyze.py` and `git_identity.py`.
