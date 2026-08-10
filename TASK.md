@@ -4,6 +4,35 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Add `tools/delivery_check.py` — delivery facts, computed not asserted
+
+- **Status:** In Progress
+- **Goal:** One script that computes seven delivery facts about a branch and its
+  PR, reports them, and refuses to decide — in the shape of `resume.py`,
+  `analyze.py` and `git_identity.py`.
+- **Constraints:** Reports, never decides; **never merges, pushes or rebases**
+  (`test_process_router.py` already fails anything acquiring `gh pr merge`).
+  Exit `0` ready / `1` a check failed / `2` could not determine — and `2` is not
+  `0`, because a check that could not run is unrun, not passed. IO behind a
+  `gather_facts()` seam with an `offline` escape, decisions in a pure
+  `evaluate(facts)` the tests drive directly, mirroring
+  `git_identity.gather(root, offline=)` + `render()`. **Not** in the fast tier:
+  it needs a network and a remote, and that tier gates every auto-commit in
+  seconds.
+- **Input:** `docs/specs/2026-08-09-delivery-preflight-design.md`;
+  `tools/git_identity.py` (API seam), `tools/analyze.py` (injected-`exists`
+  test pattern), `tools/resume.py`; `.claude/skills/delivering/SKILL.md`.
+- **Output:** `tools/delivery_check.py`; `tools/test_delivery_check.py`; a step
+  in `delivering` that runs and quotes it; an entry in
+  `.claude/project-checks.json` only if it proves fast enough to belong.
+- **Done Checks:** `python tools/test_delivery_check.py` exits 0 with an
+  assertion per check, each proved red first; and the base-alignment check flags
+  a fixture where `merge-base(base, head) != tip(base)`, which is the case that
+  stranded three merged units outside PR #7.
+- **Out of Scope:** repo-settings-as-code (its own unit, and the only preventive
+  option available); stacked-PR tooling such as Graphite (rejected in the spec);
+  merging anything; configuring branch protection.
+
 ### Decide whether `/skills-doctor` still has a job
 
 - **Status:** Not started — raised by a `no-slop` sweep on 2026-08-03
@@ -46,6 +75,29 @@
 <!-- Append-only, newest entry at the top. Never delete or rewrite an
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
+
+### 2026-08-09 — Add an `uninstall` verb, mirroring `install`
+
+- **Goal**: `capability-layer uninstall [--into DIR] [--dry-run]` removes the
+  layer it installed, keyed off the v2 manifest, without destroying local edits.
+- **Output**: `uninstall_plan()` + `_contained()` + an `--uninstall` branch in
+  `.claude/install.py`; the verb in `capability_layer/cli.py` (`_TARGETS`,
+  `_PAYLOAD_ONLY`, `_MODE_FLAG`); ~30 assertions in `tools/test_install.py`; a
+  "Taking it back out" section in `README.md`. PR #5.
+- **Done Checks**: all four met — untouched file removed, edited file kept *and
+  named in the report*, `--dry-run` byte-identical (proved by hashing the tree
+  before and after), `.claude/settings.json` still present. Each is
+  mutation-tested; the final sweep over eight defects reports `hollow: none`.
+- **Result**: `code-review` found a path traversal that three `verifying-work`
+  passes had cleared — see `ISSUES.md` 2026-08-09 19:30. Two plan amendments and
+  two recovery passes are recorded in
+  `docs/plans/2026-08-09-uninstall-verb.md`.
+- **Out of Scope, and still out**: un-merging `settings.json` hook-by-hook;
+  removing `PRESERVE` files; uninstalling from a repo with no manifest.
+- **Not verified**: never run against a real third-party repository — every
+  fixture is synthetic. `capability-layer uninstall` as a shell command is
+  exercised only through the wheel in `test_package.py`.
+- **Status**: Done
 
 ### 2026-08-02 — Delete the process-compliance gates
 

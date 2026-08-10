@@ -53,8 +53,28 @@ imported from `site-packages` at runtime.
 ```bash
 python -m capability_layer install --into . --dry-run   # writes nothing, lists every path
 python -m capability_layer upgrade --into .             # keeps what you edited
+python -m capability_layer uninstall --into .           # removes only what it installed
 python -m capability_layer verify                       # the full tier, in your repo
 ```
+
+### Taking it back out
+
+`uninstall` reads the same manifest `upgrade` does and asks the same question —
+does this file's sha256 still match what was installed — but uses the answer to
+decide delete-vs-keep. It is deliberately timid, because a wrong `upgrade` keeps
+a file it could have refreshed and a wrong uninstall deletes your work:
+
+| Kept, and named in the report | Why |
+|---|---|
+| Anything you edited after install | Your work, not the layer's. A file with no recorded hash counts as edited |
+| `.claude/settings.json` | Merged into whatever hooks you already had, and nothing recorded what those were |
+| `CLAUDE.md`, `.claude/project-checks.json` | Never written by the installer in the first place |
+| Seeded lint and CI config | Written only if you lacked them, so you have been running on them since — removing the layer should not break `ruff` and CI in the same step. The exact set is `SEED` in `.claude/install.py`, and the run names every file it kept |
+
+Everything kept is printed with its reason — silence about a leftover file is the
+failure this verb exists to avoid. Run `--dry-run` first; it writes nothing.
+Without a `.claude/layer-manifest.json` it refuses outright rather than deleting
+by pattern, which is also what makes running it twice safe.
 
 Each install records a sha256 per file, so `upgrade` can tell **you edited this**
 from **upstream changed this**: an untouched file takes the update, an edited one
@@ -114,23 +134,25 @@ python tools/parallel_groups.py <plan>                 # which tasks may run at 
 ## How a change moves
 
 ```text
-                    ┌─ approach settled ──→ do the change ─┐
-repo-recon → task-brief                                    ├→ verifying-work
-                    └─ approach open ──→ brainstormer ──┐   │
-                                                        ↓   │
-                                        writing-plans →[GATE 1]→ executing-plans
-                                                                        │
-     ┌──────────────────────────────────────────────────────────────────┘
-     └→ verifying-work → no-slop → code-review → delivering
-                                                     └→[GATE 2]→ releasing
-                                                                    └→ knowledge-manager
+                         ┌──── dispatch, and it returns ────┐
+                         │  brainstormer · research         │
+                         │  designer · systematic-debugging │
+                         ↓                                  │
+repo-recon → writing-plans ────────────────────────────────┘
+                  │  frame (TASK.md) → fetch → plan
+                  └→[GATE 1]→ executing-plans → verifying-work → no-slop
+                                                                    │
+     ┌──────────────────────────────────────────────────────────────┘
+     └→ code-review → delivering
+                          └→[GATE 2]→ releasing → knowledge-manager
 ```
 
-**The numbers in `workflow.md` are labels, not a sequence.** `task-brief` and
-`brainstormer` are alternatives — one question decides which, *is the approach
-settled* — and neither reaches `writing-plans` directly, because six lines is not
-a spec. `repo-recon` runs only when the repository is unread. `releasing` runs
-only when there is somewhere to deploy.
+**The numbers in `workflow.md` are labels, not a sequence.** There is one door:
+`writing-plans` frames the request into six fields, dispatches for whatever it
+could not fill, then decomposes it. A dispatch is not a handoff — each one comes
+back, which is what removed the seam an un-handed-off brief used to fall through.
+`repo-recon` runs only when the repository is unread. `releasing` runs only when
+there is somewhere to deploy. Work too small to plan skips the plan and the gate.
 
 `.claude/workflow.md` §Entry owns that rule and is the only place it is stated.
 Read it before adding a stage. Each skill states its own triggers and handoff;
@@ -141,14 +163,14 @@ loads only when the task calls for it.
 
 | Path | What it is |
 |---|---|
-| `.claude/skills/` | the 15 skills, one directory each |
+| `.claude/skills/` | the 14 skills, one directory each |
 | `.claude/agents/` | 11 subagents — the read-only fan-out set, plus one implementer |
 | `.claude/hooks/` | what fires automatically — checkpoints, secret scan, branch guard, state report |
 | `.claude/commands/` | the 12 slash commands, including `/verify`, `/save` and `/publish` |
 | `.claude/constitution.md` | seven articles every plan ticks or justifies |
 | `.claude/workflow.md` | stage → owner → artefact, the entry rule, and the `[state:*]` blocks the session-start hook renders |
 | `.claude/install.py` | copies the layer into another repository; merges `settings.json`, never overwrites a decision |
-| `tools/` | `run_checks.py`, `resume.py`, `loop.py`, `recon.py`, `parallel_groups.py`, and the 28 suites that keep all of it honest |
+| `tools/` | `run_checks.py`, `resume.py`, `loop.py`, `recon.py`, `parallel_groups.py`, and the 30 suites that keep all of it honest |
 | `capability_layer/` | the console entry points; `pyproject.toml` builds the wheel |
 | `decisions/` | dated ADRs for the choices that were not obvious |
 | `templates/`, `guide/` | how to author a skill, hook, command or workflow here |
@@ -193,7 +215,7 @@ Stated here rather than discovered later:
   checkout. `parallel-dispatch.md` now states the precondition. **A writing
   fan-out has still never completed** — one read-only agent is not a round.
 - **Skill trigger rates are unmeasured.** `tools/eval_triggers.py` holds 180
-  queries across all 15 skills, sandboxed and instrument-checked; no live run has
+  queries across all 14 skills, sandboxed and instrument-checked; no live run has
   been paid for. "It triggers" rests on description properties the suite enforces,
   not on a measured rate — and the one thing actually observed is that across a
   long session touching every stage, none fired on their own.

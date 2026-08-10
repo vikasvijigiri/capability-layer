@@ -56,6 +56,9 @@ GOOD = """# Checkout retry Implementation Plan
 ## File map
 - `src/checkout.ts` — owns the retry
 
+## Progress
+- [ ] Task 1 — retry once on a failed submit
+
 ## Tasks
 
 ### Task 1: retry once on a 5xx
@@ -121,6 +124,38 @@ check("findings carry a line number",
 
 # Creating a file that is already there is the mirror-image mistake and is just
 # as wrong: it means the plan was written against a stale view of the tree.
+# --- the progress block executing-plans ticks -------------------------------
+#
+# `executing-plans` claimed `writing-plans` mandated `- [ ]` checkboxes for
+# tracking. It did not, so every plan had zero and the executor's progress
+# mechanism had nothing to record against. Both directions are checked: absent
+# is a finding, and a count that stops matching the tasks is a finding, because
+# a plan that gains a task without its box drifts back into the same silence one
+# task at a time.
+no_progress = az.analyze(GOOD.replace("## Progress\n- [ ] Task 1 — retry once on a failed submit\n\n", ""),
+                         exists=exists_good, slug="checkout-retry")
+check("a plan with no progress checkboxes is a finding",
+      any(f["code"] == "progress" for f in no_progress),
+      f"got {[f['code'] for f in no_progress]}")
+
+miscounted = az.analyze(
+    GOOD.replace("- [ ] Task 1 — retry once on a failed submit",
+                 "- [ ] Task 1 — retry once\n- [ ] Task 2 — a task that does not exist"),
+    exists=exists_good, slug="checkout-retry")
+check("more checkboxes than tasks is a finding",
+      any(f["code"] == "progress" for f in miscounted),
+      f"got {[f['code'] for f in miscounted]}")
+
+# The constitution gate is also `- [ ]`, and conflating the two would make every
+# plan report a wild miscount. `PROGRESS_RE` requires `Task N` after the box;
+# `GATE_RE` requires a roman numeral. GOOD carries seven gate boxes and one
+# progress box, and produced no finding above -- which is that separation
+# holding.
+check("constitution gate boxes are not counted as progress boxes",
+      len(az.PROGRESS_RE.findall(GOOD)) == 1,
+      f"counted {len(az.PROGRESS_RE.findall(GOOD))} progress boxes in a plan "
+      f"with 7 gate boxes and 1 task")
+
 created = az.analyze(GOOD.replace("- Modify: `src/checkout.ts:submit`",
                                   "- Create: `src/checkout.ts`"),
                      exists=exists_good, slug="checkout-retry")

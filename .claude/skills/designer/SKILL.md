@@ -11,7 +11,7 @@ disable-model-invocation: false
 # Designer
 
 Create or audit the design contract before implementation. **Off-chain
-capability:** enter from `task-brief`, `brainstormer`, or `writing-plans` when
+capability:** dispatched by `writing-plans`, or entered from `brainstormer`, when
 the task changes a user-facing surface. Do not turn design decisions into
 untracked chat context; write the contract or a dated design decision.
 
@@ -125,8 +125,9 @@ verdict has produced reading, not work.
 
 ## Routing
 
-- Enter from `task-brief`, `brainstormer`, or `writing-plans` for user-facing
-  product work.
+- Dispatched by `writing-plans` when the work touches a user-facing surface with
+  no design contract, or entered from `brainstormer`. A dispatch returns to its
+  caller; this is not a chain stage.
 - For an independent review of a material contract, read
   `writing-plans/references/artifact-review.md` — it is a reference, not a skill,
   and invoking it as one is a handoff to nothing.

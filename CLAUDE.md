@@ -66,21 +66,33 @@ any artefact exists is the opposite of a two-gate chain. They are
 Delivery is separate and not counted: `delivering` and `releasing` still need an explicit yes,
 because unapproved push, merge and deploy are forbidden outright below.
 
+**Framing merged into planning on 2026-08-09, and ten stages became nine.**
+`task-brief` is gone; `writing-plans` owns the six fields, the dispatch, and the
+plan. The boundary between them had been the layer's most restated rule — a
+`FORBIDDEN_SUCCESSOR` check existed only to stop a brief reaching a plan — and it
+was deleted rather than defended, because the seam it guarded was where work
+actually fell through: nothing watched for a finished brief, so an un-handed-off
+one was simply forgotten. What replaced it is Stage B, where a blank field
+dispatches `brainstormer`, `research`, `designer`, `repo-recon` or
+`systematic-debugging` and **each returns to the caller**. A dispatch is not a
+handoff, and `test_process_router.py` pins that distinction:
+`DISPATCHED_STAGES` are numbered in the table but never appear in the handoff
+walk. `decisions/2026-08-09-one-door-into-the-chain.md` carries the argument.
+
 | Skill | Stage | Produces |
 |---|---|---|
 | `repo-recon` | — entry boundary | `docs/recon/YYYY-MM-DD-<repo>.md` — the map, and up to five candidates |
-| `task-brief` | 1 frame | `TASK.md` — six fields, inferred ones marked |
+| `writing-plans` | 1 frame and plan | `TASK.md` — six fields, inferred ones marked — then `docs/plans/YYYY-MM-DD-<feature>.md` |
 | `brainstormer` | 2 design | `docs/specs/YYYY-MM-DD-<topic>-design.md` |
-| `writing-plans` | 3 plan | `docs/plans/YYYY-MM-DD-<feature>.md` |
-| `executing-plans` | 4 execute | the thing itself; ticked plan checkboxes |
-| `verifying-work` | 5 validate | coverage verdict + the unbacked set |
-| `no-slop` | 6 sweep | repo-wide findings; local repairs applied, structural reported |
-| `code-review` | 7 review | findings + a sign-off receipt |
-| `delivering` | 8 deliver | merged / pushed / PR opened |
-| `releasing` | 9 release | the change serving at a named target + a quoted smoke check |
-| `knowledge-manager` | 10 record | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `decisions/` |
-| `research` | — entered from any stage | `docs/research/YYYY-MM-DD-<topic>.md` |
-| `designer` | — entered before surface work | `DESIGN.md`, forked from `templates/DESIGN.md` |
+| `executing-plans` | 3 execute | the thing itself; ticked plan checkboxes |
+| `verifying-work` | 4 validate | coverage verdict + the unbacked set |
+| `no-slop` | 5 sweep | repo-wide findings; local repairs applied, structural reported |
+| `code-review` | 6 review | findings + a sign-off receipt |
+| `delivering` | 7 deliver | merged / pushed / PR opened |
+| `releasing` | 8 release | the change serving at a named target + a quoted smoke check |
+| `knowledge-manager` | 9 record | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `decisions/` |
+| `research` | — dispatched by stage 1, or entered from any stage | `docs/research/YYYY-MM-DD-<topic>.md` |
+| `designer` | — dispatched by stage 1 before surface work | `DESIGN.md`, forked from `templates/DESIGN.md` |
 | `systematic-debugging` | — entered on any failure | root cause + `ISSUES.md` entry |
 | `capability-layer-maintenance` | — entered to change this layer | aligned contracts, wiring, hooks, and green validators |
 | references | each stage keeps its depth in `<skill>/references/` — review lenses, worktrees, TDD, artifact review, design contract, SRE | loaded per task, not per turn |
@@ -185,7 +197,7 @@ declaring any work done — it resolves every kind, and names any it had to skip
 
 | Path | What it is |
 |---|---|
-| `.claude/skills/` | the 15 skills above, one directory each; `<skill>/references/` holds depth loaded on demand, not per turn |
+| `.claude/skills/` | the 14 skills above, one directory each; `<skill>/references/` holds depth loaded on demand, not per turn |
 | `.claude/agents/` | eleven agents: the fan-out set dispatched by skills, plus `Explore` overriding the built-in onto haiku |
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
 | `.claude/hooks/<event>/` | hooks over several events that act, deny or measure; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |

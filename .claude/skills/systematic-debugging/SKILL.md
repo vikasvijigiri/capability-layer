@@ -163,7 +163,10 @@ You still own the fix, the four-phase loop, and the `ISSUES.md` entry.
 - A `Resolved` incident that would still be true in three months, independent of
   this bug's code, earns one `MEMORY.md` line. `Escalated` and `Abandoned` never
   do — an unresolved incident is a hypothesis, not a lesson.
-- If the fix turns into a design change, stop and use `brainstormer`.
+- If the fix turns into a design change, stop and hand it to `writing-plans`,
+  which dispatches `brainstormer` itself when the approach is open. Do not enter
+  the design stage directly — a fix that grew into a design still needs framing,
+  and skipping it is how a redesign arrives with no `TASK.md` behind it.
 
 ## Success
 

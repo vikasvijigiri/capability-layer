@@ -6,6 +6,65 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-09 19:30 — uninstall deleted a file outside the target
+
+- **Phase/Context**: `code-review` of the `uninstall` verb, after three
+  `verifying-work` passes had returned Verified.
+- **Symptom**: a repository whose `.claude/layer-manifest.json` carried
+  `"paths": ["../PRECIOUS.txt"]` caused `capability-layer uninstall` to delete
+  that file from the target's **parent** directory. Measured on a fixture:
+  `before: True` / `uninstall_plan wants to remove: ['../PRECIOUS.txt']` /
+  `after: False`.
+- **Diagnosis**: `_layer_owned()` normalises path separators and validates
+  nothing else. `main()` then called `(target / rel).unlink()` with no
+  containment check. The manifest is a **tracked file** — committed, and it
+  travels with every clone — and the verb is most useful on a repository
+  somebody else wrote, so the input is attacker-controllable in the ordinary
+  case. Absolute paths are the same class: `target / "/etc/x"` is `/etc/x`
+  under pathlib join semantics.
+- **Attempts**:
+  - 1. `_contained()` — `resolve(strict=False)` + `is_relative_to()`, checked
+    *before* classification, because a crafted manifest can supply a matching
+    sha256 for the file it wants gone → fixed.
+  - 2. Refused entries reported on stderr before any deletion, never silently
+    skipped — a silent skip is how a partial uninstall looks complete → fixed.
+- **Verification**: five traversal variants re-attacked (parent, deep,
+  absolute, mixed-separator, traversal-then-back); the outside file survives
+  every one. Mutation sweep over the five repairs: `hollow: none`.
+  `PASS: 36 check(s) green (audit, build, lint, smoke, test, typecheck)`.
+- **Why it survived verification, which is the part worth keeping**: three
+  `verifying-work` passes and an eight-mutation sweep all reported clean. Every
+  mutation tested a defect *I* invented, and all eight assumed the manifest was
+  trustworthy input. Mutation coverage measures the failures you thought of. The
+  category — "is this input hostile" — is what review asks and verification did
+  not.
+- **Residual**: commit `154b66a` is a `wip:` checkpoint holding the vulnerable
+  state, and it was pushed. Private repo; not rewritten.
+- **Status**: Resolved.
+
+## 2026-08-09 — the plan checkbox nothing has ever produced
+
+- **Symptom**: `executing-plans` could not tick anything. Its progress record is
+  the plan file's `- [ ]` boxes, and the approved plan for `uninstall-verb` had
+  none.
+- **Root cause**: `executing-plans/SKILL.md:54` states *"Tick `- [ ]` → `- [x]`
+  as each step lands. `writing-plans` mandates that syntax expressly for
+  tracking."* `writing-plans` mandates no such thing. Its task template, now at
+  `writing-plans/references/task-decomposition.md:42`, emits `**Done when:**` and
+  no checkbox at all.
+- **Measured, not inferred**: `grep -c '^- \[ \]'` over every file in
+  `docs/plans/` returns 0 task checkboxes across all three real plans. The
+  mechanism has never once had anything to tick.
+- **Class**: the same one this layer keeps finding in itself — a stated mechanism
+  with no implementation behind it, passing every suite because nothing asserts
+  the two files agree. `test_process_router.py` checks that skills name each
+  other; it does not check that one skill's claim about another is true.
+- **Status**: Open. Worked around in the `uninstall-verb` plan with a hand-added
+  `## Progress` block. The real fix is a decision — either
+  `task-decomposition.md` emits a checkbox per task, or `executing-plans` stops
+  claiming it does — and it belongs to `capability-layer-maintenance`, not to a
+  mid-execution patch.
+
 ## 2026-08-07 — the trigger eval measured its own instrument, and it cost $29
 
 - **Symptom**: `tools/eval_triggers.py` reported `trigger_rate 0.1` for both

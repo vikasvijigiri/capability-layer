@@ -10,7 +10,7 @@ allowed-tools: Read Grep Glob
 
 # No-Slop
 
-Sweep for slop, then repair what the user approves. **Workflow stage 6**, between
+Sweep for slop, then repair what the user approves. **Workflow stage 5**, between
 `verifying-work` and `code-review`.
 
 That position is deliberate. Running after review would ship the repairs
@@ -32,7 +32,7 @@ it is not a guarantee that an unrendered or untested surface is correct.
 
 | Scope | When | Command |
 |---|---|---|
-| **repo** | stage 6, before shipping — the full sweep | `python tools/test_no_slop.py --scope repo` |
+| **repo** | stage 5, before shipping — the full sweep | `python tools/test_no_slop.py --scope repo` |
 | **layer** | after adding or removing a skill, agent or hook | `python tools/test_no_slop.py` |
 
 The hook watches **volume of change**, which no check can see, because each of
@@ -54,7 +54,7 @@ claim against what is actually there.
 **Structural findings are never applied here.** Merging or retiring a skill,
 re-cutting triggers, deleting a document — those change what fires, and a layer
 nobody reviewed is exactly what this skill exists to prevent. They go to
-`task-brief` as their own task, reported and not touched.
+`writing-plans` as their own task, reported and not touched.
 </HARD-GATE>
 
 ## Phase 1 — sweep
@@ -195,7 +195,7 @@ was checked, never as a guarantee.
 - Flagging a terminal handoff as leakage without opening `workflow.md`.
 - Editing anything before the full report has been delivered.
 - Applying a structural fix because it "looked obvious".
-- Running `--scope layer` at stage 6. Shipping is the repo-wide cadence.
+- Running `--scope layer` at stage 5. Shipping is the repo-wide cadence.
 - Inventing a smell to avoid reporting clean.
 
 **Each of these means: go back to the file and quote the line.**
@@ -228,9 +228,9 @@ the sweep was clean — the reviewer needs to know it ran.
 - Also entered off-chain after a skill, agent or hook is added or removed. That
   entry uses `--scope layer` and returns to whatever was happening.
 - Structural findings become their own unit, entering the chain at
-  `.claude/workflow.md` §Entry, which decides between `task-brief` and
-  `brainstormer`. A sweep worth remembering goes to `LOG.md` via
-  `knowledge-manager`.
+  `.claude/workflow.md` §Entry — one door, `writing-plans`, which decides for
+  itself whether the approach needs `brainstormer` first. A sweep worth
+  remembering goes to `LOG.md` via `knowledge-manager`.
 
 ## Success
 

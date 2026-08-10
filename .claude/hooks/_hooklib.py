@@ -636,7 +636,7 @@ def failure_signature(detail: str) -> str:
 # synthetic inherited repo and reading the output: `tools/recon.py` reported "25
 # test files over 26 code files (ratio 0.962)" for a repository whose own source
 # was a single file. It was counting the layer's own `tools/test_*.py`. Same root
-# cause made `install.py --dry-run` say "empty -- start at task-brief" and the
+# cause made `install.py --dry-run` say "empty -- start at framing" and the
 # post-install report say "an existing codebase", and it would have pushed
 # `resume.py` into RECON on a two-file repo.
 #

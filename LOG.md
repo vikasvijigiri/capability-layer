@@ -3,6 +3,46 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-09 20:48
+
+**Three units shipped as stacked PRs (#7 base, #5 and #6 on it); 39 files,
++2580/-625 against `main`. Nothing merged.**
+
+**Framing merged into planning (#7).** `task-brief` is gone; `writing-plans`
+owns the six fields, the dispatch and the plan. Ten stages became nine. The
+boundary between them had a `FORBIDDEN_SUCCESSOR` check whose whole job was
+stopping a brief reaching a plan — deleted rather than defended, because the
+seam it guarded was where work actually fell through. `task-brief` said so in
+its own file: nothing watched for a finished brief, so an un-handed-off one was
+forgotten. Stage B replaces it: a blank field dispatches `brainstormer`,
+`research`, `designer`, `repo-recon` or `systematic-debugging`, and each
+returns. `DISPATCHED_STAGES` in `test_process_router.py` is what stops a
+dispatch quietly becoming a handoff.
+
+**The `uninstall` verb, and the hole three verification passes missed (#5).**
+`code-review` demonstrated a path traversal: `.claude/layer-manifest.json` is
+tracked and travels with every clone, and a crafted `"paths": ["../X"]` deleted
+a file in the target's parent directory. Three `verifying-work` passes and an
+eight-mutation sweep reporting `hollow: none` had all cleared it first — every
+mutation assumed the manifest was trustworthy. The category was the blind spot,
+not the rigour. See `ISSUES.md`.
+
+**A push needed a click and had none (#6).** `delivering` triggers on "push this
+up" and "merge it" and carried zero `AskUserQuestion` calls; its Routing said
+approval belonged to `releasing`, which runs *after* delivery. Meanwhile
+`CLAUDE.md` forbade unapproved pushes and `/publish` gated the same action with
+two calls. Found by the user after I ended a turn with "say the word and I'll
+take it" — a prose question for an irreversible outward action.
+
+**The chain ran end to end for the first time**, spec → plan → execute →
+verify → sweep → review → deliver, including two recovery loops back to stage 3.
+It broke twice, both times the same way and both times mine: after
+`code-review` returned `passed: false` I asked in prose instead of invoking the
+successor, and after the delivery confirmation I did the push by hand rather
+than through `delivering` — which removed the handoff that stage would have
+performed. A confirmation is not a terminus, and doing a stage's work manually
+severs the only link the chain has.
+
 ## 2026-08-08 (packaging, gates, triggering)
 
 **The layer became installable, and the first thing that verified an artifact

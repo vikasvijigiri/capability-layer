@@ -11,6 +11,8 @@
     "python tools/test_process_router.py",
     "python tools/test_workflow_contract.py",
     "python tools/test_hook_registration.py",
+    "python tools/test_entry_classifier.py",
+    "python tools/test_delivery_check.py",
     "python tools/test_artifact_autocommit.py",
     "python tools/test_no_slop.py --scope layer",
     "python tools/test_no_slop.py --scope portability",

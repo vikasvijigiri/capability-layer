@@ -180,9 +180,18 @@ def check(name: str) -> int:
             r.need("that number matches workflow.md",
                    int(stated.group(1)) == stage,
                    f"skill says {stated.group(1)}, table says {stage}")
-        # Stage 1 has no predecessor. Asserting one made task-brief fail a
-        # condition it cannot satisfy -- a checker bug, not a layer defect.
-        if stage > 1:
+        # Stage 1 has no predecessor. Asserting one made the framing stage
+        # fail a condition it cannot satisfy -- a checker bug, not a layer
+        # defect. Still true after the 2026-08-09 merge: stage 1 is now
+        # `writing-plans`, and nothing hands off to the chain's front door.
+        #
+        # A DISPATCHED stage has no predecessor either, for a different reason:
+        # stage 1 calls it and it returns, so no `## Next step` anywhere names
+        # it and none should. `brainstormer` failed this check the moment it
+        # became a dispatch. The exemption is read from workflow.md's own
+        # `Runs when` cell rather than listed here -- a second list of which
+        # stages are dispatched is exactly the drift this layer keeps deleting.
+        if stage > 1 and not _is_dispatched(name, wf):
             r.need("the predecessor names it in a `## Next step`",
                    _has_predecessor(name, wf, stage),
                    "no earlier stage hands off to it",
@@ -244,6 +253,19 @@ def check(name: str) -> int:
            "run the task without the skill, then with it, and write the delta")
 
     return r.render(name)
+
+
+def _is_dispatched(name: str, wf: str) -> bool:
+    """Does workflow.md's row for this stage say it is dispatched, not entered?
+
+    Read from the table's `Runs when` cell, which is where the distinction is
+    already stated, so nothing here has to hold a second copy of it.
+    """
+    for row in re.findall(r"^\|\s*\d+\s*\|[^|]+\|\s*`([a-z-]+)`\s*\|([^|]*)\|",
+                          wf, re.M):
+        if row[0] == name:
+            return "dispatch" in row[1].lower()
+    return False
 
 
 def _has_predecessor(name: str, wf: str, stage: int) -> bool:

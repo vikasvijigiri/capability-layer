@@ -39,7 +39,21 @@ if failures:
     sys.exit(1)
 
 text = CONSTITUTION.read_text(encoding="utf-8")
-skill = PLANS_SKILL.read_text(encoding="utf-8")
+
+# The skill IS its SKILL.md plus its references/ -- `writing-plans` loads them by
+# name and they are part of what it instructs. Reading only SKILL.md was correct
+# until the plan template moved into `references/plan-document.md` under the
+# 200-line prose budget, at which point every gate assertion below went red while
+# the template was intact and one file away.
+#
+# Concatenated rather than checked per file: the property is that the skill
+# offers the gates somewhere a plan author will read, not that any single file
+# carries them.
+skill = "\n".join(
+    [PLANS_SKILL.read_text(encoding="utf-8")]
+    + [p.read_text(encoding="utf-8")
+       for p in sorted((PLANS_SKILL.parent / "references").glob("*.md"))]
+)
 
 # `## IV — Reversibility` -> ("IV", "Reversibility")
 articles = {m.group(1): m.group(2).strip()

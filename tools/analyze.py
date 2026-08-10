@@ -43,6 +43,9 @@ _rs = _load("tools/resume.py", "resume_for_analyze")
 REQUIRED_HEADINGS = ["**Goal:**", "## File map", "## Tasks"]
 TASK_RE = re.compile(r"(?m)^###\s+Task\s+(\d+)\s*:?(.*)$")
 GATE_RE = re.compile(r"(?m)^- \[( |x|X)\]\s+([IVX]+)\s")
+# `- [ ] Task 3 — title`. Distinguished from GATE_RE by what follows the box:
+# a constitution gate is followed by a roman numeral, a progress box by `Task N`.
+PROGRESS_RE = re.compile(r"(?m)^- \[( |x|X)\]\s+Task\s+(\d+)\b")
 # `- Create: \`path\` — why` / `- Modify: \`path:symbol\` — why`
 FILE_RE = re.compile(r"(?m)^\s*-\s+(Create|Modify|Test|Delete|Move):\s*`([^`]+)`")
 
@@ -89,8 +92,26 @@ def analyze(text: str, exists=None, slug: str = "") -> list[dict]:
             f"article(s) {', '.join(unticked)} unticked with no Complexity tracking "
             f"section -- an exception is legal, an unexplained one is not")
 
-    # --- tasks
+    # --- the progress block executing-plans ticks
+    #
+    # It said "`writing-plans` mandates that syntax expressly for tracking" while
+    # the task template emitted no checkbox at all, so every plan in docs/plans/
+    # had zero and the executor's progress mechanism had never had anything to
+    # tick. Counted rather than merely required: a plan that gains a task and not
+    # its box drifts back into the same silence one task at a time.
     tasks = list(TASK_RE.finditer(text))
+    progress = PROGRESS_RE.findall(text)
+    if tasks and not progress:
+        add(1, "progress",
+            f"no `## Progress` checkboxes for {len(tasks)} task(s) -- "
+            f"`executing-plans` ticks these, and a plan with none gives it "
+            f"nothing to record against")
+    elif progress and len(progress) != len(tasks):
+        add(1, "progress",
+            f"{len(progress)} progress checkbox(es) for {len(tasks)} task(s) -- "
+            f"one per task, or the record silently stops matching the plan")
+
+    # --- tasks
     if not tasks:
         add(1, "tasks", "no `### Task N:` sections")
     for i, m in enumerate(tasks):

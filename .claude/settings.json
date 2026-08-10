@@ -16,6 +16,17 @@
         ]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/user-prompt/01-entry-classifier.py\"",
+            "statusMessage": "Classifying the prompt's workflow entry shape..."
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

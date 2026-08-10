@@ -364,48 +364,6 @@
       "should_trigger": false
     }
   ],
-  "task-brief": [
-    {
-      "query": "we need a way for users to export their invoices as csv",
-      "should_trigger": true
-    },
-    {
-      "query": "can we support multiple currencies at checkout",
-      "should_trigger": true
-    },
-    {
-      "query": "add a dark mode toggle",
-      "should_trigger": true
-    },
-    {
-      "query": "make it so admins can suspend an account without deleting it",
-      "should_trigger": true
-    },
-    {
-      "query": "the search returns stale results after an edit, worth tracking",
-      "should_trigger": true
-    },
-    {
-      "query": "what does the invoice exporter currently support",
-      "should_trigger": false
-    },
-    {
-      "query": "any ideas on how we should approach multi-currency",
-      "should_trigger": false
-    },
-    {
-      "query": "change the button colour in src/ui/Button.tsx to #333",
-      "should_trigger": false
-    },
-    {
-      "query": "write the implementation plan for csv export",
-      "should_trigger": false
-    },
-    {
-      "query": "the export endpoint 500s on empty invoices, why",
-      "should_trigger": false
-    }
-  ],
   "brainstormer": [
     {
       "query": "any ideas for how to onboard new users faster",
@@ -451,23 +409,28 @@
   "writing-plans": [
     {
       "query": "the spec is approved, turn it into tasks",
-      "should_trigger": true
+      "should_trigger": true,
+      "entry": "silent"
     },
     {
       "query": "break this down into steps i can hand to someone",
-      "should_trigger": true
+      "should_trigger": true,
+      "entry": "silent"
     },
     {
       "query": "what order should we build the migration in",
-      "should_trigger": true
+      "should_trigger": true,
+      "entry": "silent"
     },
     {
       "query": "does the plan cover the rollback case",
-      "should_trigger": true
+      "should_trigger": true,
+      "entry": "silent"
     },
     {
       "query": "review the plan before we start",
-      "should_trigger": true
+      "should_trigger": true,
+      "entry": "silent"
     },
     {
       "query": "start on task 1",
@@ -479,7 +442,8 @@
     },
     {
       "query": "add csv export",
-      "should_trigger": false
+      "should_trigger": true,
+      "entry": "unframed"
     },
     {
       "query": "did we finish everything in the plan",
@@ -487,6 +451,52 @@
     },
     {
       "query": "the plan's task 3 command fails",
+      "should_trigger": false
+    },
+    {
+      "query": "we need a way for users to export their invoices as csv",
+      "should_trigger": true,
+      "entry": "unframed"
+    },
+    {
+      "query": "can we support multiple currencies at checkout",
+      "should_trigger": true,
+      "entry": "unframed"
+    },
+    {
+      "query": "add a dark mode toggle",
+      "should_trigger": true,
+      "entry": "unframed"
+    },
+    {
+      "query": "make it so admins can suspend an account without deleting it",
+      "should_trigger": true,
+      "entry": "unframed"
+    },
+    {
+      "query": "the search returns stale results after an edit, worth tracking",
+      "should_trigger": true,
+      "entry": "unframed"
+    },
+    {
+      "query": "what does the invoice exporter currently support",
+      "should_trigger": false
+    },
+    {
+      "query": "any ideas on how we should approach multi-currency",
+      "should_trigger": false
+    },
+    {
+      "query": "change the button colour in src/ui/Button.tsx to #333",
+      "should_trigger": false
+    },
+    {
+      "query": "write the implementation plan for csv export",
+      "should_trigger": true,
+      "entry": "silent"
+    },
+    {
+      "query": "the export endpoint 500s on empty invoices, why",
       "should_trigger": false
     }
   ],
