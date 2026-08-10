@@ -20,7 +20,6 @@ Run: python tools/test_chain.py
 
 from __future__ import annotations
 
-import json
 import sys
 import tempfile
 from pathlib import Path
@@ -160,6 +159,7 @@ check("...and fingerprints the tree", bool(facts.get("fingerprint")), str(facts)
 # disable the "never stall on a gate" rule.
 sys.path.insert(0, str(ROOT / "tools"))
 import resume as _resume  # noqa: E402
+
 # `NEXT_ACTION` is the authoritative set: resume keeps every state's next action
 # beside the state deliberately, so a state that exists has a row here.
 declared = set(getattr(_resume, "NEXT_ACTION", {}) or {})

@@ -144,6 +144,30 @@ Stage B; do not plan around an independently identified gap. For cross-cutting
 boundaries, dispatch `architecture-reviewer` — it reports risks, this skill keeps
 the plan and the gate.
 
+### C1b. Ask what this repository already knows
+
+Before the file map hardens, query the durable knowledge for the paths you are
+about to touch:
+
+    python tools/memory.py --paths <the files you expect to change>
+    python tools/memory.py --plan <the plan>      # once the map exists
+
+It reads `MEMORY.md`, `ISSUES.md` and `decisions/` and returns entries that name
+those files or their directory. **State what came back, including when nothing
+did** — "nothing recorded about these files" is a finding a reader can act on;
+silence is indistinguishable from not having looked.
+
+This was a write-only habit for a long time: every unit of work wrote to
+`MEMORY.md` and nothing ever read it, so a convention learned in one session
+could not change a plan written in the next. A knowledge store nobody queries is
+worse than none, because writing to it feels like the work is being retained.
+
+A returned entry is **evidence, not an order.** An ADR that settled a question
+still settles it; a convention recorded before the thing it describes was
+rewritten may be rot. `python tools/memory.py --stale` names entries whose paths
+or counts no longer match the tree — if one you are relying on shows up there,
+fix the entry as part of this work rather than planning against it.
+
 ### C2. Freeze the file map
 
 Before defining tasks, state for every file the implementation may touch whether
