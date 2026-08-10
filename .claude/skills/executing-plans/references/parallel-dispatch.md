@@ -42,6 +42,27 @@ release config. The conflict is in the resource, not the path, so disjointness
 does not help: a pair of agents each adding one dependency both rewrite the
 whole lockfile. `parallel_groups.py` gives these a round to themselves.
 
+## Proving a fan-out actually ran
+
+An agent reporting `DONE` is a claim. The tree is the evidence, and the two
+questions it answers are separate:
+
+    git -C <worktree> merge-base --is-ancestor <working branch> HEAD   # right base?
+    git -C <worktree> diff --stat                                      # did it write?
+
+Check both, per worktree, before the next round. A wrong base gives a clean diff
+against the wrong repository, and nothing inside that worktree looks wrong.
+
+**Also read what a `DONE_WITH_CONCERNS` is actually saying.** The most useful
+thing a fan-out has produced here was an agent that built its function, refused
+to wire it because the calling file was outside its declared file set, and named
+the file it would have needed. That refusal is the scope rule working, and it is
+invisible in a self-report skimmed for the word `DONE`.
+
+**Say what a run does not prove.** Two disjoint agents working is not evidence
+for three, nor for an agent that must consume another's output mid-round, nor
+for recovery from a real mid-round conflict. Claim the case you measured.
+
 ## Running it
 
 ```bash
@@ -125,15 +146,43 @@ Two rungs carry the weight:
   nobody could see. Nothing reported a stale base, because from inside the
   worktree nothing is wrong -- it is a clean checkout of a real commit.
 
-  **Before dispatching any worktree agent, confirm the work is on the default
-  branch.** `git merge-base --is-ancestor HEAD origin/<default>` answers it. If
-  it is not, do not use worktrees: dispatch serially in-tree, or merge first.
-  A worktree agent on an unmerged branch is not slower or riskier, it is
-  building against a different repository.
+  **Re-measured since, and it is still true.** Two `task-implementer` agents
+  dispatched from a feature branch got worktrees on the default branch instead;
+  `git merge-base --is-ancestor <feature> HEAD` inside them exited **1**. Prose
+  about this bug did not change the behaviour, because prose was never what set
+  the base. Re-run that command in any worktree you are handed before trusting
+  it — the answer is a fact about your repository, not about this one.
 
-  It costs ~200-500ms and disk, and is removed
-  automatically when nothing changed. Two writers in one checkout is the
-  corruption the whole check exists to prevent.
+  Both then refused to launch with *"git could not be run to resolve it, so its
+  git identity could not be verified"*. That message is a **false cause**: git
+  resolves those worktrees fine from a shell — `rev-parse HEAD` and
+  `rev-parse --show-toplevel` both answer correctly. So `isolation: worktree`
+  currently fails twice over, and the second failure hides the first.
+
+  **The remedy is to own the worktree instead of asking for one.** Create it
+  yourself, naming the base out loud, and dispatch an agent that does not force
+  its own isolation:
+
+  ```bash
+  python tools/worktree.py create task6 feat/target-workflow   # prints path + base SHA
+  # dispatch a NON-worktree agent, pointing it at that absolute path
+  git -C .worktrees/task6 merge-base --is-ancestor feat/target-workflow HEAD
+  python tools/worktree.py remove task6
+  ```
+
+  `worktree.py` takes `base` as a required positional with no default, because
+  the convenient default *is* the bug. It returns the resolved base SHA so the
+  caller can assert on it rather than trust that the call exiting 0 meant the
+  right thing happened — which is precisely what every agent in the failed
+  fan-out did.
+
+  This superseded the previous advice here, which was "do not use worktrees on
+  an unmerged branch: dispatch serially in-tree, or merge first". That was a
+  real remedy and it cost the whole mechanism; merging unfinished work to get
+  isolation is backwards.
+
+  Two writers in one checkout is the corruption the whole check exists to
+  prevent, so the isolation is not optional — only its provenance changed.
 - **Never let an agent commit, push or merge.** The dispatcher owns integration,
   and a round of agents each committing produces a history nobody can read.
 - **Hand over paths, never pasted text.** Everything pasted into a dispatch stays

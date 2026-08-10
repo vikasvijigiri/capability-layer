@@ -88,6 +88,29 @@ def tracked(prefix: str | None) -> list[Path]:
     return [ROOT / line for line in out.splitlines() if line.strip()]
 
 
+def changed_files() -> list[Path]:
+    """Tracked-and-modified plus untracked, for `--scope change`.
+
+    Uses `git status --porcelain` rather than a diff against a base, because the
+    sweep reads the tree as it stands -- including work that is not committed
+    yet, which is the normal state when this runs. A git failure returns nothing
+    and says so, rather than reporting a clean sweep of zero files.
+    """
+    try:
+        out = subprocess.run(["git", "status", "--porcelain=v1", "-uall"],
+                             cwd=str(ROOT), capture_output=True,
+                             text=True, timeout=60).stdout
+    except (OSError, subprocess.SubprocessError):
+        notes.append("git status failed -- the change scope read no files")
+        return []
+    paths = []
+    for line in out.splitlines():
+        if len(line) > 3:
+            rel = line[3:].strip().strip('"').split(" -> ")[-1]
+            paths.append(ROOT / rel)
+    return paths
+
+
 # .docx, .png and .svg are tracked here. Reading them as text produces bytes that
 # can match a credential regex by coincidence, so decode strictly and skip what
 # is not text -- rather than errors="ignore", which turns a binary into
@@ -257,11 +280,12 @@ def main() -> int:
     # clean about code it never read. This repo is the exception, not the rule,
     # and `.claude/project-checks.json` passes `--scope layer` explicitly to say
     # so.
-    ap.add_argument("--scope", choices=("layer", "repo", "portability"),
+    ap.add_argument("--scope", choices=("layer", "repo", "portability", "change"),
                     default="repo",
                     help="repo = everything tracked (default); layer = .claude/ "
                          "only; portability = is the layer safe to install into "
-                         "another repository")
+                         "another repository; change = only the files this "
+                         "change touches")
     args = ap.parse_args()
 
     if args.scope == "portability":
@@ -270,7 +294,19 @@ def main() -> int:
     check_temp_dir_cleanup()
     check_hook_spawn_stdin()
 
-    files = tracked(None if args.scope == "repo" else ".claude")
+    if args.scope == "change":
+        # The fourth scope, for small work. It sweeps only what changed, so its
+        # verdict line names the scope -- a clean `change` sweep says nothing
+        # about the rest of the repository, and the one-line result is what gets
+        # quoted. Slop accumulates across sessions in files this scope never
+        # opens, which is exactly why `repo` stays the stage-5 cadence.
+        files = [p for p in changed_files() if p.exists()]
+        if not files:
+            print("scope=change: nothing changed -- no files to sweep. This is "
+                  "not a clean repo-wide result and must not be quoted as one.")
+            return 0
+    else:
+        files = tracked(None if args.scope == "repo" else ".claude")
     scannable = [p for p in files if p.name not in SELF_REFERENTIAL]
 
     # --- credentials ---------------------------------------------------------
@@ -390,7 +426,21 @@ def main() -> int:
     # with no stated Success has no definition of done, and one with no Routing
     # hands off to nothing.
     desc_budget = 500
-    skill_line_budget = 200
+    # Raised from 200 by explicit decision on 2026-08-10: "there is no limit for
+    # number of lines in prose".
+    #
+    # The old number was a forcing function pointed at the wrong thing. A skill
+    # that grew by fifteen lines of load-bearing reasoning went red, and the way
+    # to green was to delete reasoning from somewhere else in the same file --
+    # editing by budget rather than by judgement, which is the argument `CLAUDE.md`
+    # already makes about its own length.
+    #
+    # It is not removed, because a genuinely unbounded file is the god-skill this
+    # section exists to catch. It is set where only a real structural problem
+    # reaches it, and the god-skill signal stays what it always was: whether a
+    # reviewer could approve half of the skill. That is a reading, not a count,
+    # and `no-slop`'s judgement pass owns it.
+    skill_line_budget = 400
 
     for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
         md = d / "SKILL.md"
@@ -428,10 +478,18 @@ def main() -> int:
                         else "no definition of done")
                 fail(f"{rel(md)} has no `{section}` section — {kind}")
 
-    print(f"scope={args.scope}: scanned {len(scannable)} tracked files, "
+    # The scope is in the verdict line deliberately. A `change` sweep that
+    # reported the same sentence as a `repo` sweep would let a clean result on
+    # four files be quoted as a clean repository -- and slop is defined by
+    # accumulating in files the current change never touches.
+    noun = "changed files" if args.scope == "change" else "tracked files"
+    print(f"scope={args.scope}: scanned {len(scannable)} {noun}, "
           f"{len(instruction_docs)} instruction docs, "
           f"{len(list(SKILLS.iterdir()))} skills, "
           f"{len(list(AGENTS.glob('*.md')))} agents\n")
+    if args.scope == "change":
+        print("  note: scope=change covers only what this change touched; it is "
+              "not a repo-wide result and must not be quoted as one\n")
     for n in notes:
         print(f"  note: {n}")
 

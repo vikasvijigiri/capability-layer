@@ -66,10 +66,13 @@ from _hooklib import (  # noqa: E402
     changed_paths,
     classify_failure,
     current_branch,
+    declaration_sources,
+    declared_paths,
     failure_budget,
     failure_signature,
     load_payload,
     migration_paths,
+    minimal_diff_refusal,
     scan_for_secrets,
 )
 from _projectchecks import (  # noqa: E402
@@ -356,6 +359,31 @@ def main():
               f"reversible thing here and no suite proves it is right. Review it "
               f"and commit deliberately. {len(paths)} file(s) left uncommitted.")
         return
+
+    # --- gate 2c: minimal diff
+    #
+    # The target workflow calls minimal-diff commits mandatory, and until
+    # 2026-08-10 nothing enforced it. "Minimal" here means *no unrelated file* --
+    # not few lines: a formatting sweep across forty files is not minimal, and a
+    # hundred-line change in one file is.
+    #
+    # Resolved at Gate 1 as refuse-and-name rather than warn. Every other clause
+    # in this gate refuses, and a lone warning among seven refusals is the one
+    # nobody reads. The accepted cost is real: a turn touching a file no plan
+    # names gets NO checkpoint. That is why the refusal prints the paths -- the
+    # fix is to name them in the plan or to stop touching them, never to wonder
+    # why nothing committed. Silence would be the worst of the three outcomes.
+    # The gate applies only where something could declare a path. A repository
+    # with no `TASK.md` and no `docs/plans/*.md` has nothing to be minimal
+    # *against*, and refusing there would disable the auto-commit outright in
+    # every repo this layer installs into that has never written a plan. The
+    # other seven clauses still run, so this is a gate that does not apply
+    # rather than a check reporting green on no evidence.
+    if declaration_sources(REPO_ROOT):
+        unrelated = minimal_diff_refusal(paths, declared_paths(REPO_ROOT))
+        if unrelated:
+            speak(unrelated)
+            return
 
     # --- gate 3: secrets. This hook's commits never reach 01-secret-scan.py,
     # so the identical rule is enforced here from the same _hooklib patterns.

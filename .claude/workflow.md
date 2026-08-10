@@ -124,6 +124,19 @@ dependency is a concurrent dispatch over ordered work, which is the one failure
 worse than being slow. Depth is in
 `.claude/skills/executing-plans/references/parallel-dispatch.md`.
 
+**The worktree's base is named explicitly, never defaulted.** `isolation:
+worktree` bases an agent's tree on the repository's *default branch*, not the
+branch the session is on. Measured, more than once: a fan-out dispatched from
+a feature branch landed on the default branch instead. So the dispatcher creates
+the worktree itself:
+
+    python tools/worktree.py create <name> <base>   # base is a required positional
+
+`base` has no default because the default is the bug. `create()` returns the
+resolved SHA so the caller can assert `git merge-base --is-ancestor` rather than
+trust that the call exiting 0 meant the right thing happened — which is exactly
+what every agent in the first, failed fan-out did.
+
 A dispatch also needs a bounded ladder, because an agent fails in ways a check
 does not — it can report that its own brief was incomplete, or die before
 reporting at all:
@@ -140,6 +153,39 @@ security, scope, rollback, performance, and conflict status; tie-break by smalle
 diff, fewer dependencies, stronger tests, and lower risk. Configure protected
 branches, required checks, and merge queue in the hosting service; the workflow
 never force-pushes or bypasses them.
+
+## How much of the repository a change is checked against
+
+`small` and `major` decide the breadth of the tier, the sweep and the review.
+Judged, the answer under deadline pressure is always `small`, so it is computed:
+
+    python tools/scope.py            # 0 small · 1 major · 2 undetermined
+
+A **veto list**, not a score: any one of `shared-surface`, `control-surface`,
+`volume`, `spread` or `unmapped` forces `major`, and the verdict names every
+clause that fired. A score would let two cheap signals outvote one expensive one
+and turn an auditable decision into arithmetic nobody can check.
+
+| Consumer | `small` | `major` |
+|---|---|---|
+| `run_checks.py --scoped` | the suites `test_map` maps the changed paths to | refuses, exit 2 — run the full tier |
+| `no-slop --scope change` | sweeps only the changed files | `--scope repo`, the stage-5 cadence |
+| `code-review` | the changed files and their direct callers | the whole branch diff |
+
+Three rules keep "cheaper" from becoming "unmeasured", and they are the whole
+safety argument:
+
+- A scoped run prints **`PARTIAL PASS`, never `PASS`**, and names every suite it
+  skipped.
+- It **never moves `refs/uaios/green/<slug>`** — that ref means the full tier
+  passed, and `run_checks.py` contains no ref write at all.
+- An **unmapped** changed path escalates to the full tier rather than running
+  nothing, so the map's gaps fail safe.
+
+`undetermined` is read as `major` everywhere. Article V: a clause that could not
+be evaluated is not permission to check less. The `test_map` itself is a coverage
+*claim* — its shape is asserted, its judgement is not, and a wrongly-mapped path
+makes a change fast and under-checked with no symptom.
 
 ## Artifacts and ownership
 

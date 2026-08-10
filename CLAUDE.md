@@ -36,11 +36,17 @@ consumes and produces, and the two shapes (linear and loop). Read it before
 adding a skill or wondering what comes next.
 
 **The chain has exactly two workflow approval gates** — the finished plan at the
-end of `writing-plans`, and the shipment approval in `releasing`. Both are asked
-with `AskUserQuestion`, never in prose: a prose question is answerable by silence
-and scrolls away, so approval must be a click the user made rather than something
-inferred from their next message. `test_process_router.py` holds the set to those
-two. **A rejection is durable**: it appends `## Rejected <date> (plan <hash>)`
+end of `writing-plans`, and the shipment approval in `releasing`. **Each has its
+own tool**: Gate 1 is `ExitPlanMode`, whose contract is precisely a plan approval
+and which says not to pair it with a second question; Gate 2 is
+`AskUserQuestion`, which is what real alternatives need. Neither is ever asked in
+prose: a prose question is answerable by silence and scrolls away, so approval
+must be a click the user made rather than something inferred from their next
+message. `test_process_router.py` holds the set to those two and checks each
+against *its own* tool — a blanket check would pass on any incidental mention,
+which is a marker that reads as a gate and stops nothing. Plan mode is read-only
+apart from its plan, so `TASK.md` is written immediately after the exit;
+ownership does not move, only the moment. **A rejection is durable**: it appends `## Rejected <date> (plan <hash>)`
 plus the user's words verbatim to the artifact, and `loop.py` refuses to
 re-present a body whose hash has not changed, then retreats at three. A gate has
 no retry budget — there is none on a person's judgement — but re-asking does. This file said gate 2 was the `code-review` sign-off until 2026-08-07, which
@@ -50,7 +56,7 @@ confirmation, such as choosing a worktree or target; they do not grant approval
 to bypass either gate.
 Each gate DECLARES itself with a `<!-- GATE n: ... -->` marker, and
 `test_process_router.py` checks three things: no third marker exists, both
-markers are still there, and each has an actual `AskUserQuestion` behind it. The
+markers are still there, and each has its own declared tool behind it. The
 check used to be a substring search for the tool name, which broke the moment a
 skill named it in order to forbid it — `brainstormer` now does, four times, and a
 substring test read those prohibitions as a new gate. A marker somebody has to
@@ -253,7 +259,18 @@ resolved over detection by `.claude/hooks/_projectchecks.py` — the same code
 | checks | any **fast-tier** command exits non-zero — lint, typecheck, test |
 | unverified code | the change contains code and **no test check ran** — passing and having nothing to run are different facts |
 | migration | the change touches `_hooklib.MIGRATION_PATH_PATTERNS` — the least reversible thing here, and no suite proves it |
+| minimal diff | a changed path is named by neither `TASK.md` nor any `docs/plans/*.md` — **and the refusal prints those paths** |
 | message | the generated subject matches `_hooklib.AI_ATTRIBUTION_PATTERNS` |
+
+**Minimal means "no unrelated file", not "few lines"**: a formatting sweep across
+forty files is not minimal; a hundred-line change in one file is. It refuses
+rather than warns, because a lone warning among seven refusals is the clause
+nobody reads. The accepted cost is real — a turn touching an unplanned file gets
+no checkpoint at all — which is why the refusal names the paths: the fix is to
+declare them or stop touching them, never to wonder why nothing committed.
+The gate applies only where a declaration source exists; a repo with no
+`TASK.md` and no plans has nothing to be minimal against, and refusing there
+would disable the auto-commit in every repo this layer installs into.
 
 Every clause is a fact about the artefact, never about process. A refusal is
 always spoken. It **never pushes**, never `git add .`.
@@ -267,6 +284,15 @@ gate nobody can afford to run gets switched off:
 | slow | build · audit · e2e · smoke | before delivery, minutes | push / PR, and CI |
 
     python tools/run_checks.py --tier all --require-test
+    python tools/run_checks.py --scoped         # only what the change touches
+
+`--scoped` narrows the fast tier to the suites `test_map` maps the changed paths
+to, and **only on a change `tools/scope.py` calls `small`** — a `major` or
+`undetermined` one is refused with exit 2 rather than narrowed. It prints
+`PARTIAL PASS`, never `PASS`, names every suite it skipped, escalates any
+unmapped code path to the full tier, and cannot move `refs/uaios/green/<slug>`.
+"Fast" must mean *ran fewer checks and said which*, never *green on less
+evidence*. `.claude/workflow.md` owns the scope table and the three consumers.
 
 **Review moves to the push/PR**, over the whole branch — a commit that needs a
 human is not a checkpoint. `wip:` is deliberate: squash-merge collapses them.

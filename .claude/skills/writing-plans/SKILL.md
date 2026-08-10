@@ -198,23 +198,30 @@ for the plan approval gate. State the plan path, task count, key assumptions and
 known risks.
 
 <!-- GATE 1: plan approval. The chain has two; see .claude/workflow.md. -->
-**Then put every `[NEEDS CLARIFICATION]` marker into one `AskUserQuestion` call.**
-One batch, at the gate — not a question each time one arises. Scattered questions
-are what turned two gates into nine, and they interrupt at the moment the answer
+**Gate 1 is `ExitPlanMode`, and it is the only approval mechanism here.**
+
+That tool's contract *is* this gate — it "inherently requests user approval" and
+says not to pair it with a second question.
+**This skill must never call `AskUserQuestion`**, for the markers or for the
+approval: two mechanisms mean the plan is approved twice, and one of them is
+theatre.
+
+**Every `[NEEDS CLARIFICATION]` marker goes into the plan body before the exit**,
+beside the paragraph its answer belongs to. One batch, at the gate — scattered
+questions are what turned two gates into nine, and they interrupt when the answer
 is least informed.
 
-The same call carries the approval, with three real options:
+All three outcomes stay reachable. On approve, write `## Approved` into the plan
+— that exact heading, because `tools/resume.py` derives the unit's state from it
+and a paraphrase leaves an approved plan reading as unapproved. Revise and reject
+record the user's own words verbatim.
 
-| Option | Means |
-|---|---|
-| Approve | write `## Approved`, hand off to `executing-plans` |
-| Revise — say what to change | rejected, and the free text is the brief |
-| Reject — wrong approach | the plan is not the problem; return to `brainstormer` |
+Plan mode is read-only apart from the plan, so **`TASK.md` is written
+immediately after the exit** — ownership does not move, only the moment.
 
-**The revise and reject options take the user's own words**, recorded verbatim —
-a reason paraphrased is a reason lost. On anything but approve, append the
-rejection to the plan and stop; `references/plan-document.md` owns that block's
-format and what `tools/resume.py` and `tools/loop.py` do with it.
+`references/plan-mode.md` owns all of it: the one-tool rule, the three outcomes,
+why `TASK.md` moved, and the one thing no skill can do — switch permission mode.
+`references/plan-document.md` owns the rejection block's format.
 
 After the user approves, invoke `executing-plans` and pass it the plan path.
 Until approval is explicit, stop here.

@@ -24,12 +24,21 @@ untracked files. Never treat passing tests as a substitute for reading the diff.
 1. Establish the surface: working tree for a local change, or
    `git diff <merge-base> HEAD` for a branch/PR. Include `git status --porcelain`
    so untracked files are not missed.
-2. Inspect correctness, security, silent failures, test quality, scope drift,
-   dependency risk, and repository policy violations.
-3. Report every finding with severity, `file:line`, defect, impact, and evidence.
-4. Return `passed: true` only when no blocking finding remains. Return
-   `passed: false` when repair is required. Do not edit, commit, push, merge, or
-   ask the user a mid-run question.
+2. Run `python tools/scope.py` (add `--base <ref>` for a branch/PR) to get the
+   computed scope. `small` reviews the changed files and their direct callers;
+   `major` reviews the whole branch diff as today; `undetermined` is read as
+   `major` — the veto list exists so nobody has to guess, and a clause that
+   could not be evaluated is not permission to look at less.
+3. Inspect correctness, security, silent failures, test quality, scope drift,
+   dependency risk, and repository policy violations, within the scope from
+   step 2.
+4. Report every finding with severity, `file:line`, defect, impact, and evidence.
+5. Return `passed: true` only when no blocking finding remains. A `small`
+   review states its scope in the verdict, so `passed: true` is never read as
+   broader than it was — four review rounds on `delivery_check.py` each found
+   what the previous missed, and a narrowed review must not hide that. Return
+   `passed: false` when repair is required. Do not edit, commit, push, merge,
+   or ask the user a mid-run question.
 
 For a large change, the workflow may dispatch `diff-reviewer` for independent
 correctness, security, test-quality, and scope passes; merge duplicate findings

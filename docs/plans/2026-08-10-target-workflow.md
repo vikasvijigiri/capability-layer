@@ -54,9 +54,15 @@ Two things the target under-specifies, which must not be regressed:
 | `tools/test_scope.py` | Create | One case per veto clause, each red first |
 | `tools/run_checks.py` | Modify | `--scoped` selects suites and prints `PARTIAL PASS` |
 | `tools/test_no_slop.py` | Modify | A fourth scope, `change` |
+| `tools/test_run_checks_scoped.py` | Create | The scoped run's rules, runnable on any change |
 | `.claude/skills/code-review/SKILL.md` | Modify | Reads the scope decision |
 | `.claude/hooks/_hooklib.py` | Modify | Minimal-diff gate for the auto-commit |
+| `.claude/hooks/post-run/06-artifact-autocommit.py` | Modify | Calls the gate — a gate nothing calls is prose |
+| `tools/test_artifact_autocommit.py` | Modify | The gate, red first |
+| `.gitignore` | Modify | Ignores `.worktrees/`, the holder `tools/worktree.py` creates |
 | `.claude/skills/writing-plans/SKILL.md` | Modify | Gate 1 becomes `ExitPlanMode` |
+| `.claude/skills/writing-plans/references/plan-mode.md` | Create | The one-tool rule, the three outcomes, why `TASK.md` moved |
+| `README.md`, `.gitignore` | Modify | Suite count; ignore the worktree holder |
 | `tools/test_process_router.py` | Modify | Per-gate-tool assertion; the scope contracts |
 | `.claude/workflow.md`, `CLAUDE.md` | Modify | Policy, written last |
 
@@ -67,13 +73,13 @@ and quoted. Nothing here is ticked on a clean diff or a zero exit code.
 
 - [x] Task 1 — `normalise()` stops eating a leading dot
 - [x] Task 2 — `tools/worktree.py`, mandatory explicit base
-- [ ] Task 3 — one live parallel dispatch, proved by reading the tree
+- [x] Task 3 — one live parallel dispatch, proved by reading the tree
 - [x] Task 4 — `tools/scope.py`, the small-vs-major decision
-- [ ] Task 5 — `run_checks.py --scoped` and the `change` sweep scope
-- [ ] Task 6 — `code-review` reads the scope decision
-- [ ] Task 7 — minimal-diff enforcement
-- [ ] Task 8 — Gate 1 becomes plan mode's own approval
-- [ ] Task 9 — contracts and policy
+- [x] Task 5 — `run_checks.py --scoped` and the `change` sweep scope
+- [x] Task 6 — `code-review` reads the scope decision
+- [x] Task 7 — minimal-diff enforcement
+- [x] Task 8 — Gate 1 becomes plan mode's own approval
+- [x] Task 9 — contracts and policy
 
 ## Tasks
 
@@ -238,9 +244,28 @@ nothing classifies `small` with the clauses it considered listed.
   the scope so a clean result is not read as a repo-wide clean.
 
 **Verification:**
-- Run: `PYTHONIOENCODING=utf-8 python tools/run_checks.py --scoped --tier fast && PYTHONIOENCODING=utf-8 python tools/test_no_slop.py --scope change`
-- Expect: the scoped run prints `PARTIAL PASS`, lists every skipped suite by
-  name, and the sweep reports the scope in its verdict line
+- Run: `PYTHONIOENCODING=utf-8 python tools/test_run_checks_scoped.py`
+- Expect: exit 0 — the verdict word is `PARTIAL PASS` and never `PASS`, every
+  resolved check is either run or named as skipped, an unmapped code path
+  escalates, a `major` or `undetermined` change is refused with exit 2, and
+  `run_checks.py` contains no ref write at all
+
+**Amended during execution (2026-08-10):** the original verification was
+`run_checks.py --scoped --tier fast`, expecting `PARTIAL PASS`. **It cannot pass
+on the change that implements it.** This change is `major` by `scope.py`'s own
+veto list — it touches `.claude/hooks/**`, `.claude/project-checks.json`, and
+spans three top-level containers — so `--scoped` correctly refuses it with
+exit 2 and the reason `vetoed by: shared-surface, control-surface, spread,
+unmapped`. That refusal is the feature working, and quoting it would have been
+quoting a failure as a success.
+
+A verification runnable only somewhere else is not a verification, so it became
+`tools/test_run_checks_scoped.py`, which asserts every rule directly and runs
+anywhere. The live refusal is recorded here as the evidence it is:
+
+    $ python tools/run_checks.py --scoped --tier fast   # exit 2
+    scope: major  --  vetoed by: shared-surface, control-surface, spread, unmapped
+    REFUSED: --scoped narrows a `small` change only; this one is `major`.
 
 **Done when:** a scoped run cannot print `PASS`, cannot move the green ref, and
 refuses a `major` change with exit 2.
@@ -279,8 +304,17 @@ enforces it today.
 **Files:**
 - Modify: `.claude/hooks/_hooklib.py` — the gate and its threshold
 - Modify: `tools/test_artifact_autocommit.py` — the gate, red first
+- Modify: `.claude/hooks/post-run/06-artifact-autocommit.py` — call the gate
 
 **Depends on:** 4
+
+**Amended during execution (2026-08-10):** the third file was missing, and the
+`task-implementer` running this task found it rather than a reviewer. It built
+and tested the gate, then **refused to wire it** because
+`06-artifact-autocommit.py` was outside its declared files — and named the file
+it would have needed. A gate that no hook calls is prose, so the file is now
+declared. The refusal was correct: the same rule this task implements, applied
+to the agent implementing it.
 
 **Implementation notes:**
 - The auto-commit already refuses on branch, size (`MAX_FILES = 25`), secrets,

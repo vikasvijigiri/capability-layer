@@ -394,6 +394,111 @@ check("the hook names no skill in anything it emits", not _named, f"names {_name
 check("the loop never blocks the turn",
       '"decision"' not in _src and "block" not in _src.lower().split("deadlock")[0][-2000:])
 
+# --- Task 7: minimal-diff gate ----------------------------------------------
+#
+# The target says commits must be minimal-diff, mandatorily: every changed
+# path must be one TASK.md or the active plan names, or the commit is refused
+# with the unnamed paths printed -- a warning would be the one clause among
+# seven refusals that nobody reads.
+#
+# `_hooklib.declared_paths/minimal_diff_violations/minimal_diff_refusal` are
+# tested directly against `_hooklib` (already imported and registered in
+# `sys.modules` by `load()` above, since the hook module does
+# `from _hooklib import ...`) rather than through `mod.main()`. The pure
+# functions are worth testing directly whatever the hook does with them; the
+# wiring itself is asserted separately, further down, against the hook's source.
+
+_hooklib = sys.modules["_hooklib"]
+
+check("minimal_diff_violations is exposed",
+      hasattr(_hooklib, "minimal_diff_violations"))
+check("minimal_diff_refusal is exposed",
+      hasattr(_hooklib, "minimal_diff_refusal"))
+check("declared_paths is exposed", hasattr(_hooklib, "declared_paths"))
+
+check("a declared path is covered",
+      _hooklib.minimal_diff_violations(["tools/scope.py"], {"tools/scope.py"}) == [])
+check("a path under a declared directory is covered",
+      _hooklib.minimal_diff_violations(["tools/scope.py"], {"tools/"}) == [])
+check("a path matching a declared glob is covered",
+      _hooklib.minimal_diff_violations(
+          ["prisma/migrations/001/migration.sql"], {"**/migrations/*"}) == [])
+check("an undeclared path is a violation",
+      _hooklib.minimal_diff_violations(["src/unrelated.py"], {"tools/"})
+      == ["src/unrelated.py"])
+check("only the undeclared paths are returned, declared order-preserved",
+      _hooklib.minimal_diff_violations(
+          ["tools/a.py", "src/b.py", "tools/c.py"], {"tools/"}) == ["src/b.py"])
+
+check("a clean diff refuses nothing",
+      _hooklib.minimal_diff_refusal(["tools/scope.py"], {"tools/"}) is None)
+_mdmsg = _hooklib.minimal_diff_refusal(["src/unrelated.py"], {"tools/"})
+check("an unrelated file is refused, not warned",
+      isinstance(_mdmsg, str) and "REFUSED" in _mdmsg, str(_mdmsg))
+check("the refusal prints the unnamed path",
+      isinstance(_mdmsg, str) and "src/unrelated.py" in _mdmsg, str(_mdmsg))
+check("many unnamed paths are truncated but the count is stated",
+      "6 path(s)" in (_hooklib.minimal_diff_refusal(
+          [f"x/{i}.py" for i in range(6)], set()) or ""))
+
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d4:
+    tmp4 = Path(d4)
+    write(tmp4, "TASK.md", "See `tools/scope.py` and `tools/test_scope.py`.\n")
+    (tmp4 / "docs" / "plans").mkdir(parents=True)
+    write(tmp4, "docs/plans/2026-08-10-x.md",
+          "- Modify: `.claude/hooks/_hooklib.py`\n")
+    _declared = _hooklib.declared_paths(root=tmp4)
+    check("declared_paths reads TASK.md", "tools/scope.py" in _declared)
+    check("declared_paths reads docs/plans/*.md",
+          ".claude/hooks/_hooklib.py" in _declared)
+    check("declared_paths always covers the knowledge docs",
+          {"LOG.md", "HANDOFF.md", "TASK.md"} <= _declared)
+    check("declared_paths is silent, not raising, on a root with no plans dir",
+          isinstance(_hooklib.declared_paths(root=tmp4 / "nowhere"), set))
+
+# The gate is wired, and this assertion is the whole reason to keep it.
+#
+# It was written inverted -- "the running hook does NOT yet call the gate" --
+# by the agent that built the gate but was not permitted to wire it, its
+# declared files not including the hook. That is the correct behaviour and it
+# is why the inverted form existed: a gap asserted cannot be forgotten, where a
+# gap merely mentioned in a report can.
+#
+# The dispatcher then declared the file and wired it, so the assertion flips
+# rather than being deleted. A tested function nothing calls is prose with a
+# test suite attached, and that is the failure mode this repository names most
+# often: a document asserting what the wiring does not do.
+hook_src = HOOK.read_text(encoding="utf-8")
+check("the running hook calls the minimal-diff gate",
+      "minimal_diff_refusal(" in hook_src)
+check("...and speaks its refusal rather than committing anyway",
+      "speak(unrelated)" in hook_src)
+check("...and imports it from _hooklib rather than restating the rule",
+      "minimal_diff_refusal," in hook_src and "declared_paths," in hook_src)
+
+# The gate must not apply where nothing could declare a path. Ten end-to-end
+# cases below commit in a temp repo with no plan in it, and every one refused
+# when the gate was first wired -- this layer installs into repositories that
+# have never written a plan, and a gate that stops every checkpoint there is
+# not strict, it is broken.
+check("the hook checks a declaration source exists before applying the gate",
+      "declaration_sources(REPO_ROOT)" in hook_src)
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as _dn:
+    _bare = Path(_dn)
+    check("a repo with no TASK.md and no plans has no declaration source",
+          _hooklib.declaration_sources(root=_bare) == [],
+          str(_hooklib.declaration_sources(root=_bare)))
+    write(_bare, "TASK.md", "Goal: something\n")
+    check("...and a TASK.md alone is a source",
+          _hooklib.declaration_sources(root=_bare) == ["TASK.md"],
+          str(_hooklib.declaration_sources(root=_bare)))
+    (_bare / "docs" / "plans").mkdir(parents=True)
+    write(_bare, "docs/plans/2026-08-10-y.md", "- Modify: `tools/x.py`\n")
+    check("...as is a plan, and both are listed",
+          _hooklib.declaration_sources(root=_bare) ==
+          ["TASK.md", "docs/plans/2026-08-10-y.md"],
+          str(_hooklib.declaration_sources(root=_bare)))
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

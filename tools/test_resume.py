@@ -322,8 +322,13 @@ check("writing-plans states the approval marker verbatim",
       rs.APPROVAL_MARKER in _plans, rs.APPROVAL_MARKER)
 check("brainstormer routes non-directional questions to a marker",
       rs.CLARIFICATION_MARKER in _brain)
-check("writing-plans batches the markers into one question at the gate",
-      "AskUserQuestion" in _plans and "One batch" in _plans)
+# The property is that every marker is resolved TOGETHER, at the gate -- not
+# one interruption per question as they arise, which is what turned two gates
+# into nine. The tool that asks changed (`AskUserQuestion` -> `ExitPlanMode`,
+# whose contract is precisely a plan approval); the property did not, so the
+# assertion follows the property rather than the tool name.
+check("writing-plans batches the markers into one approval at the gate",
+      "ExitPlanMode" in _plans and "one batch, at the gate" in _plans.lower())
 
 
 # --- which plan belongs to this unit -----------------------------------------

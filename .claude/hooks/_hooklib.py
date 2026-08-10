@@ -652,6 +652,130 @@ def failure_signature(detail: str) -> str:
 LAYER_MANIFEST = ".claude/layer-manifest.json"
 
 
+# --- minimal-diff gate -------------------------------------------------------
+#
+# Task 7 (docs/plans/2026-08-10-target-workflow.md): the target says every
+# auto-commit must be minimal-diff, mandatorily, and nothing enforced it.
+# "Minimal" means no unrelated file, not "few lines" -- a forty-file
+# formatting sweep is not minimal, a hundred-line change in one file is.
+#
+# The check: every changed path is one the current TASK.md or the active plan
+# names, or it is refused and the unnamed paths are printed. Resolved at the
+# plan's own Gate 1 as refuse-and-name, not warn: a warning would be the one
+# clause among seven refusals that nobody reads, and the specification called
+# this mandatory.
+#
+# KNOWLEDGE_DOCS are always covered without being individually spelled out in
+# a plan -- a checkpoint routinely touches LOG.md/HANDOFF.md/etc regardless of
+# which plan is active, and making every plan restate that would be noise the
+# gate itself would have to read past.
+
+
+def declaration_sources(root=None) -> list:
+    """The files that could declare a path: `TASK.md` and `docs/plans/*.md`.
+
+    Separate from `declared_paths` because "no source exists" and "sources exist
+    and name nothing" are different facts, and collapsing them disables the
+    auto-commit outright in every repository that has no plan. `declared_paths`
+    always returns at least `KNOWLEDGE_DOCS`, so it cannot answer this on its
+    own -- an empty declaration is indistinguishable from an absent one once the
+    floor is added.
+
+    Found the same turn the gate was wired, by ten end-to-end cases that commit
+    in a temp repo with no plan in it. Every one refused. This layer installs
+    into repositories that have never written a plan, and a gate that stops
+    every checkpoint there is not strict, it is broken.
+    """
+    root = Path(root) if root else HOOKS_DIR.parents[1]
+    found = []
+    if (root / "TASK.md").is_file():
+        found.append("TASK.md")
+    plans_dir = root / "docs" / "plans"
+    if plans_dir.is_dir():
+        found.extend(f"docs/plans/{p.name}" for p in sorted(plans_dir.glob("*.md")))
+    return found
+
+
+def declared_paths(root=None) -> set:
+    """Repo-relative paths named in `TASK.md` or any `docs/plans/*.md`.
+
+    A path is "named" if it appears inside a backtick code span containing a
+    `/` or `\\` -- the convention every plan and TASK.md entry in this repo
+    already uses for a file reference (see the File map tables in
+    `docs/plans/*.md`). Unreadable or absent sources contribute nothing rather
+    than raising: a missing plan must not silently widen what counts as
+    declared, which would defeat the gate in exactly the case it exists for.
+    """
+    root = Path(root) if root else HOOKS_DIR.parents[1]
+    texts = []
+    task_md = root / "TASK.md"
+    if task_md.is_file():
+        try:
+            texts.append(task_md.read_text(encoding="utf-8", errors="ignore"))
+        except OSError:
+            pass
+    plans_dir = root / "docs" / "plans"
+    if plans_dir.is_dir():
+        for p in sorted(plans_dir.glob("*.md")):
+            try:
+                texts.append(p.read_text(encoding="utf-8", errors="ignore"))
+            except OSError:
+                pass
+    declared: set = set()
+    for text in texts:
+        for m in re.finditer(r"`([^`\n]+)`", text):
+            token = m.group(1).strip().rstrip(",;.")
+            if "/" in token or "\\" in token:
+                declared.add(token.replace("\\", "/"))
+    return declared | set(KNOWLEDGE_DOCS)
+
+
+def minimal_diff_violations(paths, declared) -> list:
+    """`paths` covered by no entry in `declared`, in `paths`' own order.
+
+    Covered means an exact match, a match under a declared directory prefix
+    (`tools/` covers `tools/x.py`), or an fnmatch glob (`**/migrations/*`).
+    Pure -- the caller gathers `paths` and `declared` itself (typically from
+    `changed_paths()` and `declared_paths()`), which keeps this testable
+    without touching a filesystem.
+    """
+    import fnmatch
+    out = []
+    for p in paths:
+        norm = str(p).replace("\\", "/")
+        covered = False
+        for d in declared:
+            dn = d.rstrip("/")
+            if norm == dn or norm.startswith(dn + "/"):
+                covered = True
+                break
+            if ("*" in d or "?" in d) and fnmatch.fnmatch(norm, d):
+                covered = True
+                break
+        if not covered:
+            out.append(p)
+    return out
+
+
+def minimal_diff_refusal(paths, declared) -> str | None:
+    """The refusal message for an unrelated file, or None when the diff is clean.
+
+    Formatted the way every other gate in `post-run/06-artifact-autocommit.py`
+    speaks a refusal -- a REFUSED message naming what tripped it -- so a
+    caller can `speak()` it verbatim once wired in.
+    """
+    unnamed = minimal_diff_violations(paths, declared)
+    if not unnamed:
+        return None
+    shown = unnamed[:5]
+    more = f" ...and {len(unnamed) - 5} more" if len(unnamed) > 5 else ""
+    return (f"Auto-commit REFUSED: this turn touches {len(unnamed)} path(s) "
+            f"named by neither TASK.md nor the active plan -- "
+            f"{', '.join(shown)}{more}. Minimal-diff is mandatory: name the "
+            f"file in the plan, or stop touching it. {len(paths)} file(s) "
+            f"left uncommitted.")
+
+
 def layer_paths(root):
     """The repo-relative posix paths this layer installed, or an empty set.
 

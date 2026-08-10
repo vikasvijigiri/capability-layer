@@ -114,7 +114,6 @@ check("an empty change is undetermined, not small",
 # already exist. A copy would drift the moment either changed -- the same defect
 # as the three disagreeing commit tokenisers.
 check("shared-surface reuses _hooklib's migration table",
-      set(scope._migration_patterns()) and
       "migrations/*" in scope._migration_patterns(),
       str(scope._migration_patterns())[:120])
 check("shared-surface reuses parallel_groups' shared table",

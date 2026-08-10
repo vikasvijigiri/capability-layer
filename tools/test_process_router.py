@@ -16,6 +16,7 @@ Run: python tools/test_process_router.py
 """
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -296,6 +297,13 @@ NOT_SKILLS = {
     "task-brief-style", "session-context",
     # code-review angles handed to a diff-reviewer, not names of anything
     "test-quality",
+    # the scope vocabulary: verdicts and veto clauses from `tools/scope.py`.
+    # Backticked because they are exact values a reader will grep for, which is
+    # precisely why this checker mistook them for skills.
+    "small", "major", "undetermined",
+    "shared-surface", "control-surface", "spread", "unmapped", "volume",
+    # git nouns
+    "base", "main",
 }
 
 # --- workflow.md's own names resolve --------------------------------------
@@ -849,15 +857,45 @@ check("no skill prompts the user outside the two gates",
       not _unexpected,
       f"{_unexpected} added a gate -- the chain allows two, see workflow.md")
 
+# Each gate names its OWN tool, rather than both being checked against
+# `AskUserQuestion`.
+#
+# Gate 1 is a plan approval, and `ExitPlanMode` is the tool built for exactly
+# that -- its contract says it "inherently requests user approval" and
+# explicitly says not to pair it with `AskUserQuestion`. Gate 2 is a shipment
+# approval with real alternatives to choose between, which is what
+# `AskUserQuestion` is for.
+#
+# The failure this shape exists to catch: swapping Gate 1's tool while leaving a
+# blanket "AskUserQuestion is somewhere in this file" assertion would pass on
+# any incidental mention -- a marker that reads as a gate and stops nothing.
+# Both limbs are asserted, so the wrong tool is as red as no tool.
+GATE_TOOL = {"writing-plans": "ExitPlanMode", "releasing": "AskUserQuestion"}
+check("every gate skill has a declared tool",
+      set(GATE_TOOL) == GATE_SKILLS,
+      f"{sorted(set(GATE_TOOL) ^ GATE_SKILLS)} is in one set and not the other")
+
 for _g in sorted(GATE_SKILLS):
     _gbody = (SKILLS / _g / "SKILL.md").read_text(encoding="utf-8")
     check(f"gate skill `{_g}` declares its gate", _g in _prompting,
           "a gate was removed; the chain would then have no human checkpoint here")
-    # The marker is a claim; the call is the mechanism. A marker with no
-    # AskUserQuestion beside it is a gate that announces itself and never stops.
-    check(f"gate skill `{_g}` actually calls the tool it declares",
-          "AskUserQuestion" in _gbody,
+    # The marker is a claim; the call is the mechanism. A marker with no call
+    # beside it is a gate that announces itself and never stops.
+    _tool = GATE_TOOL[_g]
+    check(f"gate skill `{_g}` actually calls `{_tool}`, the tool it declares",
+          _tool in _gbody,
           "the marker says there is a gate here and nothing implements it")
+
+# `ExitPlanMode` and `AskUserQuestion` must not both back Gate 1. Two mechanisms
+# for one approval means the plan is approved twice and one of them is theatre --
+# and the tool's own contract forbids the pairing.
+_wp = (SKILLS / "writing-plans" / "SKILL.md").read_text(encoding="utf-8")
+_wp_asks = [ln for ln in _wp.splitlines()
+            if "AskUserQuestion" in ln and not _NEGATED.search(ln)]
+check("Gate 1 has one approval mechanism, not two",
+      not _wp_asks,
+      f"{len(_wp_asks)} un-negated AskUserQuestion mention(s) beside ExitPlanMode: "
+      f"{_wp_asks[:2]}")
 
 # --- anything that leaves the machine asks with the tool ---------------------
 #
@@ -1045,6 +1083,66 @@ check("no skill states half the entry rule",
       f"{_entry_failures} route to `brainstormer` without naming `writing-plans`, "
       f"calling it a dispatch, or deferring to workflow.md §Entry -- there is one "
       f"door as of 2026-08-09, and a second one lets work reach a plan unframed")
+
+# --- the scope decision is one decision, used in three places ----------------
+#
+# `small` and `major` decide how much of the repository a change is checked
+# against. Judged separately by each consumer, they drift -- and the drift is
+# invisible, because each consumer is individually green. So the decision is
+# computed once by `tools/scope.py` and every consumer names it.
+_cr = (SKILLS / "code-review" / "SKILL.md").read_text(encoding="utf-8")
+check("`code-review` reads the computed scope rather than judging it",
+      "tools/scope.py" in _cr,
+      "the review's breadth must come from the same decision the tier uses")
+check("...and a narrowed review declares its scope in the verdict",
+      "scope" in _cr.lower() and "passed: true" in _cr,
+      "a `small` verdict read as a whole-branch verdict is the failure here")
+
+# The scoped tier must not be able to produce the word every reader copies.
+#
+# `tools/` is NOT part of what `install.py` copies -- an installed layer is
+# `.claude/` plus the knowledge docs -- so in a target repo these files are
+# absent and the honest answer is to say so rather than to fail. The same shape
+# `test_entry_classifier.py` uses for its corpus, and for the same reason: this
+# suite went red in a fresh install while being green here.
+_rcpath = ROOT / "tools" / "run_checks.py"
+if not _rcpath.is_file():
+    print("SKIP: no tools/run_checks.py -- the scoped tier ships with the source "
+          "repository, not with an install; its rules are unmeasured here")
+else:
+    _rcsrc = _rcpath.read_text(encoding="utf-8")
+    check("a scoped run has a verdict word of its own",
+          'PARTIAL_VERDICT = "PARTIAL PASS"' in _rcsrc,
+          "`PASS` on a narrowed run is green reported on less evidence")
+    check("...and it refuses to narrow anything but a `small` change",
+          'verdict["scope"] != "small"' in _rcsrc)
+    check("...and never writes a green ref", "update-ref" not in _rcsrc,
+          "only the full tier may mark a tree verified")
+
+# Shape of the map, never its judgement -- see `_why_test_map`. A mapped command
+# that is not a registered check runs nothing for that path, silently.
+#
+# `project-checks.json` is never overwritten by an installer, so a target repo
+# has its own with no `test_map` at all. Absent is not a failure; a map that
+# names a command nothing registers is.
+_cfg = json.loads((ROOT / ".claude" / "project-checks.json").read_text(encoding="utf-8"))
+_tm = _cfg.get("test_map") or {}
+_reg: set = set()
+for _ckey, _cval in _cfg.items():
+    if _ckey.startswith("_") or _ckey == "test_map":
+        continue
+    if isinstance(_cval, str):
+        _reg.add(_cval)
+    elif isinstance(_cval, list):
+        _reg.update(x for x in _cval if isinstance(x, str))
+_badmap = sorted({c for c in _tm.values()
+                  if c not in _reg
+                  and not c.startswith("python tools/run_checks.py")})
+check("every test_map command is a registered check", not _badmap, str(_badmap))
+if _tm:
+    check("the test_map states that its judgement is unproven",
+          "silent" in (_cfg.get("_why_test_map") or ""),
+          "a coverage claim nothing verifies must say so where it lives")
 
 print()
 if failures:
