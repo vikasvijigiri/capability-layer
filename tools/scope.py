@@ -373,8 +373,13 @@ def main(argv: list[str] | None = None) -> int:
         # 0 low · 1 medium · 2 high. Ordered, so a caller can threshold on it.
         return TIERS.index(risk["tier"])
 
-    result = classify(gather(root, args.base, offline=args.offline))
-    risk = tier(result, gather(root, args.base, offline=args.offline).get("paths"))
+    # Gathered ONCE. Calling it twice ran the whole git probe a second time for
+    # a value already in hand, and worse, it could disagree with itself: the two
+    # calls are separated by a classify, so a file written in between would make
+    # the tier and the scope describe different trees.
+    facts = gather(root, args.base, offline=args.offline)
+    result = classify(facts)
+    risk = tier(result, facts.get("paths"))
 
     if args.json:
         print(json.dumps({**result, **risk}, indent=2))

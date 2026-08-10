@@ -71,14 +71,6 @@ COUNT_CLAIM = re.compile(r"(\d+)\s+(skills?|agents?|hooks?|suites?)\b", re.I)
 NEGATED_WORDS = {"no", "not", "never", "removed", "deleted",
                  "gone", "absent", "stop", "avoid"}
 
-# Notes that assert a file's ABSENCE. `MEMORY.md` says "There is no
-# `routing/process-skills.md` keyword router. Do not recreate one" -- that
-# path is missing on purpose, and reporting it as rot is backwards. Same
-# negation idea `test_process_router.py` uses when scanning for forbidden
-# verbs, and the same reason: the mention and the prohibition look identical
-# to a substring match.
-NEGATED = re.compile(r"(no|not|never|removed|deleted|gone|absent)", re.I)
-
 # A backticked token that looks like a path. Same shape the minimal-diff gate
 # uses, and for the same reason: prose here is full of backticked words that are
 # symbols, not files.

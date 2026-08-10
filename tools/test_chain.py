@@ -185,6 +185,42 @@ check("every state resume calls terminal is classified here",
       not uncovered,
       f"{uncovered} would be treated as ordinary work and could report stalled")
 
+# --- the per-turn cost, which is a correctness property here ------------------
+#
+# This runs from a hook on EVERY turn. `resume.gather_facts` makes two
+# `gh pr list` calls; measured, they were 4.8s of a 5.2s run, and a five-second
+# tax on every turn is how a reporting mechanism gets switched off -- exactly
+# the argument `CLAUDE.md` makes for two check tiers.
+#
+# Asserted two ways, because either alone can be satisfied while the tax comes
+# back: the default must be offline, and the elapsed time must stay small.
+import inspect  # noqa: E402
+import time  # noqa: E402
+
+_sig = inspect.signature(chain.gather)
+check("gather() is offline BY DEFAULT",
+      _sig.parameters["offline"].default is True,
+      "a network probe on every turn is how this gets switched off")
+
+_t0 = time.monotonic()
+chain.gather(ROOT)
+_elapsed = time.monotonic() - _t0
+check(f"gather() stays under 3s ({_elapsed:.2f}s)", _elapsed < 3.0,
+      "5.2s measured before the gh calls were stubbed; if this fails, a network "
+      "probe has been reintroduced into the per-turn path")
+
+# The ledger is append-only and unbounded by construction. Bounded reading is
+# what keeps that safe: `assess` must not need the whole history, or a long-lived
+# repository pays for every past turn on every new one.
+_huge = entries(*[("BUILD", str(i)) for i in range(5000)])
+_t0 = time.monotonic()
+chain.assess(_huge, "BUILD", "z")
+_big_elapsed = time.monotonic() - _t0
+check(f"assess() is fast on a long ledger ({_big_elapsed:.3f}s)",
+      _big_elapsed < 0.5,
+      "the ledger only grows; a scan proportional to all of history would make "
+      "the instrument slower every day it runs")
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

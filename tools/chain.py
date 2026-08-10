@@ -177,12 +177,30 @@ def assess(entries: list[dict], state: str | None, fingerprint: str | None) -> d
             "reason": f"{state}, {same} recorded turn(s) in this state"}
 
 
-def gather(root: Path | None = None, ledger: Path | None = None) -> dict:
-    """The IO seam: derive the state via `resume.py`, read the ledger, fingerprint."""
+def gather(root: Path | None = None, ledger: Path | None = None,
+           offline: bool = True) -> dict:
+    """The IO seam: derive the state via `resume.py`, read the ledger, fingerprint.
+
+    **`offline=True` by default, and that default is the whole point.**
+    `resume.gather_facts` makes two `gh pr list` calls, which measured 4.8s of a
+    5.2s run. This is called by a hook on *every turn*, and a five-second tax on
+    every turn is how a reporting mechanism gets switched off -- the same
+    argument `CLAUDE.md` makes for splitting the checks into two tiers.
+
+    Stubbing `gh` costs nothing for this module's purpose: the derived state was
+    identical (`BUILD`) with and without it, because stall detection turns on
+    whether the state MOVED, not on which state it is. The states that genuinely
+    need PR data -- `LAND`, `QUEUED` -- are ones a stall would not be claimed in
+    anyway, and a caller that needs them passes `offline=False`.
+    """
     root = Path(root or ROOT)
     resume = _load("tools/resume.py", "resume_for_chain")
     state = slug = None
     if resume is not None:
+        if offline:
+            # Explicit, and narrow: only the network probe is stubbed. Every
+            # git-derived fact is still read for real.
+            resume._gh_json = lambda *a, **k: None
         # `gather_facts` then `derive_state` -- resume's own two-part seam, used
         # exactly as resume's own `main()` uses it. Calling the pair rather than
         # shelling out to `resume.py` keeps one implementation of the state

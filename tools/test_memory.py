@@ -144,11 +144,19 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
 # The defect class this session kept hitting was a function proved on synthetic
 # input while the real input was what broke it. So the live tree is asserted too.
 real = memory.load(ROOT)
-check("the real repository has durable knowledge to query",
-      len(real) > 20, f"{len(real)} entries")
-check("it is clean of path rot and count rot right now",
-      not memory.stale(real, ROOT) and not memory.count_rot(ROOT),
-      f"stale={memory.stale(real, ROOT)[:1]} counts={memory.count_rot(ROOT)[:1]}")
+if len(real) < 10:
+    # A freshly installed layer has a stub `MEMORY.md` and no accumulated
+    # knowledge yet -- there is nothing to query and nothing to have rotted.
+    # Reporting that as a failure would assert this repository's contents in
+    # somebody else's, which is what the portability scope exists to catch.
+    print(f"SKIP: only {len(real)} durable entries here -- a repository that has "
+          f"not accumulated knowledge yet has none to query and none to rot")
+else:
+    check("the real repository has durable knowledge to query",
+          len(real) > 20, f"{len(real)} entries")
+    check("it is clean of path rot and count rot right now",
+          not memory.stale(real, ROOT) and not memory.count_rot(ROOT),
+          f"stale={memory.stale(real, ROOT)[:1]} counts={memory.count_rot(ROOT)[:1]}")
 
 # The one that proves the wiring, not just the tool: planning consults it.
 plans_skill = (ROOT / ".claude/skills/writing-plans/SKILL.md").read_text(encoding="utf-8")
