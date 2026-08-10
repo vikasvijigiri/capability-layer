@@ -25,7 +25,9 @@ Run: python tools/test_delivery_check.py
 from __future__ import annotations
 
 import importlib.util
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -272,6 +274,35 @@ check("a failed command is distinguishable from empty output",
 check("...while a command that succeeds with no output returns empty, not None",
       dc._run(["git", "log", "-0", "--format="], ROOT) == "",
       "empty and failed are different answers")
+
+
+# --- the two paths a mutation sweep found uncovered -----------------------------
+#
+# Both were HOLLOW: mutating them left the suite green. Neither needs a mock --
+# a name that is not an executable raises OSError, and a directory that is not a
+# repository makes `git status` exit non-zero. Reaching a branch with a real
+# input beats asserting it with a patched one.
+
+check("a missing executable is None, not empty output",
+      dc._run(["definitely-not-an-executable-xyz"], ROOT) is None,
+      "this is the `except OSError` branch; returning '' here made a failed "
+      "command look like a command that printed nothing")
+
+# `gather_facts` in a directory with no repository: every git call fails, so
+# `dirty` must be None rather than [] -- absent, not clean.
+_norepo = Path(tempfile.mkdtemp())
+_facts = dc.gather_facts(_norepo, "main", "HEAD", offline=True)
+check("gather_facts reports an undetermined worktree as None, not clean",
+      _facts["dirty"] is None,
+      f"got {_facts['dirty']!r} -- [] would read as 'no uncommitted paths', "
+      f"which is a pass this could not have earned")
+check("...and evaluate turns that into `unknown`, never silence",
+      sev(_facts, "worktree") == "unknown",
+      f"findings: {[f['code'] for f in dc.evaluate(_facts)]}")
+check("...and the run as a whole cannot exit 0 from there",
+      dc.exit_code(dc.evaluate(_facts)) != 0)
+
+shutil.rmtree(_norepo, ignore_errors=True)
 
 
 # --- gather_facts is inert offline ---------------------------------------------

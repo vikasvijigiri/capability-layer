@@ -131,6 +131,13 @@ def _chain_depth(prs: list | None, head: str) -> int | None:
     # `range` bounds the walk by the number of edges that exist, so the loop is
     # finite whatever the data says. Two mutation runs hung here before this --
     # a removed guard produced no failure, just a suite that never returned.
+    #
+    # **This bound is deliberately redundant with the `seen` check below**, and a
+    # mutation sweep reports it as "hollow" for that reason: replacing it with
+    # `while True` leaves the suite green, because `seen` still terminates the
+    # walk. That is belt and braces on the one construct here that can hang, and
+    # a hang is not a test failure -- it is the absence of an answer, which no
+    # assertion can catch. Do not delete it because a sweep called it uncovered.
     for _ in range(len(base_of) + 1):
         if cur not in base_of:
             break
