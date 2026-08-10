@@ -121,9 +121,13 @@ check("an empty change is undetermined, not small",
 check("_norm strips a ./ prefix without eating the dot",
       scope._norm("./.claude/settings.json") == ".claude/settings.json",
       scope._norm("./.claude/settings.json"))
-check("...repeatedly, and on backslashes",
-      scope._norm(".\\\\.github\\\\workflows\\\\ci.yml").endswith(".github/workflows/ci.yml"),
-      scope._norm(".\\\\.github\\\\workflows\\\\ci.yml"))
+# Two source backslashes, which is ONE real separator. Four were written first
+# and that is a doubled separator no Windows path ever produces -- the assertion
+# failed against an input that cannot occur, which is a test defect wearing a
+# code defect's clothes.
+check("...and on backslashes",
+      scope._norm(".\\.github\\workflows\\ci.yml") == ".github/workflows/ci.yml",
+      scope._norm(".\\.github\\workflows\\ci.yml"))
 check("a ./-prefixed control surface still fires its clause",
       scope.classify({"paths": ["./.claude/hooks/_hooklib.py"], "test_map": {}})["fired"]
       == scope.classify({"paths": [".claude/hooks/_hooklib.py"], "test_map": {}})["fired"],

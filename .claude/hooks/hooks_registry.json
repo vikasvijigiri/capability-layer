@@ -17,12 +17,13 @@
       ]
     },
     "post-run": {
-      "description": "After a turn completes; snapshots recovery state, then commits the turn as a wip checkpoint if the artefact gates pass",
+      "description": "After a turn completes; snapshots recovery state, commits the turn as a wip checkpoint if the artefact gates pass, then records the unit's state and says so when the chain stops advancing",
       "claude_code_event": "Stop",
       "subscribers": [
         ".claude/hooks/post-run/03-checkpoint.py",
         ".claude/hooks/post-run/06-artifact-autocommit.py",
-        ".claude/hooks/post-run/07-layer-drift.py"
+        ".claude/hooks/post-run/07-layer-drift.py",
+        ".claude/hooks/post-run/08-chain-continuity.py"
       ]
     },
     "pre-commit": {

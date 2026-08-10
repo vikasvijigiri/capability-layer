@@ -44,6 +44,11 @@
             "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-run/07-layer-drift.py\"",
             "statusMessage": "Checking capability-layer drift..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-run/08-chain-continuity.py\"",
+            "statusMessage": "Recording chain state..."
           }
         ]
       }

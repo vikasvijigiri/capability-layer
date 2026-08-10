@@ -231,6 +231,21 @@ The capability layer changed without a completed layer audit. Run the
 capability-layer-maintenance audit and the no-slop layer scan before delivery.
 [/state:layer-unreviewed]
 
+[state:chain-stalled]
+This unit's state has not advanced for several turns while its tree kept
+changing. That is the shape of a **missed handoff**: a stage finished and its
+successor was never invoked, which is silent by construction -- the turn ends,
+the checks are green, and a skipped stage looks exactly like a stage nothing
+needed.
+
+Read the stage table above, find the stage that owns the artefact that just
+changed, and invoke its stated successor. If the stage genuinely is still in
+progress, nothing is wrong and this will clear on the next transition.
+
+Nothing can force the handoff -- a hook cannot invoke a skill -- so this notice
+is the whole mechanism. Acting on it is yours.
+[/state:chain-stalled]
+
 [state:entry-unframed]
 This prompt names work with a done-state, and the **Entry** table above routes
 named work at any scope to stage 1 `writing-plans`. Frame it first: six fields,
