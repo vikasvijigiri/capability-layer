@@ -62,6 +62,22 @@ DECLARED_MERGE_METHOD = "squash"
 STACK_ADVISORY = 2
 STACK_BLOCKING = 4
 
+# Check-run conclusions that are NOT a failure. GitHub emits `success`,
+# `failure`, `neutral`, `cancelled`, `skipped`, `timed_out`, `action_required`
+# and `stale`; only the first three here mean "nothing is wrong".
+#
+# `skipped` is the one that matters and it is not theoretical: this repository's
+# own `checks.yml` skips `build · audit · e2e · smoke` on push-only runs, so a
+# fully green commit carries one skipped run. Treating anything-but-success as
+# failure reported `[blocking] CI concluded 'failure'` on a green base branch --
+# and `delivering` treats that exit as a stop, so it would have blocked the
+# delivery of working code.
+#
+# `None` is here because a completed run should always carry a conclusion; if
+# one does not, that is not evidence of failure. A table rather than a condition
+# so a new conclusion value is one row, not a hunt through a boolean.
+NON_FAILING = (None, "success", "skipped", "neutral")
+
 
 def _run(args: list[str], cwd: Path | None = None, timeout: int = 20) -> str | None:
     """stdout on success (possibly ''), or **None** when the command failed.
@@ -103,7 +119,7 @@ def _ci_from_runs(runs: dict | None, head_sha: str) -> dict | None:
     """
     all_runs = (runs or {}).get("check_runs", [])
     done = [r for r in all_runs if r.get("status") == "completed"]
-    if any(r.get("conclusion") not in (None, "success") for r in done):
+    if any(r.get("conclusion") not in NON_FAILING for r in done):
         return {"sha": head_sha, "conclusion": "failure"}
     if not done or len(done) != len(all_runs):
         # Nothing finished, or something is still running. Not green: a check

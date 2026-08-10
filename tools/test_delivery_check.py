@@ -237,6 +237,23 @@ check("a completed failure beside a running job is still a failure",
       (dc._ci_from_runs(_RUNS_FAILED, "aaaaaaa") or {}).get("conclusion") == "failure",
       "a job that already failed does not become pending because another is running")
 
+# `skipped` and `neutral` are not failures, and this is not theoretical: this
+# repository's own checks.yml skips `build · audit · e2e · smoke` on push-only
+# runs, so a green commit carries one skipped run. Treating anything-but-success
+# as failure reported `[blocking] CI concluded 'failure'` on a green base branch.
+for _ok in ("skipped", "neutral"):
+    _mixed = {"check_runs": [{"status": "completed", "conclusion": "success"},
+                             {"status": "completed", "conclusion": _ok}]}
+    check(f"a completed `{_ok}` run does not make CI a failure",
+          (dc._ci_from_runs(_mixed, "a") or {}).get("conclusion") == "success",
+          f"got {dc._ci_from_runs(_mixed, 'a')} -- a skipped job is not a failed one")
+
+for _bad in ("failure", "cancelled", "timed_out", "action_required"):
+    _f = {"check_runs": [{"status": "completed", "conclusion": _bad}]}
+    check(f"a completed `{_bad}` run IS a failure",
+          (dc._ci_from_runs(_f, "a") or {}).get("conclusion") == "failure",
+          f"got {dc._ci_from_runs(_f, 'a')}")
+
 check("no runs at all is not-yet-run", dc._ci_from_runs({"check_runs": []}, "a") is None)
 check("an unreadable response is not-yet-run", dc._ci_from_runs(None, "a") is None)
 
