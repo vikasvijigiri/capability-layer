@@ -34,10 +34,24 @@ rollback, and then the smallest lower-risk diff.
    return a structured conflict incident to `systematic-debugging`.
 4. Prepare the PR or merge-queue handoff. Do not bypass protected-branch rules,
    required checks, or merge queue. Do not deploy.
-5. **Before anything leaves the machine, confirm with `AskUserQuestion`.**
+5. **Run the preflight and quote it. Exit `1` is a stop, not a note.**
+
+       python tools/delivery_check.py --base <base> --head <head>
+
+   Seven facts, computed rather than asserted: base alignment, CI green *for
+   this exact SHA*, stack depth, merge-method compatibility, divergence,
+   worktree cleanliness, and whether any of it is enforceable at all. Exit `0`
+   ready · `1` a check failed · `2` a fact could not be determined — and **`2`
+   is not `0`**, because a check that could not run is unrun.
+
+   Everything above this line is prose, and prose already failed here: step 1
+   has said "confirm the base is known" throughout, and a PR was still opened
+   with a base that was not its branch point, by an agent that had read this
+   file that morning. The prose is the reason; the command is the mechanism.
+6. **Before anything leaves the machine, confirm with `AskUserQuestion`.**
    See below — a prose question does not count.
-6. Return `clean`, `conflict`, or `blocked` with changed paths, base, checks,
-   conflict files, and evidence.
+7. Return `clean`, `conflict`, or `blocked` with changed paths, base, checks,
+   conflict files, and evidence. Never `clean` without step 5's output quoted.
 
 ## The push confirmation
 

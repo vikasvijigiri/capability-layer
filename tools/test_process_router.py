@@ -894,6 +894,17 @@ check("`delivering` says no skill merges",
       re.search(r"no skill.{0,40}merge|human presses the button", _del, re.I | re.S)
       is not None,
       "deferring to a merge queue that may not exist leaves the merge unowned")
+# A validator nothing invokes is the gate-nobody-runs failure this layer keeps
+# deleting. `delivery_check.py` is advisory by construction -- the 403 means it
+# can never prevent a merge -- so its entire value is that this stage runs it.
+check("`delivering` runs the delivery preflight",
+      "tools/delivery_check.py" in _del,
+      "the check exists and nothing calls it, which is worth less than no check "
+      "because it reads as coverage")
+check("...and treats a failing preflight as a stop",
+      re.search(r"exit `?1`?[^.]{0,40}stop", _del, re.I) is not None,
+      "an advisory that never stops anything is a log line")
+
 check("`delivering` warns that squash breaks a stacked PR",
       "squash" in _del.lower() and "stack" in _del.lower(),
       "the layer assumes squash-merge and says nothing about what that does to a "

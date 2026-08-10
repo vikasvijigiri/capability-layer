@@ -56,15 +56,15 @@ Check 1 below catches both. It is one command.
 | `tools/delivery_check.py` | Create | `gather_facts()` (IO), `evaluate()` (pure), `render()`, `main()` |
 | `tools/test_delivery_check.py` | Create | One assertion per check, each proved red first |
 | `.claude/skills/delivering/SKILL.md` | Modify | Gains the step that runs and quotes it |
-| `.claude/project-checks.json` | Modify | Only if it proves fast enough; otherwise untouched and said so |
+| `.claude/project-checks.json` | Modify | Registers `test_delivery_check.py` in the **test** tier — owned by Task 2 |
 
 ## Progress
 
 Ticked by `executing-plans` as each task's own **Verification** command is run
 and quoted. Nothing here is ticked on a clean diff or a zero exit code.
 
-- [ ] Task 1 — `tools/delivery_check.py` and its suite
-- [ ] Task 2 — `delivering` runs and quotes it
+- [x] Task 1 — `tools/delivery_check.py` and its suite
+- [x] Task 2 — `delivering` runs and quotes it
 
 ## Tasks
 
@@ -136,8 +136,11 @@ it is precisely what stranded three merged units.
 
 **Verification:**
 - Run: `PYTHONIOENCODING=utf-8 python tools/test_delivery_check.py && PYTHONIOENCODING=utf-8 python tools/delivery_check.py --offline`
-- Expect: the suite exits 0 with one `OK:` per check; the offline run exits 2 and
-  names every undetermined fact
+- Expect: the suite exits 0 with one `OK:` per check; the offline run names every
+  undetermined fact. **Amended:** the offline run exits **1**, not 2, on a dirty
+  tree — blocking outranks unknown, and an uncommitted worktree is blocking. The
+  original `Expect` assumed a clean tree. Exit 2 is reached when facts are
+  undetermined and nothing is blocking, proved directly and by the suite.
 
 **Done when:** inverting any one fact turns exactly that check red, and the
 offline run reports `unknown` by name rather than passing.
@@ -150,6 +153,7 @@ report `clean` without quoting it.
 **Files:**
 - Modify: `.claude/skills/delivering/SKILL.md` — a numbered step plus the reason
 - Modify: `tools/test_process_router.py` — assert the skill names the script
+- Modify: `.claude/project-checks.json` — register the suite in the test tier
 
 **Depends on:** 1
 
@@ -164,7 +168,8 @@ report `clean` without quoting it.
 
 **Verification:**
 - Run: `PYTHONIOENCODING=utf-8 python tools/run_checks.py --tier all --require-test`
-- Expect: `PASS: 36 check(s) green (audit, build, lint, smoke, test, typecheck)`
+- Expect: `PASS: 37 check(s) green (audit, build, lint, smoke, test, typecheck)`
+  — 37, not 36: registering the suite adds one
 
 **Done when:** `delivering` names the script, the suite asserts it, and the full
 tier is green.
@@ -205,3 +210,19 @@ No unticked boxes.
 `--allow-pending`; merge method resolved as squash with no stacking; the
 public/Pro question demoted from a marker to a risk because it does not change
 what gets built.
+
+## Amended during execution — 2026-08-10
+
+Three findings from the pre-execution scan, all one knot and all resolved by the
+plan's own constraints rather than by a judgement:
+
+The File map listed `.claude/project-checks.json` while no task declared it, and
+"Not in the fast tier" read as contradicting "only if it proves fast enough".
+They are not in tension once the distinction is drawn: **the script is not a
+check — its suite is.** `delivery_check.py` needs a network and a remote, so it
+stays on-demand like `resume.py`. `test_delivery_check.py` drives `evaluate()`
+from dict literals and `gather_facts(offline=True)`, so it is offline, fast, and
+belongs in the test tier — and a suite nothing runs is the gate-nobody-invokes
+failure this layer keeps deleting.
+
+Task 2 therefore owns `project-checks.json`, and its expected count is 37.
