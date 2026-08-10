@@ -63,12 +63,19 @@ STACK_ADVISORY = 2
 STACK_BLOCKING = 4
 
 
-def _run(args: list[str], cwd: Path | None = None, timeout: int = 20) -> str:
-    """stdout, or '' when the command is missing, fails or hangs.
+def _run(args: list[str], cwd: Path | None = None, timeout: int = 20) -> str | None:
+    """stdout on success (possibly ''), or **None** when the command failed.
 
-    Shape copied from `git_identity._run`: `stdin=DEVNULL` so a subprocess can
-    never inherit an open pipe and block forever, and no `shell=True` -- ruff
-    selects the `S` set and would reject it.
+    The `None` matters. This returned `''` for both outcomes, and
+    `git status --porcelain` is the caller where that is indistinguishable from
+    a clean tree -- so a status command that never ran reported "no uncommitted
+    paths", which is this module's own Article V violation: absent read as
+    passing. Empty output and no output are different answers and now have
+    different values.
+
+    Shape otherwise from `git_identity._run`: `stdin=DEVNULL` so a subprocess
+    can never inherit an open pipe and block forever, and no `shell=True` --
+    ruff selects the `S` set and would reject it.
     """
     try:
         proc = subprocess.run(
@@ -77,8 +84,66 @@ def _run(args: list[str], cwd: Path | None = None, timeout: int = 20) -> str:
             stdin=subprocess.DEVNULL, timeout=timeout, check=False,
         )
     except (OSError, subprocess.SubprocessError):
-        return ""
-    return proc.stdout.strip() if proc.returncode == 0 else ""
+        return None
+    return proc.stdout.strip() if proc.returncode == 0 else None
+
+
+def _ci_from_runs(runs: dict | None, head_sha: str) -> dict | None:
+    """The CI verdict for `head_sha`, or None when nothing has finished.
+
+    **`conclusion` is null until `status == "completed"`.** Reading it unfiltered
+    made an in-progress job look like a failure, and -- worse -- made the fact
+    non-None, so `evaluate()`'s pending branch never ran and `--allow-pending`
+    could not fire in the one situation it was added for. Pending and failing
+    are different facts; that distinction was a Gate 1 resolution and the
+    collection had quietly undone it.
+
+    A job that has already failed stays a failure even while another is running:
+    more evidence will not turn a red job green.
+    """
+    all_runs = (runs or {}).get("check_runs", [])
+    done = [r for r in all_runs if r.get("status") == "completed"]
+    if any(r.get("conclusion") not in (None, "success") for r in done):
+        return {"sha": head_sha, "conclusion": "failure"}
+    if not done or len(done) != len(all_runs):
+        # Nothing finished, or something is still running. Not green: a check
+        # that has not reported is unsatisfied, not satisfied.
+        return None
+    return {"sha": head_sha, "conclusion": "success"}
+
+
+def _chain_depth(prs: list | None, head: str) -> int | None:
+    """How many PRs `head` is stacked on, following its own chain.
+
+    Walks `head` upward through `baseRefName` until it reaches a ref that is not
+    another open PR's head. The previous count was global -- every stacked PR
+    anywhere in the repository -- so it returned the same number for every
+    branch, and an unrelated stack could block a branch based directly on the
+    default branch.
+
+    `seen` terminates a cycle rather than hanging on one; a base/head loop is
+    malformed but it must not spin.
+    """
+    if prs is None:
+        return None
+    base_of = {p["headRefName"]: p["baseRefName"] for p in prs}
+    depth, seen, cur = 1, {head}, head
+    # `range` bounds the walk by the number of edges that exist, so the loop is
+    # finite whatever the data says. Two mutation runs hung here before this --
+    # a removed guard produced no failure, just a suite that never returned.
+    for _ in range(len(base_of) + 1):
+        if cur not in base_of:
+            break
+        nxt = base_of[cur]
+        if nxt not in base_of or nxt in seen:
+            # The base is not another open PR's head (or we have looped), so the
+            # chain ends here. The hop to a non-PR base adds no depth: a branch
+            # with one PR onto the default branch is depth 1.
+            break
+        seen.add(nxt)
+        cur = nxt
+        depth += 1
+    return depth
 
 
 def _json(args: list[str], cwd: Path | None = None):
@@ -106,10 +171,12 @@ def gather_facts(root: Path, base: str, head: str,
     facts["head_sha"] = _run(["git", "rev-parse", head], root) or None
     facts["base_tip"] = _run(["git", "rev-parse", base], root) or None
     facts["merge_base"] = _run(["git", "merge-base", base, head], root) or None
-    facts["dirty"] = [
-        ln[3:].strip()
-        for ln in _run(["git", "status", "--porcelain"], root).splitlines()
-        if ln.strip()
+
+    # `or None` is wrong here and right above: an empty `git status` means a
+    # clean tree, which is a real answer, while a failed one is no answer at all.
+    status = _run(["git", "status", "--porcelain"], root)
+    facts["dirty"] = None if status is None else [
+        ln[3:].strip() for ln in status.splitlines() if ln.strip()
     ]
 
     ahead_behind = _run(
@@ -128,19 +195,13 @@ def gather_facts(root: Path, base: str, head: str,
         return facts
 
     slug = _run(["gh", "repo", "view", "--json", "nameWithOwner",
-                 "--jq", ".nameWithOwner"], root)
+                 "--jq", ".nameWithOwner"], root) or ""
 
     facts["ci"] = None
     if slug and facts["head_sha"]:
         runs = _json(["gh", "api",
                       f"repos/{slug}/commits/{facts['head_sha']}/check-runs"], root)
-        conclusions = [r.get("conclusion") for r in (runs or {}).get("check_runs", [])]
-        if conclusions:
-            facts["ci"] = {
-                "sha": facts["head_sha"],
-                "conclusion": ("success" if all(c == "success" for c in conclusions)
-                               else "failure"),
-            }
+        facts["ci"] = _ci_from_runs(runs, facts["head_sha"])
 
     facts["protection"] = (
         _json(["gh", "api", f"repos/{slug}/branches/{base}/protection"], root)
@@ -156,11 +217,10 @@ def gather_facts(root: Path, base: str, head: str,
 
     prs = _json(["gh", "pr", "list", "--state", "open", "--json",
                  "number,baseRefName,headRefName"], root)
-    if prs is None:
-        facts["stack_depth"] = None
-    else:
-        heads = {p["headRefName"] for p in prs}
-        facts["stack_depth"] = 1 + sum(1 for p in prs if p["baseRefName"] in heads)
+    # The branch NAME, not the ref this was called with: `HEAD` never matches a
+    # `headRefName`, so the chain has to start from what the PR list calls it.
+    branch = _run(["git", "rev-parse", "--abbrev-ref", head], root) or head
+    facts["stack_depth"] = _chain_depth(prs, branch)
 
     return facts
 
@@ -223,11 +283,16 @@ def evaluate(facts: dict) -> list[dict]:
     if methods is None:
         unknown("merge-method", "which merge methods are enabled")
     elif DECLARED_MERGE_METHOD in methods and (depth or 0) >= STACK_ADVISORY:
+        # No date and no count in the emitted string: this text is read in
+        # whatever repository the layer was installed into, and a claim about
+        # THIS repository's history is false in every other one. The incident
+        # that motivated it belongs in the module docstring, which nobody but a
+        # maintainer reads.
         add("merge-method", "blocking",
             f"{DECLARED_MERGE_METHOD}-merge is enabled and {depth} PRs are "
             f"stacked. Squashing the base gives the default branch a new SHA, "
-            f"and every child then re-proposes its parent's files. This is what "
-            f"stranded three merged units on 2026-08-09.")
+            f"so every child is retargeted onto history that never landed and "
+            f"re-proposes its parent's files as conflicts that are not real.")
 
     # --- divergence
     if facts.get("ahead") is None or facts.get("behind") is None:

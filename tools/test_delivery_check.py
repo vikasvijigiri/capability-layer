@@ -199,6 +199,81 @@ check("an undetermined fact exits 2, not 0",
       "absent and passing are different answers")
 
 
+# --- the transformations gather_facts used to hide -----------------------------
+#
+# Every defect `code-review` found was in `gather_facts`, and the suite had
+# missed all three because it only ever exercised that function with
+# `offline=True` -- the one path where it does nothing. The seam that made
+# `evaluate()` testable is exactly what left the collection untested.
+#
+# The transformations are pure functions now, so the API shapes that caused the
+# defects are ordinary dict literals here.
+
+# `conclusion` is null until `status == "completed"`. Reading it unfiltered made
+# an in-progress run look like a failure -- and, worse, made `facts["ci"]`
+# non-None, so the pending branch never ran and `--allow-pending` could not fire
+# in the one situation it exists for.
+_RUNS_MIXED = {"check_runs": [{"status": "in_progress", "conclusion": None},
+                              {"status": "completed", "conclusion": "success"}]}
+check("a run still in progress means not-yet-green, never a failure",
+      dc._ci_from_runs(_RUNS_MIXED, "aaaaaaa") is None,
+      f"got {dc._ci_from_runs(_RUNS_MIXED, 'aaaaaaa')}")
+
+_RUNS_QUEUED = {"check_runs": [{"status": "queued", "conclusion": None}]}
+check("a queued run is not-yet-run either",
+      dc._ci_from_runs(_RUNS_QUEUED, "aaaaaaa") is None)
+
+_RUNS_DONE = {"check_runs": [{"status": "completed", "conclusion": "success"},
+                             {"status": "completed", "conclusion": "success"}]}
+check("all completed and successful is success",
+      dc._ci_from_runs(_RUNS_DONE, "aaaaaaa") == {"sha": "aaaaaaa",
+                                                  "conclusion": "success"})
+
+_RUNS_FAILED = {"check_runs": [{"status": "completed", "conclusion": "failure"},
+                               {"status": "in_progress", "conclusion": None}]}
+check("a completed failure beside a running job is still a failure",
+      (dc._ci_from_runs(_RUNS_FAILED, "aaaaaaa") or {}).get("conclusion") == "failure",
+      "a job that already failed does not become pending because another is running")
+
+check("no runs at all is not-yet-run", dc._ci_from_runs({"check_runs": []}, "a") is None)
+check("an unreadable response is not-yet-run", dc._ci_from_runs(None, "a") is None)
+
+
+# Depth must describe THIS branch's chain. Counting every stacked PR in the
+# repository gave the same number to every branch, so an unrelated stack could
+# block a branch based directly on the default branch.
+_PRS = [{"baseRefName": "main", "headRefName": "unrelated-a"},
+        {"baseRefName": "unrelated-a", "headRefName": "unrelated-b"},
+        {"baseRefName": "main", "headRefName": "mine"}]
+check("a branch off the default branch is depth 1, whatever else is stacked",
+      dc._chain_depth(_PRS, "mine") == 1,
+      f"got {dc._chain_depth(_PRS, 'mine')} -- an unrelated stack must not count")
+check("...and the unrelated stack still measures its own depth",
+      dc._chain_depth(_PRS, "unrelated-b") == 2,
+      f"got {dc._chain_depth(_PRS, 'unrelated-b')} -- two PRs in that chain "
+      f"(unrelated-b, unrelated-a); `main` is not a PR and adds no depth")
+check("a branch with no PR is depth 1",
+      dc._chain_depth(_PRS, "no-pr-yet") == 1)
+check("an unreadable PR list is unknown, not 1",
+      dc._chain_depth(None, "mine") is None)
+
+# A cycle in baseRefName must terminate rather than hang.
+_CYCLE = [{"baseRefName": "b", "headRefName": "a"},
+          {"baseRefName": "a", "headRefName": "b"}]
+check("a cycle in the chain terminates", dc._chain_depth(_CYCLE, "a") is not None)
+
+
+# `_run` returned "" for both a clean tree and a failed command, so an
+# undetermined worktree read as a pass -- the exact Article V violation this
+# module's docstring is built around.
+check("a failed command is distinguishable from empty output",
+      dc._run(["git", "definitely-not-a-subcommand"], ROOT) is None,
+      "a failure must not look like success with no output")
+check("...while a command that succeeds with no output returns empty, not None",
+      dc._run(["git", "log", "-0", "--format="], ROOT) == "",
+      "empty and failed are different answers")
+
+
 # --- gather_facts is inert offline ---------------------------------------------
 
 _offline = dc.gather_facts(ROOT, "main", "HEAD", offline=True)
