@@ -4,6 +4,41 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Make the layer match the target workflow architecture
+
+- **Status:** In Progress
+- **Goal:** The chain the user specified, running end to end: decompose into
+  independent tasks, a workflow per task, plan in plan mode, Gate 1, execute
+  with minimal diffs, verify, bounded retry, scoped sweep and review, a
+  confirmed push, Gate 2, release, record.
+- **Constraints:** Two lifecycle gates only — the push confirmation stays an
+  operational safety check with no `<!-- GATE n -->` marker. The retry budget
+  stays **class-aware** (`security 0, merge 2, transient 2, deterministic 3,
+  unknown 3`), not flattened to 3. A skipped check is **named as skipped**,
+  never counted as a pass. Nothing acquires `gh pr merge`. Every rule added is
+  enforced by a test or a hook, not prose.
+- **Input:** `main` @ `9a65137`, clean, 37 checks green, 0 open PRs.
+  `tools/parallel_groups.py` (scheduler + the live `normalise` bug),
+  `tools/loop.py` + `_hooklib.FAILURE_BUDGETS`, `tools/test_no_slop.py`
+  (scopes `repo|layer|portability`), `.claude/agents/task-implementer.md`
+  (`isolation: worktree`), `executing-plans/references/{using-git-worktrees,
+  parallel-dispatch}.md`, `docs/plans/2026-08-10-adaptive-workflow.md`
+  (small-vs-major veto rule, to be folded in).
+- **Output:** a corrected scheduler; `tools/worktree.py` with a mandatory base;
+  one *proved* parallel dispatch or a deleted claim; `tools/scope.py`; a change
+  scope for `no-slop` and `code-review`; scoped test selection; minimal-diff
+  enforcement; plan-mode wiring where `ExitPlanMode` replaces Gate 1's
+  `AskUserQuestion`.
+- **Done Checks:** `python tools/run_checks.py --tier all --require-test` exits 0
+  and prints the suite count; `python tools/parallel_groups.py <this plan>` shows
+  `.claude/settings.json` correctly serialised rather than schedulable; and one
+  live two-agent dispatch whose worktrees are proved based on the working branch
+  by `git merge-base --is-ancestor`, read from the tree rather than from an
+  agent's report.
+- **Out of Scope:** merging anything; branch protection (403 on this plan tier);
+  an external chain driver (`tools/drive.py`) — deferred until the
+  chain-continuity instrument has measured how often the chain actually breaks.
+
 ### Add `tools/delivery_check.py` — delivery facts, computed not asserted
 
 - **Status:** In Progress

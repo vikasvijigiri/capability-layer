@@ -220,6 +220,40 @@ check("a migration is a shared surface too, from _hooklib's table",
       [g for g in mig["groups"] if 1 in g["tasks"]][0]["serialized"],
       "the migration pattern list is reused, not re-listed")
 
+# A dotfile keeps its dot. `str.strip` strips BOTH ends, so the trailing-comma
+# tidy-up in `normalise` was also eating the leading `.` -- turning
+# `.claude/settings.json` into `claude/settings.json`, which matches no pattern
+# in SHARED_PATTERNS. Half this list is dotted, so the failure was not a corner:
+# every `.claude/` and `.github/` surface was invisible to the scheduler, and an
+# invisible shared surface is exactly what makes two colliding tasks look
+# disjoint.
+for dotted in (".claude/settings.json", ".claude/project-checks.json",
+               ".github/workflows/checks.yml"):
+    check(f"normalise keeps the leading dot on {dotted}",
+          pg.normalise(f"`{dotted}`") == dotted, pg.normalise(f"`{dotted}`"))
+
+DOTFILE = """
+### Task 1: Register a suite
+**Files:**
+- Modify: `.claude/project-checks.json`
+**Dependencies:** none
+
+### Task 2: Unrelated feature
+**Files:**
+- Create: `src/feature.py`
+**Dependencies:** none
+"""
+dot = pg.schedule(DOTFILE)
+dot_group = [g for g in dot["groups"] if 1 in g["tasks"]][0]
+check("a dotted shared surface still runs alone",
+      dot_group["tasks"] == [1] and dot_group["serialized"], str(dot_group))
+
+# The trailing strip is what the leading one was collateral damage from, so it
+# is asserted in the same place -- a fix that deleted the whole strip would pass
+# the three checks above and lose the behaviour they were collateral to.
+check("a trailing comma is still stripped",
+      pg.normalise("src/a.py,") == "src/a.py", pg.normalise("src/a.py,"))
+
 
 # --- a plan that cannot be scheduled says why -------------------------------
 

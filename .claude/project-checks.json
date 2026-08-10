@@ -30,6 +30,8 @@
     "python tools/test_failure_classes.py",
     "python tools/test_loop.py",
     "python tools/test_parallel_groups.py",
+    "python tools/test_worktree.py",
+    "python tools/test_scope.py",
     "python tools/test_recon.py",
     "python tools/test_install.py",
     "python tools/test_git_identity.py",
