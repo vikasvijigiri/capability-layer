@@ -4,6 +4,35 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Add `tools/delivery_check.py` — delivery facts, computed not asserted
+
+- **Status:** In Progress
+- **Goal:** One script that computes seven delivery facts about a branch and its
+  PR, reports them, and refuses to decide — in the shape of `resume.py`,
+  `analyze.py` and `git_identity.py`.
+- **Constraints:** Reports, never decides; **never merges, pushes or rebases**
+  (`test_process_router.py` already fails anything acquiring `gh pr merge`).
+  Exit `0` ready / `1` a check failed / `2` could not determine — and `2` is not
+  `0`, because a check that could not run is unrun, not passed. IO behind a
+  `gather_facts()` seam with an `offline` escape, decisions in a pure
+  `evaluate(facts)` the tests drive directly, mirroring
+  `git_identity.gather(root, offline=)` + `render()`. **Not** in the fast tier:
+  it needs a network and a remote, and that tier gates every auto-commit in
+  seconds.
+- **Input:** `docs/specs/2026-08-09-delivery-preflight-design.md`;
+  `tools/git_identity.py` (API seam), `tools/analyze.py` (injected-`exists`
+  test pattern), `tools/resume.py`; `.claude/skills/delivering/SKILL.md`.
+- **Output:** `tools/delivery_check.py`; `tools/test_delivery_check.py`; a step
+  in `delivering` that runs and quotes it; an entry in
+  `.claude/project-checks.json` only if it proves fast enough to belong.
+- **Done Checks:** `python tools/test_delivery_check.py` exits 0 with an
+  assertion per check, each proved red first; and the base-alignment check flags
+  a fixture where `merge-base(base, head) != tip(base)`, which is the case that
+  stranded three merged units outside PR #7.
+- **Out of Scope:** repo-settings-as-code (its own unit, and the only preventive
+  option available); stacked-PR tooling such as Graphite (rejected in the spec);
+  merging anything; configuring branch protection.
+
 ### Decide whether `/skills-doctor` still has a job
 
 - **Status:** Not started — raised by a `no-slop` sweep on 2026-08-03
