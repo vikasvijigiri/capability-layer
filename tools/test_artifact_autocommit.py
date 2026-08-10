@@ -418,21 +418,76 @@ check("declared_paths is exposed", hasattr(_hooklib, "declared_paths"))
 
 check("a declared path is covered",
       _hooklib.minimal_diff_violations(["tools/scope.py"], {"tools/scope.py"}) == [])
-check("a path under a declared directory is covered",
-      _hooklib.minimal_diff_violations(["tools/scope.py"], {"tools/"}) == [])
+# A bare DIRECTORY covers nothing. This assertion is inverted from what it
+# said when written, and the inversion is the fix: `tools/` covering
+# `tools/x.py` made a prose mention of a directory into a blanket declaration,
+# and twelve such tokens in this repo's plans turned the gate off completely.
+check("a bare directory does NOT cover the files under it",
+      _hooklib.minimal_diff_violations(["tools/scope.py"], {"tools/"})
+      == ["tools/scope.py"])
+# Declaring a directory on purpose still works -- as a glob, which somebody has
+# to type, rather than as a side effect of mentioning a path in a sentence.
+check("a declared glob still covers a directory deliberately",
+      _hooklib.minimal_diff_violations(["tools/scope.py"], {"tools/*"}) == [])
 check("a path matching a declared glob is covered",
       _hooklib.minimal_diff_violations(
           ["prisma/migrations/001/migration.sql"], {"**/migrations/*"}) == [])
 check("an undeclared path is a violation",
-      _hooklib.minimal_diff_violations(["src/unrelated.py"], {"tools/"})
+      _hooklib.minimal_diff_violations(["src/unrelated.py"], {"tools/*"})
       == ["src/unrelated.py"])
 check("only the undeclared paths are returned, declared order-preserved",
       _hooklib.minimal_diff_violations(
-          ["tools/a.py", "src/b.py", "tools/c.py"], {"tools/"}) == ["src/b.py"])
+          ["tools/a.py", "src/b.py", "tools/c.py"], {"tools/*"}) == ["src/b.py"])
+
+# --- against the REAL harvested set, not a fixture ------------------------
+#
+# The one that would have caught it. Every assertion above drives a synthetic
+# `declared` set, and the defect lived in what `declared_paths()` actually
+# returns from this repository's own TASK.md and plans -- so all of them passed
+# while the running gate committed an undeclared file with no refusal.
+#
+# Anything asserted about the gate must therefore also be asserted against the
+# real input at least once.
+_real = _hooklib.declared_paths(root=ROOT)
+check("declared_paths harvests no bare directory token",
+      not [t for t in _real if t.endswith("/")],
+      str(sorted(t for t in _real if t.endswith("/"))[:8]))
+check("a file no plan names is a violation against the REAL declared set",
+      _hooklib.minimal_diff_violations(
+          ["tools/_no_plan_names_this.py"], _real) == ["tools/_no_plan_names_this.py"],
+      f"{len(_real)} declared tokens covered a file nothing declares")
+check("...and the refusal names it",
+      "tools/_no_plan_names_this.py" in
+      (_hooklib.minimal_diff_refusal(["tools/_no_plan_names_this.py"], _real) or ""))
+
+# A file the active plan DOES name must still be committable, or the gate
+# refuses every turn and gets switched off.
+#
+# Only checkable where a plan exists. An installed layer ships no `docs/plans/`,
+# so `_real` there is the knowledge-doc floor and every source file is correctly
+# a violation -- which is why the running hook also requires a non-empty
+# declaration before applying the gate at all. Reporting that as a failure would
+# be asserting this repository's contents in somebody else's.
+_declared_beyond_floor = sorted(_real - set(_hooklib.KNOWLEDGE_DOCS))
+if not _declared_beyond_floor:
+    print("SKIP: no plan declares any path here -- the positive half of the "
+          "minimal-diff gate is unmeasured in this repository (the hook's own "
+          "guard is asserted separately, against the hook source)")
+else:
+    _sample = _declared_beyond_floor[0]
+    check("a file the plan names is still covered by the REAL declared set",
+          _hooklib.minimal_diff_violations([_sample], _real) == [],
+          f"the gate must not refuse the very files the plan declares: {_sample}")
+
+# The guard that makes the above safe: no declaration, no gate.
+_hooksrc = HOOK.read_text(encoding="utf-8")
+check("the hook applies the gate only when something is actually declared",
+      "KNOWLEDGE_DOCS" in _hooksrc and "_declared -" in _hooksrc,
+      "a source with zero declarations would otherwise refuse every turn")
 
 check("a clean diff refuses nothing",
-      _hooklib.minimal_diff_refusal(["tools/scope.py"], {"tools/"}) is None)
-_mdmsg = _hooklib.minimal_diff_refusal(["src/unrelated.py"], {"tools/"})
+      _hooklib.minimal_diff_refusal(["tools/scope.py"], {"tools/*"}) is None)
+_mdmsg = _hooklib.minimal_diff_refusal(["src/unrelated.py"], {"tools/*"})
 check("an unrelated file is refused, not warned",
       isinstance(_mdmsg, str) and "REFUSED" in _mdmsg, str(_mdmsg))
 check("the refusal prints the unnamed path",
@@ -443,12 +498,19 @@ check("many unnamed paths are truncated but the count is stated",
 
 with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d4:
     tmp4 = Path(d4)
-    write(tmp4, "TASK.md", "See `tools/scope.py` and `tools/test_scope.py`.\n")
+    write(tmp4, "TASK.md",
+          "Prose naming `tools/prose_only.py` declares nothing.\n"
+          "- Modify: `tools/scope.py` — this one is a declaration\n")
     (tmp4 / "docs" / "plans").mkdir(parents=True)
     write(tmp4, "docs/plans/2026-08-10-x.md",
           "- Modify: `.claude/hooks/_hooklib.py`\n")
     _declared = _hooklib.declared_paths(root=tmp4)
-    check("declared_paths reads TASK.md", "tools/scope.py" in _declared)
+    check("declared_paths reads a declaration line in TASK.md",
+          "tools/scope.py" in _declared)
+    # The fix, asserted from the other side: a path merely MENTIONED in prose is
+    # not declared. Harvesting every backtick is what made the gate inert.
+    check("...and ignores a path merely mentioned in prose",
+          "tools/prose_only.py" not in _declared, str(sorted(_declared)))
     check("declared_paths reads docs/plans/*.md",
           ".claude/hooks/_hooklib.py" in _declared)
     check("declared_paths always covers the knowledge docs",

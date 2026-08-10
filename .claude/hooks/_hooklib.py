@@ -696,15 +696,37 @@ def declaration_sources(root=None) -> list:
     return found
 
 
-def declared_paths(root=None) -> set:
-    """Repo-relative paths named in `TASK.md` or any `docs/plans/*.md`.
+# A declaration line, as `writing-plans` emits them and `parallel_groups.py`
+# parses them:
+#
+#     - Create: `tools/worktree.py` -- what it is for
+#     - Modify: `tools/run_checks.py:main` -- what changes
+#     **Files:** `a.py`, `b.py`
+#
+# Deliberately NOT "any backtick containing a slash". That was the first
+# implementation and it made the gate inert: plan prose mentions `.claude/`,
+# `tools/**`, and even shell one-liners containing slashes, and each became a
+# blanket declaration -- twelve directory tokens plus two `**` globs covered the
+# whole repository, so an undeclared file committed with no refusal at all.
+#
+# Parsing the declaration SHAPE means a file counts only where somebody wrote it
+# down as a file the work touches, which is what the plan format already says.
+DECLARE_LINE = re.compile(
+    r"(?im)^\s*[-*]\s*(?:create|modify|delete|move|rename|add)\s*:\s*(.+)$")
+FILES_INLINE = re.compile(r"(?im)^\s*\**files?\**\s*:\s*\**\s*(.+)$")
 
-    A path is "named" if it appears inside a backtick code span containing a
-    `/` or `\\` -- the convention every plan and TASK.md entry in this repo
-    already uses for a file reference (see the File map tables in
-    `docs/plans/*.md`). Unreadable or absent sources contribute nothing rather
-    than raising: a missing plan must not silently widen what counts as
-    declared, which would defeat the gate in exactly the case it exists for.
+
+def declared_paths(root=None) -> set:
+    """Repo-relative paths a plan or `TASK.md` DECLARES that the work touches.
+
+    Only declaration-shaped lines count -- see `DECLARE_LINE`. Unreadable or
+    absent sources contribute nothing rather than raising: a missing plan must
+    not silently widen what counts as declared, which would defeat the gate in
+    exactly the case it exists for.
+
+    A trailing `:symbol` is stripped (`run_checks.py:main` declares the file), a
+    bare directory is ignored, and a token carrying whitespace is a sentence or
+    a shell command rather than a path.
     """
     root = Path(root) if root else HOOKS_DIR.parents[1]
     texts = []
@@ -723,21 +745,43 @@ def declared_paths(root=None) -> set:
                 pass
     declared: set = set()
     for text in texts:
-        for m in re.finditer(r"`([^`\n]+)`", text):
-            token = m.group(1).strip().rstrip(",;.")
-            if "/" in token or "\\" in token:
-                declared.add(token.replace("\\", "/"))
+        values = [m.group(1) for m in DECLARE_LINE.finditer(text)]
+        values += [m.group(1) for m in FILES_INLINE.finditer(text)]
+        for value in values:
+            # Cut the reason clause first. The plan format is
+            #
+            #     - Create: `MANIFEST.in` — sdist inclusion for `.claude/**`
+            #
+            # and everything after the dash is prose that may itself contain
+            # backticked paths. Taking the whole line harvested `.claude/**` and
+            # `tools/**` out of one reason and re-inerted the gate -- the second
+            # time the same defect appeared in a different disguise.
+            value = re.split(r"\s+(?:—|–|--)\s+|\s+#\s+", value, maxsplit=1)[0]
+            for raw in re.findall(r"`([^`\n]+)`", value):
+                token = raw.strip().rstrip(",;.").replace("\\", "/")
+                if not token or " " in token or "\t" in token:
+                    continue          # a sentence or a shell command, not a path
+                token = token.split(":", 1)[0]   # `file.py:symbol` declares the file
+                if "/" not in token or token.endswith("/"):
+                    continue          # a bare name or a directory is not a file
+                declared.add(token)
     return declared | set(KNOWLEDGE_DOCS)
 
 
 def minimal_diff_violations(paths, declared) -> list:
     """`paths` covered by no entry in `declared`, in `paths`' own order.
 
-    Covered means an exact match, a match under a declared directory prefix
-    (`tools/` covers `tools/x.py`), or an fnmatch glob (`**/migrations/*`).
+    Covered means an **exact** match or an fnmatch glob (`.claude/hooks/**`).
     Pure -- the caller gathers `paths` and `declared` itself (typically from
     `changed_paths()` and `declared_paths()`), which keeps this testable
     without touching a filesystem.
+
+    **Directory-prefix coverage was removed**, and that is the whole fix: with
+    it, a declared `tools/scope.py` was fine but a prose mention of `tools/`
+    silently covered every file in the tree. Declaring a directory on purpose is
+    still possible and now has to be said explicitly, as a glob -- `tools/*` or
+    `.claude/hooks/**` -- which is a thing somebody types rather than a thing
+    prose does by accident.
     """
     import fnmatch
     out = []
@@ -745,8 +789,7 @@ def minimal_diff_violations(paths, declared) -> list:
         norm = str(p).replace("\\", "/")
         covered = False
         for d in declared:
-            dn = d.rstrip("/")
-            if norm == dn or norm.startswith(dn + "/"):
+            if norm == d:
                 covered = True
                 break
             if ("*" in d or "?" in d) and fnmatch.fnmatch(norm, d):

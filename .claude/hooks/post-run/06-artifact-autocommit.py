@@ -62,6 +62,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from _hooklib import (  # noqa: E402
     AI_ATTRIBUTION_PATTERNS,
+    KNOWLEDGE_DOCS,
     PROTECTED_BRANCHES,
     changed_paths,
     classify_failure,
@@ -379,8 +380,14 @@ def main():
     # every repo this layer installs into that has never written a plan. The
     # other seven clauses still run, so this is a gate that does not apply
     # rather than a check reporting green on no evidence.
-    if declaration_sources(REPO_ROOT):
-        unrelated = minimal_diff_refusal(paths, declared_paths(REPO_ROOT))
+    # Two conditions, and both are fail-safe. A source must exist, AND it must
+    # actually declare something: only declaration-shaped lines count now, so a
+    # repo with a `TASK.md` full of prose and no plan yet has a source and zero
+    # declarations -- and refusing there would block every turn for work that
+    # has not reached a plan.
+    _declared = declared_paths(REPO_ROOT) if declaration_sources(REPO_ROOT) else set()
+    if _declared - set(KNOWLEDGE_DOCS):
+        unrelated = minimal_diff_refusal(paths, _declared)
         if unrelated:
             speak(unrelated)
             return
