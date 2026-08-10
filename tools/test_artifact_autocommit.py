@@ -513,6 +513,20 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d4:
           "tools/prose_only.py" not in _declared, str(sorted(_declared)))
     check("declared_paths reads docs/plans/*.md",
           ".claude/hooks/_hooklib.py" in _declared)
+    # A root-level file is declarable. Requiring a `/` in the token was right
+    # for prose scanning and wrong on a declaration line: it silently made
+    # `CLAUDE.md`, `README.md` and `.gitignore` undeclarable, so the gate
+    # refused three files the plan explicitly named. Found by firing the hook.
+    write(tmp4, "docs/plans/2026-08-10-z.md",
+          "- Modify: `CLAUDE.md` — policy\n- Modify: `.gitignore` — ignore it\n")
+    _declared2 = _hooklib.declared_paths(root=tmp4)
+    check("a root-level file can be declared", "CLAUDE.md" in _declared2,
+          str(sorted(_declared2)))
+    check("...including a dotfile with no extension",
+          ".gitignore" in _declared2, str(sorted(_declared2)))
+    check("...while a bare directory still is not",
+          _hooklib.minimal_diff_violations(["docs/x.md"], _declared2)
+          == ["docs/x.md"])
     check("declared_paths always covers the knowledge docs",
           {"LOG.md", "HANDOFF.md", "TASK.md"} <= _declared)
     check("declared_paths is silent, not raising, on a root with no plans dir",

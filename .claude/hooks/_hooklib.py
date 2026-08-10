@@ -704,16 +704,85 @@ def declaration_sources(root=None) -> list:
 #     **Files:** `a.py`, `b.py`
 #
 # Deliberately NOT "any backtick containing a slash". That was the first
-# implementation and it made the gate inert: plan prose mentions `.claude/`,
-# `tools/**`, and even shell one-liners containing slashes, and each became a
-# blanket declaration -- twelve directory tokens plus two `**` globs covered the
-# whole repository, so an undeclared file committed with no refusal at all.
+# implementation and it made the gate inert: plan prose mentions directories,
+# recursive globs and even shell one-liners containing slashes, and each became
+# a blanket declaration covering everything beneath it -- so an undeclared file
+# committed with no refusal at all. Every test passed throughout, because each
+# drove a synthetic declared set rather than what this function returns.
 #
 # Parsing the declaration SHAPE means a file counts only where somebody wrote it
 # down as a file the work touches, which is what the plan format already says.
 DECLARE_LINE = re.compile(
     r"(?im)^\s*[-*]\s*(?:create|modify|delete|move|rename|add)\s*:\s*(.+)$")
 FILES_INLINE = re.compile(r"(?im)^\s*\**files?\**\s*:\s*\**\s*(.+)$")
+
+# The File map TABLE, which `writing-plans` C2 calls the frozen file map:
+#
+#     | `tools/worktree.py` | Create | what it owns afterwards |
+#     | `README.md`, `.gitignore` | Modify | suite count; ignore the holder |
+#
+# Parsed because it is the canonical list and the per-task bullets are not
+# always a superset of it. `.gitignore` was declared ONLY here and was refused
+# on that basis, while `README.md` looked covered purely because an unrelated
+# older plan happened to name it -- coverage that is right by accident is the
+# thing hardest to notice going wrong.
+TABLE_ROW = re.compile(
+    r"(?im)^\s*\|([^|]+)\|\s*(?:create|modify|delete|move|rename|add)\b[^|]*\|")
+
+# `**Slug:** target-workflow` -- the same declaration `tools/resume.py` keys
+# every derived fact off. Duplicated as a pattern rather than imported because
+# `_hooklib` is loaded by hooks and must not depend on `tools/`; the string it
+# matches is the contract, and `test_artifact_autocommit.py` pins the two
+# together.
+PLAN_SLUG = re.compile(r"(?im)^\*\*Slug:\*\*\s*`?([a-z0-9][a-z0-9._-]*)`?\s*$")
+BRANCH_PREFIXES = ("feat/", "fix/", "docs/", "chore/", "refactor/")
+
+
+def active_plans(root) -> list:
+    """The plan(s) belonging to THIS unit of work, newest first. Never all of them.
+
+    The gate read every `docs/plans/*.md` until this was written, so a path any
+    past plan had ever named stayed declared forever -- `capability_layer/cli.py`
+    was declared by a closed unit from a different week. Every merged plan
+    widened what may be committed unreviewed, and the refusal text said "the
+    active plan" while the code meant "any plan": prose asserting a scoping the
+    wiring did not implement.
+
+    Belonging is decided the way `tools/resume.py` decides it, in the same
+    order: a `**Slug:**` declaration first, then the filename convention. The
+    filename alone breaks the moment a plan is named after a feature while the
+    branch is named after something else, which has happened here.
+
+    An empty result is correct and safe: the caller then has only `TASK.md`, and
+    the auto-commit applies no minimal-diff gate at all when nothing beyond the
+    knowledge docs is declared. Falling back to "all plans" would restore the
+    defect exactly.
+    """
+    plans_dir = Path(root) / "docs" / "plans"
+    if not plans_dir.is_dir():
+        return []
+    candidates = sorted((p for p in plans_dir.glob("*.md")
+                         if p.name.lower() != "readme.md"), reverse=True)
+    branch = current_branch(root) or ""
+    for prefix in BRANCH_PREFIXES:
+        if branch.startswith(prefix):
+            branch = branch[len(prefix):]
+            break
+    if not branch:
+        return []
+
+    declared_match = []
+    for path in candidates:
+        try:
+            head = path.read_text(encoding="utf-8", errors="ignore")[:4000]
+        except OSError:
+            continue
+        found = PLAN_SLUG.search(head)
+        if found and found.group(1) == branch:
+            declared_match.append(path)
+    if declared_match:
+        return declared_match
+    return [p for p in candidates if branch in p.name]
 
 
 def declared_paths(root=None) -> set:
@@ -736,17 +805,16 @@ def declared_paths(root=None) -> set:
             texts.append(task_md.read_text(encoding="utf-8", errors="ignore"))
         except OSError:
             pass
-    plans_dir = root / "docs" / "plans"
-    if plans_dir.is_dir():
-        for p in sorted(plans_dir.glob("*.md")):
-            try:
-                texts.append(p.read_text(encoding="utf-8", errors="ignore"))
-            except OSError:
-                pass
+    for p in active_plans(root):
+        try:
+            texts.append(p.read_text(encoding="utf-8", errors="ignore"))
+        except OSError:
+            pass
     declared: set = set()
     for text in texts:
         values = [m.group(1) for m in DECLARE_LINE.finditer(text)]
         values += [m.group(1) for m in FILES_INLINE.finditer(text)]
+        values += [m.group(1) for m in TABLE_ROW.finditer(text)]
         for value in values:
             # Cut the reason clause first. The plan format is
             #
@@ -762,8 +830,14 @@ def declared_paths(root=None) -> set:
                 if not token or " " in token or "\t" in token:
                     continue          # a sentence or a shell command, not a path
                 token = token.split(":", 1)[0]   # `file.py:symbol` declares the file
-                if "/" not in token or token.endswith("/"):
-                    continue          # a bare name or a directory is not a file
+                # No `/` requirement. A slash was the only signal that a
+                # backtick in PROSE was a path; on a declaration line the line
+                # itself is the signal, and demanding one meant no root-level
+                # file could ever be declared -- `CLAUDE.md`, `README.md` and
+                # `.gitignore` were refused while the plan declared all three.
+                # Caught by firing the hook, not by the suite.
+                if not token or token.endswith("/"):
+                    continue          # a directory is not a file
                 declared.add(token)
     return declared | set(KNOWLEDGE_DOCS)
 

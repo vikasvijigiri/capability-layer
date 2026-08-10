@@ -286,13 +286,11 @@ gate nobody can afford to run gets switched off:
     python tools/run_checks.py --tier all --require-test
     python tools/run_checks.py --scoped         # only what the change touches
 
-`--scoped` narrows the fast tier to the suites `test_map` maps the changed paths
-to, and **only on a change `tools/scope.py` calls `small`** — a `major` or
-`undetermined` one is refused with exit 2 rather than narrowed. It prints
-`PARTIAL PASS`, never `PASS`, names every suite it skipped, escalates any
-unmapped code path to the full tier, and cannot move `refs/uaios/green/<slug>`.
-"Fast" must mean *ran fewer checks and said which*, never *green on less
-evidence*. `.claude/workflow.md` owns the scope table and the three consumers.
+`--scoped` narrows the fast tier on a change `tools/scope.py` calls `small`, and
+refuses one it calls `major` or `undetermined`. **"Fast" means *ran fewer checks
+and said which*, never *green on less evidence*** — the three rules that keep
+that true are in `.claude/workflow.md`, which owns the scope table, the three
+consumers and the veto list. Stated once there, not restated here.
 
 **Review moves to the push/PR**, over the whole branch — a commit that needs a
 human is not a checkpoint. `wip:` is deliberate: squash-merge collapses them.

@@ -113,6 +113,22 @@ check("an empty change is undetermined, not small",
 # The whole reason `shared-surface` works is that it reuses the two tables that
 # already exist. A copy would drift the moment either changed -- the same defect
 # as the three disagreeing commit tokenisers.
+# `lstrip` takes a character SET, so `lstrip("./")` ate the leading dot and
+# `./.claude/settings.json` became `claude/settings.json`, matching nothing.
+# The identical defect this plan's Task 1 removed from
+# `parallel_groups.normalise`, shipped again in the new file -- so both limbs
+# are pinned: the prefix goes, the dot stays.
+check("_norm strips a ./ prefix without eating the dot",
+      scope._norm("./.claude/settings.json") == ".claude/settings.json",
+      scope._norm("./.claude/settings.json"))
+check("...repeatedly, and on backslashes",
+      scope._norm(".\\\\.github\\\\workflows\\\\ci.yml").endswith(".github/workflows/ci.yml"),
+      scope._norm(".\\\\.github\\\\workflows\\\\ci.yml"))
+check("a ./-prefixed control surface still fires its clause",
+      scope.classify({"paths": ["./.claude/hooks/_hooklib.py"], "test_map": {}})["fired"]
+      == scope.classify({"paths": [".claude/hooks/_hooklib.py"], "test_map": {}})["fired"],
+      "the prefix changed the verdict, so a control surface was invisible")
+
 check("shared-surface reuses _hooklib's migration table",
       "migrations/*" in scope._migration_patterns(),
       str(scope._migration_patterns())[:120])

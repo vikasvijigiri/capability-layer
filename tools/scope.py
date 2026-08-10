@@ -97,8 +97,25 @@ def _shared_patterns() -> list[str]:
 
 
 def _norm(path: str) -> str:
-    return path.replace("\\", "/").lstrip("./") if path.startswith("./") \
-        else path.replace("\\", "/")
+    """Repo-relative, forward slashes, no `./` prefix -- and the dot KEPT.
+
+    `lstrip("./")` was the first version and it is the same defect this plan's
+    Task 1 removed from `parallel_groups.normalise`: `lstrip` takes a character
+    SET, so `./.claude/settings.json` became `claude/settings.json` and matched
+    no pattern at all. Measured: `classify(["./.claude/hooks/_hooklib.py"])`
+    fired only `unmapped`, while the identical path without the prefix fired
+    `control-surface` too -- so a control surface was invisible and the change
+    could classify `small`.
+
+    Latent rather than live, because `gather()` sources paths from
+    `git diff --name-only` and `git status --porcelain`, neither of which emits
+    a `./` prefix. `classify()` is public and is what every consumer calls, so
+    it is fixed rather than documented.
+    """
+    out = path.replace("\\", "/")
+    while out.startswith("./"):
+        out = out[2:]
+    return out
 
 
 def _match(path: str, patterns: list[str]) -> bool:
