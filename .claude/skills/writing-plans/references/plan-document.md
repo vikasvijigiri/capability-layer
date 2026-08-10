@@ -28,6 +28,9 @@ Use a stable, descriptive feature name. The document MUST begin with:
 
 **Slug:** [the unit of work, matching the branch — see below]
 
+**Risk:** [low | medium | high — computed, not judged: run
+`python tools/scope.py --plan <this file>` and paste its one-line reason]
+
 **Architecture:** [the chosen approach and why it fits the existing system]
 
 **Tech stack and constraints:** [versions, boundaries, conventions, and non-goals]
@@ -38,6 +41,18 @@ Use a stable, descriptive feature name. The document MUST begin with:
 ## Tasks
 ...
 ```
+
+**`**Risk:**` is computed, never judged.** `tools/scope.py --plan <file>` reads
+the plan's own `- Create:` / `- Modify:` declaration lines and applies the same
+veto list the tier uses: a shared or control surface forces `high`, volume or
+spread forces `medium`, a sensitive surface (auth, credentials, the installer,
+packaging, CI) forces `high` on its own, and an unclassifiable plan is `high`
+rather than `low`. Exit code is the tier: `0` low, `1` medium, `2` high.
+
+Four things downstream read it — how deep the security pass goes, how a merge is
+narrowed, what shape a release takes, and what Gate 2 is shown. It is **not**
+permission to skip Gate 2: a low-risk plan still asks. Auto-approving a shipment
+would contradict the one rule that has no exceptions anywhere in this layer.
 
 **`**Slug:**` is machine-read and is not decoration.** `tools/resume.py` keys
 every derived fact off one slug — the plan, `refs/uaios/green/<slug>`, the attempt

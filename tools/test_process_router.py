@@ -302,6 +302,8 @@ NOT_SKILLS = {
     # precisely why this checker mistook them for skills.
     "small", "major", "undetermined",
     "shared-surface", "control-surface", "spread", "unmapped", "volume",
+    # risk tiers, and the clause that forces one on its own
+    "low", "medium", "high", "sensitive-surface",
     # git nouns
     "base", "main",
 }
@@ -1097,6 +1099,27 @@ check("`code-review` reads the computed scope rather than judging it",
 check("...and a narrowed review declares its scope in the verdict",
       "scope" in _cr.lower() and "passed: true" in _cr,
       "a `small` verdict read as a whole-branch verdict is the failure here")
+
+# --- the risk tier never becomes permission -----------------------------------
+#
+# The checklist this was built against proposed auto-approving Gate 2 for
+# low-risk plans. It is refused, and the refusal needs an assertion rather than
+# a paragraph: a tier computed by the system that wants to ship must never be
+# able to waive the one rule that has no exceptions.
+_rel = (SKILLS / "releasing" / "SKILL.md").read_text(encoding="utf-8")
+check("`releasing` shows the risk tier at the shipment gate",
+      "tools/scope.py --plan" in _rel,
+      "a reader approving a shipment needs to know it touches a migration")
+check("...and states that the tier never waives the gate",
+      "never whether it is **asked**" in _rel or "still asks" in _rel,
+      "auto-approve-on-low would make the second gate conditional")
+_wf_text_risk = (ROOT / ".claude" / "workflow.md").read_text(encoding="utf-8")
+check("workflow.md owns the tier table",
+      "risk tier" in _wf_text_risk.lower() and "undetermined` is `high" in _wf_text_risk,
+      "an unclassifiable plan must not tier low")
+check("every plan must carry a computed risk tier",
+      '"**Risk:**"' in (ROOT / "tools" / "analyze.py").read_text(encoding="utf-8"),
+      "an untiered plan would reach Gate 1 with the tier unavailable downstream")
 
 # The scoped tier must not be able to produce the word every reader copies.
 #

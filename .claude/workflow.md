@@ -154,6 +154,42 @@ diff, fewer dependencies, stronger tests, and lower risk. Configure protected
 branches, required checks, and merge queue in the hosting service; the workflow
 never force-pushes or bypasses them.
 
+## How much the pipeline may trust automation with it — the risk tier
+
+Separate from `small`/`major`, and answering a different question. That one asks
+how much of the repository a change should be checked against; this asks how far
+the work may travel before a person looks at it.
+
+    python tools/scope.py --plan <plan>     # 0 low · 1 medium · 2 high
+
+Assigned at **planning time**, from the plan's own `- Create:` / `- Modify:`
+lines — before any diff exists, which is the point: the tier has to be available
+to decide what the rest of the run does. Same veto discipline as the scope
+verdict, so it stays auditable:
+
+| Forced by | Tier |
+|---|---|
+| a shared surface — migration, lockfile, CI config | `high` |
+| a control surface — hooks, agents, `workflow.md`, `settings.json` | `high` |
+| a sensitive surface — auth, credentials, the installer, packaging | `high` |
+| volume, or spread across containers | `medium` |
+| nothing | `low` |
+
+**`undetermined` is `high`.** A plan that cannot be classified is not a low-risk
+plan, and this is the last place in the chain where guessing is cheap.
+
+`**Risk:**` is a required section of every plan — `tools/analyze.py` refuses a
+plan without it, so an untiered plan cannot reach Gate 1.
+
+### What the tier does *not* do
+
+**It never skips Gate 2.** A low-risk shipment still asks. Auto-approve-on-low
+was considered and refused: *never push, merge, publish or deploy without
+explicit user approval* is the one rule in this layer with no exceptions, and a
+tier computed by the same system that wants to ship is not the thing that should
+be allowed to waive it. The tier decides what Gate 2 is **shown**, not whether it
+is **asked**.
+
 ## How much of the repository a change is checked against
 
 `small` and `major` decide the breadth of the tier, the sweep and the review.

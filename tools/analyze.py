@@ -40,7 +40,7 @@ def _load(rel: str, name: str):
 
 _rs = _load("tools/resume.py", "resume_for_analyze")
 
-REQUIRED_HEADINGS = ["**Goal:**", "## File map", "## Tasks"]
+REQUIRED_HEADINGS = ["**Goal:**", "**Risk:**", "## File map", "## Tasks"]
 TASK_RE = re.compile(r"(?m)^###\s+Task\s+(\d+)\s*:?(.*)$")
 GATE_RE = re.compile(r"(?m)^- \[( |x|X)\]\s+([IVX]+)\s")
 # `- [ ] Task 3 — title`. Distinguished from GATE_RE by what follows the box:

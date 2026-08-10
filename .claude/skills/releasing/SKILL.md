@@ -15,6 +15,18 @@ At the shipment gate, present the release candidate, smoke evidence, rollback,
 and target, then use `AskUserQuestion` for the single explicit shipment
 approval. Do not ask for approval earlier in the workflow.
 
+**Show the risk tier in the question**, from
+`python tools/scope.py --plan <plan>` — `0` low, `1` medium, `2` high, with the
+clause that forced it. A reader deciding whether to ship needs to know that this
+change touches a migration or the installer, and that fact is computed rather
+than remembered.
+
+**The tier never waives this gate.** A low-risk shipment still asks. Nothing in
+this layer may push, merge, publish or deploy on an inferred yes, and a tier
+computed by the system that wants to ship is not the thing that gets to waive
+the one rule with no exceptions. The tier decides what the question **shows**,
+never whether it is **asked**.
+
 Offer ship, hold, and reject as real options, and **say in the question that
 hold and reject take the reason as free text** — the tool appends its own
 "Other" for that; never add one. Record the answer verbatim, including anything

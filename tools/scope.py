@@ -71,6 +71,39 @@ CONTROL_PATTERNS = [
 
 CLAUSES = ("shared-surface", "control-surface", "volume", "spread", "unmapped")
 
+# --- risk tier ---------------------------------------------------------------
+#
+# `small`/`major` answers "how much of the repo does this change deserve to be
+# checked against". `low`/`medium`/`high` answers a different question -- "how
+# much of the pipeline should trust automation with it" -- and four things read
+# it: whether a deep security pass runs, whether a merge may be narrowed, what
+# shape a release takes, and whether Gate 2 may auto-approve.
+#
+# Same veto principle, so the answer stays auditable: a tier is forced by a named
+# clause, never averaged. The tiers are ordered and the highest forced wins.
+TIERS = ("low", "medium", "high")
+
+# Paths where a mistake is not merely a bug. Auth and credentials because the
+# blast radius is other people's data; the installer and the packaging because a
+# defect there lands in every repository that takes an upgrade, which is the one
+# failure this project can cause outside itself.
+SENSITIVE_PATTERNS = [
+    "**/auth/**", "**/auth.*", "**/*password*", "**/*credential*",
+    "**/*secret*", "**/session*.py", "**/permission*",
+    ".claude/install.py", "capability_layer/**", "pyproject.toml",
+    ".github/workflows/**",
+]
+
+# Which clause forces which tier. A clause absent from here contributes nothing
+# on its own -- `unmapped` is deliberately absent, because an unmapped path is a
+# gap in the test map rather than a fact about the change's danger.
+CLAUSE_TIER = {
+    "shared-surface": "high",     # migrations and lockfiles: least reversible
+    "control-surface": "high",    # changes what fires for every later change
+    "volume": "medium",
+    "spread": "medium",
+}
+
 
 def _load(rel: str, name: str):
     spec = importlib.util.spec_from_file_location(name, ROOT / rel)
@@ -200,6 +233,70 @@ def classify(facts: dict) -> dict:
             "considered": list(CLAUSES), "detail": detail, "reason": reason}
 
 
+def tier(verdict: dict, paths=None) -> dict:
+    """Pure. A `classify()` verdict (+ its paths) -> {tier, forced_by, reason}.
+
+    Ordered veto, not an average: every clause that forces a tier is named, and
+    the highest one wins. `undetermined` is `high`, never `low` -- Article V,
+    and the tier is what decides whether a human may be skipped at Gate 2, which
+    is the last place to guess.
+    """
+    if verdict.get("scope") == "undetermined":
+        return {"tier": "high", "forced_by": ["undetermined"],
+                "reason": "the change could not be classified, and an "
+                          "unclassifiable change is never low-risk"}
+
+    forced: dict[str, str] = {}
+    for clause in verdict.get("fired", []):
+        if clause in CLAUSE_TIER:
+            forced[clause] = CLAUSE_TIER[clause]
+
+    sensitive = [p for p in (_norm(p) for p in (paths or []))
+                 if _match(p, SENSITIVE_PATTERNS)]
+    if sensitive:
+        forced["sensitive-surface"] = "high"
+
+    if not forced:
+        return {"tier": "low", "forced_by": [],
+                "reason": "no clause forces a tier above low",
+                "sensitive": []}
+
+    highest = max(forced.values(), key=TIERS.index)
+    names = sorted(k for k, v in forced.items() if v == highest)
+    return {"tier": highest, "forced_by": names,
+            "reason": f"{highest} forced by: {', '.join(names)}",
+            "sensitive": sensitive}
+
+
+def plan_paths(plan: Path) -> list[str] | None:
+    """The paths a PLAN declares, for tiering work that has no diff yet.
+
+    Sourced from `_hooklib.declared_paths`, which parses the plan's own
+    `- Create:` / `- Modify:` / `**Files:**` lines. Reused rather than
+    re-parsed: the minimal-diff gate and the risk tier must agree on what a plan
+    declares, or a file can be in scope for one and not the other.
+
+    None when the plan cannot be read, which tiers `high` rather than `low`.
+    """
+    mod = _load(".claude/hooks/_hooklib.py", "hooklib_tier")
+    if mod is None or not plan.is_file():
+        return None
+    try:
+        text = plan.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return None
+    declared: set = set()
+    for m in mod.DECLARE_LINE.finditer(text):
+        value = m.group(1)
+        import re as _re
+        value = _re.split(r"\s+(?:—|–|--)\s+|\s+#\s+", value, maxsplit=1)[0]
+        for raw in _re.findall(r"`([^`\n]+)`", value):
+            token = raw.strip().rstrip(",;.").replace("\\", "/").split(":", 1)[0]
+            if token and not token.endswith("/") and " " not in token:
+                declared.add(token)
+    return sorted(declared)
+
+
 def _run(args: list[str], cwd: Path) -> str | None:
     """None on failure. `""` means a real, empty success -- see delivery_check."""
     try:
@@ -252,15 +349,38 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--root", default=".")
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--plan", default=None,
+                    help="tier a PLAN's declared paths instead of a diff -- "
+                         "this is how work is tiered before it exists")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
+
+    if args.plan:
+        declared = plan_paths(Path(args.plan))
+        facts = gather(root, args.base, offline=True)
+        facts["paths"] = declared
+        result = classify(facts)
+        risk = tier(result, declared)
+        if args.json:
+            print(json.dumps({**result, **risk, "paths": declared}, indent=2))
+        else:
+            print(f"risk: {risk['tier']}  --  {risk['reason']}")
+            print(f"scope: {result['scope']}  --  {result['reason']}")
+            for path in risk.get("sensitive") or []:
+                print(f"  [sensitive-surface] {path}")
+            print(f"  {len(declared or [])} path(s) declared by the plan")
+        # 0 low · 1 medium · 2 high. Ordered, so a caller can threshold on it.
+        return TIERS.index(risk["tier"])
+
     result = classify(gather(root, args.base, offline=args.offline))
+    risk = tier(result, gather(root, args.base, offline=args.offline).get("paths"))
 
     if args.json:
-        print(json.dumps(result, indent=2))
+        print(json.dumps({**result, **risk}, indent=2))
     else:
         print(f"scope: {result['scope']}  --  {result['reason']}")
+        print(f"risk:  {risk['tier']}  --  {risk['reason']}")
         for clause in result["fired"]:
             for item in result["detail"].get(clause, []):
                 print(f"  [{clause}] {item}")

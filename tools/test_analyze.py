@@ -42,6 +42,8 @@ GOOD = """# Checkout retry Implementation Plan
 
 **Goal:** retry a failed checkout once before surfacing an error.
 
+**Risk:** low — `scope.py --plan` reports no clause forces a tier above low.
+
 **Source spec:** docs/specs/2026-08-07-checkout-retry-design.md
 
 ## Constitution gate

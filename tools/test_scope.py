@@ -152,8 +152,97 @@ live = scope.gather(root, "HEAD")
 check("gather() against a real repo returns a list of paths",
       isinstance(live["paths"], list), str(live)[:160])
 
+# --- risk tier ----------------------------------------------------------------
+#
+# A different question from small/major: not "how much of the repo does this
+# deserve" but "how much of the pipeline may trust automation with it". Four
+# things read it, and one of them decides whether a human is skipped at Gate 2 --
+# so the same veto discipline applies, and `undetermined` must never be `low`.
+
+low = scope.tier(scope.classify(QUIET), QUIET["paths"])
+check("a change firing nothing is low risk", low["tier"] == "low", str(low))
+check("...and nothing forced it", low["forced_by"] == [], str(low))
+
+# One case per clause that forces a tier, each inverted alone.
+for clause, expect in scope.CLAUSE_TIER.items():
+    facts = dict(QUIET, paths=INVERSIONS[clause])
+    got = scope.tier(scope.classify(facts), INVERSIONS[clause])
+    check(f"[{clause}] alone forces {expect}", got["tier"] == expect,
+          f"got {got['tier']} -- {got['reason']}")
+    check(f"[{clause}] ...and is named as the reason",
+          clause in got["forced_by"], str(got["forced_by"]))
+
+# `unmapped` is deliberately NOT a tier-forcing clause: it is a gap in the test
+# map, not a fact about danger. Asserted so that adding it later is a decision
+# rather than a drift.
+check("unmapped does not force a tier on its own",
+      "unmapped" not in scope.CLAUSE_TIER,
+      "an unmapped path is a coverage gap, not a risk signal")
+
+# The highest forced tier wins, and every clause at that level is named -- an
+# average would let a `medium` dilute a `high`, which is the failure a veto list
+# exists to prevent.
+mixed = dict(QUIET, paths=[".claude/hooks/_hooklib.py", "tools/a.py", "docs/b.py"])
+got = scope.tier(scope.classify(mixed), mixed["paths"])
+check("the highest forced tier wins over a lower one",
+      got["tier"] == "high", str(got))
+check("...and only the winning clauses are named",
+      "spread" not in got["forced_by"], str(got["forced_by"]))
+
+# Sensitive surfaces force high on their own, even when no veto clause fires.
+# The installer is the one defect this project can ship into other repositories.
+sens = {"paths": [".claude/install.py"], "test_map": {".claude/*.py": "x"}}
+got = scope.tier(scope.classify(sens), sens["paths"])
+check("a sensitive surface forces high by itself",
+      got["tier"] == "high" and "sensitive-surface" in got["forced_by"], str(got))
+check("...and names the path that did it",
+      ".claude/install.py" in (got.get("sensitive") or []), str(got))
+
+# Article V, at the point it matters most.
+und = scope.tier({"scope": "undetermined", "fired": []}, None)
+check("an undetermined change is high risk, never low",
+      und["tier"] == "high", str(und))
+check("...and says why", "never low-risk" in und["reason"], und["reason"])
+
+# --- tiering a plan, before any diff exists -----------------------------------
+#
+# The whole point: work is tiered at planning time, so the tier can decide what
+# the rest of the pipeline does. Sourced from the plan's own declaration lines
+# via `_hooklib.declared_paths`' parser -- reused, not re-implemented, or the
+# minimal-diff gate and the tier could disagree about what a plan declares.
+import tempfile  # noqa: E402
+
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as _d:
+    _plan = Path(_d) / "p.md"
+    _plan.write_text(
+        "# Plan\n\n### Task 1\n"
+        "- Modify: `tools/quiet_one.py` — a reason mentioning `.claude/hooks/x.py`\n"
+        "- Create: `tools/quiet_two.py`\n", encoding="utf-8")
+    declared = scope.plan_paths(_plan)
+    check("plan_paths reads the declaration lines",
+          declared == ["tools/quiet_one.py", "tools/quiet_two.py"], str(declared))
+    check("...and does not harvest the reason clause",
+          ".claude/hooks/x.py" not in (declared or []),
+          "a path named in a REASON is not declared, or every plan tiers high")
+
+    _plan.write_text("# Plan\n\n### Task 1\n"
+                     "- Modify: `.claude/hooks/_hooklib.py` — the gate\n",
+                     encoding="utf-8")
+    declared2 = scope.plan_paths(_plan)
+    got = scope.tier(scope.classify({"paths": declared2, "test_map": {}}), declared2)
+    check("a plan touching a control surface tiers high",
+          got["tier"] == "high", str(got))
+
+    check("an unreadable plan yields None, which tiers high",
+          scope.plan_paths(Path(_d) / "absent.md") is None)
+
+# Exit codes are ordered so a caller can threshold on them.
+check("the tier order is low < medium < high",
+      scope.TIERS == ("low", "medium", "high"), str(scope.TIERS))
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")
     sys.exit(1)
-print(f"All scope tests passed ({len(scope.CLAUSES)} clauses)")
+print(f"All scope tests passed ({len(scope.CLAUSES)} clauses, "
+      f"{len(scope.TIERS)} risk tiers)")

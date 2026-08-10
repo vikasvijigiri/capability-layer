@@ -8,6 +8,11 @@ retry, scoped sweep and review, confirmed push, Gate 2, release, record.
 
 **Slug:** target-workflow
 
+**Risk:** high — `python tools/scope.py --plan docs/plans/2026-08-10-target-workflow.md`
+reports `high forced by: control-surface, shared-surface` over 18 declared paths.
+Correct: this plan edits the hook that gates every commit and the file that
+decides what fires.
+
 **Architecture:** ~70% of the target already exists. This plan corrects one live
 defect, proves one mechanism that has never worked, and builds four things —
 scope decision, scoped sweep/review/tests, minimal-diff enforcement, plan-mode
