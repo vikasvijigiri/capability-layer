@@ -54,6 +54,14 @@ Each is its own unit and enters at `writing-plans`:
 4. **`ISSUES.md` carries two `0x08` bytes**, in the entry describing `0x08`
    bytes. See `ISSUES.md` 2026-08-11 21:15.
 
+5. **`WAITING_DELIVERY` never fires.** `derive_state` returns `BUILD` on
+   `checks_green is None`, before reaching it — and `checks_green` comes from
+   `refs/uaios/green/<slug>`, which only the auto-commit hook writes. Commit by
+   hand, or have the auto-commit refuse once, and the ref is never set: this
+   branch has no green ref while five older slugs do. The chain instrument then
+   reports `stalled` forever on a finished unit, correctly by its own rule. See
+   `ISSUES.md` 2026-08-11 21:45.
+
 Unchanged and still true: branch protection is unavailable on this repo tier
 (`403 Upgrade to GitHub Pro`); seven branches merged into `main` are dead
 weight; `feat/adaptive-workflow` @ `076914e` carries a superseded plan nothing

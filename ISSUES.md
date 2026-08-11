@@ -6,6 +6,41 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-11 21:45 — WAITING_DELIVERY is unreachable when commits are made by hand
+
+- **Phase/Context**: after `knowledge-manager` closed the unit, the chain
+  instrument was still reporting `stalled` — on a unit that was finished.
+- **Symptom**: `resume.py` derives `BUILD` for a branch where every fact
+  `WAITING_DELIVERY` requires is true: `plan_tasks_done=True`,
+  `commits_ahead=18`, `pr_number=None`. The state Task 1 built for exactly this
+  situation never fires.
+- **Diagnosis**: `derive_state` returns `BUILD` at `resume.py:496` —
+  `if green is None: return "BUILD"` — before it ever reaches the
+  `WAITING_DELIVERY` branch at :499. `checks_green` is `None` because it is read
+  from `refs/uaios/green/<slug>`, and **only `post-run/06-artifact-autocommit.py`
+  ever writes that ref**, at the end of a successful auto-commit.
+
+  This unit's commits were made by hand. The auto-commit additionally refused
+  several turns outright — correctly — on the minimal-diff gate, because
+  undeclared files were in the tree. So the green ref for `checklist-completion`
+  was never set: `git for-each-ref refs/uaios/green/` lists five slugs and not
+  this one.
+
+  The chain then compounds it. Pinned `BUILD` + a churning tree + flat progress
+  is precisely the three-limb stall condition, so the instrument reported a
+  missed handoff on every turn after the plan finished — correctly, by its own
+  rule, about a unit that had none.
+- **Attempts**: none — this is a fifth mechanism-does-not-fire finding in one
+  session and belongs in a plan, not in an ad-hoc edit to the state machine.
+  `tools/resume.py` is a control surface: `scope.py` tiers a change touching it
+  `high`.
+- **Fix**: not applied. Three shapes are open and the choice is not obvious:
+  derive `checks_green` from a fresh check run rather than from the ref; let
+  `WAITING_DELIVERY` be reachable on `green is None` since an unverified branch
+  still awaits a delivery decision; or have something other than the auto-commit
+  move the ref. Each changes what a *different* consumer sees.
+- **Status**: `Open` — the fifth item in `HANDOFF.md` Pending.
+
 ## 2026-08-11 20:10 — The first gate could not be asked, and its guard passed
 
 - **Phase/Context**: presenting a finished plan at Gate 1, hours after Gate 1
