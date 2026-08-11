@@ -6,6 +6,99 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-11 20:10 — The first gate could not be asked, and its guard passed
+
+- **Phase/Context**: presenting a finished plan at Gate 1, hours after Gate 1
+  was changed from `AskUserQuestion` to `ExitPlanMode`.
+- **Symptom**: `ExitPlanMode` refused outright — *"You are not in plan mode. To
+  enter plan mode, call the EnterPlanMode tool first."* The same change had
+  removed `AskUserQuestion` from `writing-plans` and added an assertion
+  forbidding it, so **the chain's first gate had no working mechanism** unless
+  the session happened to already be in plan mode.
+- **Diagnosis**: two compounding errors. The gate depended on a mode nothing
+  entered; and `references/plan-mode.md`, written to explain the gate, asserted
+  *"There is no tool for it"* about entering plan mode. `EnterPlanMode` exists —
+  the refusal message names it. The guard passed the whole time because it
+  checked the tool was **named in the file**, not that the gate was
+  **reachable**. Presence is not reachability.
+- **Attempts**:
+  - 1. Called `ExitPlanMode` to present the plan → refused, which is how the
+    defect surfaced at all.
+  - 2. Read `EnterPlanMode`'s actual contract → it exists, it raises its own
+    consent prompt, and it recommends `AskUserQuestion` for *clarifying* inside
+    plan mode. So the blanket ban was over-tight as well as load-bearing.
+- **Fix**: `writing-plans` calls `EnterPlanMode` itself at Stage C, so planning
+  happens in plan mode without anyone selecting it. The ban narrowed from the
+  tool to the approval: Gate 1's approval is `ExitPlanMode` only, a
+  clarification may use `AskUserQuestion`. The assertion now checks
+  reachability, and a further one fails if the false sentence returns. The
+  quotation of it survives in a blockquote, and the checker excludes
+  blockquoted lines so recording an error is not itself an error.
+- **Status**: `Resolved`
+
+## 2026-08-11 19:05 — A licence gate that let every denied licence through
+
+- **Phase/Context**: first run of `tools/deps.py`'s own suite, immediately after
+  writing it.
+- **Symptom**: every one of the five denied families reported `ok`. `AGPL-3.0`,
+  `GPL-3.0`, `SSPL`, `BUSL` and `CC-BY-NC` all passed a denylist naming them.
+- **Diagnosis**: the tokeniser's character class was `[A-Za-z0-9.+-]+`, which
+  **includes the hyphen**, so `AGPL-3.0` stayed a single token and never equalled
+  `AGPL`. The gate would have shipped green and enforced nothing.
+- **Attempts**:
+  - 1. Substring matching (`"GPL" in licence`) → rejected before writing: it
+    matches `LGPL-2.1`, which is permitted, and the fix people reach for is a
+    blanket exception that then covers the licences that should block.
+  - 2. Tokenise on non-alphanumerics → breaks `CC-BY-NC`, whose own name is
+    hyphenated.
+  - 3. Match the denied name where it is not flanked by a **letter** → correct in
+    both directions: `GPL` blocks `GPL-3.0`, does not block `LGPL-2.1`, and
+    `AGPL` matches its own entry.
+- **Fix**: `_denies()` with a letter-boundary lookaround, and both directions
+  asserted. The suite caught this before any commit, which is the whole argument
+  for writing the failing case first.
+- **Status**: `Resolved`
+
+## 2026-08-11 18:40 — The stall detector cried wolf on a healthy execution
+
+- **Phase/Context**: executing a twelve-task plan, rounds landing normally.
+- **Symptom**: `chain: stalled` on four consecutive turns while every round was
+  green and committing.
+- **Diagnosis**: `assess()` read two facts — has the state changed, has the tree
+  changed — and a long plan legitimately sits in `BUILD` for many turns while
+  files change constantly. A healthy execution and a dropped handoff are
+  identical under that rule. The instrument was reporting a false break on the
+  very run that built it, which is the failure its own suite warns about: a
+  detector nobody believes is worse than none.
+- **Attempts**:
+  - 1. Raising `STALL_TURNS` → rejected: it delays the true positive by exactly
+    as much as it suppresses the false one.
+  - 2. Adding a third limb from a signal already on disk — the plan's ticked
+    `## Progress` boxes. A rising count is proof of advance whatever the state
+    machine says.
+- **Fix**: a stall now requires the state pinned **and** the tree churning
+  **and** progress flat. Each limb has its own case. An absent plan yields
+  `None`, not `0`, and falls back to the two-limb rule — no plan is not evidence
+  of no progress. It then stayed quiet through five further rounds and fired
+  correctly once the plan finished with its successor un-invoked.
+- **Status**: `Resolved`
+
+## 2026-08-11 21:15 — The incident report about corrupt bytes contains corrupt bytes
+
+- **Phase/Context**: `code-review` over the whole branch, running a byte scan
+  across every changed file.
+- **Symptom**: two literal `0x08` bytes at `ISSUES.md:4245` and `:4317` — inside
+  the 2026-08-10 entry that documents literal `0x08` bytes.
+- **Diagnosis**: that entry was written through a bash heredoc, and describing
+  the bug required writing the escape sequence that causes it. The heredoc
+  converted it exactly as it had in the original defect. The report reproduced
+  the failure it reports.
+- **Attempts**: none yet.
+- **Fix**: none yet. It is documentation corruption rather than a behavioural
+  defect, so it was recorded rather than repaired mid-review — a reviewer that
+  edits produces a verdict covering a tree that no longer exists.
+- **Status**: `Open` — grouped with three other follow-ups in `HANDOFF.md`.
+
 ## 2026-08-10 18:30 — A commit gate passed 76 assertions while doing nothing
 
 - **Phase/Context**: `verifying-work` on the target-workflow plan, immediately

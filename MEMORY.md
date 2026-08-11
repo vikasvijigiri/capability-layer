@@ -55,6 +55,11 @@ in HANDOFF.md; chronological events belong in LOG.md. -->
 - Hook runtime is a correctness property. A reporting hook runs on every turn,
   and one shipped at 5.2s because nothing measured it; a per-turn tax that size
   is how a mechanism gets switched off.
+- A threshold calibrated on partial samples fires on the first complete one.
+  `budget.py`'s 3.0h ceiling came from two units already in progress when the
+  ledger started, so it encoded how much of a unit was visible rather than how
+  long one takes; the first complete unit came in 6.6x over. Measure a bound
+  from finished instances, or state the censoring where the number is defined.
 - `isolation: worktree` bases an agent's tree on the **default** branch, not the
   branch in play. Create the worktree explicitly with `tools/worktree.py`, naming
   the base, and prove it with `git merge-base --is-ancestor` read from the tree —

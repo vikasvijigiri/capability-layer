@@ -3,6 +3,47 @@
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
+## 2026-08-11 21:30
+
+**Twelve tasks closed the measurable half of `GOAL_CHECKLIST.md`; the
+unmeasurable half is recorded as unbuildable rather than described.** 17
+commits, `c9f7ce6..198b559`, `63 files changed, 9175 insertions(+), 508
+deletions(-)` against `main`. Full tier at close: `PASS: 49 check(s) green
+(audit, build, lint, smoke, test, typecheck)`. Nothing pushed, no PR.
+
+**Six subagents ran concurrently in one round.** The previous record was two,
+and before this session it was zero. Every worktree was proved on the working
+branch by `git merge-base --is-ancestor` read from the tree rather than from any
+agent's report, and the seventeen changed paths were fully disjoint. The recipe
+that works is `tools/worktree.py` with a mandatory explicit base plus an agent
+that does not force its own isolation — the harness's `isolation: worktree`
+still bases on the default branch and then refuses to launch.
+
+**The reframing that made §12-§14 buildable: the deployable artefact is the
+wheel, and "production" is a target repository with the layer installed.** That
+was not a device to make the checklist pass — `tools/test_package.py` already
+built the wheel, installed it into a clean venv and a fresh repo, and required
+that repo's own tier green. The rehearsal existed and nothing collected its
+result. `install.py --uninstall` is likewise a real rollback, and the checklist
+asks for one that has been *run*: `_rollback_probe` installs into a scratch
+repo, uninstalls, and reads the tree back — `True` in 0.4s, and `'uninstall
+exited 1'` when `uninstall_plan` is disabled, so the probe can fail.
+
+**Gate 2 auto-approve for low-risk plans was refused, and the refusal has an
+assertion.** The checklist asks for it. A tier computed by the system that wants
+to ship must not be able to waive the one rule with no exceptions, so the tier
+decides what Gate 2 is *shown*, never whether it is *asked*.
+
+**Seventeen of the twenty-one remaining absences need a running service** —
+canary rollout, auto-rollback on error rate, alerting, bake time, DAST. They are
+in the plan's Out of Scope with the reason. Writing four skills describing them
+would have moved the count without moving the capability, which is the exact
+defect the audit measures.
+
+**Every defect worth recording was found by running something, not by a test.**
+Four in `ISSUES.md`, including one found by `code-review` inside the entry
+documenting the identical bug.
+
 ## 2026-08-10 18:40
 
 **The layer's own workflow ran end to end on itself, and three mechanisms it

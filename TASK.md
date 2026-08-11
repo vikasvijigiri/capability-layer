@@ -108,6 +108,25 @@
 - **Done Checks:** `python tools/test_session_start_contract.py` exits 0; the loader creates only the intended placeholders; the task brief remains in `TASK.md` and is ready to implement.
 - **Out of scope:** generating full content for the skeleton files, creating actual `.claude/agents/` definitions, or changing hooks outside SessionStart.
 
+### Close the GOAL_CHECKLIST gaps that have an honest implementation
+
+- **Status:** Done — 12/12 tasks, reviewed `passed: true`, `PASS: 49 check(s)
+  green`. Branch `feat/checklist-completion`, local and unpushed.
+- **Goal:** close every `GOAL_CHECKLIST.md` line with a real implementation
+  here, and state plainly in the plan which lines have none.
+- **Output:** nine tools (`chain`, `memory`, `worktree`, `halt`, `deps`,
+  `git_ops`, `release_candidate`, `budget`, plus risk tiering in `scope`), two
+  per-turn hooks, the gate log, and the release-candidate report Gate 2 reads.
+- **Done Checks:** met — the full tier is green, rollback is executed rather
+  than described (`True` in 0.4s, `'uninstall exited 1'` when disabled), and
+  memory demonstrably changed this plan's Task 1.
+- **Not verified:** Gate 2 has still never run end to end; the kill switch is
+  proven in its suite but never mid-run; the meta-eval corpus has never been
+  paid-run; three of four definition-of-done scenarios have never fired.
+- **Out of Scope, and still out:** canary rollout, auto-rollback on production
+  metrics, alerting, bake time, DAST — no running service exists. Gate 2
+  auto-approve, refused on purpose.
+
 ## Completed
 
 <!-- Append-only, newest entry at the top. Never delete or rewrite an
