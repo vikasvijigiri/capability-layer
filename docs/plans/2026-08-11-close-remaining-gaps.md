@@ -6,7 +6,10 @@ surface rather than simulating them in one that does not.
 
 **Slug:** close-remaining-gaps
 
-**Risk:** to be filled by `python tools/scope.py --plan docs/plans/2026-08-11-close-remaining-gaps.md`
+**Risk:** high — `python tools/scope.py --plan docs/plans/2026-08-11-close-remaining-gaps.md`
+reports `high forced by: control-surface, shared-surface` over 21 declared
+paths. Correct: this plan edits `analyze.py`, `run_checks.py`, `chain.py` and
+`project-checks.json`, each of which decides what happens to every later change.
 
 **Source brief:** `GOAL_CHECKLIST.md`, and the audit at
 `https://claude.ai/code/artifact/789942aa-667f-443e-8910-661568f3aa4d`
