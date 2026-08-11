@@ -5,59 +5,50 @@ history belongs in LOG.md and TASK.md's Completed section. -->
 
 ## Completed
 
-Two units shipped on 2026-08-10/11, both closing gaps in the layer itself: the
-target-workflow architecture, then twelve tasks against `GOAL_CHECKLIST.md`.
-See `LOG.md` for both.
-
-**Parallel subagent dispatch works, six at a time.** This file once said *"No
-subagent has ever completed a task."* That is now two records out of date.
+Three units on 2026-08-10/11/12, all closing gaps in the layer itself: the
+target-workflow architecture, twelve tasks against `GOAL_CHECKLIST.md`, then the
+security gate. See `LOG.md` for all three.
 
 <!-- session-context:start -->
 
 ## Current Work — START HERE
 
-**A plan is approved and unstarted.** `docs/plans/2026-08-11-close-remaining-gaps.md`,
-slug `close-remaining-gaps`, on branch `feat/close-remaining-gaps` (cut from
-`feat/checklist-completion`). Ten tasks, `risk: high`, schedulable as
-`2 group(s) may run concurrently, 1 must not`. Gate 1 passed 2026-08-11 and is
-in the ledger.
+**The security gate is complete through review and sitting local on
+`feat/security-gate`.** Two commits, `d654ee5` (the gate) and `4fece17` (the
+repair review round 1 demanded), `21 files changed, 1748 insertions(+), 19
+deletions(-)` against `feat/close-remaining-gaps`, which is where the branch was
+cut from. Plan `docs/plans/2026-08-11-security-gate.md`, 8/8 tasks ticked. Full
+tier: `PASS: 51 check(s) green (audit, build, lint, smoke, test, typecheck)`.
+**Nothing pushed, no PR, and the branch stacks on a parent whose own ten-task
+plan is unstarted.**
 
-To resume: `python tools/resume.py`, then invoke `executing-plans` with that
-plan path. Nothing has been started — no task is ticked.
+`python tools/security_gate.py --base main` is the new check. Five clauses, each
+a fact about the artefact rather than about process, in the `audit` kind so it
+gates push/PR and CI but not the per-turn auto-commit. Read its docstring before
+touching it: the reason it is **not** a receipt is the whole design, and
+`decisions/2026-08-12-escape-hatches-inherit-trust.md` records the one time that
+design was nearly lost.
 
-Two decisions were taken at that gate and are binding on the work:
+To resume: `python tools/resume.py`. The unit is recorded and needs no further
+work — a delivery decision is owed, not a build.
 
-- **The deploy stages are proven against `../physrun`, not built here.**
-  Seventeen checklist absences need a running service; this repo ships a wheel
-  and `CLAUDE.md` says there is no application code in it. Task 10 exercises
-  `releasing` against a repo that actually serves something and records which
-  stages were proven and which could not be.
-- **`**Preconditions:**` becomes a condition, not prose.** It is free text
-  today, `analyze.py` checks only that the label exists, and no plan has ever
-  filled one. Terraform's `precondition` block and Ansible's `assert` agree on
-  the shape — a condition plus a message — and this repo already has that
-  vocabulary as `Run:` / `Expect:`.
+**Two decisions from this unit are binding on later work:**
+
+- **`WAIVABLE_CLAUSES` holds two of five, and `secret-in-branch` is not one of
+  them.** Adding a clause to that tuple fails an existing test on purpose.
+- **`no-slop` and `code-review` state their boundary on both sides**, and
+  `test_process_router.py` fails if either stops naming the other. The audit's
+  proposal to merge them was resolved at Gate 1 to keep both.
 
 ## Previous Work
 
-Branch `feat/checklist-completion`, **17 commits ahead of `main`**
-(`c9f7ce6..198b559`), `63 files changed, 9175 insertions(+), 508 deletions(-)`.
-**Nothing is pushed and no PR is open** — kept local by explicit choice.
+Branch `feat/close-remaining-gaps` — the parent — carries an approved, unstarted
+ten-task plan (`docs/plans/2026-08-11-close-remaining-gaps.md`, risk `high`) and
+26 commits inherited from `feat/checklist-completion`. Nothing there was touched
+by this unit.
 
-Derived state is now `WAITING_DELIVERY` — *"a delivery decision is owed: push
-the branch and open the PR, or say why not"* — and the chain reports `waiting`
-rather than `stalled`.
-
-The unit is complete through the chain: 12/12 tasks ticked with quoted
-verifications, `verifying-work` returned **gaps** (named below), `no-slop`
-swept repo-wide and applied no local repairs, `code-review` returned
-**`passed: true`** with three P2 findings. Full tier at close:
-`PASS: 49 check(s) green (audit, build, lint, smoke, test, typecheck)`.
-
-Nine new tools: `chain.py`, `memory.py`, `worktree.py`, `halt.py`, `deps.py`,
-`git_ops.py`, `release_candidate.py`, `budget.py`, plus risk tiering in
-`scope.py`. Two hooks now fire every turn: `pre-run/01-halt-guard.py` and
-`pre-edit/02-agent-scope-guard.py`.
+`feat/checklist-completion` remains 17 commits ahead of `main`, reviewed, green,
+local, and undelivered.
 
 ## Pending
 
@@ -123,5 +114,23 @@ marks as superseded.
   (`claude.ai/code/artifact/789942aa-667f-443e-8910-661568f3aa4d`) says 38
   mechanism; `verifying-work` found agent file scope overstated, so it is 37.
   The artifact has not been corrected.
+
+
+### Added by the security-gate unit
+
+6. **Two clauses have never fired on an organic branch.** `secret-in-branch` and
+   `dependency-risk` are proven in fixtures and, for the first, by a deliberate
+   injection that was then reverted. Neither has caught anything real, so
+   neither is evidence of anything yet.
+7. **The "five state reporters" question is open, and the obvious answer is
+   wrong.** `/wip`, `/git-state`, `/handoff`, `tools/resume.py` and
+   `session-start/03-state-report.py` overlap in *description*. Folding
+   `/git-state` into `/wip` was planned, attempted and reverted — the bodies do
+   not overlap. Whether anything should merge needs its own unit.
+8. **A unit of this size gets no automatic recovery point.** The auto-commit
+   refused every turn (past `MAX_FILES = 25`), and uncommitted work was lost to
+   a `git checkout --` with no checkpoint holding it. Either the size gate is
+   wrong for planned multi-task units, or `/save` must be run at task
+   boundaries rather than at the end.
 
 <!-- session-context:end -->

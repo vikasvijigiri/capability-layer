@@ -1,5 +1,77 @@
 # Log
 
+## 2026-08-12 00:30
+
+**A security gate that asserts facts about the artefact, and the escape hatch
+that nearly turned it back into a receipt.** Branch `feat/security-gate`, two
+commits `d654ee5..4fece17`, `21 files changed, 1748 insertions(+), 19
+deletions(-)` against `feat/close-remaining-gaps`. Full tier at close: `PASS: 51
+check(s) green (audit, build, lint, smoke, test, typecheck)`. Local, unpushed,
+no PR.
+
+**The unit started as an audit question, not a build request** — whether an
+online pipeline diagram beat this layer's chain, and whether any skills
+duplicate each other. The answer to the first was that it is a topology with no
+gate before implementation, an unbounded fix loop, and no durable state between
+nodes. The second found the thing worth building: security review here had
+**three doors and no gate** — `code-review`'s lens, `/security-review`, the
+`security-reviewer` agent — all reviewers, none of them forced, with the lens
+loaded "when the diff earns it" by model judgement. `tools/scope.py` had been
+computing `sensitive-surface` and `control-surface` for the risk tier since
+2026-08-11 and **nothing consumed either for security.**
+
+**The obvious design was the forbidden one.** A receipt recording that a review
+happened is what `pre-commit/03-review-gate.py` was: every receipt
+self-invalidated because the file was tracked, and then the model forged one
+asserting a sign-off that had not happened. Reading that history changed the
+design before a line was written — five clauses, each computable from two git
+revisions, no state to keep and none to forge.
+
+**Then the escape hatch re-introduced it anyway, and `code-review` caught it.**
+`# security-gate: allow <clause> -- <reason>`, modelled on `# noqa`, was applied
+to all five clauses on an argument only tested against the easiest one. Round 1
+returned `passed: false`: `F1 waived-credential exit: 0` — a committed
+credential plus one comment line, green. That is a self-certified pass, and it
+contradicted a rule shipped in the same commit. `WAIVABLE_CLAUSES` now holds two
+of five, and a marker naming an unwaivable clause is reported rather than
+ignored. `decisions/2026-08-12-escape-hatches-inherit-trust.md` carries the
+argument. Round 2 passed.
+
+**What the gate found on its own repository, unprompted:**
+`.github/workflows/checks.yml` matched `SENSITIVE_PATTERNS`, had changed, and
+was mapped to no suite — while `tools/test_ci_shape.py` had covered it all
+along. A new bare-stem check found five more instances of the `artifact-review`
+defect: reference files still handing work to `test-driven-development` and
+`observability-sre` as though the 2026-08-07 consolidation had not happened. And
+two defects in the gate itself on its first real run — `subprocess.run(text=True)`
+decoding `git show` as cp1252, so an emoji in `AI_ATTRIBUTION_PATTERNS`
+mojibaked and `control-weakened` reported a guard removed that nobody touched;
+and `_agent_facts` written and never called, so `agent-unscoped` had never once
+been evaluated.
+
+**A planned task was executed as a revert, and that is the more useful result.**
+The audit reported five overlapping state reporters and the plan folded
+`/git-state` into `/wip`. Read in full, `/git-state`'s eight counting sections
+have no counterpart in `/wip` — the overlap was between their *descriptions*.
+One line was genuinely duplicated, and it hid a bug: `/wip` asked for "how far
+ahead of the base branch" while `/git-state` exists partly to warn that assuming
+`main` fails outright on a repository whose base is `master`. Both commands
+stand; the reasoning is in the plan's Deviations.
+
+**Two things not verified.** `secret-in-branch` and `dependency-risk` have never
+fired on an organic branch — the credential proof was a deliberate injection,
+reverted. And the "five state reporters" question is unresolved: the fold was
+the wrong answer, not the wrong question.
+
+**One self-inflicted loss worth recording.** `git checkout --` on
+`code-review/SKILL.md`, to undo a deliberate break, discarded uncommitted work;
+no `wip:` checkpoint held it, because the auto-commit had refused every turn of
+this unit (past `MAX_FILES = 25`, and for the early turns the plan was not yet
+the active one). The edits were rewritten. A unit this size gets **no automatic
+recovery point at all**, which is a property of the commit loop worth knowing
+before relying on it.
+
+
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 
