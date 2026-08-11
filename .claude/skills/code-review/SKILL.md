@@ -29,11 +29,15 @@ untracked files. Never treat passing tests as a substitute for reading the diff.
    `major` reviews the whole branch diff as today; `undetermined` is read as
    `major` — the veto list exists so nobody has to guess, and a clause that
    could not be evaluated is not permission to look at less.
-3. Inspect correctness, security, silent failures, test quality, scope drift,
+3. Run `python tools/security_gate.py --base <merge-base ref> --json`. Exit `1`
+   names the clauses that fired; exit `2` names the ones it could not evaluate,
+   and `2` is not `0`. This decides the security lens in step 6 — it is not
+   advice.
+4. Inspect correctness, security, silent failures, test quality, scope drift,
    dependency risk, and repository policy violations, within the scope from
    step 2.
-4. Report every finding with severity, `file:line`, defect, impact, and evidence.
-5. Return `passed: true` only when no blocking finding remains. A `small`
+5. Report every finding with severity, `file:line`, defect, impact, and evidence.
+6. Return `passed: true` only when no blocking finding remains. A `small`
    review states its scope in the verdict, so `passed: true` is never read as
    broader than it was — four review rounds on `delivery_check.py` each found
    what the previous missed, and a narrowed review must not hide that. Return
@@ -61,11 +65,35 @@ Pick by what changed, not by habit — reading all four on a typo fix is the cos
 this consolidation exists to remove. A lens that produces a finding reports it
 through the same severity/`file:line`/evidence format as everything else.
 
+**The security lens is the exception: it is computed, not picked.** If step 3's
+gate exits non-zero, `references/security-review.md` is mandatory and the fired
+clause names where to start. "Load it when the diff earns it" is the rule this
+replaces: a rule whose whole content is a judgement call made under time
+pressure has one reliable answer. `tools/scope.py` had been computing
+`sensitive-surface` and `control-surface` for the risk tier the whole time and
+nothing consumed either for security; the gate is what consumes them.
+
+The other three lenses stay judged by what changed. Making them computed would
+need clauses none of them have, and inventing one to look symmetrical is how a
+check that means nothing gets added.
+
 **A high-severity security finding is never auto-waived**, whichever lens found
 it: it blocks, and `_hooklib.classify_failure` gives its class a budget of zero.
 
 When the security lens needs an independent pass rather than a reading, dispatch
 `security-reviewer`; it reports, this skill still owns the verdict.
+
+## Not this skill's job
+
+`no-slop` runs at the stage before this one and can read the same files. The
+division: it reads **standing artefacts, including files the change never
+touched**, and asks whether slop has accumulated; this reads **the diff** and
+asks whether the change is correct and safe to ship. A finding about an
+unchanged file belongs there, not here.
+
+`tools/test_process_router.py` fails if either skill stops naming the other. A
+boundary stated on one side and checked by nothing is the shape of a rule that
+quietly stops being true.
 
 ## Recovery
 

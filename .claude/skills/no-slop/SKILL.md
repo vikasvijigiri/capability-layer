@@ -18,9 +18,25 @@ unreviewed — the exact hole review exists to close. Running before verificatio
 means you're sweeping a tree that's about to change anyway, wasting a reader's
 attention on findings that won't survive.
 
-**This is not a diff review.** A diff review reads a change someone is about to
-ship. This reads standing artefacts, diff or no diff: slop accumulates across
-sessions, and every turn that produced it was individually fine at the time.
+**This is not a diff review, and `code-review` is.** The two run at adjacent
+stages and can read the same files, so the division is stated on both sides
+rather than assumed:
+
+| | Reads | Answers |
+|---|---|---|
+| this skill | standing artefacts, **including files the change never touched** | has slop accumulated here |
+| `code-review` | the diff, and under `small` its direct callers | is this change correct and safe to ship |
+
+The load-bearing half is "including files the change never touched". Slop
+accumulates across sessions and every turn that produced it was individually
+fine at the time, so a sweep restricted to the diff cannot see the thing it
+exists to find. A finding here about an unchanged file is the skill working; the
+same finding from `code-review` would be scope creep.
+
+A boundary asserted in one sentence and checked by nothing is a boundary that
+drifts. `tools/test_process_router.py` fails if either skill stops naming the
+other — the same back-reference shape it uses for agents and their dispatchers,
+and the weakest mechanism that is still a mechanism.
 
 Cap visible output at ~500 tokens. Findings with `file:line`, not a tour.
 

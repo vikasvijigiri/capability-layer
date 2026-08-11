@@ -183,6 +183,7 @@ now because framing was cut and four audit skills became `code-review` lenses. E
 Safety rails, each a tool with a suite behind it — `.claude/workflow.md` owns the
 table:
 
+    python tools/security_gate.py --base main  five artefact facts; a receipt is not one
     python tools/halt.py --halt "<reason>"     halt every mutating tool; --resume lifts it
     python tools/deps.py [--sbom]              licence verdict; undetermined is not ok
     python tools/release_candidate.py          the report Gate 2 reads, rollback executed

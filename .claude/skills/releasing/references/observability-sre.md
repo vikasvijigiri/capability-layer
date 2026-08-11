@@ -41,7 +41,8 @@ path, smoke output, and rollback result. State what cannot be observed.
 
 ## Next step
 
-Hand implementation to `test-driven-development`; hand release evidence to
+Hand implementation to `executing-plans`, test-first per
+`.claude/skills/executing-plans/references/test-driven-development.md`; hand release evidence to
 `release-verifier` and `releasing`; record decisions with `knowledge-manager`.
 
 ## Routing

@@ -1225,6 +1225,35 @@ if _tm:
           "silent" in (_cfg.get("_why_test_map") or ""),
           "a coverage claim nothing verifies must say so where it lives")
 
+# --- the two skills that read the same files must each name the other -------
+#
+# `no-slop` (stage 5) and `code-review` (stage 6) run back to back and can read
+# the same changed files. The division is real -- no-slop reads standing
+# artefacts INCLUDING files the change never touched, code-review reads the diff
+# -- and until 2026-08-11 it was held by one sentence in `no-slop` saying "this
+# is not a diff review", with nothing checking that either skill still agreed.
+#
+# This is the weakest mechanism that is still a mechanism, and it is deliberately
+# the same shape as the agent/dispatcher back-reference above: it cannot verify
+# that the division is OBSERVED, only that neither side has quietly forgotten the
+# other exists. A stronger check would have to judge prose, which is how the gate
+# markers ended up needing a declared comment rather than a substring search.
+_ns = (SKILLS / "no-slop" / "SKILL.md").read_text(encoding="utf-8")
+_cr = (SKILLS / "code-review" / "SKILL.md").read_text(encoding="utf-8")
+check("no-slop names code-review as the skill that owns the diff",
+      "code-review" in _ns,
+      "the boundary is stated on one side only, which is how it drifts")
+check("code-review names no-slop as the skill that owns standing artefacts",
+      "no-slop" in _cr,
+      "the boundary is stated on one side only, which is how it drifts")
+
+# The security lens stopped being judged on 2026-08-11. If `code-review` no
+# longer names the gate, lens selection has silently gone back to a judgement
+# call -- which is invisible, because the skill still reads correctly.
+check("code-review names the gate that decides its security lens",
+      "tools/security_gate.py" in _cr,
+      "the security lens is computed only while the skill names the command")
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

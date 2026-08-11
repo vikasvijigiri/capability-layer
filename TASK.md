@@ -4,6 +4,59 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Deterministic security gate, and the duplicate review surfaces it exposes
+
+- **Status:** 7/7 tasks ticked, verified, swept. `PASS: 51 check(s) green
+  (audit, build, lint, smoke, test, typecheck)`.
+  `docs/plans/2026-08-11-security-gate.md`, slug `security-gate`, risk `high`,
+  branch `feat/security-gate` off `feat/close-remaining-gaps`. Not reviewed, not
+  pushed.
+- **Goal:** a check that refuses a diff which weakens a security control or
+  leaves a sensitive path unchecked — asserting facts about the artefact, never
+  that a review happened.
+- **Constraints:** **no receipt** — a receipt asserting "this was reviewed" was
+  built and deleted on 2026-08-02 (`LOG.md` 2026-08-01 and 2026-08-02: it
+  self-invalidated, and the model forged one the turn after writing the rule
+  forbidding it); every clause is a fact about the artefact. `blocking` /
+  `advisory` / `unknown` in `delivery_check.evaluate`'s shape, exit `0`/`1`/`2`,
+  and `unknown` is never a pass (Article V). Reuses `scope.SENSITIVE_PATTERNS`,
+  `scope.CONTROL_PATTERNS` and `_hooklib.SECRET_PATTERNS` **by import, never by
+  copy**. Slow tier (`audit` kind) — the fast tier gates every auto-commit in
+  seconds. No new hook; no hook may name a skill (ADR 2026-08-04). No fifteenth
+  skill — the description budget is charged every turn.
+- **Input:** `tools/scope.py` (`SENSITIVE_PATTERNS`, `CONTROL_PATTERNS`,
+  `CLAUSE_TIER`, `classify`, `tier`); `tools/delivery_check.py`
+  (`evaluate`/`exit_code` shape); `.claude/hooks/_hooklib.py`
+  (`SECRET_PATTERNS`, `MIGRATION_PATH_PATTERNS`, `declared_paths`);
+  `.claude/project-checks.json` (`audit` kind, `test_map`);
+  `.claude/skills/code-review/SKILL.md` + `references/security-review.md`;
+  `.claude/skills/no-slop/SKILL.md`; `.claude/commands/{plan-review,git-state,wip}.md`;
+  `tools/test_referenced_paths.py` (`BUILTIN_COMMANDS`);
+  `decisions/2026-08-02-gate-on-blast-radius.md`.
+- **Output:** `tools/security_gate.py`; `tools/test_security_gate.py`; an
+  `audit`-kind entry and `test_map` row in `.claude/project-checks.json`; a
+  security finding in `delivery_check.evaluate`; `code-review`'s lens table made
+  computed rather than judged; `/plan-review`'s dangling `artifact-review`
+  reference fixed, and `test_referenced_paths.py` widened to catch that whole
+  class; `CLAUDE.md` and `.claude/workflow.md` updated.
+- **Done Checks:** `python tools/test_security_gate.py` exits 0 with each clause
+  proven by inverting it alone; a fixture deleting one pattern from
+  `_hooklib.SECRET_PATTERNS` returns `blocking` while the same tree with it
+  present returns 0; `python tools/run_checks.py --tier all --require-test`
+  exits 0 and the `audit` kind names the new check; `python
+  tools/test_referenced_paths.py` exits 0 with no reference named by a bare
+  stem.
+- **Out of Scope:** a fifteenth skill (refused — three doors to one review);
+  any receipt or process-compliance gate (deleted 2026-08-02, refused);
+  offensive testing, DAST or live exploitation; changing what
+  `SECRET_PATTERNS` contains; the ten tasks of
+  `docs/plans/2026-08-11-close-remaining-gaps.md`; removing `no-slop` as a
+  numbered stage (resolved at Gate 1 to keep it); folding `/git-state` into
+  `/wip` (attempted and reverted -- the two bodies do not overlap; see the
+  plan's Deviations).
+
+<!-- Task(s) currently in progress. Overwrite in place as they change. -->
+
 ### Close the remaining GOAL_CHECKLIST gaps
 
 - **Status:** Approved at Gate 1, not started. Branch `feat/close-remaining-gaps`.

@@ -234,6 +234,19 @@ Four mechanisms, each with a tool and a suite behind it rather than a paragraph:
 | **Licence and SBOM** | `python tools/deps.py [--sbom]` | A denied licence exits 1; one that could not be read exits 2. `0` ok, and undetermined is never ok |
 | **Release candidate** | `python tools/release_candidate.py --plan <plan>` | The report Gate 2 reads: wheel, rehearsal, licence, SBOM, risk tier, changed paths, and a **rollback that was executed** in a scratch repo |
 | **Budget** | `python tools/budget.py` | Turns and elapsed against a ceiling, from the ledger. Reports; never halts — that is the kill switch's job |
+| **Security gate** | `python tools/security_gate.py --base <ref>` | Five clauses, each a fact about the artefact: a security control that lost an entry, a secret anywhere in the branch, a sensitive path no suite maps, an agent that may write with no declared scope, a moved dependency tree `deps.py` rejects. Exit `1` fired, `2` unevaluated. Added 2026-08-11 |
+
+**The security gate is deliberately not a receipt.** A receipt recording that a
+review happened is the obvious shape and this repository already built and
+deleted it: `pre-commit/03-review-gate.py` invalidated every receipt it wrote
+because the receipts file was tracked, and the model then wrote one asserting a
+sign-off that had not happened — *"a forged receipt and a real one are the same
+file."* It went out on 2026-08-02 under *"Every hook verifies an artefact. Not
+one enforces process."* Every clause of the gate is therefore computable from two
+git revisions by anyone, with no state to keep and none to forge. It consumes
+`scope.py`'s `sensitive-surface` and `control-surface`, which had been computed
+for the risk tier since 2026-08-11 with nothing reading them for security, and it
+is what makes `code-review`'s security lens mandatory rather than judged.
 
 **The chain ledger is the audit trail.** `.claude/hooks/state/chain-ledger.jsonl`
 is append-only: one row per turn with the derived state and the plan's ticked

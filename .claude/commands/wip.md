@@ -14,6 +14,12 @@ Report:
    `develop`, `release` — the branch guard denies commits there), how far ahead of
    the base branch, and the last three commit subjects.
 
+   **Detect the base; never assume `main`.** A repository's base has been
+   `master` while the session banner said `main`, and `git merge-base HEAD main`
+   then fails outright. `/git-state` §1 owns the detection and the commands
+   behind every number — run it rather than restating it here. This command
+   judges; that one counts, and the split is the reason both exist.
+
 2. **Uncommitted work.** `git status --porcelain` and `git diff --stat`. Group the
    changes by area (`.claude/skills/`, `tools/`, docs) rather than listing every
    path — a flat list of forty files is not a status. Call out anything staged but

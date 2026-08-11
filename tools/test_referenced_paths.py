@@ -359,6 +359,47 @@ for path in doc_sources:
                 doc_failures.append(
                     f"{path.relative_to(ROOT).as_posix()}:{number} -> {rel}")
 
+# --- a reference is named by its PATH, never by its bare stem ----------------
+#
+# Four audit skills became `<skill>/references/*.md` on 2026-08-07 and the
+# artifact review became one too. Every document that had invoked them by name
+# kept doing so, and nothing noticed: `/plan-review` said "Invoke
+# `artifact-review`" for four days, naming a skill that no longer existed. The
+# session reads that as a skill invocation, finds nothing, and continues -- the
+# failure is silent, which is the whole reason it survived.
+#
+# So the rule is mechanical rather than a matter of care: a reference file may be
+# cited by path, and a bare backticked stem is a finding. There is no judgement
+# in it and no list to maintain -- the stems come off the disk.
+REFERENCE_STEMS = {p.stem for p in (ROOT / ".claude" / "skills").glob("*/references/*.md")}
+SKILL_DIRS = {p.name for p in (ROOT / ".claude" / "skills").iterdir() if p.is_dir()}
+COMMAND_STEMS = {p.stem for p in (ROOT / ".claude" / "commands").glob("*.md")}
+# A stem that is ALSO a live skill or command name is genuinely ambiguous and is
+# left alone: `security-review` is both a reference and a command, and failing on
+# the command would be a false positive.
+BARE_STEMS = REFERENCE_STEMS - SKILL_DIRS - COMMAND_STEMS
+
+stem_failures: list[str] = []
+for source in sorted(seen):
+    rel = source.relative_to(ROOT).as_posix()
+    for number, line in enumerate(
+            strip_fences(source.read_text(encoding="utf-8", errors="replace")
+                         .splitlines()), 1):
+        if TOMBSTONE.search(line):
+            continue
+        for stem in BARE_STEMS:
+            if f"`{stem}`" in line:
+                stem_failures.append(
+                    f"{rel}:{number} names `{stem}` as if it were a skill; it is "
+                    f"a reference -- cite its path")
+
+if stem_failures:
+    for item in stem_failures[:20]:
+        print(f"FAIL: {item}")
+    print(f"{len(stem_failures)} reference(s) named by bare stem. A stem reads as "
+          f"a skill invocation and resolves to nothing, silently.")
+    sys.exit(1)
+
 if doc_failures:
     for item in doc_failures[:20]:
         print(f"FAIL: {item} does not exist")
