@@ -223,6 +223,28 @@ be evaluated is not permission to check less. The `test_map` itself is a coverag
 *claim* — its shape is asserted, its judgement is not, and a wrongly-mapped path
 makes a change fast and under-checked with no symptom.
 
+## Safety rails added 2026-08-11
+
+Four mechanisms, each with a tool and a suite behind it rather than a paragraph:
+
+| | Command | What it refuses, or reports |
+|---|---|---|
+| **Kill switch** | `python tools/halt.py --halt "<reason>"` | While halted, `pre-run/01-halt-guard.py` DENIES every tool that changes state or spawns work. Reads stay allowed on purpose — a halt you cannot investigate is a lockout, not a stop. `--resume` lifts it |
+| **Agent file scope** | declared per agent as `allowed-paths:` | `pre-edit/02-agent-scope-guard.py` denies a write outside a dispatched agent's declared files. **Unscoped denies** — an unscoped write is the case it exists for |
+| **Licence and SBOM** | `python tools/deps.py [--sbom]` | A denied licence exits 1; one that could not be read exits 2. `0` ok, and undetermined is never ok |
+| **Release candidate** | `python tools/release_candidate.py --plan <plan>` | The report Gate 2 reads: wheel, rehearsal, licence, SBOM, risk tier, changed paths, and a **rollback that was executed** in a scratch repo |
+| **Budget** | `python tools/budget.py` | Turns and elapsed against a ceiling, from the ledger. Reports; never halts — that is the kill switch's job |
+
+**The chain ledger is the audit trail.** `.claude/hooks/state/chain-ledger.jsonl`
+is append-only: one row per turn with the derived state and the plan's ticked
+task count, plus `kind: "gate"` rows carrying each gate's decision and the user's
+reason verbatim. `python tools/chain.py --ledger` reads it back.
+
+**A stall needs three limbs, not two.** The state pinned, the tree churning, *and*
+the plan's progress flat. The first version had two and reported `stalled` through
+four turns of a healthy twelve-task execution — a detector nobody believes is
+worse than none.
+
 ## Artifacts and ownership
 
 `TASK.md` and `docs/plans/` — `writing-plans` · `docs/specs/` — `brainstormer`

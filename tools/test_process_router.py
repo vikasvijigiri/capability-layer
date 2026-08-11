@@ -304,6 +304,8 @@ NOT_SKILLS = {
     "shared-surface", "control-surface", "spread", "unmapped", "volume",
     # risk tiers, and the clause that forces one on its own
     "low", "medium", "high", "sensitive-surface",
+    # chain-instrument verdicts
+    "stalled", "advancing", "waiting", "halt",
     # git nouns
     "base", "main",
 }
@@ -416,9 +418,16 @@ check("writing-plans dispatches `brainstormer` before writing the brief",
 # The six fields moved here from a deleted skill. A merge that drops them is the
 # silent half of this change: planning would still work and framing would simply
 # stop happening.
-for _field in ("Goal", "Constraints", "Inputs", "Outputs", "Done-check",
-               "Out-of-scope"):
-    check(f"writing-plans still frames `{_field}`", _field in _wp,
+# Either spelling. The fields were renamed to match `TASK.md`'s own headings
+# (`Input`, `Output`, `Done Checks`, `Out of Scope`) -- the same field, spelled
+# the way the artefact it writes spells it. What this guards is that the field
+# SURVIVES the merge, never its punctuation, and a checker that fails on a
+# consistency improvement is one somebody edits around.
+for _field in (("Goal",), ("Constraints",), ("Inputs", "Input"),
+               ("Outputs", "Output"), ("Done-check", "Done Checks"),
+               ("Out-of-scope", "Out of Scope")):
+    check(f"writing-plans still frames `{_field[0]}`",
+          any(f in _wp for f in _field),
           "the six fields came from task-brief and are the framing contract")
 
 check("writing-plans keeps the (inferred) marking that replaced the brief gate",
@@ -888,16 +897,50 @@ for _g in sorted(GATE_SKILLS):
           _tool in _gbody,
           "the marker says there is a gate here and nothing implements it")
 
-# `ExitPlanMode` and `AskUserQuestion` must not both back Gate 1. Two mechanisms
-# for one approval means the plan is approved twice and one of them is theatre --
-# and the tool's own contract forbids the pairing.
+# --- Gate 1 must be REACHABLE, not merely named -------------------------------
+#
+# The assertion here used to be "the marker's tool appears in the file", and it
+# passed for hours while Gate 1 could not be asked at all: `ExitPlanMode` refuses
+# outside plan mode, and the same change had removed `AskUserQuestion` from the
+# skill. A gate conditional on the session having started in a particular mode is
+# not a gate, and presence is not reachability.
 _wp = (SKILLS / "writing-plans" / "SKILL.md").read_text(encoding="utf-8")
-_wp_asks = [ln for ln in _wp.splitlines()
-            if "AskUserQuestion" in ln and not _NEGATED.search(ln)]
-check("Gate 1 has one approval mechanism, not two",
-      not _wp_asks,
-      f"{len(_wp_asks)} un-negated AskUserQuestion mention(s) beside ExitPlanMode: "
-      f"{_wp_asks[:2]}")
+_pm_path = SKILLS / "writing-plans" / "references" / "plan-mode.md"
+_pm = _pm_path.read_text(encoding="utf-8") if _pm_path.is_file() else ""
+
+check("`writing-plans` enters plan mode itself, so Gate 1 can always be asked",
+      "EnterPlanMode" in _wp,
+      "ExitPlanMode refuses outside plan mode; without this the gate is "
+      "reachable only by luck")
+check("...and says so where the planning stage begins",
+      "EnterPlanMode" in _wp.split("## Stage C", 1)[-1],
+      "entering after the plan is written is too late to matter")
+
+# The correction that came with it: the ban is on the APPROVAL, not the tool.
+# `EnterPlanMode`'s own documentation recommends AskUserQuestion for clarifying
+# an approach inside plan mode, so an outright ban contradicted the contract and
+# was what left the gate unreachable.
+check("the approval itself is ExitPlanMode",
+      "ExitPlanMode" in _wp)
+_wp_flat = " ".join(_wp.split())
+check("...and the file says AskUserQuestion must not carry the approval",
+      "must never carry it" in _wp_flat,
+      "the narrow rule has to be written down, or the blanket one comes back")
+
+# Whitespace-flattened, because the phrase wraps across lines in the source and a
+# raw substring search reports a rule that is present as missing.
+#
+# Blockquoted lines are excluded: `plan-mode.md` QUOTES the false sentence in
+# order to record that it was false, and a checker that cannot tell a quotation
+# from a claim would force the correction to be deleted along with the error.
+_pm_claims = "\n".join(ln for ln in _pm.splitlines()
+                       if not ln.lstrip().startswith(">"))
+check("no file still CLAIMS plan mode cannot be entered",
+      "There is no tool for it" not in " ".join(_pm_claims.split()),
+      "that sentence was false and the gate was built on it")
+check("...and the correction is recorded rather than quietly deleted",
+      "EnterPlanMode" in _pm and "was false" in _pm,
+      "an error removed without a note is one the next reader re-introduces")
 
 # --- anything that leaves the machine asks with the tool ---------------------
 #
@@ -953,8 +996,23 @@ check("`delivering` warns that squash breaks a stacked PR",
 # Nothing may quietly acquire the ability to merge. `_MERGE_VERBS` are checked
 # across every skill and command, and a mention only passes where it is negated.
 _MERGE_VERBS = re.compile(r"(?<![`\w])gh pr merge(?![\w])")
+                  # `tools/*.py` joined the scan on 2026-08-11. The plan for
+                  # `git_ops.py` asserted that "test_process_router.py already
+                  # fails any file that acquires `gh pr merge`" -- and the agent
+                  # implementing it checked, found the scan globbed only skills
+                  # and commands, and said so rather than relying on the claim.
+                  # The tools are where a merge would actually be executed from,
+                  # so they are the half that most needed covering.
 for _p in sorted([*SKILLS.glob("*/SKILL.md"),
-                  *(ROOT / ".claude" / "commands").glob("*.md")]):
+                  *(ROOT / ".claude" / "commands").glob("*.md"),
+                  # ...but not `tools/test_*.py`. A suite that ASSERTS nothing
+                  # merges necessarily contains the phrase, and three of them
+                  # tripped this the moment it was widened -- including this
+                  # file, which holds the pattern itself. The scan is for code
+                  # that could execute a merge, and a test asserting the absence
+                  # is the opposite of that risk.
+                  *(p for p in (ROOT / "tools").glob("*.py")
+                    if not p.name.startswith("test_"))]):
     _t = _p.read_text(encoding="utf-8")
     _hits = [ln for ln in _t.splitlines() if _MERGE_VERBS.search(ln)
              and not re.search(r"\b(never|not|no|nor)\b", ln, re.I)]

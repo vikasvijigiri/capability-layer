@@ -42,16 +42,52 @@ because two mechanisms read it:
 Removing it would silently turn that gate off for every unit of work that had
 not yet written a plan.
 
-## Nothing here can switch permission mode
+## The skill enters plan mode itself
 
-There is no tool for it. Exiting plan mode returns to whatever mode was active
-before, and no skill, hook or command can put the session into plan mode or take
-it out of one on its own.
+**`EnterPlanMode` exists, and this skill calls it** at the start of Stage C,
+before it reads the repository to plan. The user consents to the prompt that
+tool raises — its own contract says it *"REQUIRES user approval"* — so nobody
+has to remember to select a mode before asking for work.
 
-Any instruction claiming otherwise is describing a capability that does not
-exist — which is this repository's most-repeated defect, prose asserting what
-the wiring does not implement. If planning needs to happen in plan mode, a person
-enters it.
+That is the whole reachability story, and it took a correction to get right.
+This file previously said:
+
+> There is no tool for it… no skill, hook or command can put the session into
+> plan mode.
+
+**That was false.** `EnterPlanMode` is a documented tool, and the refusal
+message from `ExitPlanMode` names it outright:
+
+    You are not in plan mode. To enter plan mode, call the EnterPlanMode tool first.
+
+The consequence was not cosmetic. `ExitPlanMode` refuses outside plan mode, and
+the same change that made it Gate 1 also removed `AskUserQuestion` from this
+skill — so **Gate 1 had no working mechanism unless the session happened to
+already be in plan mode.** The chain's first gate was conditional on something
+nothing controlled, and the assertion guarding it passed the whole time because
+it checked that the tool was *named in the file* rather than that the gate was
+*reachable*.
+
+It is the defect this repository names most often — prose asserting what the
+wiring does not implement — committed by the file written to explain the gate.
+
+## `AskUserQuestion` is banned from the approval, not from the skill
+
+The narrower rule, and the one that matches the tools' own documentation.
+`EnterPlanMode` says plainly: *"Use `AskUserQuestion` if you need to clarify
+approaches"* inside plan mode, and *"Do NOT use `AskUserQuestion` to ask 'Is this
+plan okay?'"*
+
+So:
+
+| | |
+|---|---|
+| The **approval** at Gate 1 | `ExitPlanMode`, and only that |
+| A **clarification** while planning | `AskUserQuestion` is allowed |
+
+The first version of this rule banned the tool outright. That was over-tight, it
+contradicted the official guidance, and it is what left the gate unreachable
+when `ExitPlanMode` refused.
 
 ## Record the decision, whichever it was
 

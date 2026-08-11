@@ -236,8 +236,16 @@ check("the progress pattern ignores constitution-gate boxes",
           "- [x] I Evidence — something\n- [x] Task 1 — real\n")) == 1)
 
 live_progress = chain.plan_progress(ROOT)
-check("plan_progress reads the ACTIVE plan against the real tree",
-      isinstance(live_progress, int) and live_progress >= 0, str(live_progress))
+if live_progress is None:
+    # An installed layer ships no `docs/plans/`, so there is no active plan to
+    # count and `None` is the correct answer -- the same distinction the
+    # function exists to make. Asserting an int here would assert this
+    # repository's contents in somebody else's.
+    print("SKIP: no active plan here -- progress is unaskable, which is why "
+          "plan_progress returns None rather than 0")
+else:
+    check("plan_progress reads the ACTIVE plan against the real tree",
+          isinstance(live_progress, int) and live_progress >= 0, str(live_progress))
 
 # --- the gate log ---------------------------------------------------------------
 with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as gd:

@@ -180,6 +180,15 @@ now because framing was cut and four audit skills became `code-review` lenses. E
     /publish         create the repo, push, open the PR — one explicit yes, and
                      it never configures its own merge gates
 
+Safety rails, each a tool with a suite behind it — `.claude/workflow.md` owns the
+table:
+
+    python tools/halt.py --halt "<reason>"     halt every mutating tool; --resume lifts it
+    python tools/deps.py [--sbom]              licence verdict; undetermined is not ok
+    python tools/release_candidate.py          the report Gate 2 reads, rollback executed
+    python tools/budget.py                     turns and elapsed against a ceiling
+    python tools/chain.py --ledger             the append-only audit trail
+
 Raw equivalents, run from the repo root:
 
     python tools/run_checks.py --tier all --require-test   # both tiers
