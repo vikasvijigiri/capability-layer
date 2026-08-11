@@ -40,6 +40,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -282,6 +283,23 @@ def _definitely_missing(root: Path, token: str) -> bool:
     if not name:
         return False
     if (root / token).exists():
+        return False
+
+    # A deliberately IGNORED path is not rot, and this rule exists because CI
+    # found what no local run could. `MEMORY.md` names
+    # `.claude/settings.local.json`, which is gitignored: present on a developer
+    # machine, absent from a fresh checkout. The detector passed locally and
+    # failed in CI on the same commit -- the fourth calibration, and the first
+    # that was environment-dependent rather than pattern-dependent.
+    #
+    # `git check-ignore` answers it definitively, and a git that cannot run
+    # yields no opinion rather than a false positive.
+    try:
+        ignored = subprocess.run(["git", "-C", str(root), "check-ignore", "-q", token],
+                                 capture_output=True, timeout=10)
+        if ignored.returncode == 0:
+            return False
+    except (OSError, subprocess.SubprocessError):
         return False
     try:
         return not any(root.rglob(name))

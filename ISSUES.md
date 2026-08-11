@@ -6,6 +6,31 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-11 22:05 — Local green, CI red: the rot detector flagged a gitignored file
+
+- **Phase/Context**: the first CI run this branch has ever had, immediately
+  after its first push. Local full tier had been `PASS: 49 check(s) green`.
+- **Symptom**: `lint · typecheck · test` failed in CI in 26s —
+  `test_memory.py: FAIL: it is clean of path rot and count rot right now --
+  stale=[{'source': 'MEMORY.md', ... '.claude/settings.loc...`
+- **Diagnosis**: `MEMORY.md` names `.claude/settings.local.json`, which is
+  **gitignored** (`.gitignore:16`). It exists on a developer machine and is
+  absent from a fresh checkout, so `_definitely_missing` correctly found it
+  missing — in CI only. The assertion "the real tree is clean of rot" was
+  environment-dependent, and no local run could ever have caught it.
+- **Attempts**:
+  - 1. Reproduced in a clean clone of the pushed branch, where the file is
+    genuinely absent — the same condition CI runs in.
+  - 2. Skip a path that `git check-ignore` claims. A deliberately ignored file
+    is not rot; it is a file the repository has decided not to track.
+- **Fix**: `_definitely_missing` consults `git check-ignore -q` and returns
+  False for an ignored path. A git that cannot run yields no opinion rather
+  than a false positive. Verified in the clean clone: `All memory tests passed
+  (210 entries)` with the file absent.
+- **Status**: `Resolved`. Fourth calibration of this detector, and the first
+  that was environment-dependent rather than pattern-dependent — which is
+  precisely the class only CI can find.
+
 ## 2026-08-11 21:45 — WAITING_DELIVERY is unreachable when commits are made by hand
 
 - **Phase/Context**: after `knowledge-manager` closed the unit, the chain
