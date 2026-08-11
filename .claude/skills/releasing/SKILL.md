@@ -15,6 +15,20 @@ At the shipment gate, present the release candidate, smoke evidence, rollback,
 and target, then use `AskUserQuestion` for the single explicit shipment
 approval. Do not ask for approval earlier in the workflow.
 
+**Bring the release candidate report.** It is what this gate reviews:
+
+    python tools/release_candidate.py --plan <plan>
+
+Wheel version and hash, the target repository's own tier, the SBOM, the licence
+verdict, the risk tier, the changed-path count, and **the rollback result** —
+which comes from an uninstall that actually ran in a scratch repo, not from a
+paragraph promising one. Exit `0` ready · `1` a check failed · `2` a fact could
+not be determined, and **2 is not 0**: a candidate with an unestablished fact is
+not one anybody can approve.
+
+Slow by design — it builds a wheel and a virtualenv. Run it before opening the
+gate, not during.
+
 **Show the risk tier in the question**, from
 `python tools/scope.py --plan <plan>` — `0` low, `1` medium, `2` high, with the
 clause that forced it. A reader deciding whether to ship needs to know that this

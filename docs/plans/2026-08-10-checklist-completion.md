@@ -100,10 +100,10 @@ and quoted. Nothing here is ticked on a clean diff or a zero exit code.
 - [x] Task 4 — agent file scope, enforced by a hook
 - [x] Task 5 — SAST on the diff
 - [x] Task 6 — licence compliance and SBOM
-- [ ] Task 7 — the release candidate, with rollback executed
+- [x] Task 7 — the release candidate, with rollback executed
 - [x] Task 8 — rollback and preconditions in the task shape
 - [x] Task 9 — git operations
-- [ ] Task 10 — a per-unit budget ceiling
+- [x] Task 10 — a per-unit budget ceiling
 - [ ] Task 11 — Gate 1 is reachable, and the plan-mode claim is corrected
 - [ ] Task 12 — contracts and policy
 
