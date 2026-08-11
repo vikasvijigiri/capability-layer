@@ -51,7 +51,10 @@ anywhere the diff does not show.
 **Tech stack and constraints:**
 
 - Python 3, stdlib only. `ast` reads the watched tables out of both revisions;
-  no import of untrusted code, no network. (`literal_eval` was the plan's word
+  no network. It DOES import `_hooklib` and `scope` from the working tree to
+  read their pattern tables — the base side is read as text through `ast` and is
+  never executed, which is the asymmetry that matters. (`literal_eval` was the
+  plan's word
   and did not survive contact — see Deviations.)
 - The pattern tables are **imported, never copied** —
   `scope.SENSITIVE_PATTERNS`, `scope.CONTROL_PATTERNS`,
@@ -190,6 +193,7 @@ and quoted. Nothing here is ticked on a clean diff or a zero exit code.
 - [x] Task 5 — the dangling artifact-review reference
 - [x] Task 6 — fold /git-state into /wip
 - [x] Task 7 — documentation
+- [x] Task 8 — close the review's P0 and P1 (added after review round 1)
 
 ## Tasks
 
@@ -568,3 +572,68 @@ Adding `# security-gate: allow control-weakened -- proving the escape hatch end
 to end` returned it to `exit 0`, and restoring the file returned it to `exit 0`
 with the clause live again. The suite proves `evaluate`; this proves the whole
 path from `git show` to the exit code.
+
+## Review round 1 — findings and their repair
+
+`code-review` returned `passed: false` on `28a78fe..d654ee5`. Task 8 closes it.
+
+### Task 8: Close the review's P0 and P1
+
+**Purpose:** a credential cannot be waived, and a git failure cannot read as a
+pass.
+
+**Files:**
+- Modify: `tools/security_gate.py:WAIVABLE_CLAUSES` — only clauses with a legitimate reason are waivable
+- Modify: `tools/security_gate.py:gather_facts` — distinguish "absent at base" from "git failed"
+- Modify: `tools/security_gate.py:disabled_check_kinds` — a deleted check kind is a removal too
+- Modify: `tools/delivery_check.py` — the import cannot break the module
+- Test: `tools/test_security_gate.py` — one case per finding
+
+**Dependencies:** 1
+
+**Implementation notes:**
+- **P0.** The waiver applied to every clause. It is right for
+  `control-weakened` (a pattern legitimately moves, and the reason belongs in
+  the diff) and wrong for `secret-in-branch`: no reason makes a committed
+  credential acceptable, and a self-certified pass is the receipt's actual
+  failure mode wearing the escape hatch's clothes. `WAIVABLE_CLAUSES =
+  ("control-weakened", "sensitive-unmapped")`; the other three block regardless.
+  A marker naming an unwaivable clause is itself reported, so it cannot fail
+  silently.
+- **P1.** `_git` returns `None` for "command failed" and for "path absent at
+  base" alike, and the loop read both as nothing-to-lose. `git cat-file -e
+  <base>:<rel>` decides which: absent is a legitimate skip, present-but-unread
+  sets `readable = False` and the clause reports `unknown`.
+- **P2.** `disabled_check_kinds` saw `false` but not deletion; a check kind
+  removed outright falls back to detection, which may resolve to nothing. Only
+  the known kinds count, so removing a `_why_` note is not a finding.
+- **P2.** `delivery_check`'s module-level import moves into a `try`, with the
+  call site reporting `unknown` when the gate is unimportable.
+
+**Rollback:** revert `tools/security_gate.py` and `tools/delivery_check.py` to
+`d654ee5`; the review's findings stand again.
+
+**Preconditions:** `d654ee5` is committed, so the repair is reviewable as its
+own diff rather than folded into the original.
+
+**Verification:**
+- Run: `python tools/test_security_gate.py && PYTHONIOENCODING=utf-8 python tools/run_checks.py --tier all --require-test`
+- Expect: the suite exits 0 with a case proving a waived `secret-in-branch`
+  still exits 1, and the full tier reports `PASS`.
+
+**Done when:** an inline allow cannot clear a credential, and a git failure on a
+watched table reports `unknown` rather than a pass.
+
+## Review round 2 — passed
+
+Scoped to the repair diff (`4 files changed, 167 insertions(+), 6 deletions(-)`)
+on top of `d654ee5`. All five round-1 findings closed, each with an assertion
+behind it; the suite grew 48 -> 64 checks. `PASS: 51 check(s) green (audit,
+build, lint, smoke, test, typecheck)`.
+
+The P0 is the lesson worth keeping, and it belongs in `decisions/` rather than
+here: **an escape hatch inherits the trust model of the thing it bypasses.** The
+gate was designed specifically to avoid a self-certified pass, and the waiver
+re-introduced one for the highest-severity clause because the justification for
+`control-weakened` was generalised to every clause without asking whether a
+legitimate reason could exist for each. It could not, for three of five.

@@ -162,6 +162,43 @@ check("...and one with a reason does",
       (sg.ALLOW_RE.search("# security-gate: allow control-weakened -- the pattern moved")
        or [None])[0] is not None)
 
+# --- review round 1: what an allow may NOT waive -----------------------------
+#
+# The first version waived any clause, so a credential plus one comment line
+# exited 0. Each unwaivable clause gets its own case: a waiver list is exactly
+# the kind of table that grows by accident.
+for _clause in sg.CLAUSES:
+    _facts = dict(QUIET, allows={_clause}, **INVERSIONS[_clause])
+    _got = sg.evaluate(_facts)
+    if _clause in sg.WAIVABLE_CLAUSES:
+        check(f"[{_clause}] is waivable, and the waiver is reported",
+              sg.exit_code(_got) == 0
+              and [f["severity"] for f in _got] == ["advisory"], str(_got))
+    else:
+        check(f"[{_clause}] CANNOT be waived by an inline allow",
+              sg.exit_code(_got) == 1, str(_got))
+        check(f"[{_clause}] ...and the useless allow is named, not ignored",
+              any("does NOT apply" in f["finding"] for f in _got), str(_got))
+
+check("a credential specifically cannot be waived",
+      "secret-in-branch" not in sg.WAIVABLE_CLAUSES)
+
+# --- review round 1: a deleted check kind is a removal, not just `false` ------
+_was = '{"audit": ["pip-audit"], "lint": ["ruff"], "_why_audit": "note"}'
+_now_false = '{"audit": false, "lint": ["ruff"]}'
+_now_gone = '{"lint": ["ruff"]}'
+check("a kind set to false is disabled",
+      sg.disabled_check_kinds(_now_false) == {"audit"})
+_was_on, _gone_on = (sg.configured_check_kinds(_was) or set(),
+                     sg.configured_check_kinds(_now_gone) or set())
+check("a kind DELETED outright is no longer configured",
+      _was_on - _gone_on == {"audit"}, str(_gone_on))
+check("...while deleting a `_why_` note is not a finding",
+      sg.configured_check_kinds(_was) == sg.configured_check_kinds(
+          '{"audit": ["pip-audit"], "lint": ["ruff"]}'))
+check("configured_check_kinds returns None for unreadable JSON",
+      sg.configured_check_kinds("{not json") is None)
+
 # --- table_entries: the parser the control-weakened clause rests on ----------
 SRC = "\n".join([
     "import re",

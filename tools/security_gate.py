@@ -79,6 +79,10 @@ WATCHED_TABLES = {
 # gate switched off, which is the JSON spelling of removing a table entry.
 PROJECT_CHECKS = ".claude/project-checks.json"
 
+# The kinds `_projectchecks.py` resolves. Used to tell "this gate was removed"
+# from "a comment was removed".
+CHECK_KINDS = ("lint", "typecheck", "test", "build", "audit", "e2e", "smoke")
+
 # Files whose changing means the dependency tree moved, so `deps.py` has
 # something new to say. Absent from a diff, the clause is not applicable rather
 # than passing -- see `considered` in the result.
@@ -96,6 +100,22 @@ WRITE_TOOLS = ("Write", "Edit", "NotebookEdit")
 # that normalise one into the other. The reason group is required: `.+` and not
 # `.*`.
 ALLOW_RE = re.compile(r"#\s*security-gate:\s*allow\s+([a-z][a-z-]+)\s*(?:—|--)\s*(\S.*)")
+
+# Which clauses an inline allow may waive, and it is not all of them.
+#
+# The first version waived any clause, and review round 1 found what that means:
+# a credential in the diff plus one comment line beside it exited 0. That is the
+# receipt's actual failure mode -- a self-certified pass -- wearing the escape
+# hatch's clothes, and it contradicted `code-review`'s own rule that a
+# high-severity security finding is never auto-waived.
+#
+# The distinction is whether a legitimate reason can exist. A pattern genuinely
+# moves between tables, and a sensitive path can genuinely be covered by
+# something the map cannot express -- those are design decisions, and a decision
+# with its reason in the diff is exactly what should be waivable. There is no
+# reason that makes a committed credential, an unscoped write capability, or a
+# denied licence acceptable; each of those has a real fix that is not a comment.
+WAIVABLE_CLAUSES = ("control-weakened", "sensitive-unmapped")
 
 
 # --- loading the tables we do not own ----------------------------------------
@@ -176,6 +196,26 @@ def disabled_check_kinds(text: str) -> set[str] | None:
     return {k for k, v in data.items() if v is False}
 
 
+def configured_check_kinds(text: str) -> set[str] | None:
+    """The known check kinds this config configures, `false` excluded.
+
+    Paired with `disabled_check_kinds` because there are two ways to switch a
+    gate off and only one of them writes the word `false`. Deleting
+    `"audit": [...]` outright falls back to auto-detection, which may resolve to
+    nothing at all -- so a kind that WAS configured and now is not is a removal,
+    and review round 1 found the first version blind to it.
+
+    Only `CHECK_KINDS` counts, so deleting a `_why_` note is not a finding.
+    """
+    try:
+        data = json.loads(text)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    return {k for k in CHECK_KINDS if k in data and data[k] is not False}
+
+
 # --- the decision, pure ------------------------------------------------------
 
 def evaluate(facts: dict) -> list[dict]:
@@ -196,6 +236,16 @@ def evaluate(facts: dict) -> list[dict]:
         # waived" the same output -- which is the property that made a forged
         # receipt indistinguishable from a real one.
         if clause in allows and severity == "blocking":
+            if clause not in WAIVABLE_CLAUSES:
+                # Reported, not ignored. An allow that does nothing must say so,
+                # or the author believes they have handled it.
+                out.append({"clause": clause, "severity": "blocking",
+                            "finding": f"{finding} An inline allow was present "
+                                       f"and does NOT apply: `{clause}` is not "
+                                       f"waivable, because no reason makes this "
+                                       f"acceptable.",
+                            "detail": list(detail or [])})
+                return
             out.append({"clause": clause, "severity": "advisory",
                         "finding": f"WAIVED by an inline allow: {finding}",
                         "detail": list(detail or [])})
@@ -420,7 +470,15 @@ def gather_facts(root: Path, base: str, offline: bool = False) -> dict:
             new_src = (new_path.read_text(encoding="utf-8", errors="ignore")
                        if new_path.is_file() else None)
             if old_src is None:
-                continue                 # not present at the base; nothing to lose
+                # `_git` returns None for "the path is absent at the base" AND
+                # for "git failed", and review round 1 found that reading both
+                # as nothing-to-lose makes a transient git failure a PASS on the
+                # one clause that notices a guard leaving. `cat-file -e` decides
+                # which: it exits 0 iff the object exists.
+                if _git(["cat-file", "-e", f"{merge_base}:{rel}"], root) is None:
+                    continue             # genuinely absent at the base
+                readable = False         # present, but could not be read
+                continue
             if new_src is None:
                 removed[f"{rel} (deleted)"] = ["the whole file"]
                 continue
@@ -439,10 +497,18 @@ def gather_facts(root: Path, base: str, offline: bool = False) -> dict:
         if old_checks is not None and checks_path.is_file():
             was = disabled_check_kinds(old_checks)
             now = disabled_check_kinds(checks_path.read_text(encoding="utf-8"))
-            if was is None or now is None:
+            head_text = checks_path.read_text(encoding="utf-8")
+            was_on, now_on = (configured_check_kinds(old_checks),
+                              configured_check_kinds(head_text))
+            if (was is None or now is None
+                    or was_on is None or now_on is None):
                 readable = False
-            elif now - was:
-                removed[f"{PROJECT_CHECKS} (disabled)"] = sorted(now - was)
+            else:
+                if now - was:                       # newly set to `false`
+                    removed[f"{PROJECT_CHECKS} (disabled)"] = sorted(now - was)
+                deleted = was_on - now_on - now     # deleted, not disabled
+                if deleted:
+                    removed[f"{PROJECT_CHECKS} (kind deleted)"] = sorted(deleted)
         if readable:
             facts["removed_table_entries"] = removed
 
