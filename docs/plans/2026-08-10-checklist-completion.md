@@ -81,6 +81,7 @@ Nothing acquires `gh pr merge`. Every rule added gets a test or a hook, not pros
 | `.claude/skills/releasing/SKILL.md` | Modify | Reads the release-candidate report; Gate 2 records its decision |
 | `.claude/skills/delivering/SKILL.md` | Modify | Reads `git_ops.py` |
 | `.claude/skills/knowledge-manager/formats.md` | Modify | Recurring-findings capture |
+| `.claude/skills/{no-slop,writing-plans,executing-plans,verifying-work}/SKILL.md` | Modify | Portability rewrites reconciled with the chain contract |
 | `tools/analyze.py` | Modify | Requires the new task fields |
 | `tools/test_analyze.py` | Modify | The fixture gains them |
 | `tools/test_process_router.py` | Modify | Every contract this plan adds |
@@ -602,6 +603,23 @@ chose to keep it local, and delivery is its own decision.
 **If this repository ever grows a served surface, these become real and get their
 own plan.** Recording them as out-of-scope with a reason is the point: the next
 reader can tell "we decided not to" from "we forgot".
+
+## Amended during execution (2026-08-11)
+
+**Four skills were rewritten in the working tree while this plan ran**, by an
+edit this run did not make — genericising them for other repositories, replacing
+backticked skill names with prose and this repo's suite names with "the
+project's own checks". A coherent improvement, and it broke eleven assertions
+and three chain handoffs at once.
+
+Resolved at the user's direction: **keep every rewrite, restore only what is
+load-bearing.** In each file that meant the backticked successor name (a stage
+whose successor cannot be resolved is a stage that gets skipped), the dispatched
+agent's name, and dropping pre-approved `Write`/`Edit`. One assertion was
+adapted rather than the file: the six framing fields had been renamed to match
+`TASK.md`'s own headings, which is more consistent, so the check now accepts
+either spelling — a checker that fails on a consistency improvement is one
+somebody edits around.
 
 ## Approved
 
