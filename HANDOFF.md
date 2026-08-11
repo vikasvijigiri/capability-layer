@@ -20,6 +20,10 @@ Branch `feat/checklist-completion`, **17 commits ahead of `main`**
 (`c9f7ce6..198b559`), `63 files changed, 9175 insertions(+), 508 deletions(-)`.
 **Nothing is pushed and no PR is open** — kept local by explicit choice.
 
+Derived state is now `WAITING_DELIVERY` — *"a delivery decision is owed: push
+the branch and open the PR, or say why not"* — and the chain reports `waiting`
+rather than `stalled`.
+
 The unit is complete through the chain: 12/12 tasks ticked with quoted
 verifications, `verifying-work` returned **gaps** (named below), `no-slop`
 swept repo-wide and applied no local repairs, `code-review` returned
@@ -54,12 +58,12 @@ Each is its own unit and enters at `writing-plans`:
 4. **`ISSUES.md` carries two `0x08` bytes**, in the entry describing `0x08`
    bytes. See `ISSUES.md` 2026-08-11 21:15.
 
-5. **`WAITING_DELIVERY` never fires.** `derive_state` returns `BUILD` on
-   `checks_green is None`, before reaching it — and `checks_green` comes from
-   `refs/uaios/green/<slug>`, which only the auto-commit hook writes. Commit by
-   hand, or have the auto-commit refuse once, and the ref is never set: this
-   branch has no green ref while five older slugs do. The chain instrument then
-   reports `stalled` forever on a finished unit, correctly by its own rule. See
+5. **`refs/uaios/green/` has one writer, and it is the auto-commit hook.**
+   Commit by hand — or have the auto-commit refuse once, which the minimal-diff
+   gate is built to do — and the ref is never set, so `checks_green` stays
+   `None` and `derive_state` returns `BUILD` before it can reach
+   `WAITING_DELIVERY`. Setting the ref by hand on a verified tree resolved it
+   immediately, so the state machine is sound and the plumbing is not. See
    `ISSUES.md` 2026-08-11 21:45.
 
 Unchanged and still true: branch protection is unavailable on this repo tier

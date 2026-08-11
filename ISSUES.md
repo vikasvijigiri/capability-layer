@@ -39,7 +39,21 @@ of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on
   `WAITING_DELIVERY` be reachable on `green is None` since an unverified branch
   still awaits a delivery decision; or have something other than the auto-commit
   move the ref. Each changes what a *different* consumer sees.
-- **Status**: `Open` — the fifth item in `HANDOFF.md` Pending.
+- **Correction, same day**: the state machine is **not** broken. Setting the
+  ref by hand — `git update-ref refs/uaios/green/checklist-completion HEAD`,
+  after confirming a clean tree and `PASS: 44 check(s) green`, which is exactly
+  the hook's own precondition — makes `resume.py` report
+  `state=WAITING_DELIVERY ... next=human: a delivery decision is owed` and the
+  chain report `waiting`, exit 0. Task 1's mechanism is correct and now proven
+  end to end for the first time.
+
+  The real defect is narrower and worth stating precisely: **`refs/uaios/green/`
+  has exactly one writer**, and it is the auto-commit hook. Any unit whose
+  commits are made by hand — or whose auto-commit refuses once, which the
+  minimal-diff gate is designed to do — never gets a green ref, and then every
+  state downstream of `checks_green` is wrong for the rest of that unit's life.
+- **Status**: `Open` — narrowed. The fifth item in `HANDOFF.md` Pending, and it
+  is about the ref's single writer, not about `derive_state`.
 
 ## 2026-08-11 20:10 — The first gate could not be asked, and its guard passed
 
