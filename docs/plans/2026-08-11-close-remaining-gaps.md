@@ -428,3 +428,17 @@ field and does not use it is the prose-not-wiring defect this whole unit closes.
 - **Adding an application to this repo** — decided at the gate; the deploy
   stages are proven elsewhere instead.
 - **Merging PR #11** — that is a human's click.
+
+## Approved
+
+2026-08-11. Gate 1 passed via `ExitPlanMode` — the first approval that mechanism
+has carried. Recorded in the ledger as
+`gate 1: approve -- 10 tasks. Deploy stages proven against ../physrun rather
+than built here; Preconditions become a condition following Terraform's
+precondition shape.`
+
+This heading is the exact string `tools/resume.py` derives state from. It was
+first written as bold prose — **Approved** — and the unit read as
+`WAITING_PLAN_APPROVAL` on a plan that had been approved. `writing-plans` warns
+about precisely this, and the warning was still not enough: a paraphrase is
+invisible to a parser.
