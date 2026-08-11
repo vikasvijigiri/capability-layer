@@ -14,7 +14,31 @@ subagent has ever completed a task."* That is now two records out of date.
 
 <!-- session-context:start -->
 
-## Current Work
+## Current Work — START HERE
+
+**A plan is approved and unstarted.** `docs/plans/2026-08-11-close-remaining-gaps.md`,
+slug `close-remaining-gaps`, on branch `feat/close-remaining-gaps` (cut from
+`feat/checklist-completion`). Ten tasks, `risk: high`, schedulable as
+`2 group(s) may run concurrently, 1 must not`. Gate 1 passed 2026-08-11 and is
+in the ledger.
+
+To resume: `python tools/resume.py`, then invoke `executing-plans` with that
+plan path. Nothing has been started — no task is ticked.
+
+Two decisions were taken at that gate and are binding on the work:
+
+- **The deploy stages are proven against `../physrun`, not built here.**
+  Seventeen checklist absences need a running service; this repo ships a wheel
+  and `CLAUDE.md` says there is no application code in it. Task 10 exercises
+  `releasing` against a repo that actually serves something and records which
+  stages were proven and which could not be.
+- **`**Preconditions:**` becomes a condition, not prose.** It is free text
+  today, `analyze.py` checks only that the label exists, and no plan has ever
+  filled one. Terraform's `precondition` block and Ansible's `assert` agree on
+  the shape — a condition plus a message — and this repo already has that
+  vocabulary as `Run:` / `Expect:`.
+
+## Previous Work
 
 Branch `feat/checklist-completion`, **17 commits ahead of `main`**
 (`c9f7ce6..198b559`), `63 files changed, 9175 insertions(+), 508 deletions(-)`.

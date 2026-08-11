@@ -4,6 +4,33 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Close the remaining GOAL_CHECKLIST gaps
+
+- **Status:** Approved at Gate 1, not started. Branch `feat/close-remaining-gaps`.
+- **Goal:** close every remaining checklist gap that has an honest
+  implementation here, and prove the deploy stages against a repo with a real
+  surface rather than simulating them in one that has none.
+- **Constraints:** two lifecycle gates; class-aware retry budgets; a skipped
+  check named never counted; nothing acquires `gh pr merge`; every rule needs a
+  test or a hook, not prose.
+- **Input:** `GOAL_CHECKLIST.md`; the audit at
+  `claude.ai/code/artifact/789942aa-667f-443e-8910-661568f3aa4d` (37 mechanism /
+  16 partial / 2 prose / 21 absent); the five follow-ups in `HANDOFF.md`.
+- **Output:** `tools/preconditions.py`; a checkable `**Preconditions:**` field;
+  one owner for the ticked-task pattern; a second writer for the green ref; a
+  re-measured budget ceiling; `.claude/README.md`; plan-level rollback and blast
+  radius; changelog/semver from the plan; deploy stages proven against
+  `../physrun`.
+- **Done Checks:** `python tools/run_checks.py --tier all --require-test` exits
+  0 with nothing skipped; `python tools/analyze.py --slug close-remaining-gaps`
+  reports consistent; `python tools/preconditions.py --plan <this plan>` runs
+  against its own plan; the re-audit publishes corrected counts.
+- **Out of Scope:** Gate 2 auto-approve (refused, asserted); `state/*.json`
+  (refused by ADR); adding an application to this repo (decided at Gate 1);
+  merging PR #11.
+
+<!-- Task(s) currently in progress. Overwrite in place as they change. -->
+
 ### Make the layer match the target workflow architecture
 
 - **Status:** Done — 9/9 tasks, reviewed, `PASS: 42 check(s) green`. Moved to
