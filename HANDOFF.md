@@ -33,7 +33,7 @@ Nine new tools: `chain.py`, `memory.py`, `worktree.py`, `halt.py`, `deps.py`,
 
 ## Pending
 
-Four follow-ups, all identified by the chain itself rather than by a person.
+Five follow-ups, all identified by the chain itself rather than by a person.
 Each is its own unit and enters at `writing-plans`:
 
 1. **`pre-edit/02-agent-scope-guard.py` has no caller.** It denies correctly
@@ -72,7 +72,7 @@ marks as superseded.
 1. Decide whether `feat/checklist-completion` is pushed. It is reviewed and
    green; `tools/delivery_check.py --base main --head feat/checklist-completion`
    should be run and quoted first, and pushing needs an explicit yes.
-2. Take the four Pending items through `writing-plans` as one unit — they are
+2. Take the five Pending items through `writing-plans` as one unit — they are
    small, related, and all concern mechanisms whose claims currently exceed
    their wiring.
 3. `GOAL_CHECKLIST.md` is still untracked at the repo root. It is the brief for
