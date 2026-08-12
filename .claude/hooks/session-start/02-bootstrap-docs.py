@@ -86,12 +86,25 @@ def parse_active_task_pointers(task_md_path, max_status_chars=200):
     if not active_text.strip():
         return ""
     pointers = []
-    for block in re.split(r"(?m)^## (?=\S)", active_text):
+    # Any heading depth, because `## Active` contains `###` tasks and splitting
+    # on `## ` alone never split at all -- it returned the whole section as one
+    # block whose "name" was the HTML comment at the top, and whose status was
+    # therefore "(no Status field)". That is what this hook emitted on every
+    # session until 2026-08-12: one useless line in place of every active task.
+    for block in re.split(r"(?m)^#{2,4}\s+(?=\S)", active_text):
         block = block.strip()
-        if not block:
+        if not block or block.startswith("<!--"):
             continue
         name, _, rest = block.partition("\n")
-        status_match = re.search(r"(?ms)^-\s*\*\*Status\*\*:\s*(.*?)(?=^-\s*\*\*|\Z)", rest)
+        # Both `**Status**:` and `**Status:**` -- the format doc shows the first
+        # and every TASK.md here writes the second, so accepting one of them is
+        # how a field silently reads as absent.
+        # Stop at the next bullet of ANY kind. Stopping only at a bold one let a
+        # multi-line Status run on into `- Modify:` and `- Create:`, which are
+        # plain bullets -- so the "one-line status" quietly became the whole
+        # declaration block.
+        status_match = re.search(
+            r"(?ms)^-\s*\*\*Status:?\*\*:?\s*(.*?)(?=^\s*-\s|\Z)", rest)
         status = " ".join(status_match.group(1).split()) if status_match else "(no Status field)"
         if len(status) > max_status_chars:
             status = status[:max_status_chars].rstrip() + "..."
@@ -135,10 +148,20 @@ def parse_handoff_status(handoff_path):
 #
 # Truncation always names the file, so the full text stays one Read away. An
 # injected summary is a pointer, never a replacement.
-HANDOFF_BUDGET = 2400
-LOG_ENTRY_BUDGET = 700
-LOG_TOTAL_BUDGET = 2400
-LOG_ENTRIES = 3
+# Halved again on 2026-08-12, from 2400/2400/3, after `tools/bench.py` put a
+# number on what remained: 6,258 chars (~1,560 tokens) still spent before the
+# user types. The 2026-08-02 cut fixed the catastrophe and left the habit.
+#
+# What a session opening actually needs is *where it is*, not *what happened*.
+# HANDOFF's first paragraph is the START HERE line and earns its place; the
+# Pending list behind it does not, because nothing in it is actionable until
+# something is chosen. One LOG entry says what the last unit was; the second and
+# third are history, and history is what `LOG.md` is for. Every clip names its
+# file, so nothing here is lost -- it is one Read away instead of always paid.
+HANDOFF_BUDGET = 1000
+LOG_ENTRY_BUDGET = 500
+LOG_TOTAL_BUDGET = 500
+LOG_ENTRIES = 1
 
 
 def _clip(text, budget, what):

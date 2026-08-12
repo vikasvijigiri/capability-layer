@@ -22,7 +22,6 @@ import importlib.util
 import json
 import sys
 import tempfile
-import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -370,32 +369,43 @@ check("...and produces byte-identical output to the parallel run",
 # the suite green -- found by mutating the module and re-running, which is the
 # only reason this block exists.
 #
-# Timing is the sole observable that distinguishes the two, so the fixture is
-# two checks sleeping the SAME 0.6s: serial must take about 1.2s and parallel
-# about 0.6s.
+# The observable is OVERLAP, not elapsed time. Each check records the interval
+# it ran in; two intervals that intersect prove concurrency, and two that do not
+# prove serialisation. That is a fact about what happened, so it holds on a
+# loaded machine exactly as it does on an idle one.
 #
-# The assertion is a RATIO, not a threshold. An absolute bound has to be picked
-# far enough from both numbers to survive a loaded machine, which means either a
-# long sleep (this cost 3s of every turn when the sleeps were 1s) or a margin
-# thin enough to false-red. Under load both measurements inflate together, so
-# their ratio is the stable quantity -- it stays near 2.0 on an idle machine and
-# degrades gracefully rather than flipping.
-both_sleep = {"tools/test_s1.py": "import time\ntime.sleep(0.6)\n",
-              "tools/test_s2.py": "import time\ntime.sleep(0.6)\n"}
-par_tree = tree(dict(both_sleep))
-t0 = time.monotonic()
+# It replaces a timing ratio, which was the obvious approach and was wrong. An
+# absolute threshold needs a long sleep to clear the noise (3s of every turn at
+# 1s sleeps); a ratio survives that but still assumes the parallel arm stays
+# fast -- and inside `test_package.py`, which runs this suite in a venv while
+# eleven other checks compete for the disk, the parallel arm slowed until the
+# ratio collapsed and the assertion false-redded. A test that fails when the
+# machine is busy is not measuring the code.
+_probe = ("import time, pathlib\n"
+          "start = time.time()\n"
+          "time.sleep(0.3)\n"
+          "pathlib.Path('{name}').write_text(f'{{start}} {{time.time()}}')\n")
+both_probe = {"tools/test_p1.py": _probe.format(name="probe_a"),
+              "tools/test_p2.py": _probe.format(name="probe_b")}
+
+
+def _ran_concurrently(root) -> bool:
+    """True when the two probe checks' execution intervals intersect."""
+    a_start, a_end = (float(x) for x in (root / "probe_a").read_text().split())
+    b_start, b_end = (float(x) for x in (root / "probe_b").read_text().split())
+    return a_start < b_end and b_start < a_end
+
+
+par_tree = tree(dict(both_probe))
 pc.run_checks(par_tree)
-par_elapsed = time.monotonic() - t0
+check("the default pool runs checks concurrently -- their intervals overlap",
+      _ran_concurrently(par_tree), "probe intervals did not intersect")
 
-ser_tree = tree({**both_sleep,
+ser_tree = tree({**both_probe,
                  ".claude/project-checks.json": json.dumps({"jobs": 1})})
-t0 = time.monotonic()
 pc.run_checks(ser_tree)
-ser_elapsed = time.monotonic() - t0
-
-check("`jobs: 1` actually serialises -- serial takes >1.5x the parallel run",
-      ser_elapsed > par_elapsed * 1.5,
-      f"serial {ser_elapsed:.2f}s vs parallel {par_elapsed:.2f}s")
+check("`jobs: 1` actually serialises -- their intervals do NOT overlap",
+      not _ran_concurrently(ser_tree), "probe intervals intersected under jobs:1")
 
 # A bad `jobs` value must degrade, not propagate. `load_config` has always
 # swallowed malformed JSON for this reason -- the caller is the Stop hook that

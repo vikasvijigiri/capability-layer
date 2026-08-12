@@ -57,82 +57,6 @@
   (refused by ADR); adding an application to this repo (decided at Gate 1);
   merging PR #11.
 
-<!-- Task(s) currently in progress. Overwrite in place as they change. -->
-
-### Make the layer match the target workflow architecture
-
-- **Status:** Done — 9/9 tasks, reviewed, `PASS: 42 check(s) green`. Moved to
-  Completed below; the remaining checklist scope is a NEW unit and enters at
-  `writing-plans`.
-- **Goal:** The chain the user specified, running end to end: decompose into
-  independent tasks, a workflow per task, plan in plan mode, Gate 1, execute
-  with minimal diffs, verify, bounded retry, scoped sweep and review, a
-  confirmed push, Gate 2, release, record.
-- **Constraints:** Two lifecycle gates only — the push confirmation stays an
-  operational safety check with no `<!-- GATE n -->` marker. The retry budget
-  stays **class-aware** (`security 0, merge 2, transient 2, deterministic 3,
-  unknown 3`), not flattened to 3. A skipped check is **named as skipped**,
-  never counted as a pass. Nothing acquires `gh pr merge`. Every rule added is
-  enforced by a test or a hook, not prose.
-- **Input:** `main` @ `9a65137`, clean, 37 checks green, 0 open PRs.
-  `tools/parallel_groups.py` (scheduler + the live `normalise` bug),
-  `tools/loop.py` + `_hooklib.FAILURE_BUDGETS`, `tools/test_no_slop.py`
-  (scopes `repo|layer|portability`), `.claude/agents/task-implementer.md`
-  (`isolation: worktree`), `executing-plans/references/{using-git-worktrees,
-  parallel-dispatch}.md`, `docs/plans/2026-08-10-adaptive-workflow.md`
-  (small-vs-major veto rule, to be folded in).
-- **Output:** a corrected scheduler; `tools/worktree.py` with a mandatory base;
-  one *proved* parallel dispatch or a deleted claim; `tools/scope.py`; a change
-  scope for `no-slop` and `code-review`; scoped test selection; minimal-diff
-  enforcement; plan-mode wiring where `ExitPlanMode` replaces Gate 1's
-  `AskUserQuestion`.
-- **Done Checks:** `python tools/run_checks.py --tier all --require-test` exits 0
-  and prints the suite count; `python tools/parallel_groups.py <this plan>` shows
-  `.claude/settings.json` correctly serialised rather than schedulable; and one
-  live two-agent dispatch whose worktrees are proved based on the working branch
-  by `git merge-base --is-ancestor`, read from the tree rather than from an
-  agent's report.
-- **Out of Scope:** merging anything; branch protection (403 on this plan tier);
-  an external chain driver (`tools/drive.py`) — deferred until the
-  chain-continuity instrument has measured how often the chain actually breaks.
-
-### Add `tools/delivery_check.py` — delivery facts, computed not asserted
-
-- **Status:** Done — merged to `main` as PR #10; it has since blocked two of its
-  own unsafe deliveries, which is the evidence it works.
-- **Goal:** One script that computes seven delivery facts about a branch and its
-  PR, reports them, and refuses to decide — in the shape of `resume.py`,
-  `analyze.py` and `git_identity.py`.
-- **Constraints:** Reports, never decides; **never merges, pushes or rebases**
-  (`test_process_router.py` already fails anything acquiring `gh pr merge`).
-  Exit `0` ready / `1` a check failed / `2` could not determine — and `2` is not
-  `0`, because a check that could not run is unrun, not passed. IO behind a
-  `gather_facts()` seam with an `offline` escape, decisions in a pure
-  `evaluate(facts)` the tests drive directly, mirroring
-  `git_identity.gather(root, offline=)` + `render()`. **Not** in the fast tier:
-  it needs a network and a remote, and that tier gates every auto-commit in
-  seconds.
-- **Input:** `docs/specs/2026-08-09-delivery-preflight-design.md`;
-  `tools/git_identity.py` (API seam), `tools/analyze.py` (injected-`exists`
-  test pattern), `tools/resume.py`; `.claude/skills/delivering/SKILL.md`.
-- **Output:** `tools/delivery_check.py`; `tools/test_delivery_check.py`; a step
-  in `delivering` that runs and quotes it; an entry in
-  `.claude/project-checks.json` only if it proves fast enough to belong.
-- **Done Checks:** `python tools/test_delivery_check.py` exits 0 with an
-  assertion per check, each proved red first; and the base-alignment check flags
-  a fixture where `merge-base(base, head) != tip(base)`, which is the case that
-  stranded three merged units outside PR #7.
-- **Out of Scope:** repo-settings-as-code (its own unit, and the only preventive
-  option available); stacked-PR tooling such as Graphite (rejected in the spec);
-  merging anything; configuring branch protection.
-
-### Decide which capability owns layer retirement
-
-- **Status:** Done — `capability-layer-maintenance` owns capability-layer audits, contract changes, migration, and retirement.
-- **Goal:** Keep one owner for retiring or replacing capability-layer components.
-- **Output:** Replaced `skill-authoring`, migrated active references, added hook-policy enforcement, and verified the complete suite.
-- **Done check:** Skill routing, hook registration, hook policy, and the full all-tier suite pass.
-- **Out of scope:** Product-code changes or project-history updates owned by `knowledge-manager`.
 ### Implement world-class SessionStart bootstrap scaffolding
 - **Status:** In Progress
 - **Goal:** Implement a SessionStart bootstrap loader that scaffolds project skeleton files and a minimal, maintainable `docs/` structure without creating unnecessary subfolders or a copied `AGENTS.md`.
@@ -141,25 +65,6 @@
 - **Outputs:** updated bootstrap loader script and a documented scaffolding policy for `docs/` and `decisions/`; placeholder files created only where appropriate; task brief recorded.
 - **Done Checks:** `python tools/test_session_start_contract.py` exits 0; the loader creates only the intended placeholders; the task brief remains in `TASK.md` and is ready to implement.
 - **Out of scope:** generating full content for the skeleton files, creating actual `.claude/agents/` definitions, or changing hooks outside SessionStart.
-
-### Close the GOAL_CHECKLIST gaps that have an honest implementation
-
-- **Status:** Done — 12/12 tasks, reviewed `passed: true`, `PASS: 49 check(s)
-  green`. Branch `feat/checklist-completion`, local and unpushed.
-- **Goal:** close every `GOAL_CHECKLIST.md` line with a real implementation
-  here, and state plainly in the plan which lines have none.
-- **Output:** nine tools (`chain`, `memory`, `worktree`, `halt`, `deps`,
-  `git_ops`, `release_candidate`, `budget`, plus risk tiering in `scope`), two
-  per-turn hooks, the gate log, and the release-candidate report Gate 2 reads.
-- **Done Checks:** met — the full tier is green, rollback is executed rather
-  than described (`True` in 0.4s, `'uninstall exited 1'` when disabled), and
-  memory demonstrably changed this plan's Task 1.
-- **Not verified:** Gate 2 has still never run end to end; the kill switch is
-  proven in its suite but never mid-run; the meta-eval corpus has never been
-  paid-run; three of four definition-of-done scenarios have never fired.
-- **Out of Scope, and still out:** canary rollout, auto-rollback on production
-  metrics, alerting, bake time, DAST — no running service exists. Gate 2
-  auto-approve, refused on purpose.
 
 ## Completed
 
@@ -322,3 +227,98 @@ from day one. Move a task here the moment it reaches a terminal Status. -->
   argument dropped; `github` unblocked via `GITHUB_TOKEN`; `figma`, `sentry`, `notion`,
   `linear` added to `.mcp.json` and `.vscode/mcp.json`. 18 of 19 servers connected.
 - **Status**: Done
+
+### Make the layer match the target workflow architecture
+
+- **Status:** Done — 9/9 tasks, reviewed, `PASS: 42 check(s) green`. Moved to
+  Completed below; the remaining checklist scope is a NEW unit and enters at
+  `writing-plans`.
+- **Goal:** The chain the user specified, running end to end: decompose into
+  independent tasks, a workflow per task, plan in plan mode, Gate 1, execute
+  with minimal diffs, verify, bounded retry, scoped sweep and review, a
+  confirmed push, Gate 2, release, record.
+- **Constraints:** Two lifecycle gates only — the push confirmation stays an
+  operational safety check with no `<!-- GATE n -->` marker. The retry budget
+  stays **class-aware** (`security 0, merge 2, transient 2, deterministic 3,
+  unknown 3`), not flattened to 3. A skipped check is **named as skipped**,
+  never counted as a pass. Nothing acquires `gh pr merge`. Every rule added is
+  enforced by a test or a hook, not prose.
+- **Input:** `main` @ `9a65137`, clean, 37 checks green, 0 open PRs.
+  `tools/parallel_groups.py` (scheduler + the live `normalise` bug),
+  `tools/loop.py` + `_hooklib.FAILURE_BUDGETS`, `tools/test_no_slop.py`
+  (scopes `repo|layer|portability`), `.claude/agents/task-implementer.md`
+  (`isolation: worktree`), `executing-plans/references/{using-git-worktrees,
+  parallel-dispatch}.md`, `docs/plans/2026-08-10-adaptive-workflow.md`
+  (small-vs-major veto rule, to be folded in).
+- **Output:** a corrected scheduler; `tools/worktree.py` with a mandatory base;
+  one *proved* parallel dispatch or a deleted claim; `tools/scope.py`; a change
+  scope for `no-slop` and `code-review`; scoped test selection; minimal-diff
+  enforcement; plan-mode wiring where `ExitPlanMode` replaces Gate 1's
+  `AskUserQuestion`.
+- **Done Checks:** `python tools/run_checks.py --tier all --require-test` exits 0
+  and prints the suite count; `python tools/parallel_groups.py <this plan>` shows
+  `.claude/settings.json` correctly serialised rather than schedulable; and one
+  live two-agent dispatch whose worktrees are proved based on the working branch
+  by `git merge-base --is-ancestor`, read from the tree rather than from an
+  agent's report.
+- **Out of Scope:** merging anything; branch protection (403 on this plan tier);
+  an external chain driver (`tools/drive.py`) — deferred until the
+  chain-continuity instrument has measured how often the chain actually breaks.
+
+### Add `tools/delivery_check.py` — delivery facts, computed not asserted
+
+- **Status:** Done — merged to `main` as PR #10; it has since blocked two of its
+  own unsafe deliveries, which is the evidence it works.
+- **Goal:** One script that computes seven delivery facts about a branch and its
+  PR, reports them, and refuses to decide — in the shape of `resume.py`,
+  `analyze.py` and `git_identity.py`.
+- **Constraints:** Reports, never decides; **never merges, pushes or rebases**
+  (`test_process_router.py` already fails anything acquiring `gh pr merge`).
+  Exit `0` ready / `1` a check failed / `2` could not determine — and `2` is not
+  `0`, because a check that could not run is unrun, not passed. IO behind a
+  `gather_facts()` seam with an `offline` escape, decisions in a pure
+  `evaluate(facts)` the tests drive directly, mirroring
+  `git_identity.gather(root, offline=)` + `render()`. **Not** in the fast tier:
+  it needs a network and a remote, and that tier gates every auto-commit in
+  seconds.
+- **Input:** `docs/specs/2026-08-09-delivery-preflight-design.md`;
+  `tools/git_identity.py` (API seam), `tools/analyze.py` (injected-`exists`
+  test pattern), `tools/resume.py`; `.claude/skills/delivering/SKILL.md`.
+- **Output:** `tools/delivery_check.py`; `tools/test_delivery_check.py`; a step
+  in `delivering` that runs and quotes it; an entry in
+  `.claude/project-checks.json` only if it proves fast enough to belong.
+- **Done Checks:** `python tools/test_delivery_check.py` exits 0 with an
+  assertion per check, each proved red first; and the base-alignment check flags
+  a fixture where `merge-base(base, head) != tip(base)`, which is the case that
+  stranded three merged units outside PR #7.
+- **Out of Scope:** repo-settings-as-code (its own unit, and the only preventive
+  option available); stacked-PR tooling such as Graphite (rejected in the spec);
+  merging anything; configuring branch protection.
+
+### Decide which capability owns layer retirement
+
+- **Status:** Done — `capability-layer-maintenance` owns capability-layer audits, contract changes, migration, and retirement.
+- **Goal:** Keep one owner for retiring or replacing capability-layer components.
+- **Output:** Replaced `skill-authoring`, migrated active references, added hook-policy enforcement, and verified the complete suite.
+- **Done check:** Skill routing, hook registration, hook policy, and the full all-tier suite pass.
+- **Out of scope:** Product-code changes or project-history updates owned by `knowledge-manager`.
+
+### Close the GOAL_CHECKLIST gaps that have an honest implementation
+
+- **Status:** Done — 12/12 tasks, reviewed `passed: true`, `PASS: 49 check(s)
+  green`. Branch `feat/checklist-completion`, local and unpushed.
+- **Goal:** close every `GOAL_CHECKLIST.md` line with a real implementation
+  here, and state plainly in the plan which lines have none.
+- **Output:** nine tools (`chain`, `memory`, `worktree`, `halt`, `deps`,
+  `git_ops`, `release_candidate`, `budget`, plus risk tiering in `scope`), two
+  per-turn hooks, the gate log, and the release-candidate report Gate 2 reads.
+- **Done Checks:** met — the full tier is green, rollback is executed rather
+  than described (`True` in 0.4s, `'uninstall exited 1'` when disabled), and
+  memory demonstrably changed this plan's Task 1.
+- **Not verified:** Gate 2 has still never run end to end; the kill switch is
+  proven in its suite but never mid-run; the meta-eval corpus has never been
+  paid-run; three of four definition-of-done scenarios have never fired.
+- **Out of Scope, and still out:** canary rollout, auto-rollback on production
+  metrics, alerting, bake time, DAST — no running service exists. Gate 2
+  auto-approve, refused on purpose.
+
