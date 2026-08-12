@@ -20,6 +20,7 @@ Run: python tools/test_chain.py
 
 from __future__ import annotations
 
+import hashlib
 import sys
 import tempfile
 from pathlib import Path
@@ -319,6 +320,30 @@ check(f"assess() is fast on a long ledger ({_big_elapsed:.3f}s)",
       _big_elapsed < 0.5,
       "the ledger only grows; a scan proportional to all of history would make "
       "the instrument slower every day it runs")
+
+# --- the fingerprint must be stable ACROSS processes -------------------------
+#
+# `tree_fingerprint` used the builtin `hash()`, which on a `str` is SipHash with
+# a per-process random seed. Every hook run is a new process, so the fingerprint
+# changed on every turn whatever the tree did, and the "did the tree move?" limb
+# was ALWAYS true -- leaving the stall detector two-limbed, which is the exact
+# failure `.claude/workflow.md` says the third limb was added to fix.
+#
+# The assertion is a HARD-CODED digest, and that choice is the test. Calling the
+# function twice inside one process passes happily with the bug present, because
+# the seed is fixed for the life of a process; only a value computed in a
+# different process -- or written down here once -- can catch it.
+_STATUS = " M TASK.md\n?? new.py\n"
+_EXPECTED = hashlib.sha256(_STATUS.encode("utf-8")).hexdigest()[:8]
+check("the fingerprint is a stable digest of the status, not a random hash",
+      chain.fingerprint_of("a" * 40, _STATUS) == "a" * 40 + ":" + _EXPECTED,
+      chain.fingerprint_of("a" * 40, _STATUS))
+check("...so an unchanged status gives an unchanged fingerprint",
+      chain.fingerprint_of("b" * 40, "x") == chain.fingerprint_of("b" * 40, "x"))
+check("...and a changed status changes it",
+      chain.fingerprint_of("b" * 40, "x") != chain.fingerprint_of("b" * 40, "y"))
+check("...and the head half still distinguishes two commits",
+      chain.fingerprint_of("b" * 40, "x") != chain.fingerprint_of("c" * 40, "x"))
 
 print()
 if failures:
