@@ -4,6 +4,32 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### S1: make every turn cheap
+
+- **Status:** Concurrency landed and pinned. Context trim not started.
+- Modify: `.claude/hooks/_projectchecks.py`, `tools/test_project_checks.py`, `tools/test_session_start_contract.py`
+- **Goal:** cut the per-turn cost of this layer without changing what any gate
+  decides. Session 1 of three; the router (E0–E5) and the surface trim are S2/S3
+  and are not in scope here.
+- **Constraints:** no gate may decide differently after this than before it; a
+  speedup that costs determinism is a regression, not an optimisation; `--scoped`
+  already exists and wiring it into the auto-commit is a *policy* change, so it
+  belongs to S2 and is explicitly not done here.
+- **Input:** measured baseline — fast tier 61.4s/45 checks serial, `CLAUDE.md`
+  14,829 chars, SessionStart output 6,245 chars, descriptions 12,732 chars/turn;
+  the Notion target architecture (Universal Adaptive SDLC v2) §15, §20, §21.
+- **Output:** `.claude/hooks/_projectchecks.py` (thread pool, `jobs` config knob,
+  `DEFAULT_JOBS=8`); `tools/test_project_checks.py` (ordering, `jobs: 1`
+  equivalence, timeout vs `ran_test`); `tools/test_session_start_contract.py`
+  (label said six, list has seven); then `CLAUDE.md` → ≤5k and the SessionStart
+  trim; then `tools/bench.py` as the acceptance gate for S2/S3.
+- **Done Checks:** `python tools/run_checks.py --tier all --require-test` exits 0;
+  the fast tier is under 20s; `jobs: 1` produces byte-identical output to the
+  parallel run (asserted in `test_project_checks.py`).
+- **Out of Scope:** the router ADR; description compression (dangerous before the
+  router exists); deleting anything from `tools/` — measured at 24/24 live tools
+  and a 1.5:1 test:code ratio, so there is no dead weight to remove.
+
 ### Close the remaining GOAL_CHECKLIST gaps
 
 - **Status:** Approved at Gate 1, not started. Branch `feat/close-remaining-gaps`.

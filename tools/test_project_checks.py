@@ -22,6 +22,7 @@ import importlib.util
 import json
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -325,6 +326,96 @@ check("a prose-only change does not",
 check("a lockfile alone does not",
       not pc.changed_includes_code(["package-lock.json", ".gitignore"]))
 check("a mixed change does", pc.changed_includes_code(["README.md", "src/a.go"]))
+
+
+# --- concurrency must change the clock and nothing else ---------------------
+#
+# Checks run on a thread pool (DEFAULT_JOBS=8) because the serial fast tier cost
+# 61.4s at the end of every turn. The speedup is worthless if it costs
+# determinism, so both properties are pinned here rather than described.
+#
+# The ordering fixture is the load-bearing one. `test_a_slow` is declared first
+# and finishes last; `test_b_fast` is declared second and finishes first. Under
+# `as_completed` -- the obvious way to write this pool -- the verdict would name
+# them in completion order, so the same red tree would produce two different
+# failure strings on different runs, and a diff of two reports would show
+# phantom changes. `.map` yields in submission order, and this fixture is what
+# says so.
+
+racy = tree({"tools/test_a_slow.py":
+             "import sys,time\ntime.sleep(1.5)\nprint('FAIL: slow one')\nsys.exit(1)\n",
+             "tools/test_b_fast.py":
+             "import sys\nprint('FAIL: fast one')\nsys.exit(1)\n"})
+
+ok, detail, _ = pc.run_checks(racy)
+check("a red tree with two failures is red", not ok, detail)
+check("failures are reported in declaration order, not completion order",
+      detail.index("test_a_slow") < detail.index("test_b_fast"), detail)
+
+# Same tree, forced serial. Identical output is the whole claim: `jobs` is a
+# knob on the clock, not on the verdict.
+serial = tree({"tools/test_a_slow.py":
+               "import sys,time\ntime.sleep(1.5)\nprint('FAIL: slow one')\nsys.exit(1)\n",
+               "tools/test_b_fast.py":
+               "import sys\nprint('FAIL: fast one')\nsys.exit(1)\n",
+               ".claude/project-checks.json": json.dumps({"jobs": 1})})
+ok_s, detail_s, _ = pc.run_checks(serial)
+check("`jobs: 1` restores serial execution", not ok_s, detail_s)
+check("...and produces byte-identical output to the parallel run",
+      detail_s == detail, f"parallel={detail!r} serial={detail_s!r}")
+
+# The equivalence check above cannot fail if `jobs` is ignored: both fixtures are
+# bounded by the same slow check, so a parallel run and a serial run of them
+# produce the same string either way. Deleting the config lookup entirely left
+# the suite green -- found by mutating the module and re-running, which is the
+# only reason this block exists.
+#
+# Timing is the sole observable that distinguishes the two, so the fixture is
+# built to make it unambiguous: two checks that sleep the SAME 1s, so serial
+# must take about 2s and parallel about 1s. The 1.8s threshold sits far from
+# both. This is the one place in the file where a loaded machine could produce a
+# false red; the alternative is an assertion that cannot go red at all, which is
+# worse.
+both_sleep = {"tools/test_s1.py": "import time\ntime.sleep(1)\n",
+              "tools/test_s2.py": "import time\ntime.sleep(1)\n"}
+par_tree = tree(dict(both_sleep))
+t0 = time.monotonic()
+pc.run_checks(par_tree)
+par_elapsed = time.monotonic() - t0
+
+ser_tree = tree({**both_sleep,
+                 ".claude/project-checks.json": json.dumps({"jobs": 1})})
+t0 = time.monotonic()
+pc.run_checks(ser_tree)
+ser_elapsed = time.monotonic() - t0
+
+check("`jobs: 1` actually serialises -- two 1s checks take ~2s",
+      ser_elapsed > 1.8, f"serial elapsed {ser_elapsed:.2f}s")
+check("...while the default pool runs them concurrently",
+      par_elapsed < 1.8, f"parallel elapsed {par_elapsed:.2f}s")
+
+# A test that never finished must not count as a test that ran. `ran_test` is
+# what the commit gate reads to decide whether code may be committed at all, so
+# "attempted" must never be mistaken for "proved". Kept separate from `ok`
+# because the two answer different questions.
+# The sleep is 3s, not 30s, and the difference is not cosmetic. `timeout` bounds
+# when the *verdict* is decided, not when the process dies: `shell=True` means
+# the timeout kills the shell, and on Windows the grandchild interpreter keeps
+# running while `communicate()` blocks on the pipe it inherited. So this fixture
+# costs its full sleep in wall time however low the timeout is set -- at 30s it
+# alone made this file the longest check in the tier, 33.9s against a 61s
+# baseline for everything. 3s is the smallest sleep that still reliably outlives
+# the 1s timeout on a loaded machine. `tools/smoke.py:57` already solved the
+# same problem for the slow tier -- "`taskkill /T` is the only reliable way" --
+# and `run_checks` does not yet do it, so a hung check still blocks a turn for
+# its full runtime whatever `timeout` is set to. ISSUES.md 2026-08-12 records it.
+timed_out = tree({"tools/test_hang.py": "import time\ntime.sleep(3)\n",
+                  ".claude/project-checks.json": json.dumps({"timeout": 1})})
+ok_t, detail_t, ran_test_t = pc.run_checks(timed_out)
+check("a timed-out check is red", not ok_t, detail_t)
+check("...and says it timed out", "timed out" in detail_t, detail_t)
+check("...and does NOT count as a test having run",
+      ran_test_t is False, f"ran_test={ran_test_t}")
 
 
 # --- credentials, both axes -------------------------------------------------

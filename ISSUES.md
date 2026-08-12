@@ -6,6 +6,29 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-12 08:40 — A check `timeout` bounds the verdict, not the wall clock
+
+- **Phase/Context**: found while parallelising `_projectchecks.run_checks`. A new
+  test fixture — a check sleeping 30s under `"timeout": 1` — made
+  `test_project_checks.py` the longest check in the fast tier at 33.9s against a
+  61s baseline for all 45. The verdict was correct throughout; only the clock
+  was wrong, which is why nothing had ever caught it.
+- **Root cause**: `run_checks` calls `subprocess.run(..., shell=True, timeout=T)`.
+  The timeout kills the *shell*; on Windows the grandchild interpreter survives,
+  and `communicate()` then blocks on the pipe it inherited until that grandchild
+  exits on its own. So `T` decides when the failure is *reported*, not when the
+  process stops consuming the turn.
+- **Status**: **open, not fixed.** The fixture was reduced to a 3s sleep so the
+  tier stays fast; that hides the cost, it does not remove it.
+- **Known fix**: `tools/smoke.py:57` already solved exactly this for the slow
+  tier — `taskkill /F /T /PID` on Windows, `os.killpg` on POSIX — with the
+  comment "`taskkill /T` is the only reliable way". `run_checks` should use the
+  same teardown. The two runners disagreeing about how a child dies is the same
+  class of drift that `run_checks` itself exists to prevent.
+- **Why it matters**: the fast tier gates the auto-commit at the end of every
+  turn. One hung check blocks a turn for its full natural runtime no matter what
+  `timeout` says, and the configured value reads like a bound that holds.
+
 ## 2026-08-12 01:10 — The stall detector's third limb had never worked
 
 - **Phase/Context**: after fifteen consecutive `chain-continuity` notices in one

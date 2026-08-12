@@ -54,6 +54,7 @@ import json
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HOOKS_DIR = Path(__file__).resolve().parent
@@ -61,6 +62,19 @@ REPO_ROOT = HOOKS_DIR.parents[1]
 
 CONFIG_NAME = ".claude/project-checks.json"
 DEFAULT_TIMEOUT = 300
+
+# Checks run concurrently. They are separate processes with captured output, so
+# concurrency changes only how long the tier takes, never what it decides -- the
+# verdict is assembled in `checks` order regardless of completion order, so two
+# runs over the same tree print the same failures in the same sequence.
+#
+# 8, measured rather than guessed: this repo's fast tier is 61.4s serial, 11.5s
+# at 8 workers and 12.2s at 16, where the suites start contending for the disk.
+# Beyond the point where the longest single check dominates, more workers only
+# add contention. Override with `jobs` in the config for a project whose suites
+# are heavier or genuinely not concurrency-safe; `"jobs": 1` restores the old
+# serial behaviour exactly.
+DEFAULT_JOBS = 8
 
 # Two tiers, because cost differs by an order of magnitude and a gate nobody can
 # afford to run is a gate that gets disabled.
@@ -396,9 +410,23 @@ def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
         return True, f"no checks detected{note}", False
 
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", **(extra_env or {})}
-    failed, ran, ran_test, skipped = [], 0, False, []
 
-    for kind, command in checks:
+    def run_one(check):
+        """One check, to a ('skipped'|'errored'|'failed'|'ran', detail) pair.
+
+        Every outcome is a returned value rather than a mutation, because this
+        runs on a worker thread. Nothing here touches shared state, so the
+        reduction below stays the only place the verdict is decided.
+
+        `errored` and `failed` both count as failures and differ in one way that
+        matters: a check that timed out or could not start never *ran*, so it
+        must not mark `ran_test`. "A test proved this" and "a test was attempted
+        and never finished" are different facts, and only the first may let code
+        through the commit gate. Today a failure of either kind returns `ok`
+        False before `ran_test` is read -- the distinction is kept because that
+        ordering is not something this function should have to promise.
+        """
+        kind, command = check
         if tool_missing(command):
             # Skipped, and named in the detail. A silently absent check is the
             # thing this module exists to prevent. Name the *module* for
@@ -407,8 +435,7 @@ def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
             parts = command.split()
             missing = (parts[2] if len(parts) > 2 and parts[1] == "-m"
                        else parts[0].strip('"'))
-            skipped.append(f"{kind} (`{missing}` not installed)")
-            continue
+            return "skipped", f"{kind} (`{missing}` not installed)"
         try:
             # nosec B602 -- shell=True is required and the input is not hostile.
             # `command` comes from detection or from .claude/project-checks.json,
@@ -425,18 +452,42 @@ def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
             # claudekit's call, and it is right: a slow suite is a configuration
             # problem, not a broken change. Blocking on it trains people to
             # disable the gate entirely.
-            failed.append(f"{kind} timed out after {timeout}s -- set a faster "
-                          f"command in {CONFIG_NAME}")
-            continue
+            return "errored", (f"{kind} timed out after {timeout}s -- set a "
+                               f"faster command in {CONFIG_NAME}")
         except Exception as exc:  # noqa: BLE001
-            failed.append(f"{kind} could not run ({exc})")
-            continue
+            return "errored", f"{kind} could not run ({exc})"
 
+        if proc.returncode != 0:
+            return "failed", f"{kind} `{command}`: {failure_reason(proc)}"
+        return "ran", ""
+
+    jobs = max(1, min(int(config.get("jobs", DEFAULT_JOBS)), len(checks)))
+    if jobs == 1:
+        results = [run_one(c) for c in checks]
+    else:
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            # `.map` yields in submission order, not completion order. That is
+            # the whole reason the verdict is deterministic: the same tree
+            # produces the same failure list in the same sequence every run,
+            # however the scheduler happens to interleave the processes.
+            results = list(pool.map(run_one, checks))
+
+    failed, ran, ran_test, skipped = [], 0, False, []
+    # strict=True: a length mismatch here would silently drop checks from the
+    # verdict, reporting green on fewer results than there were checks. That is
+    # precisely the failure this module exists to prevent, so it raises.
+    for (kind, _command), (outcome, detail) in zip(checks, results, strict=True):
+        if outcome == "skipped":
+            skipped.append(detail)
+            continue
+        if outcome == "errored":
+            failed.append(detail)
+            continue
         ran += 1
         if kind == "test":
             ran_test = True
-        if proc.returncode != 0:
-            failed.append(f"{kind} `{command}`: {failure_reason(proc)}")
+        if outcome == "failed":
+            failed.append(detail)
 
     if failed:
         return False, "; ".join(failed), ran_test
