@@ -14,20 +14,21 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**`feat/security-gate` holds seven commits, all local, none pushed, no PR.**
-Five uncommitted files carry the sweep and review repairs of the newest unit —
-all declared in `TASK.md`, all green, ready to checkpoint. Full tier:
-`PASS: 51 check(s) green (audit, build, lint, smoke, test, typecheck)`, 51s.
+**`feat/security-gate` holds ten commits, all local, none pushed, no PR.** Tree
+clean apart from this record. Full tier: `PASS: 52 check(s) green (audit, build,
+lint, smoke, test, typecheck)`.
 
-    73a1ef4  Genericise the skills, add a small-work path and a context-cost hook
-    2ce3d71  Run the checks concurrently: 61.4s to 12s per turn
-    8944553  Record the /skills-doctor retirement and the fingerprint fix
-    ...and four earlier, see LOG.md
+    ee6e56d  Cap knowledge-doc entries with a check
+    5e9eaf6  Halve the session preamble; fix the task pointer that never worked
+    3974610  Move operating detail out of the preamble; size the pool to the box
+    3421fbb  Guard the jobs config; stop restating a cost that went stale
+    ...and six earlier, see LOG.md
 
-The task in `TASK.md` is **S1 of three**, and only its first half is done: the
-check tier is concurrent, the token half (`CLAUDE.md` to ≤5k, the SessionStart
-trim, `tools/bench.py`) is untouched. S2 is the router and S3 the surface trim;
-both are smaller than first scoped, for the reason under Pending 10.
+`TASK.md`'s S1 is **done except by choice**: preamble 25,599 → 9,986 ch,
+SessionStart 6,258 → 3,349, check tier 3.4x (68.2s → 20.2s interleaved).
+`tools/bench.py --save` holds the baseline; compare with it, never with a
+remembered number. **Four things remain and every one needs a decision, not
+work** — see Next Steps.
 
 **A delivery decision is owed on four units at once** — the branch stacks on
 `feat/close-remaining-gaps`, whose own ten-task plan is approved and unstarted,
@@ -101,6 +102,17 @@ marks as superseded.
 
 ## Next Steps
 
+0. **Four optimisation items are blocked on a decision, none on work.**
+   (a) Skill/command/agent descriptions are 12,732 ch injected *every turn* —
+   the last big cost. Cutting them safely needs `tools/eval_triggers.py`, which
+   is 180 `claude -p` calls per repeat; unattended spend needs a yes. Declined
+   once on 2026-08-12, so the per-turn cost stands.
+   (b) `CLAUDE.md` is 9,986 ch against a ≤5,000 target; what is left is the
+   skills table and the repo map, and which of those to lose is a judgement
+   about this repo, not a mechanical cut.
+   (c) Wiring `--scoped` into the per-turn path is the largest remaining
+   latency win and changes what a checkpoint *guarantees* — policy, not code.
+   (d) Pending 10, the two routers.
 1. Decide whether `feat/checklist-completion` is pushed. It is reviewed and
    green; `tools/delivery_check.py --base main --head feat/checklist-completion`
    should be run and quoted first, and pushing needs an explicit yes.

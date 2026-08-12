@@ -1,5 +1,25 @@
 # Log
 
+## 2026-08-12 16:53
+
+**Session preamble down 61%.** `3974610`, `5e9eaf6`, `ee6e56d`. `CLAUDE.md`+rules
+25,599 → 9,986 ch; SessionStart 6,258 → 3,349. `PASS: 52 check(s) green`.
+
+**The SessionStart task pointer had never worked.** It split on `^## ` while
+tasks are `###`, so every session got one block named after an HTML comment;
+the regex wanted `**Status**:` and every `TASK.md` writes `**Status:**`. Four
+Done tasks still sat in `## Active`.
+
+**Corrected: the speedup is 3.4x, not the 5x logged at 16:12** — one favourable
+run. Interleaved: 68.2s against 20.2s; the same tree gave 11s and 27s within an
+hour, so `bench.py` now prints that caveat.
+
+**Two instruments were wrong before their subject was.** The `jobs` timing
+assertion false-redded in a venv and now rests on interval overlap, which load
+cannot move; `test_doc_entries.py` demanded a rewrite of append-only history and
+now checks only what is in flight. Memory rot: none, 0 stale of 236 — the
+problem is the opposite, LOG's median entry ran 39 lines to a cap of 15.
+
 ## 2026-08-12 16:12
 
 **The checks now run concurrently: 61.4s to 12s on the tier that gates every
