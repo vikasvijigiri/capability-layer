@@ -8,8 +8,8 @@
 
 - **Status:** Concurrency landed, verified, swept and reviewed (`passed: true`
   after one bounded repair). Token half not started.
-- Modify: `.claude/hooks/_projectchecks.py`, `tools/test_project_checks.py`, `tools/test_session_start_contract.py`, `CLAUDE.md`, `.claude/skills/verifying-work/SKILL.md`, `.claude/hooks/session-start/02-bootstrap-docs.py`
-- Create: `.claude/operating.md`, `tools/bench.py`
+- Modify: `.claude/hooks/_projectchecks.py`, `tools/test_project_checks.py`, `tools/test_session_start_contract.py`, `CLAUDE.md`, `.claude/skills/verifying-work/SKILL.md`, `.claude/hooks/session-start/02-bootstrap-docs.py`, `README.md`, `.claude/project-checks.json`
+- Create: `.claude/operating.md`, `tools/bench.py`, `tools/test_doc_entries.py`
 - **Goal:** cut the per-turn cost of this layer without changing what any gate
   decides. Session 1 of three; the router (E0–E5) and the surface trim are S2/S3
   and are not in scope here.
