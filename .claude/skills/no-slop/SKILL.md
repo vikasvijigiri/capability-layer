@@ -10,214 +10,152 @@ allowed-tools: Read Grep Glob Bash
 
 # No-Slop
 
-Sweep for slop, then repair what the user approves. Run this after work has
-been verified and before it's reviewed for shipping — not instead of either.
+Sweep for slop, then repair what the user approves. Runs after work is verified
+and before it is reviewed — not instead of either. Running after review would
+ship the repairs unreviewed; running before verification sweeps a tree that is
+about to change.
 
-That position is deliberate. Running after review would ship the repairs
-unreviewed — the exact hole review exists to close. Running before verification
-means you're sweeping a tree that's about to change anyway, wasting a reader's
-attention on findings that won't survive.
-
-**This is not a diff review, and `code-review` is.** The two run at adjacent
-stages and can read the same files, so the division is stated on both sides
-rather than assumed:
+**This is not a diff review, and `code-review` is.** Both can read the same
+files, so the division is stated on both sides:
 
 | | Reads | Answers |
 |---|---|---|
 | this skill | standing artefacts, **including files the change never touched** | has slop accumulated here |
 | `code-review` | the diff, and under `small` its direct callers | is this change correct and safe to ship |
 
-The load-bearing half is "including files the change never touched". Slop
-accumulates across sessions and every turn that produced it was individually
-fine at the time, so a sweep restricted to the diff cannot see the thing it
-exists to find. A finding here about an unchanged file is the skill working; the
-same finding from `code-review` would be scope creep.
+"Including files the change never touched" is the load-bearing half: slop
+accumulates across sessions and every turn that produced it was fine at the
+time, so a sweep restricted to the diff cannot see what it exists to find.
 
-A boundary asserted in one sentence and checked by nothing is a boundary that
-drifts. `tools/test_process_router.py` fails if either skill stops naming the
-other — the same back-reference shape it uses for agents and their dispatchers,
-and the weakest mechanism that is still a mechanism.
-
-**`capability-layer-maintenance` is the other neighbour**, and the division is
-by question rather than by directory. Sweeping `.claude/` is this skill's job;
-deciding what the layer's contracts and wiring should be is that skill's. A dead
-reference is **reported here and repaired there** — which is the same structural
-rule as everywhere else in this file, since changing what fires is never a
-cleanup. The same suite fails if either stops naming the other.
+**`capability-layer-maintenance` is the other neighbour**, divided by question
+rather than directory: sweeping `.claude/` is this skill's job, deciding what
+its contracts should be is that skill's. A dead reference is **reported here and
+repaired there**. `tools/test_process_router.py` fails if either neighbour stops
+naming the other.
 
 Cap visible output at ~500 tokens. Findings with `file:line`, not a tour.
 
-Classify every finding as `P0` release-blocking, `P1` high-risk, or `P2`
-cleanup. State the evidence and the smallest safe repair. A clean result means
-the automated checks passed and the judgement pass found no unexplained
-findings; it is not a guarantee that an unrendered or untested surface is
-correct.
+Classify every finding `P0` release-blocking, `P1` high-risk, or `P2` cleanup,
+with the evidence and the smallest safe repair. Clean means the automated checks
+passed and the judgement pass found nothing — not that an unrendered or untested
+surface is correct.
 
 ## Scope is one dimension, set per run
 
-Don't split this into fixed categories like "whole project" vs "just the new
-part" — scope is however much of the tree this run is answerable for, and it
-should be stated in the report so the reader knows what was and wasn't covered.
-Typical triggers for running it:
+Scope is however much of the tree this run is answerable for, and it is stated
+in the report so the reader knows what was covered. Typical triggers:
 
-- **Before shipping, merging, or handing off** a meaningful unit of work — the
-  default case, and it should cover everything in that unit plus anything it
-  touches.
-- **After adding or removing a component** — a module, service, endpoint,
-  config surface, dependency, script, or any other named unit the project is
-  built from. This is when overlap, duplication, and dead references appear,
-  and no single edit reveals them; a narrower sweep centered on the new or
-  removed component plus its neighbors is usually enough.
-- **On a cadence or a change-volume threshold you set** — e.g., weekly, or once
-  N files have changed since the last sweep. Pick a number that fits the
-  project's pace; the point is that slop is invisible turn-by-turn and only
-  shows up at volume.
+- **Before shipping, merging or handing off** — the default; covers the unit
+  plus anything it touches.
+- **After adding or removing a component** — where overlap, duplication and dead
+  references appear, and no single edit reveals them.
+- **On a cadence or change-volume threshold you set** — slop is invisible
+  turn-by-turn and shows up at volume.
 
-If the request doesn't specify scope, ask, or default to the smallest scope
-that would still catch what prompted the request — and say which you picked.
+If the request doesn't specify, ask, or default to the smallest scope that would
+catch what prompted the request — and say which you picked.
 
 ## Two phases, and the gate between them is hard
 
 <HARD-GATE>
-Phase 1 REPORTS in full. Phase 2 then repairs **the local group only**, and
-only after the user has seen every finding.
+Phase 1 REPORTS in full. Phase 2 repairs **the local group only**, and only
+after the user has seen every finding.
 
-Deliver every finding before touching anything, even the one-character ones.
-Fixing mid-sweep is still forbidden and the reason is unchanged: it makes the
-report describe a tree that no longer exists, so the reader cannot check a
-single claim against what is actually there.
+Fixing mid-sweep makes the report describe a tree that no longer exists, so the
+reader cannot check a single claim against what is there.
 
 **Structural findings are never applied here.** Merging or splitting a
-component, renaming a public interface, deleting a document, re-cutting how
-work is routed — those change what exists or what fires, and a change nobody
-reviewed is exactly what this skill exists to prevent. They're reported and
-handed to whatever planning or decision process the project uses, as their own
-piece of work, not folded into this sweep.
+component, renaming a public interface, deleting a document, re-cutting how work
+is routed — those change what exists or what fires, and an unreviewed change is
+what this skill exists to prevent. Report them and hand them to planning as
+their own piece of work.
 </HARD-GATE>
 
 ## Phase 1 — sweep
 
-**Run the project's automated checks first, if it has any** — linters,
-formatters, type checkers, custom consistency scripts, CI's own lint stage —
-and quote the last relevant line of output. Those own credentials,
-merge-conflict markers, unresolved placeholders, empty tracked files, dead
-imports, and anything else objectively decidable. Re-checking those by eye
-produces a second, weaker answer to a settled question.
+**Run the project's automated checks first** and quote the last relevant line.
+**Take the scoped tier** (`python tools/run_checks.py --scoped`): this stage runs
+mid-chain and the full tier belongs to the last verification before delivery.
+Phase 2's re-run is scoped too. Those checks own credentials, conflict markers,
+placeholders, empty files, dead imports — anything objectively decidable.
+Re-checking them by eye is a second, weaker answer to a settled question.
 
-If the project has **no** automated checks for a category the sweep would
-otherwise catch mechanically, say so explicitly as a finding (usually `P2`,
-`P1` if it's a category that's bitten this project before) — the absence is
-itself information, not a reason to skip the category.
+If the project has **no** automated check for a category, say so as a finding
+(usually `P2`, `P1` if it has bitten this project) — the absence is information.
 
-Then read for what automation can't decide. Use this pass order so a cheap
-failure stops an expensive review:
+Then read for what automation cannot decide, cheapest failure first:
 
 1. **P0 safety:** credentials, destructive commands, conflict markers, broken
-   configuration (including a tool or skill whose declared permissions don't
-   cover the steps it instructs), unsafe defaults, and claims of completion
-   without proof.
-2. **P1 correctness:** unhandled failures, unreachable code paths, missing
-   edge cases, stale references, scope violations, and duplicated sources of
-   truth.
+   configuration (including a tool whose declared permissions don't cover the
+   steps it instructs), unsafe defaults, completion claimed without proof.
+2. **P1 correctness:** unhandled failures, unreachable paths, missing edge
+   cases, stale references, scope violations, duplicated sources of truth.
 3. **P1 product quality:** incomplete loading/empty/error/permission states,
-   inaccessible interactions, responsive overflow, or a design-token violation
-   on any user-facing surface.
-4. **P2 maintainability:** naming, comments, local consistency, dead weight,
-   redundant prose, and cosmetic cleanup.
+   inaccessible interactions, responsive overflow, design-token violations.
+4. **P2 maintainability:** naming, comments, consistency, dead weight.
 
-**1. Overlapping responsibilities.** Two functions, modules, endpoints, docs,
-or automations that would both plausibly handle the same request or input.
-Automated checks catch identical names; they can't catch two things described
-differently that actually compete. Test it: write three realistic inputs and
-name which one owns each. The most expensive ambiguity there is — the wrong
-one still produces confident output and nothing signals the mismatch.
+**1. Overlapping responsibilities.** Two things that would both plausibly handle
+the same input. Automation catches identical names, not two things described
+differently that compete. Test it: write three realistic inputs and name which
+one owns each. The wrong one still produces confident output.
 
-**2. Duplicate knowledge, paraphrased.** Automated checks catch identical
-text. They miss one rule stated three different ways, which is worse: the
-versions drift and no reader can tell which is current. Ask how many places
-would need editing if that rule changed — count paragraphs and comments, not
-just files. More than one means pick an owner and replace the rest with a
-pointer.
+**2. Duplicate knowledge, paraphrased.** One rule stated three ways drifts, and
+no reader can tell which is current. Count the paragraphs that would need
+editing if the rule changed; more than one means pick an owner and leave
+pointers.
 
-**3. God component.** One function, class, file, or service doing two jobs
-that could be reviewed or replaced separately. The signal is **not** length —
-long is fine when the length is inherent to the job (a template, a full
-schema, a reference table). The signal is whether a reviewer could approve or
-revert half of it without touching the rest.
+**3. God component.** One unit doing two jobs that could be reviewed or replaced
+separately. The signal is **not** length — it is whether a reviewer could
+approve or revert half of it without touching the rest.
 
 **4. Orchestration leakage.** Something deciding what happens next instead of
-producing its result and letting the caller decide. Watch for hardcoded
-sequencing, hidden retries, or a component reaching outside its own boundary
-to trigger unrelated work.
+producing its result and letting the caller decide.
 
-**5. Design-surface slop.** If the change touches a user-facing surface, read
-the project's design system or style guide if one exists; don't invent rules
-here. Check the implemented surface for consistent tokens (color, type,
-spacing), all meaningful states (loading, empty, error, disabled), visible
-focus, actual contrast, alt text, color-independent meaning, and reduced
-motion. If there's no design contract to check against, report a `P1`
-missing-decision finding rather than inventing a visual system during cleanup.
+**5. Design-surface slop.** On a user-facing surface, read the project's design
+system if one exists; don't invent rules. Check tokens, all meaningful states,
+visible focus, contrast, alt text, colour-independent meaning, reduced motion.
+No design contract to check against is a `P1` missing-decision finding.
 
-**6. Evidence slop.** For each important claim, ask what artifact proves it:
-test output for behavior, a diff for scope, a rendered view for visual
-quality, a log or smoke check for deployment. "Looks fine," "should work," and
-"done" are not evidence. Missing evidence is a finding, not an invitation to
-guess.
+**6. Evidence slop.** For each important claim, ask what artifact proves it.
+"Looks fine" and "done" are not evidence. Missing evidence is a finding, not an
+invitation to guess.
 
-**Named handoffs get the same scrutiny, carefully.** If a component states
-what should happen after it (a next step, a caller, a downstream owner),
-that's fine on its own — a step with no named successor is one that's easy to
-forget. The finding is **not** "this names what comes next." It's a named
-successor that contradicts how the project actually routes work elsewhere, or
-one stated unconditionally where the real logic is conditional.
+**Named handoffs get scrutiny, carefully.** A component stating what comes next
+is fine — a step with no named successor is easy to forget. The finding is a
+successor that *contradicts* how the project routes work, or one stated
+unconditionally where the real logic is conditional.
 
-**Counted provenance.** A number can be true of the current state and false
-the moment anything changes — "seven call sites," "three teams affected,"
-"five files reference this." That's different from a number that's generic
-guidance and stays true regardless — "retry up to 3 times," "cap output at
-~500 tokens." Automated checks can flag dates and possessive references but
-can't tell these two kinds of number apart, since a bare count doesn't say
-which one it is. Read each one and ask: does this describe the current
-specific state, or is it a rule that would still hold after the state
-changes?
+**Counted provenance.** A number can be true now and false after any change
+("seven call sites"), or generic and durable ("retry 3 times"). Automation
+cannot tell them apart. Ask: does this describe current state, or a rule that
+survives the state changing?
 
-At wider scopes, also read for dead weight nothing mechanical can judge: a
-document superseded by a newer one and never marked as such, a script nothing
-calls, a config key nothing reads, a dependency nothing imports.
+At wider scopes, read for dead weight nothing mechanical can judge: a superseded
+document never marked as such, a script nothing calls, a config key nothing
+reads, a dependency nothing imports.
 
-For each unit reviewed, record one of three outcomes: `pass`, `finding`, or
-`deliberate exception`. Exceptions must name the rule, the reason, an owner,
-and an expiry or follow-up condition; "intentional" alone is not a
+Record each unit as `pass`, `finding`, or `deliberate exception`. An exception
+names the rule, the reason, an owner, and an expiry; "intentional" is not a
 justification.
 
 ## The report
 
-A table: `file:line` · the smell · one sentence on what breaks. State the
-scope that was covered. Then the verdict: clean, or the count. If nothing is
-wrong, say so in one line **and name what you read** — an empty review that
-lists nothing is indistinguishable from a review that never ran.
+A table: `file:line` · the smell · one sentence on what breaks. State the scope
+covered, then the verdict: clean, or the count. If nothing is wrong, say so in
+one line **and name what you read** — an empty review is indistinguishable from
+one that never ran.
 
-Split the findings into two groups, because they carry different risk and only
-one of them is safe to act on without asking:
+Split the findings, because only one group is safe to act on unasked:
 
 | Group | Examples | Disposition |
 |---|---|---|
-| **Local** | a hedge, a stray `TODO`, a missing doc section, a stale count, an over-long description, dead code with no external reference | Repairable now — contained in one file, mechanically checkable afterwards |
-| **Structural** | merging or splitting a component, renaming a public interface, retiring a document, changing how work is routed between parts of the system | **Its own unit of work, not an edit.** It changes what exists or what fires; doing it mid-sweep ships a change nobody reviewed |
+| **Local** | a hedge, a stray `TODO`, a stale count, dead code with no external reference | Applied in Phase 2 — contained in one file, mechanically checkable after |
+| **Structural** | merging or splitting a component, renaming an interface, retiring a document, changing how work is routed | **Its own unit of work.** It changes what exists or what fires |
 
-Local findings are applied automatically in Phase 2, right after this report —
-that's what makes them local: contained in one file and mechanically checkable
-afterwards. Structural findings are never applied here, no matter how obvious
-the fix looks.
-
-Route each structural finding to whatever planning, RFC, or decision process
-the project uses, and let that process decide from there — the question that
-matters is *is the approach settled?* "Retire this dead document" is settled
-and can go straight into a task. "This component overlaps its neighbor" is
-not settled — merging them or splitting the responsibility are both live
-options — and skipping straight to a task bakes in whichever answer came to
-mind first. Name the finding and the tradeoff; don't pick the destination
-yourself if the project has a process meant to make that call.
+Route each structural finding to the project's planning or decision process and
+let that decide. "Retire this dead document" is settled and can become a task;
+"this component overlaps its neighbour" is not — merging and splitting are both
+live, and skipping to a task bakes in whichever came to mind first.
 
 ## Phase 2 — rectify
 
@@ -225,39 +163,32 @@ Only what was approved, and only the local group.
 
 1. Apply the fixes.
 2. **Re-run the project's automated checks at the same scope.** Repairs move
-   line numbers, counts, and references that other checks may assert against
-   — confirm nothing else broke.
-3. Quote the result. Still red is a debugging problem, not a reason to retry
-   the same fix.
-4. Report what changed, and which structural findings were handed off, with
-   the reason and the destination given.
+   line numbers, counts and references other checks assert against.
+3. Quote the result. Still red is a debugging problem, not a reason to retry.
+4. Report what changed, and which structural findings were handed off, where.
 
-**You may be editing something that's currently running or in use** — a
-config file being read by a live process, a script invoked elsewhere, a
-document another tool parses. An edited file doesn't necessarily reload in the
-current session, so don't verify by re-triggering the very thing you just
-edited; check its effect the way an outside caller would.
+**You may be editing something in use** — a config a live process is reading, a
+script invoked elsewhere. An edited file does not necessarily reload, so check
+its effect the way an outside caller would rather than by re-triggering what you
+just edited.
 
 ## What "clean" can and cannot mean
 
 Green means every decidable check passed and the judgement pass found nothing
 this time. It does not mean the project is provably clean — most of the
-checklist needs a reader, which is why this skill exists at all. State the
-verdict as what was checked, never as a guarantee.
+checklist needs a reader, which is why this skill exists. State the verdict as
+what was checked, never as a guarantee.
 
 ## Red Flags — you are padding, not sweeping
 
 - Re-stating what an automated check already printed.
 - A finding with no `file:line`.
 - "Consider possibly simplifying this section" — name the sentence to cut.
-- Flagging a named handoff as leakage without checking how the project
-  actually routes work.
+- Flagging a named handoff as leakage without checking how the project routes work.
 - Editing anything before the full report has been delivered.
 - Applying a structural fix because it "looked obvious."
-- Sweeping a much narrower scope than the request implied, to finish faster.
+- Sweeping a narrower scope than the request implied, to finish faster.
 - Inventing a smell to avoid reporting clean.
-- Restating a rule you already stated, in different words, because the first
-  version "didn't feel emphatic enough."
 
 **Each of these means: go back to the file and quote the line.**
 
@@ -265,39 +196,35 @@ verdict as what was checked, never as a guarantee.
 
 | Mistake | Why it bites |
 |---|---|
-| Reviewing a diff instead of the tree | Slop doesn't live in one change; it accumulates across many that each looked fine |
+| Reviewing a diff instead of the tree | Slop accumulates across many changes that each looked fine |
 | Fixing as you go | The report then describes a tree that no longer exists |
-| Treating a structural fix as a local one | It changes what exists or what fires; it ships a change nobody reviewed |
-| Skipping the re-run after repairs | Repairs move counts and references other checks may assert against |
-| Treating length as the god-component signal | Some units are long because the length is inherent to the job, and that's correct |
-| Giving a tool or skill fewer permissions than its own steps require | It can report the gate but can't clear it |
-| Fixing scope silently instead of stating it in the report | The reader can't tell what was and wasn't covered |
+| Treating a structural fix as local | It ships a change nobody reviewed |
+| Skipping the re-run after repairs | Repairs move counts other checks assert against |
+| Treating length as the god-component signal | Some units are long because the job is |
+| Giving a tool fewer permissions than its own steps require | It can report the gate but not clear it |
+| Fixing scope silently instead of stating it | The reader can't tell what was covered |
 
 ## Next step — you MUST take it
 
-**The terminal state is invoking `code-review`.** The repairs made here
-are themselves a change, and an unreviewed clean-up is how a sweep introduces
-the defect it was run to prevent. If nothing was repaired, hand over anyway
-and say the sweep was clean — the reviewer needs to know it ran.
+**The terminal state is invoking `code-review`.** The repairs made here are
+themselves a change, and an unreviewed clean-up is how a sweep introduces the
+defect it was run to prevent. If nothing was repaired, hand over anyway and say
+the sweep was clean — the reviewer needs to know it ran.
 
 ## Routing
 
-- Mandatory validator: the project's own automated checks, run at the start of
-  Phase 1 and again in Phase 2. Findings only mean something on a tree whose
-  mechanical checks already pass.
-- Preceded by verification of the work being swept. Sweeping unverified work
-  spends a reader on a tree that may still change.
+- Mandatory validator: the project's automated checks, at the start of Phase 1
+  and again in Phase 2. Findings only mean something on a mechanically green tree.
+- Preceded by verification of the work being swept.
 - Terminal handoff: `code-review`, then `delivering`.
-- Also entered off-chain after a component is added or removed, scoped to
-  that component and its neighbors, then returns to whatever was happening.
-- Structural findings become their own unit of work, routed to the project's
-  planning or decision process rather than applied here. A sweep worth
-  remembering — a recurring smell, a pattern worth documenting — goes wherever
-  the project records decisions or lessons, if it keeps one.
+- Also entered off-chain after a component is added or removed, scoped to that
+  component and its neighbours, then returns to whatever was happening.
+- Structural findings become their own unit, routed to planning rather than
+  applied. A recurring smell goes wherever the project records lessons.
 
 ## Success
 
-Every finding named a `file:line`, the scope covered was stated, automated
-check output was quoted rather than re-derived, nothing was edited before the
-user approved it, structural findings were routed rather than applied, and
-every relevant check was re-run and quoted after repairs.
+Every finding named a `file:line`, the scope covered was stated, automated check
+output was quoted rather than re-derived, nothing was edited before approval,
+structural findings were routed rather than applied, and every relevant check
+was re-run and quoted after repairs.

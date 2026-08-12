@@ -10,6 +10,14 @@ Arguments: optional changed-area hint in `$ARGUMENTS`.
 Run:
 
 ```bash
+PYTHONIOENCODING=utf-8 python tools/run_checks.py --scoped
+```
+
+Scoped narrows the fast tier to the suites the changed paths map to, prints
+`PARTIAL PASS` rather than `PASS`, and names what it skipped. It refuses a
+`major` change with exit 2 — take the fast tier then:
+
+```bash
 PYTHONIOENCODING=utf-8 python tools/run_checks.py --tier fast --require-test
 ```
 

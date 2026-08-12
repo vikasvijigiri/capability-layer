@@ -229,29 +229,19 @@ working. Never route around it by switching tool or shell.
 
 ## Red Flags — stop, do not release
 
-- "The deploy CLI exited 0, so it's live."
-- "I'll find the rollback if we end up needing it."
-- "They approved the merge, so the deploy is approved."
-- "Staging and prod are basically the same."
-- "It's only a config change, it doesn't need a smoke test."
-- "The migration is fine, it's backward compatible." Proven how?
-- "Roll forward — rolling back loses the fix."
-- "The spend guard is noisy, I'll run it through the other shell."
-- "It's probably Vercel, there's a `next.config.js`."
+Each of these means: stop and ask, in this conversation.
 
-**Each of these means: stop and ask, in this conversation.**
-
-## Common Mistakes
-
-| Mistake | Why it bites |
+| Said | Why it bites |
 |---|---|
-| Treating the deploy tool's exit code as the smoke check | The upload succeeded; the app may be crash-looping |
-| Naming the rollback after the deploy | You find out it doesn't exist at the worst moment |
-| Inferring the target from a framework file | Framework ≠ host; the wrong environment gets the change |
-| One approval covering staging and production | Two blast radii, two decisions |
-| Debugging the live failure before rolling back | Every minute of diagnosis is a minute of outage |
-| Skipping the "what rollback does not undo" line | The reversible deploy sat on an irreversible migration |
-| Branching on the platform inside this file | The next platform adds another branch, forever |
+| "The deploy CLI exited 0, so it's live." | The upload succeeded; the app may be crash-looping. Exit code is not health |
+| "I'll find the rollback if we end up needing it." | You find out it doesn't exist at the worst moment. Name it before the deploy |
+| "It's probably Vercel, there's a `next.config.js`." | Framework ≠ host; the wrong environment gets the change |
+| "They approved the merge, so the deploy is approved." | Two blast radii, two decisions — and staging is not production |
+| "It's only a config change, it doesn't need a smoke test." | Config is what most outages are |
+| "The migration is fine, it's backward compatible." | Proven how? A reversible deploy can sit on an irreversible migration — say what rollback does *not* undo |
+| "Roll forward — rolling back loses the fix." | Every minute of diagnosis is a minute of outage. Roll back, then diagnose |
+| "The spend guard is noisy, I'll run it through the other shell." | Routing around a guard is not clearing it |
+| Branching on the platform inside this file | The next platform adds another branch, forever — platform packs live in `references/` |
 
 After the smoke check and observation window, dispatch `release-verifier` for
 an independent readiness check when the harness supports subagents. Missing

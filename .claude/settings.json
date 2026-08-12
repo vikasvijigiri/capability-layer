@@ -115,6 +115,15 @@
             "statusMessage": "Checking whether a hook script needs testing..."
           }
         ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool/01-context-cost.py\""
+          }
+        ]
       }
     ]
   }

@@ -20,6 +20,13 @@ That is the gap this fills, and nothing now reminds you it is open.
 Cap visible output at ~500 tokens. The written entries are the deliverable; do
 not also narrate them back.
 
+**Cap each written entry too.** A `LOG.md` entry is ~15 lines, a `HANDOFF.md`
+section ~10, an `ISSUES.md` incident ~12. These files are re-read on every
+session that loads them, so length is a recurring cost, not a one-off. Write the
+one thing a future reader could not reconstruct from the diff and stop. If an
+entry needs more, it is carrying detail that belongs in the diff, the plan, or
+an ADR.
+
 ## The order
 
 1. Gather evidence from the tree — `git log`, the diff, the checks that ran.

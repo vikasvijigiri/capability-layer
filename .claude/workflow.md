@@ -46,6 +46,24 @@ that is execution control, not a lifecycle gate.
 
 ## Entry
 
+### The small-work path — take it when it applies
+
+The nine stages cost the same for a two-file change as for a twelve-task plan,
+and that is the single biggest source of overhead in this layer. When
+`tools/scope.py` says `small` **and** the work is not a control, shared or
+sensitive surface:
+
+    frame it in one line -> do it -> `--scoped` checks -> record one LOG line
+
+No plan, no Gate 1, no sweep, no separate review pass — read your own diff
+before you stop. Say **"small path"** out loud so the choice is visible and
+reversible; anything that turns out `major` mid-flight re-enters at stage 1.
+
+This is a narrowing of the stage table below, not an exception to it: the
+invariants at the foot of this file still hold, and nothing here waives the two
+gates or the delivery approval.
+
+
 **This section owns the entry rule. Nowhere else states it.** It was written in
 seven places until 2026-08-08 and the suite needed a special-case
 `FORBIDDEN_SUCCESSOR` check to stop the copies drifting apart, which is what a

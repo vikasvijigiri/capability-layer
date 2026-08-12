@@ -164,31 +164,19 @@ repeated conflicts return to the plan gate.
 
 ## Red Flags — you are asserting readiness, not checking it
 
-- "The rebase should be clean, it's a small change." Simulate it; don't predict it.
-- "This conflict is probably just whitespace." Classify it mechanically before
-  touching it.
-- "`--fill` is close enough for the PR body." It reads squashed noise, not a
-  description — write it from the plan.
-- "They'll probably say yes, I'll just push." That's the exact inferred yes
-  the push confirmation exists to prevent.
-- "The merge queue will catch anything wrong." Confirm the queue is actually
-  enabled before trusting it as a safety net.
-- "I'll resolve this migration conflict myself, it's probably fine." Substantive
-  conflicts escalate; they are not yours to guess at.
-- Reporting `clean` without step 6's preflight output quoted beside it.
+Each of these means: run the check, quote it, and let the result decide.
 
-**Each of these means: run the check, quote it, and let the result decide.**
-
-## Common Mistakes
-
-| Mistake | Why it bites |
+| Said | Why it bites |
 |---|---|
-| Treating an inferred "sounds good" as push approval | The confirmation exists precisely because prose approval is unreliable |
-| Resolving a substantive conflict by inspection instead of escalating | Migration and auth-path conflicts need a real diagnosis, not a fast guess |
-| Using an auto-filled PR body | It surfaces squashed checkpoint noise, not the actual change description |
-| Opening a second stacked PR without declaring the merge strategy first | Squash-merging the base silently breaks every child's history |
-| Treating "could not determine" as a pass | An unenforceable or unchecked fact is not a fact that held |
-| Deferring to a merge queue without confirming it's enabled | The mechanism you're relying on may not exist on this repository's tier |
+| "The rebase should be clean, it's a small change." | Simulate it; don't predict it |
+| "This conflict is probably just whitespace." | Classify it mechanically before touching it |
+| "I'll resolve this migration conflict myself, it's probably fine." | Migration and auth-path conflicts need a diagnosis, not a fast guess — escalate |
+| "`--fill` is close enough for the PR body." | It surfaces squashed checkpoint noise, not the change. Write it from the plan |
+| "They'll probably say yes, I'll just push." | The confirmation exists precisely because prose approval is unreliable |
+| "The merge queue will catch anything wrong." | Confirm the queue is enabled before trusting it; it may not exist on this tier |
+| Opening a second stacked PR without declaring the merge strategy | Squash-merging the base silently breaks every child's history |
+| Treating "could not determine" as a pass | An unchecked fact is not a fact that held |
+| Reporting `clean` without the preflight output quoted beside it | The claim outruns the evidence |
 
 ## Next step — you MUST take it
 
