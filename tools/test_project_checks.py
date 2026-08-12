@@ -343,7 +343,7 @@ check("a mixed change does", pc.changed_includes_code(["README.md", "src/a.go"])
 # says so.
 
 racy = tree({"tools/test_a_slow.py":
-             "import sys,time\ntime.sleep(1.5)\nprint('FAIL: slow one')\nsys.exit(1)\n",
+             "import sys,time\ntime.sleep(0.6)\nprint('FAIL: slow one')\nsys.exit(1)\n",
              "tools/test_b_fast.py":
              "import sys\nprint('FAIL: fast one')\nsys.exit(1)\n"})
 
@@ -355,7 +355,7 @@ check("failures are reported in declaration order, not completion order",
 # Same tree, forced serial. Identical output is the whole claim: `jobs` is a
 # knob on the clock, not on the verdict.
 serial = tree({"tools/test_a_slow.py":
-               "import sys,time\ntime.sleep(1.5)\nprint('FAIL: slow one')\nsys.exit(1)\n",
+               "import sys,time\ntime.sleep(0.6)\nprint('FAIL: slow one')\nsys.exit(1)\n",
                "tools/test_b_fast.py":
                "import sys\nprint('FAIL: fast one')\nsys.exit(1)\n",
                ".claude/project-checks.json": json.dumps({"jobs": 1})})
@@ -371,13 +371,17 @@ check("...and produces byte-identical output to the parallel run",
 # only reason this block exists.
 #
 # Timing is the sole observable that distinguishes the two, so the fixture is
-# built to make it unambiguous: two checks that sleep the SAME 1s, so serial
-# must take about 2s and parallel about 1s. The 1.8s threshold sits far from
-# both. This is the one place in the file where a loaded machine could produce a
-# false red; the alternative is an assertion that cannot go red at all, which is
-# worse.
-both_sleep = {"tools/test_s1.py": "import time\ntime.sleep(1)\n",
-              "tools/test_s2.py": "import time\ntime.sleep(1)\n"}
+# two checks sleeping the SAME 0.6s: serial must take about 1.2s and parallel
+# about 0.6s.
+#
+# The assertion is a RATIO, not a threshold. An absolute bound has to be picked
+# far enough from both numbers to survive a loaded machine, which means either a
+# long sleep (this cost 3s of every turn when the sleeps were 1s) or a margin
+# thin enough to false-red. Under load both measurements inflate together, so
+# their ratio is the stable quantity -- it stays near 2.0 on an idle machine and
+# degrades gracefully rather than flipping.
+both_sleep = {"tools/test_s1.py": "import time\ntime.sleep(0.6)\n",
+              "tools/test_s2.py": "import time\ntime.sleep(0.6)\n"}
 par_tree = tree(dict(both_sleep))
 t0 = time.monotonic()
 pc.run_checks(par_tree)
@@ -389,10 +393,9 @@ t0 = time.monotonic()
 pc.run_checks(ser_tree)
 ser_elapsed = time.monotonic() - t0
 
-check("`jobs: 1` actually serialises -- two 1s checks take ~2s",
-      ser_elapsed > 1.8, f"serial elapsed {ser_elapsed:.2f}s")
-check("...while the default pool runs them concurrently",
-      par_elapsed < 1.8, f"parallel elapsed {par_elapsed:.2f}s")
+check("`jobs: 1` actually serialises -- serial takes >1.5x the parallel run",
+      ser_elapsed > par_elapsed * 1.5,
+      f"serial {ser_elapsed:.2f}s vs parallel {par_elapsed:.2f}s")
 
 # A bad `jobs` value must degrade, not propagate. `load_config` has always
 # swallowed malformed JSON for this reason -- the caller is the Stop hook that
@@ -404,7 +407,12 @@ check("...while the default pool runs them concurrently",
 # Out-of-range values are separate and need no guard -- the max/min clamp
 # already handles them -- so they are asserted here as green rather than as
 # errors, which is what stops a later "fix" from rejecting a valid 0.
-for _bad in ("eight", None, [8], {"n": 8}):
+# One case per exception type rather than one per shape: 'eight' is the
+# ValueError path and None the TypeError path, and [8]/{} were re-proving the
+# latter at ~0.4s each. Mutation testing showed all four failing identically
+# when the guard is removed, which is what makes the extra two redundant rather
+# than merely similar.
+for _bad in ("eight", None):
     _tree = tree({"tools/test_j.py": "print('ok')\n",
                   ".claude/project-checks.json": json.dumps({"jobs": _bad})})
     try:
@@ -415,7 +423,7 @@ for _bad in ("eight", None, [8], {"n": 8}):
         check(f"a `jobs` value of {_bad!r} degrades to the default",
               False, f"raised {type(exc).__name__}: {exc}")
 
-for _edge in (0, -3, 2.7):
+for _edge in (0, 2.7):  # the int path and the float path; -3 re-proved 0
     _tree = tree({"tools/test_j.py": "print('ok')\n",
                   ".claude/project-checks.json": json.dumps({"jobs": _edge})})
     _ok, _detail, _ = pc.run_checks(_tree)
@@ -437,7 +445,7 @@ for _edge in (0, -3, 2.7):
 # same problem for the slow tier -- "`taskkill /T` is the only reliable way" --
 # and `run_checks` does not yet do it, so a hung check still blocks a turn for
 # its full runtime whatever `timeout` is set to. ISSUES.md 2026-08-12 records it.
-timed_out = tree({"tools/test_hang.py": "import time\ntime.sleep(3)\n",
+timed_out = tree({"tools/test_hang.py": "import time\ntime.sleep(2)\n",
                   ".claude/project-checks.json": json.dumps({"timeout": 1})})
 ok_t, detail_t, ran_test_t = pc.run_checks(timed_out)
 check("a timed-out check is red", not ok_t, detail_t)

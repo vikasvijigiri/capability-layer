@@ -68,13 +68,24 @@ DEFAULT_TIMEOUT = 300
 # verdict is assembled in `checks` order regardless of completion order, so two
 # runs over the same tree print the same failures in the same sequence.
 #
-# 8, measured rather than guessed: this repo's fast tier is 61.4s serial, 11.5s
-# at 8 workers and 12.2s at 16, where the suites start contending for the disk.
-# Beyond the point where the longest single check dominates, more workers only
-# add contention. Override with `jobs` in the config for a project whose suites
-# are heavier or genuinely not concurrency-safe; `"jobs": 1` restores the old
-# serial behaviour exactly.
-DEFAULT_JOBS = 8
+# One worker per core, measured rather than guessed -- and measured twice,
+# because the first answer went stale within the day. On this 12-core machine:
+#
+#     workers   4      8     12     16
+#     wall    31.8s  26.6s  17.7s  26.2s
+#
+# A hard-coded 8 was right when the suite was lighter and wrong an hour later,
+# which is the argument for deriving it rather than pinning it: the correct
+# number tracks the machine, and a constant cannot.
+#
+# These suites are disk-bound, not CPU-bound -- `test_install.py` takes 8.6s
+# alone and 22.5s with eleven neighbours -- so this schedules contention rather
+# than removing it. Removing it means spawning fewer child processes, which is a
+# change to the fixtures, not to this number.
+#
+# Override with `jobs` in the config for a project whose suites are heavier or
+# genuinely not concurrency-safe; `"jobs": 1` restores serial behaviour exactly.
+DEFAULT_JOBS = os.cpu_count() or 4
 
 # Two tiers, because cost differs by an order of magnitude and a gate nobody can
 # afford to run is a gate that gets disabled.
