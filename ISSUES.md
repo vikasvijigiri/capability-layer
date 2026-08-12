@@ -6,6 +6,51 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-12 01:10 — The stall detector's third limb had never worked
+
+- **Phase/Context**: after fifteen consecutive `chain-continuity` notices in one
+  session, all reporting the same unit as stalled while the work was finished
+  and committed.
+- **Symptom**: `chain: stalled -- state has been BUILD for N turn(s) while the
+  tree kept changing`, firing on turns that made **no edit at all** — including
+  four consecutive turns whose only output was a one-line reply.
+- **Diagnosis**: `tools/chain.py:121` computed the tree fingerprint as
+  `f"{head}:{hash(status) & 0xffffffff:08x}"`. Python's builtin `hash()` on a
+  `str` is SipHash with a **per-process random seed**, and every hook run is a
+  new process, so the fingerprint changed on every turn regardless of the tree.
+  The ledger shows it plainly: the head SHA is identical across rows while the
+  second half differs every time.
+- **Why it survived**: the wrong answer and the right one look the same. A
+  fingerprint is expected to be opaque, so a changing one reads as a changing
+  tree. The obvious unit test — call the function twice and compare — passes
+  with the bug present, because the seed is fixed for the life of one process.
+- **What it actually broke**: `.claude/workflow.md` says a stall needs three
+  limbs (state pinned, tree churning, progress flat) and that the third was
+  added because a two-limb version *"reported `stalled` through four turns of a
+  healthy twelve-task execution"*. With a fingerprint that always differs, the
+  churn limb was permanently true — the detector was two-limbed for its entire
+  life and the documented fix was never in effect.
+- **Attempts**:
+  - 1. Blamed the green-ref bug (`HANDOFF.md` Pending). True, and the cause of
+    the pinned `BUILD` state, but it does not explain the churn limb — the two
+    are independent.
+  - 2. Read the ledger instead of the code, which is what exposed the constant
+    head and the varying tail.
+  - 3. Proved it directly: three processes on an unchanged tree gave
+    `b30ad4dc`, `1bf90e40`, `e519ed51`; one process twice, and
+    `PYTHONHASHSEED=0` across processes, both gave one value.
+- **Fix**: `fingerprint_of(head, status)` extracted as a pure function using
+  `hashlib.sha256(...)[:8]`. `tools/test_chain.py` asserts a **hard-coded**
+  digest — the only shape that catches per-process randomness, since a
+  same-process comparison cannot. Proved red by reinstating the old line.
+- **Verification**: after the fix the last three ledger rows share one
+  fingerprint (the first time any two consecutive rows have matched), and
+  `python tools/chain.py` reports `chain: advancing` where every prior run
+  reported `stalled`. Full tier `PASS: 51 check(s) green`.
+- **Status**: `Resolved` in `f641681`. `resume.py:plan_body_hash` was audited as
+  the only other hashing site and already used `hashlib.sha256`, so the durable
+  plan-rejection mechanism was never affected.
+
 ## 2026-08-11 22:05 — Local green, CI red: the rot detector flagged a gitignored file
 
 - **Phase/Context**: the first CI run this branch has ever had, immediately

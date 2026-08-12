@@ -5,40 +5,49 @@ history belongs in LOG.md and TASK.md's Completed section. -->
 
 ## Completed
 
-Three units on 2026-08-10/11/12, all closing gaps in the layer itself: the
-target-workflow architecture, twelve tasks against `GOAL_CHECKLIST.md`, then the
-security gate. See `LOG.md` for all three.
+Five units on 2026-08-10/11/12, all closing gaps in the layer itself: the
+target-workflow architecture, twelve tasks against `GOAL_CHECKLIST.md`, the
+security gate, the `/skills-doctor` retirement, and the chain fingerprint fix.
+See `LOG.md` for each.
 
 <!-- session-context:start -->
 
 ## Current Work — START HERE
 
-**The security gate is complete through review and sitting local on
-`feat/security-gate`.** Two commits, `d654ee5` (the gate) and `4fece17` (the
-repair review round 1 demanded), `21 files changed, 1748 insertions(+), 19
-deletions(-)` against `feat/close-remaining-gaps`, which is where the branch was
-cut from. Plan `docs/plans/2026-08-11-security-gate.md`, 8/8 tasks ticked. Full
-tier: `PASS: 51 check(s) green (audit, build, lint, smoke, test, typecheck)`.
-**Nothing pushed, no PR, and the branch stacks on a parent whose own ten-task
-plan is unstarted.**
+**Nothing is in progress. `feat/security-gate` holds five commits, all local,
+none pushed, no PR.** Tree clean. Full tier: `PASS: 51 check(s) green (audit,
+build, lint, smoke, test, typecheck)`.
 
-`python tools/security_gate.py --base main` is the new check. Five clauses, each
-a fact about the artefact rather than about process, in the `audit` kind so it
-gates push/PR and CI but not the per-turn auto-commit. Read its docstring before
-touching it: the reason it is **not** a receipt is the whole design, and
-`decisions/2026-08-12-escape-hatches-inherit-trust.md` records the one time that
-design was nearly lost.
+    f641681  Fingerprint the tree with sha256, not a per-process hash()
+    26eb41b  Retire /skills-doctor: three layer-audit doors become two
+    0eb4547  Record the security-gate unit and its ADR
+    4fece17  Refuse to waive a credential: not every clause is waivable
+    d654ee5  Add a deterministic security gate: five artefact facts, no receipt
 
-To resume: `python tools/resume.py`. The unit is recorded and needs no further
-work — a delivery decision is owed, not a build.
+Three units, each complete through review and recorded in `LOG.md`. **A delivery
+decision is owed on all three at once** — the branch stacks on
+`feat/close-remaining-gaps`, whose own ten-task plan is approved and unstarted,
+which in turn stacks on `feat/checklist-completion` (17 commits, reviewed,
+green, undelivered). Three undelivered branches deep is the real state.
 
-**Two decisions from this unit are binding on later work:**
+**The gate is the thing to read first.** `python tools/security_gate.py --base
+main` — five clauses, each a fact about the artefact, in the `audit` kind.
+Read its docstring before changing it: the reason it is **not** a receipt is the
+whole design, and `decisions/2026-08-12-escape-hatches-inherit-trust.md` records
+the one time that design was nearly lost.
 
-- **`WAIVABLE_CLAUSES` holds two of five, and `secret-in-branch` is not one of
-  them.** Adding a clause to that tuple fails an existing test on purpose.
-- **`no-slop` and `code-review` state their boundary on both sides**, and
-  `test_process_router.py` fails if either stops naming the other. The audit's
-  proposal to merge them was resolved at Gate 1 to keep both.
+**Three findings bind later work:**
+
+- **`WAIVABLE_CLAUSES` holds two of five.** `secret-in-branch`,
+  `agent-unscoped` and `dependency-risk` cannot be waived by an inline allow;
+  adding one to that tuple fails an existing test on purpose.
+- **Skills that read the same surface state their boundary on both sides**, and
+  `test_process_router.py` fails if either stops naming the other. Three pairs
+  now: `no-slop`/`code-review`, `no-slop`/`capability-layer-maintenance`, and
+  `code-review`/the security gate.
+- **Do not trust an instrument you have not seen go red.** `chain.py`'s stall
+  detector was two-limbed for its whole life while its documentation described
+  three. See `ISSUES.md` 2026-08-12 01:10.
 
 ## Previous Work
 
@@ -127,7 +136,13 @@ marks as superseded.
    `session-start/03-state-report.py` overlap in *description*. Folding
    `/git-state` into `/wip` was planned, attempted and reverted — the bodies do
    not overlap. Whether anything should merge needs its own unit.
-8. **A unit of this size gets no automatic recovery point.** The auto-commit
+8. **`.claude/workflow.md`'s three-limb stall rule is now true for the first
+   time.** It was written to describe a fix that a random fingerprint had
+   silently disabled; `f641681` makes the description accurate. Nothing needs
+   editing — but if the detector is ever changed again, the property to preserve
+   is that its fingerprint is stable ACROSS processes, and the test that proves
+   it must use a hard-coded digest.
+9. **A unit of this size gets no automatic recovery point.** The auto-commit
    refused every turn (past `MAX_FILES = 25`), and uncommitted work was lost to
    a `git checkout --` with no checkpoint holding it. Either the size gate is
    wrong for planned multi-task units, or `/save` must be run at task

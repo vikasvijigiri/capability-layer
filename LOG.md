@@ -1,5 +1,65 @@
 # Log
 
+## 2026-08-12 01:20
+
+**Two small units, and the second is the more important: a detector's third
+limb had never once worked.** `26eb41b` (7 files, +59/-50) and `f641681` (2
+files, +57/-1) on `feat/security-gate`. Full tier at close: `PASS: 51 check(s)
+green (audit, build, lint, smoke, test, typecheck)`. Local, unpushed.
+
+**`/skills-doctor` retired; three layer-audit surfaces become two.** The
+question had been open since 2026-08-03 on a single argument — that it alone
+compared disk against the session's *rendered* skill listing, which no
+file-reading script can see. That argument had already expired: its own text had
+been changed to say *"Do not claim to inspect the current session's rendered
+system listing; that is not repository-observable."* Measured, all five of its
+commands were already registered in `project-checks.json`, so it was a strict
+subset of `/verify`. The two survivors, `no-slop` and
+`capability-layer-maintenance`, now divide by **question rather than by
+directory** — sweep and report there, own the contract and repair here — with
+two back-reference assertions that were each proved red by breaking their own
+direction.
+
+**`tools/chain.py` fingerprinted the tree with the builtin `hash()`.** On a
+`str` that is SipHash with a per-process random seed, and every hook run is a
+new process, so the fingerprint changed on every turn no matter what the tree
+did. Measured on an unchanged tree across three processes: `b30ad4dc`,
+`1bf90e40`, `e519ed51`; same process twice, or with `PYTHONHASHSEED` pinned,
+identical.
+
+The consequence is larger than the noise it produced. `.claude/workflow.md`
+records that a two-limb stall detector *"reported `stalled` through four turns of
+a healthy twelve-task execution — a detector nobody believes is worse than
+none"*, and that a third limb was added to fix it. With a random fingerprint
+that limb was **always true**, so the detector had been two-limbed for its whole
+life and the documented fix was never in effect. This is the class the layer
+keeps finding in itself: prose asserting a property the wiring does not
+implement, invisible because the wrong answer and the right one look the same.
+
+Found by disbelieving an instrument rather than by reading code. The
+chain-continuity notice fired fifteen consecutive times; the first fourteen were
+blamed on a known green-ref bug, which was true and incomplete. Reading the
+ledger showed the head SHA identical across rows while the fingerprint half
+changed every time — on turns that made no edit at all.
+
+The regression test asserts a **hard-coded** digest, and that choice is the
+test: calling the function twice inside one process passes happily with the bug
+present, because the seed is fixed for a process lifetime. `resume.py`'s
+`plan_body_hash` was the other candidate and was already correct, so the durable
+plan-rejection mechanism was never affected. Those were the only two `hash()`
+call sites in the repository.
+
+**Verified in situ, not just in the suite.** After the fix the last three ledger
+rows share one fingerprint — the first time any two consecutive entries have
+matched — and `python tools/chain.py` reports `chain: advancing` instead of
+`stalled`, having reported `stalled` on every turn before it.
+
+**Still not fixed, and unrelated:** `refs/uaios/green/<slug>` has one writer, the
+auto-commit hook, which refuses on units over `MAX_FILES = 25`. So this unit's
+state stayed `BUILD` throughout and would have regardless of the fingerprint.
+`HANDOFF.md` Pending carries it.
+
+
 ## 2026-08-12 00:30
 
 **A security gate that asserts facts about the artefact, and the escape hatch
