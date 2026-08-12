@@ -184,7 +184,7 @@ COUNT_RE = re.compile(
     re.IGNORECASE)
 
 # Built-in Claude Code commands, not files in this repo.
-BUILTIN_COMMANDS = {"/verify", "/save", "/wip", "/skills-doctor", "/git-state",
+BUILTIN_COMMANDS = {"/verify", "/save", "/wip", "/git-state",
                     "/fast", "/config", "/help", "/clear", "/loop", "/simplify",
                     "/code-review", "/run", "/init", "/review", "/schedule"}
 

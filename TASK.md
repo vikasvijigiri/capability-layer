@@ -98,27 +98,6 @@
   option available); stacked-PR tooling such as Graphite (rejected in the spec);
   merging anything; configuring branch protection.
 
-### Decide whether `/skills-doctor` still has a job
-
-- **Status:** Not started — raised by a `no-slop` sweep on 2026-08-03
-- **Goal:** Decide whether `/skills-doctor` is retired, narrowed, or kept as is.
-- **Why now:** `tools/test_no_slop.py` and `tools/test_process_router.py` between
-  them now cover the static half of what the command checks — description budget,
-  YAML parse, `name:`/directory mismatch, loose `.md` files. Three owners of one
-  question is the Duplicate Knowledge smell, and the routing keyword
-  "skill layer health" already points at `no-slop` rather than at the command
-  whose own description uses that exact phrase.
-- **The part that is NOT duplicated,** and the reason this is a decision rather
-  than a deletion: `/skills-doctor` compares the files on disk against what
-  **actually rendered in the live session's skill listing**, which is truncated
-  against a token budget. No file-reading script can see that. A skill can be
-  valid on disk and absent from the listing on the exact turn that needed it —
-  that has happened here.
-- **Done check:** either the command is deleted and `CLAUDE.md`'s command list
-  updated, or its text is narrowed to the live-listing measurement with the
-  static checks removed and a pointer to the suites that own them.
-- **Out of scope:** changing what the suites check. They are green and correct.
-
 ### Decide which capability owns layer retirement
 
 - **Status:** Done — `capability-layer-maintenance` owns capability-layer audits, contract changes, migration, and retirement.
@@ -159,6 +138,32 @@
 <!-- Append-only, newest entry at the top. Never delete or rewrite an
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
+
+### 2026-08-12 — Retire `/skills-doctor`; three layer-audit doors become two
+
+- **Goal**: decide whether `/skills-doctor` is retired, narrowed, or kept —
+  raised by a `no-slop` sweep on 2026-08-03 and open since.
+- **Decision**: retired. Its five commands are *all* already registered in
+  `.claude/project-checks.json`, so it was a strict subset of `/verify`:
+  `ALREADY IN TIER` for `new_skill_check --all`, `test_process_router`,
+  `test_agent_standards`, `test_referenced_paths`, `test_command_standards`.
+- **What closed the question**: the 2026-08-03 entry kept it alive on one
+  argument — that it alone compared disk against the session's *rendered* skill
+  listing, which no file-reading script can see. Its own text had since been
+  changed to say the opposite: *"Do not claim to inspect the current session's
+  rendered system listing; that is not repository-observable."* The narrowing
+  option was therefore already impossible, and nothing unique remained.
+- **Output**: `.claude/commands/skills-doctor.md` deleted; removed from
+  `CLAUDE.md`'s command list, `test_process_router.NOT_SKILLS`, and
+  `test_referenced_paths.BUILTIN_COMMANDS`. The two surviving surfaces —
+  `no-slop` (sweeps, reports) and `capability-layer-maintenance` (owns the
+  contract, repairs) — now state the division on both sides, with two
+  assertions in `test_process_router.py` that fail if either stops naming the
+  other. Both proved red by breaking each direction.
+- **Done Check**: met, by the first of the two branches the 2026-08-03 entry
+  offered. `OK: 11 command contracts validated` (was 12).
+- **Out of Scope, and still out**: changing what the suites check.
+- **Status**: Done
 
 ### 2026-08-12 — Deterministic security gate, and the review surfaces it exposed
 

@@ -38,6 +38,13 @@ drifts. `tools/test_process_router.py` fails if either skill stops naming the
 other — the same back-reference shape it uses for agents and their dispatchers,
 and the weakest mechanism that is still a mechanism.
 
+**`capability-layer-maintenance` is the other neighbour**, and the division is
+by question rather than by directory. Sweeping `.claude/` is this skill's job;
+deciding what the layer's contracts and wiring should be is that skill's. A dead
+reference is **reported here and repaired there** — which is the same structural
+rule as everywhere else in this file, since changing what fires is never a
+cleanup. The same suite fails if either stops naming the other.
+
 Cap visible output at ~500 tokens. Findings with `file:line`, not a tour.
 
 Classify every finding as `P0` release-blocking, `P1` high-risk, or `P2`

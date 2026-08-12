@@ -28,6 +28,17 @@ This skill owns the capability contract and its wiring:
 those files when the requested change is project history or state rather than
 the capability contract.
 
+`no-slop` also reads `.claude/`, and the division is by **question, not by
+directory**: it asks whether slop has accumulated and reports findings; this
+skill asks whether the contract and its wiring are correct, and changes them. A
+dead reference found by a sweep is reported there and repaired here. Running a
+sweep is not maintenance, and neither is running the validators — `/verify`
+resolves every one of them, so a command that re-runs a subset of them is a
+second, weaker answer to a settled question.
+
+`tools/test_process_router.py` fails if either skill stops naming the other. A
+boundary held by one side's prose is one that drifts.
+
 ## Non-negotiable contract
 
 1. Read `AGENTS.md`, `harnesses.json`, `CLAUDE.md`, `.claude/workflow.md`, and

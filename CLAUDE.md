@@ -171,7 +171,6 @@ now because framing was cut and four audit skills became `code-review` lenses. E
     /save            explicitly confirmed local commit; never pushes
     /wip             branch, uncommitted work, and documentation staleness
     /git-state       exact Git counts and branch accounting
-    /skills-doctor   deterministic capability-layer diagnosis
     /plan-review     independent spec/plan review before execution
     /security-review independent trust-boundary review
     /release-check   non-destructive release-readiness evidence

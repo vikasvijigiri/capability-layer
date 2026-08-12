@@ -289,8 +289,6 @@ NOT_SKILLS = {
     # hook event directories
     "pre-commit", "post-run", "pre-edit", "pre-deploy", "session-start",
     "pre-compact", "on-artifact-create", "global-session-start",
-    # slash commands
-    "skills-doctor",
     # Claude Code agent types
     "general-purpose", "statusline-setup",
     # document sections and prose
@@ -1253,6 +1251,20 @@ check("code-review names no-slop as the skill that owns standing artefacts",
 check("code-review names the gate that decides its security lens",
       "tools/security_gate.py" in _cr,
       "the security lens is computed only while the skill names the command")
+
+# The other pair that reads the same directory. `.claude/` is swept by `no-slop`
+# and owned by `capability-layer-maintenance`, and until 2026-08-12 there were
+# THREE surfaces over it -- `/skills-doctor` was the third, and it turned out to
+# run five suites that `/verify` already resolves, with its one unique claim
+# (inspecting the session's rendered listing) already disowned in its own text.
+# It was retired; these two remain and divide by question, not by directory.
+_clm = (SKILLS / "capability-layer-maintenance" / "SKILL.md").read_text(encoding="utf-8")
+check("capability-layer-maintenance names no-slop as the skill that sweeps",
+      "no-slop" in _clm,
+      "one side naming the other is how the audit surfaces stayed distinct")
+check("no-slop names capability-layer-maintenance as the skill that repairs",
+      "capability-layer-maintenance" in _ns,
+      "a sweep that repairs the layer's wiring is the structural edit this forbids")
 
 print()
 if failures:
