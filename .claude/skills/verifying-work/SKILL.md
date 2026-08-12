@@ -75,10 +75,10 @@ in the evidence column is unbacked, however obviously true it looks.
 - Run the project's automated check suite as the mechanical half: run it, quote
   it, don't re-derive it by eye.
 
-  **Name the cheapest tier that answers the question.** Measured here: the full
-  tier is 196s and ran 86 times across two sessions — 281 minutes of waiting —
-  while the scoped path ran 5 times. A mid-chain stage takes `--scoped`; only
-  the last verification before delivery takes `--tier all`.
+  **Name the cheapest tier that answers the question.** A mid-chain stage takes
+  `--scoped`; only the last verification before delivery takes `--tier all`.
+  `CLAUDE.md` owns why — do not restate the cost here, because a figure copied
+  into two files goes stale in one of them, and this one did.
 
       python tools/run_checks.py --scoped                    # mid-chain
       python tools/run_checks.py --tier all --require-test    # once, before delivery

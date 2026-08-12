@@ -388,7 +388,14 @@ def failure_reason(proc) -> str:
 
 
 def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
-    """(ok, detail, ran_test) for one tier. Never raises.
+    """(ok, detail, ran_test) for one tier.
+
+    Every *check* outcome is returned rather than raised -- a suite that fails,
+    times out, cannot start or is not installed all come back as values, because
+    the caller is a commit gate and an exception there is silent. The two things
+    that can still propagate are a check command whose executable lookup itself
+    throws, and a result/check length mismatch, which is asserted rather than
+    absorbed precisely because it would mean reporting on fewer checks than ran.
 
     `ran_test` is separate from `ok` on purpose. "Everything passed" and "there
     was nothing to run" are the same boolean and completely different facts, and
@@ -461,7 +468,18 @@ def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
             return "failed", f"{kind} `{command}`: {failure_reason(proc)}"
         return "ran", ""
 
-    jobs = max(1, min(int(config.get("jobs", DEFAULT_JOBS)), len(checks)))
+    # A bad `jobs` value degrades to the default; it never propagates. This
+    # function runs from the Stop hook that gates every commit, and an exception
+    # there is silent -- indistinguishable from "nothing needed committing". The
+    # same reasoning already governs `load_config`, which swallows malformed
+    # JSON rather than raising, and `int()` on a config value was the one place
+    # that reasoning had not been applied. Out-of-range values need no guard:
+    # the clamp below already handles 0, negatives and floats.
+    try:
+        configured = int(config.get("jobs", DEFAULT_JOBS))
+    except (TypeError, ValueError):
+        configured = DEFAULT_JOBS
+    jobs = max(1, min(configured, len(checks)))
     if jobs == 1:
         results = [run_one(c) for c in checks]
     else:

@@ -20,8 +20,10 @@ pointer to a paragraph.
 - **Be terse.** Cap skill and command responses at ~500 tokens.
 - **Prefer deterministic mechanisms** — a hook or a test over a written rule.
 - **Take the cheapest tier that answers the question.** `--scoped` mid-chain,
-  `--tier all` once before delivery. The full tier is ~196s and was run 86 times
-  across two sessions: 281 minutes of waiting.
+  `--tier all` once before delivery. Cost is why: the fast tier gates every turn
+  and the full tier gates delivery, so the gap between them is paid over and
+  over. Both got ~4x cheaper on 2026-08-12 when the checks began running
+  concurrently — the rule did not change, only how much it saves.
 
 ---
 
@@ -182,7 +184,7 @@ same code `/verify` calls, so the two cannot disagree:
 | Gate | Refuses when |
 |---|---|
 | branch | on `main`/`master`/`develop`/`release` |
-| size | more than `MAX_FILES = 25` changed — a unit of work, not a checkpoint |
+| size | more than `DEFAULT_MAX_FILES = 25` changed — a unit of work, not a checkpoint |
 | secrets | any changed file matches `_hooklib.SECRET_PATTERNS` |
 | checks | any **fast-tier** command exits non-zero |
 | unverified code | the change contains code and **no test check ran** |

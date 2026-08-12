@@ -5,30 +5,34 @@ history belongs in LOG.md and TASK.md's Completed section. -->
 
 ## Completed
 
-Five units on 2026-08-10/11/12, all closing gaps in the layer itself: the
+Six units on 2026-08-10/11/12, all closing gaps in the layer itself: the
 target-workflow architecture, twelve tasks against `GOAL_CHECKLIST.md`, the
-security gate, the `/skills-doctor` retirement, and the chain fingerprint fix.
-See `LOG.md` for each.
+security gate, the `/skills-doctor` retirement, the chain fingerprint fix, and
+the concurrent check tier. See `LOG.md` for each.
 
 <!-- session-context:start -->
 
 ## Current Work — START HERE
 
-**Nothing is in progress. `feat/security-gate` holds five commits, all local,
-none pushed, no PR.** Tree clean. Full tier: `PASS: 51 check(s) green (audit,
-build, lint, smoke, test, typecheck)`.
+**`feat/security-gate` holds seven commits, all local, none pushed, no PR.**
+Five uncommitted files carry the sweep and review repairs of the newest unit —
+all declared in `TASK.md`, all green, ready to checkpoint. Full tier:
+`PASS: 51 check(s) green (audit, build, lint, smoke, test, typecheck)`, 51s.
 
-    f641681  Fingerprint the tree with sha256, not a per-process hash()
-    26eb41b  Retire /skills-doctor: three layer-audit doors become two
-    0eb4547  Record the security-gate unit and its ADR
-    4fece17  Refuse to waive a credential: not every clause is waivable
-    d654ee5  Add a deterministic security gate: five artefact facts, no receipt
+    73a1ef4  Genericise the skills, add a small-work path and a context-cost hook
+    2ce3d71  Run the checks concurrently: 61.4s to 12s per turn
+    8944553  Record the /skills-doctor retirement and the fingerprint fix
+    ...and four earlier, see LOG.md
 
-Three units, each complete through review and recorded in `LOG.md`. **A delivery
-decision is owed on all three at once** — the branch stacks on
+The task in `TASK.md` is **S1 of three**, and only its first half is done: the
+check tier is concurrent, the token half (`CLAUDE.md` to ≤5k, the SessionStart
+trim, `tools/bench.py`) is untouched. S2 is the router and S3 the surface trim;
+both are smaller than first scoped, for the reason under Pending 10.
+
+**A delivery decision is owed on four units at once** — the branch stacks on
 `feat/close-remaining-gaps`, whose own ten-task plan is approved and unstarted,
 which in turn stacks on `feat/checklist-completion` (17 commits, reviewed,
-green, undelivered). Three undelivered branches deep is the real state.
+green, undelivered). Three undelivered branches deep is still the real state.
 
 **The gate is the thing to read first.** `python tools/security_gate.py --base
 main` — five clauses, each a fact about the artefact, in the `audit` kind.
@@ -143,9 +147,33 @@ marks as superseded.
    is that its fingerprint is stable ACROSS processes, and the test that proves
    it must use a hard-coded digest.
 9. **A unit of this size gets no automatic recovery point.** The auto-commit
-   refused every turn (past `MAX_FILES = 25`), and uncommitted work was lost to
-   a `git checkout --` with no checkpoint holding it. Either the size gate is
-   wrong for planned multi-task units, or `/save` must be run at task
+   refused every turn (past `DEFAULT_MAX_FILES = 25`), and uncommitted work was
+   lost to a `git checkout --` with no checkpoint holding it. Either the size
+   gate is wrong for planned multi-task units, or `/save` must be run at task
    boundaries rather than at the end.
+
+### Added by the concurrent-check-tier unit
+
+10. **The entry classifier and `workflow.md`'s small-work path disagree, and the
+    disagreement favours the less careful route.** For `add a --jobs flag to
+    run_checks.py` the classifier is silent ("a named file plus a concrete
+    value"), while `scope.py` calls that same file a `control-surface`, risk
+    `high` — which is what the small path's own condition vetoes on. This
+    session's `_projectchecks.py` change was exactly that shape. Reconciling two
+    routers is a decision, not a merge; it is the whole of S2 and is smaller
+    than "build a router", because the classifier already discriminates.
+11. **`resume.py` reported `BUILD` for 57 turns against a stale slug.** It keys
+    state to `security-gate` from the branch name; that plan is complete and
+    this unit never had one, so there was nothing to advance. Compounds Pending
+    5 rather than duplicating it — that one is the green ref never being
+    written, this one is the slug pointing at a finished unit. A unit worked
+    without a plan is invisible to the chain, which is worth deciding about
+    before the small-work path makes plan-less units routine.
+12. **A check `timeout` bounds the verdict, not the wall clock.** `shell=True`
+    kills the shell, the grandchild survives, `communicate()` blocks on the
+    inherited pipe. A hung check blocks a turn for its full runtime whatever
+    `timeout` says. `tools/smoke.py:57` already solved it with `taskkill /T`;
+    `run_checks` does not use it. Open, with the fix known — `ISSUES.md`
+    2026-08-12 08:40.
 
 <!-- session-context:end -->

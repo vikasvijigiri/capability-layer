@@ -1,5 +1,38 @@
 # Log
 
+## 2026-08-12 16:12
+
+**The checks now run concurrently: 61.4s to 12s on the tier that gates every
+turn.** `2ce3d71` and `73a1ef4` on `feat/security-gate`, 18 files, +885/-818
+against `8944553`. Full tier at close: `PASS: 51 check(s) green (audit, build,
+lint, smoke, test, typecheck)`, 51s against a ~196s baseline. Local, unpushed.
+
+**The measurement decided the design, and twice it overturned what looked
+obvious.** Interpreter startup was only 2.3s of the original 56.6s, and 97-99%
+of test time is inside child processes — so a faster harness language was never
+the lever, and `tools/` was never a token cost at all since none of it enters
+context. 8 workers, not 16: 11.5s against 12.2s, where the suites start
+contending for the disk.
+
+**Three would-be optimisations were retracted after measuring.** "Verification
+theatre" was wrong — tests are 79% code and 11,229 lines against 7,558 of tools,
+a healthy ratio. "One dead tool" was wrong — the grep searched for a filename
+with `.py`, which no import statement contains; 24/24 are live. And `--scoped`
+already existed, so the per-turn cost was never a missing feature, only an
+unwired one.
+
+**Both new tests were initially unfalsifiable in part, and mutation testing is
+the only reason that surfaced.** The `jobs` equivalence check passed with the
+config lookup deleted entirely, because both fixtures were bounded by the same
+slow check; it now asserts on timing. Code review then found the guard missing
+on `int()` itself — a bad `jobs` value crashed the Stop hook that gates every
+commit, in a module whose own test says malformed config must degrade.
+
+**`resume.py` has been reporting `BUILD` for 57 turns against a stale slug.**
+The chain tracks `security-gate`, whose plan is complete; this unit never had a
+plan, so there was nothing to advance and the continuity notice fired five times
+correctly describing a unit it was not watching.
+
 ## 2026-08-12 01:20
 
 **Two small units, and the second is the more important: a detector's third

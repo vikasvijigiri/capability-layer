@@ -394,6 +394,34 @@ check("`jobs: 1` actually serialises -- two 1s checks take ~2s",
 check("...while the default pool runs them concurrently",
       par_elapsed < 1.8, f"parallel elapsed {par_elapsed:.2f}s")
 
+# A bad `jobs` value must degrade, not propagate. `load_config` has always
+# swallowed malformed JSON for this reason -- the caller is the Stop hook that
+# gates every commit, and an exception there is silent, indistinguishable from
+# "nothing needed committing". `int()` on the config value was the one place
+# that reasoning had not been applied: 'eight', null and [8] each raised
+# straight through a function whose contract is to return outcomes.
+#
+# Out-of-range values are separate and need no guard -- the max/min clamp
+# already handles them -- so they are asserted here as green rather than as
+# errors, which is what stops a later "fix" from rejecting a valid 0.
+for _bad in ("eight", None, [8], {"n": 8}):
+    _tree = tree({"tools/test_j.py": "print('ok')\n",
+                  ".claude/project-checks.json": json.dumps({"jobs": _bad})})
+    try:
+        _ok, _detail, _ = pc.run_checks(_tree)
+        check(f"a `jobs` value of {_bad!r} degrades to the default",
+              _ok, _detail)
+    except Exception as exc:  # noqa: BLE001
+        check(f"a `jobs` value of {_bad!r} degrades to the default",
+              False, f"raised {type(exc).__name__}: {exc}")
+
+for _edge in (0, -3, 2.7):
+    _tree = tree({"tools/test_j.py": "print('ok')\n",
+                  ".claude/project-checks.json": json.dumps({"jobs": _edge})})
+    _ok, _detail, _ = pc.run_checks(_tree)
+    check(f"an out-of-range `jobs` of {_edge!r} is clamped, not rejected",
+          _ok, _detail)
+
 # A test that never finished must not count as a test that ran. `ran_test` is
 # what the commit gate reads to decide whether code may be committed at all, so
 # "attempted" must never be mistaken for "proved". Kept separate from `ok`
