@@ -1,5 +1,26 @@
 # Log
 
+## 2026-08-14 11:49
+
+**Three instruments were lying; $3.61 to find out.** `07930af`, `0c87e90`,
+`e136ec0`. `CLAUDE.md`+rules 9,986 → 9,056 ch; fast tier 10.9s; 52 green.
+
+**The description cut was approved and should not happen.** `eval_triggers.py`
+had never run live — it died on the first real call, `message` being a string
+on error events. Fixed, it measured what nobody had: ~$0.45 a query, so the
+approved "180 invocations" is **~$81**, and `code-review` scored trigger_rate
+0.0 — a probe of "review this diff before I merge it" shows twelve Bash calls
+and no skill invocation. Descriptions may need to be *more* specific, not
+shorter.
+
+**The docs settle the router question the other way.** Routing is
+description-driven invocation plus `disable-model-invocation: true` for
+side-effecting skills; `delivering` and `releasing` are deliberately `false` so
+the chain can hand off, and `test_process_router.py` records that twelve of
+thirteen were once `true`, blocking every handoff with the suite green.
+`CLAUDE.md` also held a lossier copy of `workflow.md`'s stage table; deleting it
+broke `new_skill_check.py`, retargeted at the file that names all 14.
+
 ## 2026-08-12 16:53
 
 **Session preamble down 61%.** `3974610`, `5e9eaf6`, `ee6e56d`. `CLAUDE.md`+rules

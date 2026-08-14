@@ -14,21 +14,22 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**`feat/security-gate` holds ten commits, all local, none pushed, no PR.** Tree
-clean apart from this record. Full tier: `PASS: 52 check(s) green (audit, build,
+**`feat/security-gate` holds twelve commits, all local, none pushed, no PR.**
+Tree clean apart from this record. Full tier: `PASS: 52 check(s) green (audit, build,
 lint, smoke, test, typecheck)`.
 
-    ee6e56d  Cap knowledge-doc entries with a check
-    5e9eaf6  Halve the session preamble; fix the task pointer that never worked
-    3974610  Move operating detail out of the preamble; size the pool to the box
-    3421fbb  Guard the jobs config; stop restating a cost that went stale
-    ...and six earlier, see LOG.md
+    e136ec0  Delete CLAUDE.md's copy of the stage table; point at its owner
+    0c87e90  Fix the trigger eval's stream parser; it had never run live
+    07930af  Stop the stall notice asserting a fact about a plan that is absent
+    da084b2  Record the preamble unit; the entry cap caught this entry twice
+    ...and eight earlier, see LOG.md
 
-`TASK.md`'s S1 is **done except by choice**: preamble 25,599 → 9,986 ch,
-SessionStart 6,258 → 3,349, check tier 3.4x (68.2s → 20.2s interleaved).
-`tools/bench.py --save` holds the baseline; compare with it, never with a
-remembered number. **Four things remain and every one needs a decision, not
-work** — see Next Steps.
+`TASK.md`'s S1 is **closed**: `CLAUDE.md`+rules 25,599 → 9,056 ch, SessionStart
+6,258 → 3,349, check tier 3.4x (68.2s → 20.2s interleaved). All four
+optimisation questions are answered in Next Steps 0 — three settled, one open
+on evidence. `tools/bench.py --save` holds the baseline; compare against it,
+never against a remembered number. **The largest remaining cost, 12,732 ch of
+descriptions per turn, is deliberately unpaid down** — see 0(a).
 
 **A delivery decision is owed on four units at once** — the branch stacks on
 `feat/close-remaining-gaps`, whose own ten-task plan is approved and unstarted,
@@ -102,17 +103,25 @@ marks as superseded.
 
 ## Next Steps
 
-0. **Four optimisation items are blocked on a decision, none on work.**
-   (a) Skill/command/agent descriptions are 12,732 ch injected *every turn* —
-   the last big cost. Cutting them safely needs `tools/eval_triggers.py`, which
-   is 180 `claude -p` calls per repeat; unattended spend needs a yes. Declined
-   once on 2026-08-12, so the per-turn cost stands.
-   (b) `CLAUDE.md` is 9,986 ch against a ≤5,000 target; what is left is the
-   skills table and the repo map, and which of those to lose is a judgement
-   about this repo, not a mechanical cut.
-   (c) Wiring `--scoped` into the per-turn path is the largest remaining
-   latency win and changes what a checkpoint *guarantees* — policy, not code.
-   (d) Pending 10, the two routers.
+0. **All four optimisation items are now answered; one is open on purpose.**
+   (a) **Descriptions: do not cut.** Approved on 2026-08-14 and stopped after
+   $3.61. `eval_triggers.py` had never run live; once fixed it showed a query
+   costs ~$0.45, so the approved run is **~$81**, and `code-review` measured
+   trigger_rate 0.0 — a probe of "review this diff before I merge it" produced
+   twelve Bash calls and no skill invocation. **This is the open item**: either
+   `code-review` genuinely under-triggers, which the docs say is fixed by
+   making the description *more* specific, or the harness still cannot see an
+   invocation. Both need the same next step; spend the $81 there, not on
+   shrinking. 12,732 ch/turn stands until it is settled.
+   (b) **Done.** `CLAUDE.md`+rules 9,986 → 9,056 ch. The ≤5,000 target was
+   abandoned deliberately: reaching it meant deleting the command list and
+   repo map to save ~1,000 tokens once per session.
+   (c) **Declined** on 2026-08-14 — `--scoped` stays off the per-turn path.
+   (d) **Answered from the docs.** Routing is description-driven invocation
+   plus `disable-model-invocation: true` for side-effecting skills. This layer
+   sets `delivering` and `releasing` to `false` on purpose so the chain can
+   hand off; Pending 10's entry-classifier is the part with no basis in the
+   documentation.
 1. Decide whether `feat/checklist-completion` is pushed. It is reviewed and
    green; `tools/delivery_check.py --base main --head feat/checklist-completion`
    should be run and quoted first, and pushing needs an explicit yes.

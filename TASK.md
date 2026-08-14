@@ -6,8 +6,8 @@
 
 ### S1: make every turn cheap
 
-- **Status:** Concurrency landed, verified, swept and reviewed (`passed: true`
-  after one bounded repair). Token half not started.
+- **Status:** Closed 2026-08-14. Preamble 25,599 -> 9,056 ch, tier 3.4x. The
+  per-turn description cost is deliberately unpaid -- see HANDOFF Next Step 0(a).
 - Modify: `.claude/hooks/_projectchecks.py`, `tools/test_project_checks.py`, `tools/test_session_start_contract.py`, `CLAUDE.md`, `.claude/skills/verifying-work/SKILL.md`, `.claude/hooks/session-start/02-bootstrap-docs.py`, `README.md`, `.claude/project-checks.json`, `tools/chain.py`, `tools/test_chain.py`, `.claude/workflow.md`, `.claude/hooks/post-run/08-chain-continuity.py`, `tools/eval_triggers.py`, `tools/new_skill_check.py`
 - Create: `.claude/operating.md`, `tools/bench.py`, `tools/test_doc_entries.py`
 - **Goal:** cut the per-turn cost of this layer without changing what any gate
