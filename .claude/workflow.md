@@ -335,6 +335,27 @@ Nothing can force the handoff -- a hook cannot invoke a skill -- so this notice
 is the whole mechanism. Acting on it is yours.
 [/state:chain-stalled]
 
+[state:chain-stalled-no-plan]
+The state has been pinned for several turns while the tree kept changing, and
+this unit has no active plan -- so two of the three signals fired and the third
+could not be asked. This is **weaker evidence than a missed handoff**, and it is
+shown rather than suppressed because going quiet would blind the detector to
+exactly the units the small-work path above makes routine.
+
+Three things produce it, and only the first is a problem:
+
+1. A unit that finished a stage without invoking the successor -- the real
+   missed handoff. Read the stage table above and invoke it.
+2. Work taken on the small-work path, which by design has no plan to tick.
+   Nothing is wrong; this clears when the work lands.
+3. State derived from a **finished** unit's slug, because the branch name still
+   points at it. Run tools/resume.py: if the slug names work that is already
+   complete, this notice is about that unit and not about what you are doing.
+
+Case 3 repeats every turn until the branch is delivered or the current work gets
+a plan of its own, so recognise it once rather than re-reading it.
+[/state:chain-stalled-no-plan]
+
 [state:entry-unframed]
 This prompt names work with a done-state, and the **Entry** table above routes
 named work at any scope to stage 1 `writing-plans`. Frame it first: six fields,

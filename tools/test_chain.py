@@ -219,12 +219,30 @@ check("...and the reason names all three limbs",
       "progress" in stuck_plan["reason"] and "tree kept changing" in stuck_plan["reason"],
       stuck_plan["reason"])
 
-# An absent plan must not read as a stall. `plan_progress` returns None rather
-# than 0 for exactly this: no plan to read is not the same as no progress.
+# An absent plan still reports `stalled` -- on two limbs, and SAYING SO.
+#
+# The comment here used to read "an absent plan must not read as a stall",
+# directly contradicting the assertion three lines below it, and the reason
+# string contradicted both: it announced "the plan's progress did not [move]"
+# about a file that does not exist. That notice fired 64 consecutive times on
+# 2026-08-12 for a benign cause, which is how a detector stops being read.
+#
+# The verdict stays. Going silent for plan-less units would blind this to
+# exactly the work `workflow.md`'s small-work path is about to make routine, and
+# silence is the worse failure. What changed is that the reason now names the
+# limb it could not evaluate, the same way `security_gate.considered()` omits a
+# clause it could not check rather than claiming it.
 no_plan = chain.assess(
     entries(("BUILD", "a"), ("BUILD", "b"), ("BUILD", "c")), "BUILD", "d", None)
-check("an absent plan falls back to the two-limb rule rather than erroring",
+check("an absent plan still reports stalled, on two limbs",
       no_plan["chain"] == "stalled", str(no_plan))
+check("...and the reason says the plan limb was UNEVALUATED, not flat",
+      "NO active plan" in no_plan["reason"], no_plan["reason"])
+check("...and never claims progress failed to move",
+      "progress did not" not in no_plan["reason"], no_plan["reason"])
+check("...while a real flat-progress stall still says progress did not move",
+      "progress" in stuck_plan["reason"] and "NO active plan" not in stuck_plan["reason"],
+      stuck_plan["reason"])
 
 check("plan_progress returns None, not 0, when there is no plan to read",
       chain.plan_progress(Path(tempfile.gettempdir())) is None,

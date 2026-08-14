@@ -292,7 +292,35 @@ def assess(entries: list[dict], state: str | None, fingerprint: str | None,
     progress_moved = bool(progress is not None and prior and progress > min(prior))
 
     if same >= STALL_TURNS and tree_moved and not progress_moved:
+        # Two ways to reach here and they are not the same finding. With a plan,
+        # flat ticks across a churning tree is the missed handoff this detector
+        # was built for. WITHOUT a plan the third limb was never evaluated, and
+        # saying "the plan's progress did not [move]" asserts a fact about a
+        # file that does not exist -- which is what this notice did for 64
+        # consecutive turns on 2026-08-12 while its stated cause was benign.
+        #
+        # Whether a plan-less unit should report `stalled` AT ALL is a genuine
+        # design question, left open deliberately: `test_chain.py` says "an
+        # absent plan must not read as a stall", but going silent would blind
+        # the detector to exactly the units `workflow.md`'s small-work path is
+        # about to make routine. Silence is the worse failure. So the verdict is
+        # unchanged and only the reason is made true.
+        if progress is None:
+            return {"chain": "stalled", "turns_in_state": same,
+                    # The caller renders this key from workflow.md. Returned
+                    # rather than string-matched on the reason, because a body
+                    # chosen by grepping a sentence breaks the moment the
+                    # sentence is reworded -- and the reason above is prose.
+                    "block": "chain-stalled-no-plan",
+                    "reason": f"state has been {state} for {same} recorded "
+                              f"turn(s) while the tree kept changing, and this "
+                              f"unit has NO active plan -- so progress could not "
+                              f"be measured and this rests on two limbs, not "
+                              f"three. Either the work never had a plan to tick, "
+                              f"or the state is being derived from a finished "
+                              f"unit's slug"}
         return {"chain": "stalled", "turns_in_state": same,
+                "block": "chain-stalled",
                 "reason": f"state has been {state} for {same} recorded turn(s) "
                           f"while the tree kept changing and the plan's progress "
                           f"did not -- a stage finished and its successor was "

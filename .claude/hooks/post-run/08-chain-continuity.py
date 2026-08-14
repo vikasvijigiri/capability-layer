@@ -109,7 +109,11 @@ def main() -> int:
     if verdict["chain"] != "stalled":
         return 0
 
-    block = workflow_block("chain-stalled")
+    # The verdict names its own block. A stall with no plan to tick reads
+    # differently from a missed handoff, and telling a reader "a stage finished
+    # and its successor was never invoked" when the real cause is an absent plan
+    # is how a notice stops being believed.
+    block = workflow_block(verdict.get("block", "chain-stalled"))
     if not block:
         return 0
     speak(f"Chain continuity: {verdict['reason']}.\n\n{block}")
