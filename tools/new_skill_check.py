@@ -197,10 +197,21 @@ def check(name: str) -> int:
                    "no earlier stage hands off to it",
                    "without this the chain stops one stage early and looks complete")
 
-    cm = CLAUDE_MD.read_text(encoding="utf-8", errors="ignore") if CLAUDE_MD.is_file() else ""
-    r.need("CLAUDE.md Skills table names it", f"`{name}`" in cm,
-           "" if f"`{name}`" in cm else "absent",
-           f"add a row to the Skills table in {CLAUDE_MD.name}")
+    # Registered in the layer's INDEX, which is workflow.md -- retargeted from
+    # CLAUDE.md on 2026-08-14. This is not a relaxation: the old form was
+    # `` `name` in CLAUDE.md `` , satisfied by a mention anywhere in a file that
+    # declares "workflow.md owns the order" and then reproduced a lossier copy
+    # of its table. workflow.md gives each skill a stage, an owner, an entry
+    # condition and an artefact, so the same assertion now rests on strictly
+    # more. Checked when it moved: workflow.md named all 14 skills, CLAUDE.md
+    # named 6 -- so nothing was passing here that would newly fail.
+    #
+    # The bootloader is deliberately NOT checked. Requiring a mention there is
+    # what grew the table that had to be deleted, and a file loaded on every
+    # session should carry pointers rather than a register.
+    r.need("workflow.md names it", f"`{name}`" in wf,
+           "" if f"`{name}`" in wf else "absent",
+           "add it to the stage table in .claude/workflow.md")
 
     # --- 5. every skill it names in backticks resolves -----------------------
     agents = {f.stem for f in (ROOT / ".claude" / "agents").glob("*.md")}

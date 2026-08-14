@@ -33,24 +33,19 @@ In `.claude/skills/<name>/SKILL.md`, triggered **only** by their own
 `description:` frontmatter. Each states its own triggers, gates and handoffs —
 read the skill, don't infer an order from this list.
 
-**`.claude/workflow.md` owns the order**: stage → owner → artefact, the entry
-rule, and the `[state:*]` blocks. Read it before adding a skill.
+**`.claude/workflow.md` owns the order** — stage → owner → entry condition →
+artefact, for all nine, plus the `[state:*]` blocks. Read it before adding a
+skill. A table here would be a lossier second copy of the one at its top, and a
+rule stated twice is a rule that drifts.
 
-| Skill | Stage | Produces |
-|---|---|---|
-| `repo-recon` | — entry boundary | `docs/recon/` — the map, and up to five candidates |
-| `writing-plans` | 1 frame and plan | `docs/plans/YYYY-MM-DD-<feature>.md`, six fields in its header |
-| `brainstormer` | 2 design | `docs/specs/` |
-| `executing-plans` | 3 execute | the thing itself; ticked plan checkboxes |
-| `verifying-work` | 4 validate | coverage verdict + the unbacked set |
-| `no-slop` | 5 sweep | findings; local repairs applied, structural reported |
-| `code-review` | 6 review | findings + a verdict |
-| `delivering` | 7 deliver | merged / pushed / PR opened |
-| `releasing` | 8 release | the change serving at a target + a quoted smoke check |
-| `knowledge-manager` | 9 record | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `decisions/` |
-| `research` · `designer` · `systematic-debugging` | dispatched, or entered on failure | evidence · `DESIGN.md` · root cause |
-| `capability-layer-maintenance` | entered to change this layer | aligned contracts and green validators |
-| references | `<skill>/references/` — review lenses, worktrees, TDD, design contract, SRE | loaded per task, not per turn |
+Three things that table does not tell you:
+
+- `repo-recon` sits *before* stage 1, at the entry boundary, and `research`,
+  `designer` and `systematic-debugging` are dispatched or entered on failure
+  rather than held in the sequence.
+- `capability-layer-maintenance` is the way in when **this layer** is what
+  changes — not a stage, an owner.
+- `<skill>/references/` holds depth loaded per task, never per turn.
 
 Two approval gates, each with its own tool: **Gate 1 `ExitPlanMode`** (the
 plan), **Gate 2 `AskUserQuestion`** (shipment). Never asked in prose. Delivery
@@ -94,21 +89,19 @@ before declaring work done — it resolves every kind and names any it skipped.
 
 ## Repository map
 
-| Path | What it is |
-|---|---|
-| `.claude/skills/` | one directory each; `<skill>/references/` holds depth loaded on demand |
-| `.claude/agents/` | the fan-out set, plus `Explore` overriding the built-in |
-| `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
-| `.claude/operating.md` | the commit loop, the tiers, failure budgets, gate policy, gotchas |
-| `.claude/hooks/<event>/` | hooks that act, deny or measure |
-| `.claude/settings.json` | what actually fires; `hooks_registry.json` documents the contract |
-| `.claude/commands/` | the slash commands above |
-| `tools/` | `run_checks.py`, `resume.py`, `loop.py`, `smoke.py`, `run_hook.py`, the suites |
-| `docs/specs/`, `docs/plans/`, `docs/research/` | skill outputs, one dated file each |
-| `docs/archive/` | superseded; see `docs/archive/ARCHIVE.md` |
-| `decisions/` | dated ADRs |
-| `.github/workflows/checks.yml` | CI; calls the same resolver, so it cannot drift from local |
-| `.mcp.json`, `.vscode/mcp.json` | MCP servers, kept in sync by hand |
+`ls .claude/` answers most of this. Only the parts a listing gets wrong:
+
+- **`.claude/workflow.md`** owns the chain and its invariants;
+  **`.claude/operating.md`** the commit loop, tiers, failure budgets and
+  gotchas. Those two carry what used to be here.
+- **`.claude/settings.json` is what actually fires.** `hooks_registry.json`
+  documents the contract and cannot enforce it — when they disagree, the
+  registry is the one that is wrong.
+- **`.github/workflows/checks.yml` calls the same resolver as local**, so CI
+  cannot drift from your machine. `.mcp.json` and `.vscode/mcp.json` are kept
+  in sync **by hand** and can.
+- `docs/archive/` is superseded material; see its `ARCHIVE.md` before reviving
+  anything.
 
 `~/.claude/` holds no skills or agents. **`../physrun/` is a sibling repo, not
 part of this one** — the first product built with this layer; copying this file
