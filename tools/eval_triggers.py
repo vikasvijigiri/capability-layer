@@ -226,7 +226,14 @@ def run_query(query: str, timeout: int = 180, cwd: Path | None = None) -> tuple[
             continue
         if event.get("type") == "result":
             cost += float(event.get("total_cost_usd") or 0.0)
-        message = event.get("message") or {}
+        # `message` is a dict on assistant/user events and a STRING on others
+        # (an error event carries its text there). `or {}` does not catch that
+        # -- a non-empty string is truthy -- so this crashed on the first live
+        # invocation with `'str' object has no attribute 'get'`. Every event
+        # shape this does not understand is skipped rather than assumed.
+        message = event.get("message")
+        if not isinstance(message, dict):
+            continue
         blocks = message.get("content")
         if not isinstance(blocks, list):
             continue
