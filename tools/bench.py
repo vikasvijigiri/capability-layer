@@ -79,7 +79,15 @@ def per_turn_descriptions() -> int:
             total += len(found.group(1)) if found else 0
     for folder in ("commands", "agents"):
         for doc in sorted((ROOT / ".claude" / folder).glob("*.md")):
-            found = DESC_RE.search(_read(doc))
+            text = _read(doc)
+            # `disable-model-invocation: true` keeps the entry OUT of the skill
+            # listing entirely -- it is how a user-only command stops costing
+            # context. Counting it anyway made this tool report no change when
+            # eleven commands were switched to user-only on 2026-08-15, which is
+            # the instrument disagreeing with the thing it measures.
+            if re.search(r"^disable-model-invocation:\s*true\b", text, re.M):
+                continue
+            found = DESC_RE.search(text)
             total += len(found.group(1).splitlines()[0]) if found else 0
     return total
 

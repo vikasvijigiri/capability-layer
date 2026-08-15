@@ -41,7 +41,11 @@ Fire it directly:
 
 from __future__ import annotations
 
+import hashlib
+import json
+import re
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -64,6 +68,83 @@ WARN_CHARS = 700
 WATCHED = ("Bash", "PowerShell")
 
 
+# --- second check: this call already happened ---------------------------------
+#
+# `Agentic Workflows (IDE)` section 10 makes an anti-repetition layer
+# first-class -- "Repetition is a defect", "Reuse before retrieve" -- and nothing
+# implemented it. It lives HERE rather than in a hook of its own, and that is a
+# measured decision: two PostToolUse scripts cost two Python process spawns on
+# every shell call, 215ms + 226ms = 441ms, paid whether or not either fires. One
+# process runs both checks for ~220ms. In a 90-call session that is 40 seconds
+# against 20.
+#
+# It cannot serve a cached result -- PostToolUse fires after the call, so the
+# tokens and the latency are already spent. Making the SECOND occurrence visible
+# is what changes the third. Blocking was rejected: a repeat is often
+# legitimate (a suite re-run after an edit, a file re-read because it changed),
+# and denying those trains people to switch the hook off.
+STATE = Path(__file__).resolve().parents[1] / "state" / "call-fingerprints.json"
+
+# Observing state is not repeating work: these re-read something that changes,
+# which is the entire reason to run them twice.
+VOLATILE = ("git status", "git diff", "git log", "git branch", "ls", "pwd",
+            "date", "cat .claude/hooks/state", "python tools/resume.py",
+            "python tools/run_checks", "python tools/bench.py", "gh run",
+            "python tools/chain.py")
+
+# Below this the call is too cheap for the notice to be worth its own tokens.
+MIN_REPEAT_CHARS = 40
+
+# Bounded so a long session cannot grow the file without limit.
+MAX_ENTRIES = 400
+
+
+def _load() -> dict:
+    try:
+        return json.loads(STATE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _save(seen: dict) -> None:
+    if len(seen) > MAX_ENTRIES:
+        seen = dict(sorted(seen.items(), key=lambda kv: kv[1]["at"])[-MAX_ENTRIES:])
+    try:
+        STATE.parent.mkdir(parents=True, exist_ok=True)
+        STATE.write_text(json.dumps(seen), encoding="utf-8")
+    except OSError:
+        pass  # a reporter that cannot persist still must not break the turn
+
+
+def repeat_notice(name: str, command: str) -> str:
+    """The notice for a command this session already ran, or '' for a new one."""
+    if len(command) < MIN_REPEAT_CHARS:
+        return ""
+    # Whitespace-normalised, so re-indenting a command does not read as new work.
+    normalised = re.sub(r"\s+", " ", command).strip()
+    if any(normalised.startswith(v) for v in VOLATILE):
+        return ""
+
+    key = hashlib.sha256(f"{name}\x00{normalised}".encode()).hexdigest()[:16]
+    seen = _load()
+    now = time.time()
+    prior = seen.get(key)
+    seen[key] = {"at": now, "n": (prior or {}).get("n", 0) + 1}
+    _save(seen)
+    if not prior:
+        return ""
+
+    ago = int(now - prior["at"])
+    when = f"{ago}s ago" if ago < 120 else f"{ago // 60}m ago"
+    return (
+        f"[repeat] this exact {name} already ran {when} "
+        f"(occurrence {seen[key]['n']}): {normalised[:70]}\n"
+        f"  Its result is already in this session's context -- reuse it rather "
+        f"than running it again. If the answer genuinely changed, say what "
+        f"changed it."
+    )
+
+
 def main() -> int:
     payload = load_payload() or {}
     name = payload.get("tool_name") or ""
@@ -72,19 +153,25 @@ def main() -> int:
 
     body = payload.get("tool_input") or {}
     command = str(body.get("command") or "")
-    if len(command) < WARN_CHARS:
-        return 0
 
-    tokens = len(command) // 4
-    print(
-        f"[context cost] that {name} command was {len(command):,} chars "
-        f"(~{tokens:,} tokens) and now stays in context for the rest of the "
-        f"session, re-read on every later request.\n"
-        f"  Cheaper, in order: a dedicated tool (Grep/Read/Glob) instead of a "
-        f"shell equivalent; a narrower query; or -- if the script is worth "
-        f"keeping -- write it to a file once and run the path.",
-        file=sys.stderr,
-    )
+    notices = []
+    if len(command) >= WARN_CHARS:
+        tokens = len(command) // 4
+        notices.append(
+            f"[context cost] that {name} command was {len(command):,} chars "
+            f"(~{tokens:,} tokens) and now stays in context for the rest of the "
+            f"session, re-read on every later request.\n"
+            f"  Cheaper, in order: a dedicated tool (Grep/Read/Glob) instead of a "
+            f"shell equivalent; a narrower query; or -- if the script is worth "
+            f"keeping -- write it to a file once and run the path."
+        )
+
+    repeat = repeat_notice(name, command)
+    if repeat:
+        notices.append(repeat)
+
+    if notices:
+        print("\n".join(notices), file=sys.stderr)
     return 0
 
 

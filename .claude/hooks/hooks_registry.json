@@ -65,11 +65,10 @@
       ]
     },
     "post-tool": {
-      "description": "After a shell tool returns: reports what its input added to permanent session context, and names a call this session already made with the same inputs. Reports only -- a PreToolUse hook must be able to block, and these must not",
+      "description": "After a shell tool returns: reports what its input added to permanent session context, and names a call this session already made with the same inputs. One process for both, because each PostToolUse script costs a spawn on every shell call. Reports only -- never blocks",
       "claude_code_event": "PostToolUse (Bash|PowerShell)",
       "subscribers": [
-        ".claude/hooks/post-tool/01-context-cost.py",
-        ".claude/hooks/post-tool/02-repeat-detector.py"
+        ".claude/hooks/post-tool/01-context-cost.py"
       ]
     }
   }

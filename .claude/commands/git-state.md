@@ -1,5 +1,11 @@
 ---
 description: Granular git accounting — exact counts for committed, staged, unstaged, untracked, recoverable and branch scope (how many concerns one branch is carrying), with the command behind every number
+# User entry point: typed explicitly, never auto-invoked. Notion section 8 -
+# commands are optional shortcuts, not workflow stages, and the router must work
+# without them. Left invocable, their descriptions cost 1,506 chars of the skill
+# listing on EVERY turn for a capability only the user triggers; per
+# code.claude.com/docs/en/skills this flag also keeps them out of context.
+disable-model-invocation: true
 ---
 
 Mode: read-only
