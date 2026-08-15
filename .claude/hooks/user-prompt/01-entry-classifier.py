@@ -218,14 +218,36 @@ INFO_QUESTION = [
 ]
 
 # --- pass 2: below the floor where a brief pays for itself -------------------
-TOO_SMALL = [
-    # an explicit path: the change has already been located
-    r"\b[\w./-]+\.(py|js|jsx|ts|tsx|md|json|ya?ml|toml|css|html|rs|go|java|rb)\b",
+#
+# Two tiers, and the split is load-bearing. While this pass returned None its
+# breadth was invisible: silence happened to match what the corpus expected of
+# every OTHER stage, so an over-broad pattern here cost nothing and proved
+# nothing. Routing it to a state key made that accident visible immediately --
+# "before this goes out, look at what changed in src/" and "CLAUDE.md says ten
+# agents and there are eleven" are a review and a layer observation, and both
+# were being called small work purely for naming a path.
+#
+# Naming a file is not a smallness signal. Almost every concrete request names
+# one. What signals smallness is a file named TOGETHER WITH a change verb, or a
+# word that means small on its own.
+SMALL_ALONE = [
     r"\brename\b",
     r"\btypo\b",
     r"\bone[- ]lin(e|er)\b",
     r"\bbump (the )?version\b",
 ]
+
+_PATH = (r"\b[\w./-]+\.(py|js|jsx|ts|tsx|md|json|ya?ml|toml|css|html|rs|go|"
+         r"java|rb)\b")
+_CHANGE_VERB = (r"\b(fix|change|update|set|replace|remove|delete|add|drop|"
+                r"tweak|correct|bump|swap|edit)\b")
+
+# A path AND a change verb: the change is located and the action is named, so
+# the brief would restate what the prompt already says.
+SMALL_LOCATED = [_PATH + r"[^.]{0,60}" + _CHANGE_VERB,
+                 _CHANGE_VERB + r"[^.]{0,60}" + _PATH]
+
+TOO_SMALL = SMALL_ALONE + SMALL_LOCATED
 
 # --- pass 3: the approach is not settled -------------------------------------
 OPEN = [
@@ -284,7 +306,20 @@ def classify(prompt: str) -> str | None:
     if _hit(HARD_STAGE, text):
         return None
     if _hit(TOO_SMALL, text):
-        return None
+        # Named, not silent -- changed 2026-08-15. This pass detects exactly the
+        # shape `workflow.md` wrote its narrow path for, and returning None meant
+        # the path existed in prose that nothing ever surfaced: the nine stages
+        # cost the same for a two-file change as for a twelve-task plan, which
+        # that file calls the single biggest source of overhead here.
+        #
+        # Silence is not neutral. It reads as "no entry rule applies", so the
+        # full chain runs by default on precisely the changes that least need it.
+        #
+        # Safe to route: of the labelled should-trigger queries in
+        # `docs/evals/trigger-queries.json`, ZERO reach this pass, so naming a
+        # key here cannot reclassify anything the corpus asserts. Measured before
+        # the change, not after.
+        return "entry-small"
     if _hit(OPEN, text):
         return "entry-open"
     if _hit(INFO_QUESTION, text):

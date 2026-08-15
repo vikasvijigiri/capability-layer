@@ -122,9 +122,14 @@
           {
             "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool/01-context-cost.py\""
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool/02-repeat-detector.py\""
           }
         ]
       }
     ]
-  }
+  },
+  "skillListingBudgetFraction": 0.02
 }

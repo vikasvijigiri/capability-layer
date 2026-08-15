@@ -335,6 +335,29 @@ Nothing can force the handoff -- a hook cannot invoke a skill -- so this notice
 is the whole mechanism. Acting on it is yours.
 [/state:chain-stalled]
 
+[state:entry-small]
+This prompt names a change small enough that framing it costs more than doing
+it -- a named file, a concrete value, a rename, a typo, a version bump. **The
+small-work path above applies**: frame it in one line, do it, run the scoped
+checks, record one line. No plan, no Gate 1, no separate sweep or review pass;
+read your own diff before you stop.
+
+Say **"small path"** out loud, so the choice is visible and reversible.
+
+Three things veto it, and the first two are cheap to check before starting:
+
+1. A **control or shared surface** -- anything under the agent layer, a hook, a
+   settings file, a check definition, or a module most of the tree imports.
+   These change what fires for every later change.
+2. A **sensitive surface** -- auth, credentials, permissions, personal data.
+3. The work turning out `major` once there is a diff. `tools/scope.py` is the
+   arbiter and it refuses to narrow what it cannot classify; anything it calls
+   `major` re-enters at stage 1 mid-flight, which is expected rather than a
+   failure.
+
+If any veto fires, take the full chain from the stage table above.
+[/state:entry-small]
+
 [state:chain-stalled-no-plan]
 The state has been pinned for several turns while the tree kept changing, and
 this unit has no active plan -- so two of the three signals fired and the third
