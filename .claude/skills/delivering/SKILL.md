@@ -1,7 +1,7 @@
 ---
 name: delivering
-description: Land reviewed work in the repository - branch, PR, merge queue. Triggers include "open a PR", "push this up", "merge it", "ship it", "is this ready to land", "rebase onto main", "resolve these conflicts", "why is the merge queue stuck". Do NOT use to deploy or roll out, to review code, or to diagnose a failing check — those are separate steps. Use this whenever reviewed work must reach the repository.
-when_to_use: when verified reviewed work is ready for repository integration
+description: Land reviewed work in the repository - branch, PR, rebase, merge. Reports what actually landed, and never pushes, merges or opens a pull request without explicit human approval. Triggers include "open a PR", "raise a PR", "push this up", "merge it", "land this", "ship it", "is this ready to land", "can this go in", "rebase onto main", "resolve these conflicts", "update the branch", "why is the merge queue stuck". Do NOT use to deploy to a running environment (releasing), to review the code (code-review), or to diagnose a failing check (systematic-debugging). Use this whenever reviewed work must reach the repository.
+when_to_use: Trigger when the user says open a PR, raise a PR, create a pull request, push this up, push it, merge it, merge this, land this, ship it, is this ready to land, can this go in, rebase onto main, rebase this, resolve these conflicts, fix the conflicts, update the branch, or why is the merge queue stuck.
 effort: high
 model: sonnet
 disable-model-invocation: false

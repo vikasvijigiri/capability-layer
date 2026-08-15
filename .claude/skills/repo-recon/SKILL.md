@@ -1,7 +1,7 @@
 ---
 name: repo-recon
-description: Map an unread or half-finished repository before building in it. Triggers include "what is this repo", "understand this codebase", "get me up to speed", "I inherited this project", "pick up where this left off", "what is unfinished here", "finish this project", "onboard me". Do NOT use for a repo already mapped this session, a single-file question Grep answers, or to decide what to build. Use this whenever work continues in a repo nobody has read.
-when_to_use: when work must continue in a repository nobody in this session has read
+description: Map an unread or half-finished repository before building in it. Entry points, architecture, conventions, what already works and what was left unfinished, plus candidate next steps. Triggers include "what is this repo", "what does this codebase do", "understand this codebase", "explain this project", "walk me through this", "get me up to speed", "onboard me", "I inherited this project", "I just cloned this", "pick up where this left off", "what is unfinished here", "where do I even start". Do NOT use for a repository already mapped this session, for a single-file question Grep answers, or to decide what to build (writing-plans). Use this whenever work continues in a repo nobody has read.
+when_to_use: Trigger when the user says what is this repo, what does this codebase do, understand this codebase, explain this project, walk me through this, get me up to speed, onboard me, I inherited this project, I just cloned this, pick up where this left off, what is unfinished here, finish this project, or where do I even start.
 effort: high
 model: opus
 disable-model-invocation: false

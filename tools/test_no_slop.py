@@ -425,7 +425,24 @@ def main() -> int:
     # turn, so both have budgets. The structural sections are not style: a skill
     # with no stated Success has no definition of done, and one with no Routing
     # hands off to nothing.
-    desc_budget = 500
+    desc_budget = 700
+    # Raised 500 -> 700 by explicit decision on 2026-08-15, and this one is
+    # bought rather than relaxed. `tools/eval_triggers.py`, run live for the
+    # first time, measured `code-review` at trigger_rate 0.0: it did not fire on
+    # its own canonical prompts. A description that never triggers wastes 100%
+    # of its tokens, which is the worst position on every budget at once -- so
+    # paying ~40% more for one that fires is positive ROI, not a regression.
+    #
+    # The cost is real and was measured before the decision, not after: the
+    # per-turn listing went 12,732 -> 17,904 chars, about +1,293 tokens on every
+    # turn. `.claude/settings.json` raises `skillListingBudgetFraction` to 0.02
+    # to match, because the default 1% budget drops descriptions least-used-first
+    # when the listing overflows -- and words added to one skill would then
+    # silently delete another's.
+    #
+    # If manual testing shows the skills still do not fire, this number and that
+    # setting both go back: the spend only justifies itself if it buys function.
+    #
     # Raised from 200 by explicit decision on 2026-08-10: "there is no limit for
     # number of lines in prose".
     #

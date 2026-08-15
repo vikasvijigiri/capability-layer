@@ -1,7 +1,7 @@
 ---
 name: verifying-work
-description: Prove finished work meets the brief, before review. Triggers include "is this done", "does this meet the brief", "prove it works", "are we finished", "did that work", "confirm this is complete". Do NOT use to find defects in a diff, to diagnose a known failure, or when nothing is claimed — those are separate steps. Use this whenever completion is claimed in any wording, even if unasked.
-when_to_use: when results need validation after execution
+description: Prove finished work meets the brief, before review or delivery. Every claim carries a command and its quoted output; produces a coverage verdict and names the unbacked set, keeping what nobody checked separate from what nothing could check. Triggers include "is this done", "are we finished", "did that work", "does this meet the brief", "prove it works", "show me it works", "confirm this is complete", "is it working now", "did the fix land". Do NOT use to hunt defects in a diff (code-review), to diagnose a known failure (systematic-debugging), or when nothing has been claimed. Use this whenever completion is claimed in any wording, even if unasked.
+when_to_use: Trigger when the user says is this done, are we finished, did that work, does this meet the brief, prove it works, show me it works, confirm this is complete, is it working now, did the fix land, or whenever you are about to report something as done, finished, fixed, working or complete.
 effort: medium
 model: sonnet
 disable-model-invocation: false

@@ -1,7 +1,7 @@
 ---
 name: executing-plans
-description: Carry out an approved plan, test-first, in an isolated worktree. Triggers include "execute the plan", "implement this", "start building", "do task 3", "write a failing test first", "create a worktree", "keep this off main", "build it". Do NOT use to write the plan (writing-plans), diagnose a failure (systematic-debugging), or judge the result (verifying-work). Use this whenever an approved plan is about to be built.
-when_to_use: when a plan is approved and execution begins
+description: Carry out an approved plan test-first in an isolated worktree. Writes the failing test before the code and ticks each task only when its own check passes. Triggers include "execute the plan", "implement this", "start building", "build it", "code this up", "do task 3", "next task", "continue the plan", "write a failing test first", "TDD this", "create a worktree", "keep this off main". Do NOT use to write the plan (writing-plans), to diagnose a failure (systematic-debugging), or to judge whether the result meets the brief (verifying-work). Use this whenever an approved plan is about to be built.
+when_to_use: Trigger when the user says execute the plan, implement this, start building, build it, code this up, do task 3, next task, continue the plan, carry on with the plan, write a failing test first, TDD this, create a worktree, work on a branch, or keep this off main.
 effort: medium
 model: sonnet
 disable-model-invocation: false

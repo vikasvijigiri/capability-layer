@@ -1,7 +1,7 @@
 ---
 name: systematic-debugging
-description: Find the root cause of a failure before proposing a fix. Triggers include "why is this failing", "this is broken", "it worked before", "root cause", "this test is red", "a hook produced no output", "a check passes when it should fail". Do NOT use for a failure already root-caused or a known-unimplemented feature. Use this whenever something fails unexpectedly, even if only the symptom is reported.
-when_to_use: when a failure needs root-cause analysis
+description: Find the root cause of a failure before proposing any fix. Reproduce it, isolate it, prove the cause with evidence, then repair one thing at a time. Triggers include "why is this failing", "this is broken", "it does not work", "it worked before", "what changed", "root cause", "debug this", "this test is red", "the build is broken", "it hangs", "nothing happens", "it silently fails", "a check passes when it should fail". Do NOT use for a failure whose root cause is already known, or for a feature that was never implemented. Use this whenever something fails unexpectedly, even if only the symptom is reported.
+when_to_use: Trigger when the user says why is this failing, why is this broken, this is broken, it does not work, it worked before, what changed, root cause, debug this, this test is red, the tests are failing, the build is broken, it hangs, it times out, no output, nothing happens, it silently fails, or a check passes when it should fail.
 effort: high
 model: opus
 disable-model-invocation: false

@@ -69,7 +69,12 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 # about listing-truncation budget; richer trigger coverage is worth spending
 # some of it, so going over prints a NOTE and does not fail the suite.
 
-HARD_FRONTMATTER = 1024
+# 1024 -> 1300 on 2026-08-15, in step with `new_skill_check.HARD_FRONTMATTER`
+# and `test_no_slop.desc_budget`. Three copies of one budget is a defect in
+# itself; until they are merged, changing one means changing all three, or a
+# skill passes here and fails there. The reasoning is recorded once, at
+# `test_no_slop.py`'s `desc_budget`.
+HARD_FRONTMATTER = 1300
 SOFT_DESC = 500
 
 # Every description is injected on every turn, so their sum is a standing cost

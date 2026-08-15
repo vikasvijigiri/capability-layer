@@ -1,7 +1,7 @@
 ---
 name: releasing
-description: Get delivered work running in a real environment, with signals. Triggers include "deploy this", "push it live", "release to staging", "is it live", "roll it back", "add SLOs", "set up alerts", "is this observable". Do NOT use to merge or open a PR (delivering), to prove it meets the brief (verifying-work), or to debug a failed deploy - roll back first. Use this whenever a change must reach a running target.
-when_to_use: when work must reach a running environment
+description: Get delivered work running in a real environment, with signals. Deploy, smoke check, health, SLOs, alerts and rollback, proving the change is actually serving. Triggers include "deploy this", "deploy to staging", "push it live", "release this", "cut a release", "ship to production", "go live", "is it live", "did the deploy work", "roll it back", "revert the deploy", "add SLOs", "set up alerts", "is this observable". Do NOT use to merge or open a pull request (delivering), to prove the change meets the brief (verifying-work), or to debug a failed deploy - roll back first, diagnose second. Use this whenever a change must reach a running target.
+when_to_use: Trigger when the user says deploy this, deploy to staging, deploy to prod, push it live, release this, cut a release, ship to production, go live, is it live, is it up, did the deploy work, roll it back, revert the deploy, add SLOs, set up alerts, add monitoring, or is this observable.
 effort: low
 model: sonnet
 disable-model-invocation: false

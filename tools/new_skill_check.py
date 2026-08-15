@@ -36,12 +36,19 @@ SKILLS = ROOT / ".claude" / "skills"
 WORKFLOW = ROOT / ".claude" / "workflow.md"
 CLAUDE_MD = ROOT / "CLAUDE.md"
 
-# Same numbers the suite enforces, quoted from the same reasoning: 1024 chars is
-# the hard frontmatter spec limit, and ~380 chars of description is the per-turn
-# injection budget rather than a style preference.
-HARD_FRONTMATTER = 1024
-SOFT_DESCRIPTION = 400
-HARD_DESCRIPTION = 500
+# Same numbers the suite enforces, and they must stay in step with
+# `test_no_slop.py`'s `desc_budget` -- two budgets for one property is how a
+# skill passes one check and fails the other.
+#
+# Raised on 2026-08-15 with the reasoning recorded at that `desc_budget`: a
+# description measured at trigger_rate 0.0 wastes all of its tokens, so buying
+# trigger reliability is worth ~40% more of them. The official per-entry cap is
+# 1,536 chars for description + when_to_use combined
+# (code.claude.com/docs/en/skills), so 1300 still leaves headroom under the only
+# limit this repo does not own.
+HARD_FRONTMATTER = 1300
+SOFT_DESCRIPTION = 550
+HARD_DESCRIPTION = 700
 
 MODELS = {"opus", "sonnet", "haiku"}
 EFFORTS = {"low", "medium", "high"}

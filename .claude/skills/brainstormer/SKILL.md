@@ -1,7 +1,7 @@
 ---
 name: brainstormer
-description: Generate and choose between genuinely different approaches. Triggers include "any ideas", "let us brainstorm", "what are our options", "how should we approach", "is there a better way", "I am stuck", "should we build this at all", "compare these two designs". Do NOT use once a design exists, or when only the scope is vague rather than the approach (writing-plans). Use this whenever the approach is open, even if the user does not ask for options.
-when_to_use: when a design is needed before implementation
+description: Generate and compare genuinely different approaches, then choose one. Produces options and a decision, not code - architecture, build versus buy, library and framework choice, data model and API shape, rollout strategy. Triggers include "any ideas", "let us brainstorm", "what are our options", "how should we approach this", "is there a better way", "should I use X or Y", "what are the trade-offs", "compare these two designs", "I am stuck", "should we build this at all". Do NOT use once a design already exists, when only the scope is vague rather than the approach (writing-plans), or to implement the choice. Use this whenever the approach is open, even if the user does not ask for options.
+when_to_use: Trigger when the user says any ideas, let us brainstorm, what are our options, how should we approach this, what is the best way to, is there a better way, which should I use, should I use X or Y, compare these two designs, what are the trade-offs, I am stuck, I do not know how to structure this, or should we build this at all.
 effort: high
 model: opus
 disable-model-invocation: false

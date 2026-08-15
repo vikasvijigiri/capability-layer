@@ -1,7 +1,7 @@
 ---
 name: no-slop
-description: Sweep a codebase for slop, then repair what is approved. Finds dead code, placeholders, hedging, duplicated guidance and unverified claims. Triggers include "clean up this repo", "no-slop check", "is this clean enough to ship", "tidy this up", "remove the dead code", "any leftover placeholders", "audit this before we merge". Do NOT use to review a single diff before it lands — that's code review. Use this proactively before shipping, even if the user doesn't ask for a sweep.
-when_to_use: when a unit of work is about to ship, merge or hand off, and when a component has just been added or removed
+description: Sweep a codebase for accumulated slop, then repair what is approved. Finds dead code, unused files, placeholders and TODOs, stale counts, dangling references, duplicated guidance, hedging, and claims nothing backs - reading standing artefacts including files the change never touched. Triggers include "clean up this repo", "tidy this up", "no-slop check", "is this clean enough to ship", "audit this before we merge", "remove the dead code", "anything unused", "any leftover placeholders", "tech debt". Do NOT use to review a single diff before it lands - that is code-review. Use this proactively before shipping, even if the user does not ask for a sweep.
+when_to_use: Trigger when the user says clean up this repo, tidy this up, no-slop check, sweep this, is this clean enough to ship, audit this before we merge, remove the dead code, anything unused, any leftover placeholders, is there duplication here, are the docs still true, or tech debt.
 effort: high
 model: sonnet
 disable-model-invocation: false

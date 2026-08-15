@@ -1,7 +1,7 @@
 ---
 name: capability-layer-maintenance
-description: Audit or repair the agent layer itself. Covers .claude/, CLAUDE.md, AGENTS.md, skills, agents, hooks, commands, rules and validators. Triggers include "add a skill", "the hook is not firing", "fix the layer", "audit .claude", "this skill never triggers", "wire up a subagent", "the layer has drifted". Do NOT use for product code, product docs, or a plain question about how the layer works. Use this whenever .claude/ is what changes.
-when_to_use: when the agent layer or its governing contracts need audit, repair, migration, or ownership clarification
+description: Audit or repair the agent layer itself, and its governing contracts. Covers .claude/, CLAUDE.md, AGENTS.md, skills, subagents, hooks, slash commands, rules, settings.json and their validators. Triggers include "add a skill", "create a skill", "add a hook", "wire up a subagent", "the hook is not firing", "this skill never triggers", "my skill is not being used", "the slash command is broken", "fix the layer", "audit .claude", "the layer has drifted", "update CLAUDE.md". Do NOT use for product code, product documentation, or a plain question about how the layer works. Use this whenever .claude/ is what changes.
+when_to_use: Trigger when the user says add a skill, create a skill, write a skill, add a hook, wire up a subagent, add an agent, the hook is not firing, the hook does nothing, this skill never triggers, my skill is not being used, the slash command is broken, fix the layer, audit .claude, the layer has drifted, update CLAUDE.md, or add a slash command.
 effort: high
 model: opus
 disable-model-invocation: false

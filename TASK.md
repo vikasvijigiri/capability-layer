@@ -4,6 +4,29 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Rewrite skill frontmatter for triggering
+
+- **Status:** All 14 descriptions rewritten to the official pattern; bodies not
+  yet restructured except `code-review`. **Untested by request** — the user is
+  checking triggering manually.
+- Modify: `tools/test_no_slop.py`, `tools/test_process_router.py`, `tools/new_skill_check.py`, `.claude/settings.json`, `.claude/skills/brainstormer/SKILL.md`, `.claude/skills/capability-layer-maintenance/SKILL.md`, `.claude/skills/code-review/SKILL.md`, `.claude/skills/delivering/SKILL.md`, `.claude/skills/designer/SKILL.md`, `.claude/skills/executing-plans/SKILL.md`, `.claude/skills/knowledge-manager/SKILL.md`, `.claude/skills/no-slop/SKILL.md`, `.claude/skills/releasing/SKILL.md`, `.claude/skills/repo-recon/SKILL.md`, `.claude/skills/research/SKILL.md`, `.claude/skills/systematic-debugging/SKILL.md`, `.claude/skills/verifying-work/SKILL.md`, `.claude/skills/writing-plans/SKILL.md`
+- **Goal:** maximise the trigger surface so skills actually fire, after
+  `code-review` measured `trigger_rate 0.0` on canonical prompts.
+- **Constraints:** the listing budget is 1% of context by default and drops
+  descriptions least-used-first when it overflows, so trigger words added to one
+  skill silently delete another's — `skillListingBudgetFraction` raised to 0.02
+  first. Per-entry cap is 1,536 chars. Every `Do NOT use` clause and every
+  successor/agent reference preserved.
+- **Input:** `code.claude.com/docs/en/skills` frontmatter reference and
+  troubleshooting; `anthropics/skills` `template/`, and the `doc-coauthoring`
+  and `pdf` descriptions as the trigger-dense exemplars.
+- **Output:** descriptions 6,795 → 11,967 ch; listing 8,301 → 13,473 against a
+  20,000 budget; largest entry 1,075 of 1,536.
+- **Done Checks:** the user confirms skills trigger on natural phrasing.
+  Not run here by request.
+- **Out of Scope:** the 11 `.claude/commands/` descriptions; restructuring the
+  13 remaining skill bodies.
+
 ### S1: make every turn cheap
 
 - **Status:** Closed 2026-08-14. Preamble 25,599 -> 9,056 ch, tier 3.4x. The

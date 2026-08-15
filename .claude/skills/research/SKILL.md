@@ -1,7 +1,7 @@
 ---
 name: research
-description: Gather outside evidence a decision can rest on. Triggers include "how do people usually handle this", "what is the prior art", "does this exist already", "compare the options", "investigate", "is this even possible", "what do others do". Do NOT use for a single-fact lookup, a repo question Grep settles, or once the evidence is in hand. Use this whenever a claim needs outside evidence, even if unasked.
-when_to_use: when external evidence is required
+description: Gather outside evidence a decision can rest on, then report it honestly. Documentation, specifications, prior art and real implementations, separating what the evidence supports from what it does not. Triggers include "how do people usually handle this", "what is the prior art", "best practice for", "does this exist already", "is there a library for this", "compare the options", "investigate this", "is this even possible", "what do others do", "check the official docs". Do NOT use for a single-fact lookup, for a repository question Grep settles, or once the evidence is already in hand. Use this whenever a claim needs outside evidence, even if unasked.
+when_to_use: Trigger when the user says how do people usually handle this, what is the prior art, what is the standard approach, best practice for, does this exist already, is there a library for this, which library should we use, compare the options, investigate this, look into this, find out how, is this even possible, what do others do, or check the official docs.
 effort: high
 model: opus
 disable-model-invocation: false
