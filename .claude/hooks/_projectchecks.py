@@ -294,6 +294,19 @@ def detect_checks(root=None):
     # standalone `tools/test_*.py` scripts rather than a pytest project. Treat
     # each script as a test command so temporary fixtures and layer-only repos
     # still get real test evidence without inventing a package marker.
+    #
+    # This glob stays UNCONDITIONAL, and the reason is worth keeping. Gating it
+    # on "no other test marker was found" was tried on 2026-08-15 and is wrong
+    # here: this repository has a `pyproject.toml`, so the gate handed it
+    # `pytest -q` instead -- which spends 72 seconds trying to collect 42
+    # standalone scripts that `sys.exit()` at import, then dies with
+    # INTERNALERROR having run nothing. A marker's presence does not mean the
+    # tool it names can actually run this repo's tests.
+    #
+    # The real defect was never here: `install.py` shipped `tools/test_*.py`
+    # into every target, so a product repo found the LAYER's 42 self-tests on
+    # its own disk and adopted them. That is fixed at the source, in
+    # `install.py`'s payload, so no repository has foreign tests to glob.
     tool_tests = sorted((root / "tools").glob("test_*.py"))
     found.extend(
         ("test", f'"{sys.executable}" "{p.relative_to(root)}"')

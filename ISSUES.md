@@ -6,6 +6,23 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-15 — A product repo earns `ran_test` from the layer's own suites
+
+- **Symptom**: an empty git repo with the layer installed and no product code
+  resolves 44 checks and reports `ran_test` True — the layer's 42 shipped
+  `tools/test_*.py` self-tests.
+- **Why it matters**: `ran_test` is what `06-artifact-autocommit.py` reads to
+  allow committing code. A product change clears that gate on evidence about
+  the *layer* rather than about itself.
+- **Not the shipping**: `install.py:50` ships `tools/` on purpose so the layer
+  validates itself in the target. That decision stands.
+- **Two fixes tried and rejected, with evidence**: gating the glob on "no other
+  test marker" hands THIS repo `pytest -q`, which spends 72s collecting scripts
+  that `sys.exit()` at import and dies having run nothing.
+- **Status**: **open.** Needs a way to tell a shipped test from the repo's own;
+  an install manifest is the likely shape. A weaker discriminator is worse than
+  the hole, so this is recorded rather than patched.
+
 ## 2026-08-12 08:40 — A check `timeout` bounds the verdict, not the wall clock
 
 - **Phase/Context**: found while parallelising `_projectchecks.run_checks`. A new

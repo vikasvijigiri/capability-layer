@@ -1,75 +1,76 @@
 {
- "_note": "Domain events and their subscriber scripts. Lifecycle wiring lives in .claude/settings.json; this file documents intent. Scripts read their payload via _hooklib.load_payload(), so both Claude Code (stdin) and a hand-set HOOK_PAYLOAD work. Every hook here ACTS or DENIES. Hooks whose only output was the name of a skill were deleted on 2026-08-04: hooks and skills are independent, a hook cannot invoke a skill, and a skill name written into hook source is an unvalidated second copy of a routing decision. Skills trigger from their own `description:` frontmatter.",
- "events": {
-  "session-start": {
-   "description": "At session start; loads the knowledge docs into context, then measures the repo against the branch point and renders the matching [state:<key>] block from workflow.md. Names no skill -- workflow.md owns what a state means.",
-   "claude_code_event": "SessionStart",
-   "subscribers": [
-    ".claude/hooks/session-start/02-bootstrap-docs.py",
-    ".claude/hooks/session-start/03-state-report.py"
-   ]
-  },
-  "user-prompt": {
-   "description": "Before a turn begins; classifies the prompt's entry shape -- work named with a settled approach, work named with an open one, or neither -- and renders the matching [state:<key>] block from workflow.md. Names no skill: it measures prompt shape, workflow.md's Entry table owns what that shape routes to. A hook cannot invoke a skill, so this raises the entry rule's visibility and does not guarantee a handoff.",
-   "claude_code_event": "UserPromptSubmit",
-   "subscribers": [
-    ".claude/hooks/user-prompt/01-entry-classifier.py"
-   ]
-  },
-  "post-run": {
-   "description": "After a turn completes; snapshots recovery state, commits the turn as a wip checkpoint if the artefact gates pass, then records the unit's state and says so when the chain stops advancing",
-   "claude_code_event": "Stop",
-   "subscribers": [
-    ".claude/hooks/post-run/03-checkpoint.py",
-    ".claude/hooks/post-run/06-artifact-autocommit.py",
-    ".claude/hooks/post-run/07-layer-drift.py",
-    ".claude/hooks/post-run/08-chain-continuity.py"
-   ]
-  },
-  "pre-commit": {
-   "description": "Before a git commit/push finalizes; refuses credentials, protected-branch commits, and AI attribution in either the message or the target repo's configured author",
-   "claude_code_event": "PreToolUse (Bash|PowerShell)",
-   "subscribers": [
-    ".claude/hooks/pre-commit/01-secret-scan.py",
-    ".claude/hooks/pre-commit/02-branch-guard.py",
-    ".claude/hooks/pre-commit/03-attribution-guard.py"
-   ]
-  },
-  "pre-edit": {
-   "description": "Before a file write; refuses generated, vendored and lockfile targets",
-   "claude_code_event": "PreToolUse (Edit|Write|NotebookEdit)",
-   "subscribers": [
-    ".claude/hooks/pre-edit/01-forbidden-change-guard.py",
-    ".claude/hooks/pre-edit/02-agent-scope-guard.py"
-   ]
-  },
-  "pre-deploy": {
-   "description": "Before a cloud-CLI command; allowlist-first free-tier spend guard",
-   "claude_code_event": "PreToolUse (Bash|PowerShell)",
-   "subscribers": [
-    ".claude/hooks/pre-deploy/01-spend-guard.py"
-   ]
-  },
-  "on-artifact-create": {
-   "description": "After a hook script is edited; demands it be fired against a real payload before being trusted",
-   "claude_code_event": "PostToolUse (Edit, Write)",
-   "subscribers": [
-    ".claude/hooks/on-artifact-create/02-hook-self-test-nudge.py"
-   ]
-  },
-  "pre-run": {
-   "description": "Before any tool that changes state or spawns work; refuses while a halt is in force. Reads stay allowed on purpose, so a halt can be investigated",
-   "claude_code_event": "PreToolUse (Bash|PowerShell|Edit|Write|NotebookEdit|Task)",
-   "subscribers": [
-    ".claude/hooks/pre-run/01-halt-guard.py"
-   ]
-  },
-  "post-tool": {
-   "description": "After a shell tool returns; reports what its input just added to permanent session context. Reports only -- a PreToolUse hook must be able to block, and this one must not",
-   "claude_code_event": "PostToolUse (Bash|PowerShell)",
-   "subscribers": [
-    ".claude/hooks/post-tool/01-context-cost.py"
-   ]
+  "_note": "Domain events and their subscriber scripts. Lifecycle wiring lives in .claude/settings.json; this file documents intent. Scripts read their payload via _hooklib.load_payload(), so both Claude Code (stdin) and a hand-set HOOK_PAYLOAD work. Every hook here ACTS or DENIES. Hooks whose only output was the name of a skill were deleted on 2026-08-04: hooks and skills are independent, a hook cannot invoke a skill, and a skill name written into hook source is an unvalidated second copy of a routing decision. Skills trigger from their own `description:` frontmatter.",
+  "events": {
+    "session-start": {
+      "description": "At session start; loads the knowledge docs into context, then measures the repo against the branch point and renders the matching [state:<key>] block from workflow.md. Names no skill -- workflow.md owns what a state means.",
+      "claude_code_event": "SessionStart",
+      "subscribers": [
+        ".claude/hooks/session-start/02-bootstrap-docs.py",
+        ".claude/hooks/session-start/03-state-report.py"
+      ]
+    },
+    "user-prompt": {
+      "description": "Before a turn begins; classifies the prompt's entry shape -- work named with a settled approach, work named with an open one, or neither -- and renders the matching [state:<key>] block from workflow.md. Names no skill: it measures prompt shape, workflow.md's Entry table owns what that shape routes to. A hook cannot invoke a skill, so this raises the entry rule's visibility and does not guarantee a handoff.",
+      "claude_code_event": "UserPromptSubmit",
+      "subscribers": [
+        ".claude/hooks/user-prompt/01-entry-classifier.py"
+      ]
+    },
+    "post-run": {
+      "description": "After a turn completes; snapshots recovery state, commits the turn as a wip checkpoint if the artefact gates pass, then records the unit's state and says so when the chain stops advancing",
+      "claude_code_event": "Stop",
+      "subscribers": [
+        ".claude/hooks/post-run/03-checkpoint.py",
+        ".claude/hooks/post-run/06-artifact-autocommit.py",
+        ".claude/hooks/post-run/07-layer-drift.py",
+        ".claude/hooks/post-run/08-chain-continuity.py"
+      ]
+    },
+    "pre-commit": {
+      "description": "Before a git commit/push finalizes; refuses credentials, protected-branch commits, and AI attribution in either the message or the target repo's configured author",
+      "claude_code_event": "PreToolUse (Bash|PowerShell)",
+      "subscribers": [
+        ".claude/hooks/pre-commit/01-secret-scan.py",
+        ".claude/hooks/pre-commit/02-branch-guard.py",
+        ".claude/hooks/pre-commit/03-attribution-guard.py"
+      ]
+    },
+    "pre-edit": {
+      "description": "Before a file write; refuses generated, vendored and lockfile targets",
+      "claude_code_event": "PreToolUse (Edit|Write|NotebookEdit)",
+      "subscribers": [
+        ".claude/hooks/pre-edit/01-forbidden-change-guard.py",
+        ".claude/hooks/pre-edit/02-agent-scope-guard.py"
+      ]
+    },
+    "pre-deploy": {
+      "description": "Before a cloud-CLI command; allowlist-first free-tier spend guard",
+      "claude_code_event": "PreToolUse (Bash|PowerShell)",
+      "subscribers": [
+        ".claude/hooks/pre-deploy/01-spend-guard.py"
+      ]
+    },
+    "on-artifact-create": {
+      "description": "After a hook script is edited; demands it be fired against a real payload before being trusted",
+      "claude_code_event": "PostToolUse (Edit, Write)",
+      "subscribers": [
+        ".claude/hooks/on-artifact-create/02-hook-self-test-nudge.py"
+      ]
+    },
+    "pre-run": {
+      "description": "Before any tool that changes state or spawns work; refuses while a halt is in force. Reads stay allowed on purpose, so a halt can be investigated",
+      "claude_code_event": "PreToolUse (Bash|PowerShell|Edit|Write|NotebookEdit|Task)",
+      "subscribers": [
+        ".claude/hooks/pre-run/01-halt-guard.py"
+      ]
+    },
+    "post-tool": {
+      "description": "After a shell tool returns: reports what its input added to permanent session context, and names a call this session already made with the same inputs. Reports only -- a PreToolUse hook must be able to block, and these must not",
+      "claude_code_event": "PostToolUse (Bash|PowerShell)",
+      "subscribers": [
+        ".claude/hooks/post-tool/01-context-cost.py",
+        ".claude/hooks/post-tool/02-repeat-detector.py"
+      ]
+    }
   }
- }
 }

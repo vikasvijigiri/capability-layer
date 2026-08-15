@@ -464,6 +464,31 @@ check("...and does NOT count as a test having run",
       ran_test_t is False, f"ran_test={ran_test_t}")
 
 
+# --- a product repo's `ran_test` must not be satisfied by layer self-tests ---
+#
+# `install.py` ships `tools/` ON PURPOSE -- the layer validates itself in the
+# target, and installing the checks without their fixtures once produced five
+# red suites there (install.py:50, 2026-08-07). Detection therefore finds those
+# scripts in every installed repo, which is intended.
+#
+# What is NOT intended is the credit they earn. `ran_test` is what the
+# auto-commit reads to decide whether code may be committed at all, and layer
+# self-tests passing says nothing about the product's code. Measured 2026-08-15:
+# an empty git repo with no product code resolved 44 checks and reported
+# ran_test True, so a product change would clear the unverified-code gate on
+# evidence about the layer instead of about itself.
+#
+# Recorded rather than fixed here: the fix needs a way to tell a shipped test
+# from the repo's own, and inventing one badly is worse than the hole. See
+# ISSUES.md 2026-08-15.
+
+_layer_only = tree({f"tools/test_layer{i}.py": "print('ok')\n" for i in range(3)})
+_ok, _detail, _ran = pc.run_checks(_layer_only)
+check("a repo whose only tests are shipped layer suites still reports ran_test",
+      _ran is True,
+      "documents the open hole rather than asserting the fix -- see ISSUES.md")
+
+
 # --- credentials, both axes -------------------------------------------------
 
 PATHS = [(".env", True), ("./.env", True), ("app/.env.local", True),
