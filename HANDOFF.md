@@ -14,22 +14,22 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**`feat/security-gate` holds twelve commits, all local, none pushed, no PR.**
+**`feat/security-gate` holds sixteen commits, all local, none pushed, no PR.**
 Tree clean apart from this record. Full tier: `PASS: 52 check(s) green (audit, build,
 lint, smoke, test, typecheck)`.
 
-    e136ec0  Delete CLAUDE.md's copy of the stage table; point at its owner
-    0c87e90  Fix the trigger eval's stream parser; it had never run live
-    07930af  Stop the stall notice asserting a fact about a plan that is absent
-    da084b2  Record the preamble unit; the entry cap caught this entry twice
-    ...and eight earlier, see LOG.md
+    c4653f5  Add the direct-answer level; count calls objectives 4/5 need
+    2a93290  Make commands user-only; merge the two post-tool hooks
+    7f1f942  Route the small-work path; build the anti-repetition layer
+    e136ec0  Delete CLAUDE.md's copy of the stage table
+    ...and twelve earlier, see LOG.md
 
 `TASK.md`'s S1 is **closed**: `CLAUDE.md`+rules 25,599 → 9,056 ch, SessionStart
 6,258 → 3,349, check tier 3.4x (68.2s → 20.2s interleaved). All four
 optimisation questions are answered in Next Steps 0 — three settled, one open
 on evidence. `tools/bench.py --save` holds the baseline; compare against it,
-never against a remembered number. **The largest remaining cost, 12,732 ch of
-descriptions per turn, is deliberately unpaid down** — see 0(a).
+never against a remembered number. **The largest remaining cost is the
+17,900-char per-turn listing**, deliberately unpaid down — see 0(a).
 
 **A delivery decision is owed on four units at once** — the branch stacks on
 `feat/close-remaining-gaps`, whose own ten-task plan is approved and unstarted,
@@ -102,6 +102,22 @@ weight; `feat/adaptive-workflow` @ `076914e` carries a superseded plan nothing
 marks as superseded.
 
 ## Next Steps
+
+**The Notion Primary Objectives, audited fairly on 2026-08-15: 4 green,
+3 amber, 3 red.** Two grades in the previous audit were generous and are
+corrected: objective 4 was called green while nothing counted tool calls
+(unmeasurable, not passing), and objective 8 was called green at 13% router
+coverage. Equally, calling objective 8's 86% silence a gap was unfair —
+30% are prompts a later stage's own description owns, which is the
+documented mechanism working.
+
+**Objective 2 is the one that matters and is untouched.** Per-turn cost is
+4,475 tok against 3,172 fixed — 141x — and still +41% above where the
+session began, because the skill rewrite added 6,674 chars. Whether that
+stays or reverts depends entirely on the manual triggering test; every other
+lever there is small change. Objectives 4 and 5 are now *measurable* but not
+yet *measured in the wild*: the counter has seen only synthetic firings, and
+the state file resets per session.
 
 0. **All four optimisation items are now answered; one is open on purpose.**
    (a) **Descriptions: do not cut.** Approved on 2026-08-14 and stopped after

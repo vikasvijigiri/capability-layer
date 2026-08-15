@@ -1,5 +1,26 @@
 # Log
 
+## 2026-08-15 14:00
+
+**Two objectives fixed, one measured for the first time, one untouched.**
+`7f1f942`, `2a93290`, `c4653f5`. 21 files, +489/-91. `PASS: 52 checks green`.
+
+**The router gained two execution levels it never had** — small-work and
+direct-answer, coverage 13% → 15%. Both are subsets guarded by measurement:
+routing all questions would have broken `"where did we get to last session"`,
+the single collision in 180 labelled queries.
+
+**Objective 4 was ungradeable, not merely failing.** Nothing counted tool calls,
+so §21's `tools_called` could be asserted forever. The post-tool hook now keeps
+totals and `bench.py` prints them.
+
+**Two instruments were blind to their own subject.** Each PostToolUse script
+costs a spawn on *every* shell call (215+226ms), so the detector added that
+morning already cost more than it saved — merged, 204ms. And `bench.py` counted
+command descriptions regardless of `disable-model-invocation`, the exact flag
+that removes them from the listing. Prior art was searched and is empty: ECC
+(240k stars) ships skills and rules with no hooks, router or telemetry.
+
 ## 2026-08-14 11:49
 
 **Three instruments were lying; $3.61 to find out.** `07930af`, `0c87e90`,
