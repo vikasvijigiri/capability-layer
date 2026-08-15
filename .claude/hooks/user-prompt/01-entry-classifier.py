@@ -217,6 +217,39 @@ INFO_QUESTION = [
     r"^(can|does) (it|this|that|claude)\b",
 ]
 
+# Of those, the ones answerable by reading the current tree -- the cheapest
+# execution level there is: answer directly, load no procedure, run no chain.
+#
+# The exclusions are the whole correctness argument, and they are measured
+# rather than guessed. Two question shapes wear the same grammar and are NOT
+# direct answers:
+#
+#   * recall of a past decision or session -- "where did we get to last
+#     session" is labelled a should-trigger for the docs stage in
+#     `docs/evals/trigger-queries.json`, and routing it to a direct answer
+#     would have broken that label. It was the ONLY such collision in 180
+#     queries, and it is the reason this pass is a subset rather than the whole
+#     of INFO_QUESTION.
+#   * what other people or teams do, which is outside evidence rather than a
+#     fact about this repository.
+DIRECT_ANSWER = [
+    r"^what (does|do|is|are) (the|this|that|it|a|an)\b",
+    r"^where (is|are|does|do)\b",
+    r"^how (does|do|is|are) (the|this|that|it|a|an)\b",
+]
+
+NOT_DIRECT = [
+    # recall: another stage owns the durable record
+    r"\b(last|previous|earlier) (session|week|time)\b",
+    r"\bdid we (decide|agree|choose)\b",
+    r"\bwhere did we get to\b",
+    r"\bwhat did we\b",
+    # outside evidence rather than this repository
+    r"\b(other|another) (team|teams|project|projects|people|company)\b",
+    r"\busually\b",
+    r"\bcommon practice\b",
+]
+
 # --- pass 2: below the floor where a brief pays for itself -------------------
 #
 # Two tiers, and the split is load-bearing. While this pass returned None its
@@ -323,6 +356,12 @@ def classify(prompt: str) -> str | None:
     if _hit(OPEN, text):
         return "entry-open"
     if _hit(INFO_QUESTION, text):
+        # The cheapest sufficient level, named rather than left implicit. A
+        # question about the current tree needs no procedure loaded and no chain
+        # run, and saying so is the one execution level this layer never had --
+        # everything else it knows how to do is a stage.
+        if _hit(DIRECT_ANSWER, text) and not _hit(NOT_DIRECT, text):
+            return "entry-direct"
         return None
     if _hit(TASK, text):
         # Breadth overrides the settled reading. A request naming this many

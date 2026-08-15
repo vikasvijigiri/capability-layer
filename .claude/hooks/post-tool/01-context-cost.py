@@ -108,7 +108,14 @@ def _load() -> dict:
 
 def _save(seen: dict) -> None:
     if len(seen) > MAX_ENTRIES:
-        seen = dict(sorted(seen.items(), key=lambda kv: kv[1]["at"])[-MAX_ENTRIES:])
+        totals = seen.get(TOTALS)
+        calls = {k: v for k, v in seen.items() if k != TOTALS}
+        # Trim the fingerprints, never the totals -- dropping those would make a
+        # long session look cheaper than a short one, which is the opposite of
+        # what the counter is for.
+        seen = dict(sorted(calls.items(), key=lambda kv: kv[1]["at"])[-MAX_ENTRIES:])
+        if totals is not None:
+            seen[TOTALS] = totals
     try:
         STATE.parent.mkdir(parents=True, exist_ok=True)
         STATE.write_text(json.dumps(seen), encoding="utf-8")
@@ -116,20 +123,45 @@ def _save(seen: dict) -> None:
         pass  # a reporter that cannot persist still must not break the turn
 
 
+# Reserved key inside the same state file. Sixteen hex characters is the shape
+# of every other key, so a name starting with an underscore cannot collide.
+#
+# `Agentic Workflows (IDE)` section 21 requires `tools_called` and
+# `api_call_count` per run and derives "tool calls / successful task" from them.
+# Nothing in this layer counted either, which is why objective 4 could be
+# asserted but never graded -- and an objective that cannot be measured is one
+# nobody can tell they are failing. Counting happens for EVERY watched call,
+# including the volatile and short ones the repeat check skips, because the
+# question "how many calls did this session make" does not care why.
+TOTALS = "_totals"
+
+
+def bump_totals(seen: dict, chars: int, repeated: bool) -> None:
+    t = seen.get(TOTALS) or {"calls": 0, "chars": 0, "repeats": 0}
+    t["calls"] += 1
+    t["chars"] += chars
+    t["repeats"] += 1 if repeated else 0
+    seen[TOTALS] = t
+
+
 def repeat_notice(name: str, command: str) -> str:
     """The notice for a command this session already ran, or '' for a new one."""
-    if len(command) < MIN_REPEAT_CHARS:
-        return ""
-    # Whitespace-normalised, so re-indenting a command does not read as new work.
+    seen = _load()
     normalised = re.sub(r"\s+", " ", command).strip()
-    if any(normalised.startswith(v) for v in VOLATILE):
+    skip = (len(command) < MIN_REPEAT_CHARS
+            or any(normalised.startswith(v) for v in VOLATILE))
+    if skip:
+        # Still counted. The totals answer "how many calls did this session
+        # make", which does not care whether the call was worth fingerprinting.
+        bump_totals(seen, len(command), False)
+        _save(seen)
         return ""
 
     key = hashlib.sha256(f"{name}\x00{normalised}".encode()).hexdigest()[:16]
-    seen = _load()
     now = time.time()
     prior = seen.get(key)
     seen[key] = {"at": now, "n": (prior or {}).get("n", 0) + 1}
+    bump_totals(seen, len(command), bool(prior))
     _save(seen)
     if not prior:
         return ""

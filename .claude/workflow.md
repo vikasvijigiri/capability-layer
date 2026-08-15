@@ -335,6 +335,27 @@ Nothing can force the handoff -- a hook cannot invoke a skill -- so this notice
 is the whole mechanism. Acting on it is yours.
 [/state:chain-stalled]
 
+[state:entry-direct]
+This prompt asks what the current tree already contains -- what something does,
+where it lives, how it works. **Answer it directly.** Read what you need, say
+what is true, stop.
+
+No procedure applies, so load none. No plan, no gate, no checks, no record: a
+question that changes nothing has nothing to verify and nothing to log. This is
+the cheapest path there is and it is the correct one far more often than the
+shape of this repository suggests.
+
+Two questions wear the same grammar and are **not** this:
+
+- **Recall of a past decision or session** -- what the durable record says,
+  rather than what the code says. The stage that owns those records answers it.
+- **What other teams or projects do** -- outside evidence, gathered rather than
+  read.
+
+If answering turns out to need a change, that is a new prompt and it re-enters
+at the stage table above.
+[/state:entry-direct]
+
 [state:entry-small]
 This prompt names a change small enough that framing it costs more than doing
 it -- a named file, a concrete value, a rename, a typo, a version bump. **The

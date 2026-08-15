@@ -120,6 +120,24 @@ def session_start() -> tuple[int, float]:
     return chars, time.monotonic() - started
 
 
+def session_calls() -> tuple[int, int, int]:
+    """(shell calls, chars, repeats) this session, from the post-tool counter.
+
+    `Agentic Workflows (IDE)` section 21 requires `tools_called` and
+    `api_call_count` per run; without them objectives 4 and 5 can be asserted
+    and never graded. Zeros mean the hook has not fired yet in this session,
+    which is different from a session that made no calls -- the caller says
+    which, rather than this function guessing.
+    """
+    state = (ROOT / ".claude" / "hooks" / "state" / "call-fingerprints.json")
+    try:
+        totals = json.loads(state.read_text(encoding="utf-8")).get("_totals") or {}
+    except (OSError, ValueError):
+        return 0, 0, 0
+    return (int(totals.get("calls", 0)), int(totals.get("chars", 0)),
+            int(totals.get("repeats", 0)))
+
+
 def tier(name: str) -> float:
     """Wall seconds for one check tier. Returns -1.0 when it could not run."""
     args = ["python", "tools/run_checks.py", "--tier", name]
@@ -180,6 +198,18 @@ def render(now: dict, was: dict | None) -> None:
             change = (value - was[key]) / was[key] * 100
             delta = f"{change:+.0f}%"
         print(f"{label:28} {shown:>12} {tokens:>12}  {delta:>13}  {cadence}")
+    calls, call_chars, repeats = session_calls()
+    if calls:
+        pct = repeats * 100 // calls
+        print(f"\nthis session's shell calls: {calls:,}  "
+              f"({call_chars:,} chars of input, ~{call_chars // 4:,} tok)  "
+              f"repeats: {repeats:,} ({pct}%)")
+        print("  Objective 4 and 5 are graded from this. A repeat is a call whose "
+              "answer\n  was already in context -- reuse before retrieve.")
+    else:
+        print("\nthis session's shell calls: not yet recorded -- the post-tool "
+              "counter\n  writes on the first shell call of a session.")
+
     print("\n" + TIMING_CAVEAT)
     if was is None:
         print("\nNo baseline recorded. `python tools/bench.py --save` writes one.")
