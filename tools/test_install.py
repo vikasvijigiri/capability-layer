@@ -405,8 +405,12 @@ check("an existing mypy.ini is NOT overwritten",
       "strict = True" in (cfg / "mypy.ini").read_text(encoding="utf-8"))
 
 seeded = fresh_repo()
+# Python of its own, and no lint configuration -- which is the case this seed
+# exists for. A repo with NO Python is a different case and must not be seeded
+# at all; that one is asserted further down.
+(seeded / "app.py").write_text("def main():\n    return 1\n", encoding="utf-8")
 inst.apply(seeded, inst.plan(seeded)[0])
-check("...but a repo with none is given a working starting point",
+check("...but a Python repo with none is given a working starting point",
       (seeded / "ruff.toml").is_file() and (seeded / "mypy.ini").is_file(),
       "otherwise the layer's own hooks and tools go unchecked in the target")
 
@@ -438,6 +442,80 @@ check("the seeded ruff config does not narrow itself to the layer",
       "include" not in seeded_ruff.split("[lint]")[0],
       "an include list here would scope linting to whatever this repo happens "
       "to contain")
+
+# --- the layer must not decide what a host's checks are ----------------------
+#
+# `ruff.toml` and `mypy.ini` are markers in `_projectchecks.MARKER_CHECKS`, so
+# seeding them does not merely add files -- it adds `ruff check .` and `mypy` to
+# the HOST's own fast tier. Measured 2026-08-16 in a Node-only repository: four
+# checks resolved, two of them the layer's, passing only because the layer's own
+# Python happened to be clean. The stated goal of the portability work was that
+# installing must not change what the host's checks MEAN, and this was the half
+# of it that the manifest exclusion did not reach.
+
+_pc_seed = load(".claude/hooks/_projectchecks.py", "pc_for_seed")
+
+_nopy = fresh_repo()
+(_nopy / "package.json").write_text(
+    '{"name":"n","version":"1.0.0","scripts":{"test":"echo ok",'
+    '"lint":"echo ok"}}\n', encoding="utf-8")
+(_nopy / "index.mjs").write_text("export const a = 1;\n", encoding="utf-8")
+_nopy_actions, _nopy_warnings = inst.plan(_nopy)
+inst.apply(_nopy, _nopy_actions)
+
+check("a host with no Python of its own is not given ruff.toml",
+      not (_nopy / "ruff.toml").is_file(),
+      "seeding it adds `ruff check .` to a Node repo's own gate")
+check("...nor mypy.ini",
+      not (_nopy / "mypy.ini").is_file())
+check("...and the skip is reported, never silent",
+      sum("not seeded" in w for w in _nopy_warnings) == 2,
+      str(_nopy_warnings))
+
+_nopy_checks, _ = _pc_seed.resolve_checks(_nopy, _pc_seed.FAST_KINDS)
+check("...so the Node host resolves only its own checks",
+      not any("ruff" in c or "mypy" in c for _, c in _nopy_checks),
+      str([c for _, c in _nopy_checks]))
+
+# The repeat install is the case that makes this non-trivial: by then `tools/`
+# alone is 26 Python files, so a naive `rglob("*.py")` answers yes and seeds
+# what the first install correctly refused. `_layer_owned()` -- the same
+# manifest discriminator that stops detection adopting the layer's suites -- is
+# what keeps the question about the host.
+inst.apply(_nopy, inst.plan(_nopy)[0])
+check("a REPEAT install still does not seed Python config into a Node host",
+      not (_nopy / "ruff.toml").is_file(),
+      "the layer's own tools/ must not count as the host having Python")
+
+# --- the shipped CODEOWNERS names nobody in particular -----------------------
+#
+# It was seeded from this repository's own copy until 2026-08-16, whose first
+# rule is a catch-all pointing at a real GitHub handle. In a third-party repo
+# that requests review from a stranger on every PR, or -- because GitHub ignores
+# an owner who is not a collaborator -- silently does nothing while still
+# looking like governance. The quiet failure is the one that matters.
+
+_owners = (seeded / "CODEOWNERS").read_text(encoding="utf-8")
+check("the seeded CODEOWNERS carries a placeholder owner",
+      "@OWNER-REPLACE-ME" in _owners, _owners[:80])
+check("...and no other @handle rides along with it",
+      {tok for ln in _owners.splitlines() if not ln.lstrip().startswith("#")
+       for tok in ln.split() if tok.startswith("@")} == {"@OWNER-REPLACE-ME"},
+      "a real handle here is an identity shipped into every install")
+check("...and it says on its first line that it must be replaced",
+      "REPLACE" in _owners.splitlines()[0].upper(),
+      _owners.splitlines()[0])
+
+# The manifest hash must be of what was INSTALLED. Hashing the same-named file
+# at this repository's root would record a hash the target never had, and
+# `upgrade` reads any difference as a local edit -- so every later improvement
+# to the template would be refused for a change nobody made.
+_seed_hashes = json.loads(
+    (seeded / inst.MANIFEST).read_text(encoding="utf-8")).get("files", {})
+check("the manifest records the hash of the CODEOWNERS actually written",
+      _seed_hashes.get("CODEOWNERS") == inst.file_hash(seeded / "CODEOWNERS"),
+      "otherwise upgrade refuses the file forever as a phantom local edit")
+
 
 # --- uninstall: what may be removed, and what must never be -----------------
 #

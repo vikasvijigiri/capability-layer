@@ -95,12 +95,34 @@ SEED = (
     # its own keeps every rule in it.
     "ruff.toml",
     "mypy.ini",
-    # `test_ci_shape.py` asserts both, and it travels with the layer. Seeding the
-    # workflow without the ownership file it is checked against left exactly one
-    # red suite in an otherwise-clean install -- found by running the fast tier in
-    # a synthetic target rather than by reading either file.
+    # Seeded from `templates/CODEOWNERS.seed`, never from this repository's own
+    # copy -- see `SEED_SOURCE`. It used to be justified by `test_ci_shape.py`
+    # asserting it "and it travels with the layer"; that stopped being true when
+    # the internal suites were removed from the payload on 2026-08-16, so the
+    # reason it stays is the ownership file itself: a workflow seeded with no
+    # ownership beside it is a gate nobody is named on.
     "CODEOWNERS",
 )
+
+# A seeded file whose payload lives somewhere other than the same path here.
+#
+# `CODEOWNERS` is the case that forced it. Seeding the copy at this repository's
+# root shipped a real GitHub handle into every target as owner of `*`, where it
+# either requests review from a stranger on every pull request or -- worse --
+# silently does nothing, because GitHub ignores an owner who is not a
+# collaborator. The file still LOOKS like governance either way, which is the
+# failure mode that matters. `templates/CODEOWNERS.seed` carries the same
+# path-scoped rules with a placeholder and says on its first line to replace it.
+SEED_SOURCE = {"CODEOWNERS": "templates/CODEOWNERS.seed"}
+
+# Seeded only into a target that already has Python of its own.
+#
+# Both are markers in `_projectchecks.MARKER_CHECKS`, so seeding them decides
+# what the HOST's checks are, not just what the layer's are. Measured
+# 2026-08-16: a Node-only repository resolved four fast checks after install,
+# two of them `ruff check .` and `mypy` that it never asked for and that pass
+# only while the layer's own Python happens to be clean.
+PYTHON_SEED = {"ruff.toml", "mypy.ini"}
 
 CLAUDE_SEED = "@AGENTS.md\n\n# Capability layer\n\nThis repository uses the portable layer in `.claude/`. Read `.claude/workflow.md` for the execution policy and use the native skills, commands, and hooks registered by the active host.\n"
 
@@ -345,6 +367,31 @@ def _noise(path: Path, root: Path) -> bool:
                          "__pycache__", "target", "vendor", ".git"})
 
 
+def seed_source(name: str) -> Path:
+    """Where a seeded file's payload is read from. See `SEED_SOURCE`."""
+    return SOURCE / SEED_SOURCE.get(name, name)
+
+
+def target_has_python(target: Path) -> bool:
+    """Does the TARGET have Python of its own, discounting the layer's?
+
+    Called from `plan()`, before `apply()` copies anything, because after that
+    the answer is always yes -- `tools/` alone is 26 Python files. On a REPEAT
+    install the layer's files are already on disk, so `_layer_owned()` is what
+    keeps the answer about the host; it is the same manifest discriminator that
+    stops `_projectchecks` adopting the layer's suites as the host's tests, and
+    it fails open to an empty set, which over-seeds rather than under-detects.
+    """
+    owned = _layer_owned(target)
+    for path in target.rglob("*.py"):
+        if _noise(path, target):
+            continue
+        if path.relative_to(target).as_posix() in owned:
+            continue
+        return True
+    return False
+
+
 def entry_point(target: Path) -> str:
     """Where the chain should start in the target, from what is already there.
 
@@ -415,8 +462,14 @@ def plan(target: Path) -> tuple[list[tuple[Path, str]], list[str]]:
         else:
             actions.append((Path(name), "unchanged"))
 
+    host_python = target_has_python(target)
     for name in SEED:
-        src = SOURCE / name
+        if name in PYTHON_SEED and not host_python:
+            warnings.append(f"{name} not seeded -- this target has no Python of "
+                            f"its own, and seeding it would add a Python check "
+                            f"to the host's own tier")
+            continue
+        src = seed_source(name)
         if not src.is_file():
             warnings.append(f"source is missing {name} -- not seeded")
             continue
@@ -486,11 +539,15 @@ def write_manifest(target: Path, actions: list[tuple[Path, str]]) -> int:
     # improvement is refused too. Recorded from the source at install time, not
     # from the target, so a file that fails to copy does not get a hash claiming
     # it succeeded.
+    # `seed_source` and not `SOURCE / rel`: a `SEED_SOURCE` file is installed
+    # from a template, so hashing the same-named file at this repository's root
+    # would record a hash the target never had -- and `upgrade` would read that
+    # difference as a local edit and refuse every later improvement to it.
     hashes = {
-        rel: (file_hash(SOURCE / rel) if rel != "CLAUDE.md"
+        rel: (file_hash(seed_source(rel)) if rel != "CLAUDE.md"
               else __import__("hashlib").sha256(CLAUDE_SEED.encode()).hexdigest())
         for rel in owned
-        if rel != MANIFEST.as_posix() and (rel == "CLAUDE.md" or (SOURCE / rel).is_file())
+        if rel != MANIFEST.as_posix() and (rel == "CLAUDE.md" or seed_source(rel).is_file())
     }
 
     path = target / MANIFEST
@@ -516,7 +573,9 @@ def apply(target: Path, actions: list[tuple[Path, str]]) -> list[str]:
         dst = target / rel
         if action in ("create", "overwrite"):
             dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(SOURCE / rel, dst)
+            # `seed_source` is the identity for everything but the handful of
+            # names in SEED_SOURCE, so this stays one copy path rather than two.
+            shutil.copy2(seed_source(rel.as_posix()), dst)
         elif action == "create-claude-stub":
             dst.parent.mkdir(parents=True, exist_ok=True)
             dst.write_text(CLAUDE_SEED, encoding="utf-8")
