@@ -152,9 +152,51 @@ EXCLUDE_FILES = (
     ".claude/rules/llm-env.md",
 )
 
+# The only `tools/test_*.py` a host has any use for: they check that the layer
+# it just INSTALLED is intact and wired. `install.py` ends by telling the reader
+# to run the first two.
+#
+# Everything else under that glob tests the layer's own internals -- the check
+# runner, the resume state machine, the escalation ladder, the packaging -- and
+# a host has no more use for those than for this repository's git history.
+#
+# The split is 6 files against 36, 119KB against 418KB, and shipping the 36 was
+# actively harmful rather than merely wasteful. Measured 2026-08-16 in a fresh
+# Python product:
+#
+#     INTERNALERROR> .../product/tools/test_package.py line 109: sys.exit(0)
+#     no tests ran in 32.16s
+#
+# They are standalone scripts that `sys.exit()` at import, pytest collected them
+# during its own run, and the HOST'S suite never executed. Installing the layer
+# broke the host's test runner. Nothing caught it because every one of
+# `test_install.py`'s 102 assertions checked installation mechanics and none
+# checked that the installed layer works.
+#
+# Verified against the runtime before cutting: no non-test tool imports any test
+# module, so nothing the layer DOES depends on them.
+SHIPPED_SUITES = frozenset({
+    "test_process_router.py",
+    "test_referenced_paths.py",
+    "test_command_standards.py",
+    "test_agent_standards.py",
+    "test_hook_registration.py",
+    "test_workflow_contract.py",
+})
+
+
+def is_internal_suite(rel: Path) -> bool:
+    """True for a layer self-test the host has no use for."""
+    return (rel.parent.as_posix() == "tools"
+            and rel.name.startswith("test_")
+            and rel.name.endswith(".py")
+            and rel.name not in SHIPPED_SUITES)
+
 
 def skipped(rel: Path) -> bool:
     if rel.as_posix() in EXCLUDE_FILES:
+        return True
+    if is_internal_suite(rel):
         return True
     return any(part in SKIP_PARTS for part in rel.parts)
 

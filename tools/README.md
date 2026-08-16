@@ -42,7 +42,7 @@ Not a suite, but run by the commit gate as a lint check:
 (`post-run/05-docs-gate.py`, `pre-commit/05-docs-required.py`).
 
 ```bash
-PYTHONIOENCODING=utf-8 python tools/test_hooks.py
+PYTHONIOENCODING=utf-8 python tools/<a suite in this repo>.py
 ```
 
 `resolve_capability.py`, `test_resolver.py`, `test_router.py`,

@@ -4,6 +4,19 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Make the layer portable: it broke every host's test runner
+
+- **Status:** Fixed and proven in Python and Node targets. Payload 1,586,874 ->
+  1,172,851 bytes; a fresh install is green in both.
+- Create: `tools/conftest.py`
+- Modify: `.claude/install.py`, `.claude/hooks/_projectchecks.py`, `tools/test_install.py`, `tools/test_package.py`, `.claude/project-checks.json`, `.claude/constitution.md`, `tools/README.md`, `.claude/skills/writing-plans/SKILL.md`, `.claude/skills/writing-plans/references/plan-document.md`
+- **Goal:** installing the layer must not change what the host's own checks mean
+  or break the host's test runner.
+- **Done Checks:** a fresh install into a Python product runs the product's
+  pytest and resolves only the product's checks; the same for a Node product;
+  the six shipped validators pass in a target; `--tier all --require-test` green.
+- **Out of Scope:** the 36 internal suites no longer ship at all.
+
 ### Rewrite skill frontmatter for triggering
 
 - **Status:** All 14 descriptions rewritten to the official pattern; bodies not

@@ -79,7 +79,7 @@ later reader greps for.
 - **Fill only from what was said or verified.** An unstated field stays blank. A
   guessed field is worse than an empty one — it gets approved as if the user had
   said it.
-- **Done Checks must be runnable.** `python tools/test_hooks.py exits 0` and
+- **Done Checks must be runnable.** `<the suite that covers it> exits 0` and
   `POST /session returns 201 with an id` are checks. "It works", "tests pass",
   "performance is better" are not.
 - **Out of Scope is never blank.** Name the adjacent thing you could plausibly

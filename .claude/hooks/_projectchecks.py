@@ -295,19 +295,42 @@ def detect_checks(root=None):
     # each script as a test command so temporary fixtures and layer-only repos
     # still get real test evidence without inventing a package marker.
     #
-    # This glob stays UNCONDITIONAL, and the reason is worth keeping. Gating it
-    # on "no other test marker was found" was tried on 2026-08-15 and is wrong
-    # here: this repository has a `pyproject.toml`, so the gate handed it
-    # `pytest -q` instead -- which spends 72 seconds trying to collect 42
-    # standalone scripts that `sys.exit()` at import, then dies with
-    # INTERNALERROR having run nothing. A marker's presence does not mean the
-    # tool it names can actually run this repo's tests.
+    # Skip the ones the LAYER installed. `install.py` ships `tools/` into every
+    # target, so without this a product repo adopts ~42 of the layer's contract
+    # suites as its own test suite: measured 2026-08-15, an empty git repo with
+    # no product code resolved 44 checks, all of them the layer testing itself,
+    # and the auto-commit then gated that product's commits on them.
     #
-    # The real defect was never here: `install.py` shipped `tools/test_*.py`
-    # into every target, so a product repo found the LAYER's 42 self-tests on
-    # its own disk and adopted them. That is fixed at the source, in
-    # `install.py`'s payload, so no repository has foreign tests to glob.
-    tool_tests = sorted((root / "tools").glob("test_*.py"))
+    # The discriminator is the install manifest, which already existed for
+    # exactly this class of question -- `layer_paths()` is what stops
+    # `recon.py` counting the guest as the host. It is the right one because it
+    # records what the installer actually wrote rather than guessing from a
+    # pattern: a host may have its own `tools/`, and the installer merges into
+    # it, so `tools/*` is not a safe exclusion.
+    #
+    # In THIS repository there is no manifest -- the layer is not installed into
+    # itself -- so `layer_paths()` is empty and every suite is found, unchanged.
+    #
+    # Gating on "no other test marker was found" was tried first and is wrong:
+    # this repo has a `pyproject.toml`, so that gate handed it `pytest -q`,
+    # which cannot run standalone scripts that `sys.exit()` at import. A
+    # marker's presence does not mean the tool it names can run these tests.
+    # By path, not by name: `_hooklib` is a sibling file rather than an
+    # installed module, and this runs from whatever cwd the caller had. Fails
+    # open to an empty set -- an unreadable manifest must not hide a repo's own
+    # suites, because over-reporting them is recoverable and losing them is not.
+    owned: set = set()
+    try:
+        _spec = importlib.util.spec_from_file_location(
+            "_hooklib_for_checks", HOOKS_DIR / "_hooklib.py")
+        if _spec is not None and _spec.loader is not None:
+            _hl = importlib.util.module_from_spec(_spec)
+            _spec.loader.exec_module(_hl)
+            owned = _hl.layer_paths(root)
+    except Exception:  # noqa: BLE001
+        owned = set()
+    tool_tests = [p for p in sorted((root / "tools").glob("test_*.py"))
+                  if p.relative_to(root).as_posix() not in owned]
     found.extend(
         ("test", f'"{sys.executable}" "{p.relative_to(root)}"')
         for p in tool_tests

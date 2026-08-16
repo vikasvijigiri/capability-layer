@@ -771,6 +771,78 @@ for _d in (un, _virgin):
 for _d in (cfg, seeded):
     shutil.rmtree(_d.parent, ignore_errors=True)
 
+# --- the installed layer must not become the host's test suite ---------------
+#
+# This file had 102 assertions and every one of them checked installation
+# MECHANICS -- which files land, which are preserved, which merge. None checked
+# that the installed layer WORKS in the host, and that is how the worst defect
+# this layer has shipped went unnoticed for months.
+#
+# Measured 2026-08-16 in a freshly installed Python product, before the fix:
+#
+#     INTERNALERROR> File ".../product/tools/test_package.py", line 109
+#     INTERNALERROR>   sys.exit(0)
+#     no tests ran in 32.16s
+#
+# `install.py` ships `tools/`, so the host got ~42 standalone contract suites
+# that `sys.exit()` at import. pytest collected them, died, and the host's own
+# suite never ran. Detection separately adopted them as the host's test set, so
+# `the checks pass` in a product repo meant `the capability layer is fine`.
+#
+# Two mechanisms fix it and both are asserted here: `tools/conftest.py` keeps
+# pytest out of the shipped suites, and `layer_paths()` -- the install manifest
+# that already existed to stop `recon.py` counting the guest as the host -- is
+# what detection now uses to skip them.
+
+
+def _product_repo(marker: str, body: str, extra: dict) -> Path:
+    d = fresh_repo()
+    (d / marker).write_text(body, encoding="utf-8")
+    for rel, text in extra.items():
+        p = d / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(text, encoding="utf-8")
+    inst.apply(d, inst.plan(d)[0])
+    return d
+
+
+_pc = load(".claude/hooks/_projectchecks.py", "pc_for_install")
+
+_py_product = _product_repo(
+    "pyproject.toml", "[project]\nname='demo'\nversion='0.1.0'\n",
+    {"tests/test_demo.py": "def test_ok():\n    assert True\n"})
+_py_checks, _ = _pc.resolve_checks(_py_product, _pc.FAST_KINDS)
+_py_tests = [c for k, c in _py_checks if k == "test"]
+_leaked = [c for c in _py_tests if "tools" in c and "test_" in c]
+
+check("a Python host does not adopt the layer's shipped suites",
+      _leaked == [], f"{len(_leaked)} leaked, e.g. {_leaked[:1]}")
+check("...and its own test runner is what resolves",
+      any("pytest" in c for c in _py_tests), str(_py_tests))
+check("...and tools/conftest.py ships, so pytest cannot import them",
+      (_py_product / "tools" / "conftest.py").is_file(),
+      "without it, collecting a shipped suite runs its sys.exit() and pytest dies")
+
+_node_product = _product_repo(
+    "package.json", '{"name":"d","version":"1.0.0","scripts":{"test":"echo ok"}}', {})
+_node_checks, _ = _pc.resolve_checks(_node_product, _pc.FAST_KINDS)
+_node_tests = [c for k, c in _node_checks if k == "test"]
+check("a Node host does not adopt the layer's shipped suites",
+      [c for c in _node_tests if "tools" in c and "test_" in c] == [],
+      str(_node_tests[:2]))
+check("...and `npm test` is what resolves",
+      any("npm test" in c for c in _node_tests), str(_node_tests))
+
+# The manifest is the discriminator. If it is missing the layer must fail OPEN
+# -- finding the suites -- because hiding a repo's own tests is the worse error.
+_no_manifest = _product_repo("README.md", "# x\n", {})
+(_no_manifest / inst.MANIFEST).unlink(missing_ok=True)
+_open_checks, _ = _pc.resolve_checks(_no_manifest, _pc.FAST_KINDS)
+check("without a manifest, detection fails OPEN and still finds the suites",
+      any(k == "test" for k, _ in _open_checks),
+      "an unreadable manifest must not silence a repository's tests")
+
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

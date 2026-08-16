@@ -5,7 +5,7 @@ the two strings the machinery parses out of it, the constitution gate, and
 the self-review that runs before Gate 1.
 
 Split out of `SKILL.md` because the skill exceeded its 200-line prose budget
-after absorbing the framing stage -- `tools/test_no_slop.py --scope layer`
+after absorbing the framing stage -- the layer-scope sweep
 calls that a god-skill smell, and it was right that this is the separable
 half. Read it when writing the plan; the skill body carries the decisions.
 
