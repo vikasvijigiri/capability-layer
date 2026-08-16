@@ -49,9 +49,11 @@ typed; an absent key means "detect it".
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import json
 import os
+import signal
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -347,6 +349,66 @@ def detect_checks(root=None):
     return unique
 
 
+def _run_bounded(command: str, root: Path, timeout: int, env: dict):
+    """`subprocess.run(shell=True)` whose timeout bounds the WALL CLOCK.
+
+    `subprocess.run(..., timeout=)` does not. It kills the shell, the shell's
+    grandchild survives holding the inherited stdout pipe, and the `communicate()`
+    inside `run` blocks on that pipe until the grandchild exits -- so a hung check
+    blocked a whole turn for its full natural runtime whatever `timeout` said, and
+    the TimeoutExpired arrived only afterwards. Measured; `ISSUES.md`
+    2026-08-12 08:40. This is the gate that fires on every commit, so the cost of
+    it was a turn each time.
+
+    `tools/smoke.py:kill_tree()` already solved the same problem for the dev
+    server. Same shape here: `taskkill /T` on Windows, the process group on
+    POSIX, then a bounded second wait so a child ignoring SIGTERM cannot hang the
+    cleanup either.
+
+    Raises `subprocess.TimeoutExpired` exactly as `run` did, so every caller and
+    every existing test sees the same contract -- only sooner.
+    """
+    kwargs = {}
+    if sys.platform != "win32":
+        kwargs["start_new_session"] = True  # its own process group to signal
+    # nosec B602 -- see the annotation at the call site; same provenance.
+    proc = subprocess.Popen(  # noqa: S602
+        command, cwd=str(root), shell=True, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True,
+        encoding="utf-8", errors="replace", env=env, **kwargs,
+    )
+    try:
+        out, err = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        _kill_tree(proc)
+        # Bounded: `communicate()` here reaps the pipes now that the tree is
+        # gone. Without a timeout of its own, a survivor would reintroduce the
+        # exact hang this function exists to remove.
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            proc.communicate(timeout=10)
+        raise
+    return subprocess.CompletedProcess(command, proc.returncode, out, err)
+
+
+def _kill_tree(proc) -> None:
+    """Kill the shell and everything it spawned. Reported, never fatal."""
+    if proc.poll() is not None:
+        return
+    try:
+        if sys.platform == "win32":
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                           capture_output=True, timeout=20)
+        else:
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    except Exception:  # noqa: BLE001 -- a timeout must not become a crash
+        with contextlib.suppress(Exception):
+            proc.kill()
+
+
 def resolve_checks(root=None, kinds=FAST_KINDS):
     """(checks, disabled) after the config has had its say, for one tier.
 
@@ -497,11 +559,7 @@ def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
             # write the hooks themselves. Commands are strings like `npm test`,
             # which need a shell to resolve. Annotated per-site rather than
             # silencing B602 repo-wide, so a NEW shell=True elsewhere still fails.
-            proc = subprocess.run(  # noqa: S602
-                command, cwd=str(root), shell=True, capture_output=True,
-                text=True, encoding="utf-8", errors="replace",
-                timeout=timeout, env=env,
-            )
+            proc = _run_bounded(command, root, timeout, env)
         except subprocess.TimeoutExpired:
             # claudekit's call, and it is right: a slow suite is a configuration
             # problem, not a broken change. Blocking on it trains people to

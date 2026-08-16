@@ -31,6 +31,12 @@ Use a stable, descriptive feature name. The document MUST begin with:
 **Risk:** [low | medium | high — computed, not judged: run
 `python tools/scope.py --plan <this file>` and paste its one-line reason]
 
+**Blast radius:** [what this change can reach — surfaces, consumers, data,
+anything downstream that has no idea it is happening]
+
+**Rollback:** [how to undo THIS PLAN, not one task of it — and what is left
+behind after the undo]
+
 **Architecture:** [the chosen approach and why it fits the existing system]
 
 **Tech stack and constraints:** [versions, boundaries, conventions, and non-goals]
@@ -41,6 +47,19 @@ Use a stable, descriptive feature name. The document MUST begin with:
 ## Tasks
 ...
 ```
+
+**`**Blast radius:**` and `**Rollback:**` are what Gate 1 is shown**, and
+`tools/analyze.py` requires both **in the preamble** — a task's own
+`**Rollback:**` does not satisfy the plan's. They are different claims: undoing
+task 7 tells nobody how to undo a plan whose tasks 1–6 already landed, and the
+person at the gate is deciding about the whole change. Both were prose in this
+document until recently, and nothing checked them, which is how a required
+field becomes a suggestion.
+
+Write the rollback for the **worst** landing state you can reach — half the
+tasks merged, the branch already delivered — not the tidy one. "Revert the merge
+commit" is a complete answer when it is true; say so plainly, and say what is
+left behind when it is not (written rows, a moved file, a released version).
 
 **`**Risk:**` is computed, never judged.** `tools/scope.py --plan <file>` reads
 the plan's own `- Create:` / `- Modify:` declaration lines and applies the same

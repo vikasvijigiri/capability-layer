@@ -1200,8 +1200,19 @@ else:
           "`PASS` on a narrowed run is green reported on less evidence")
     check("...and it refuses to narrow anything but a `small` change",
           'verdict["scope"] != "small"' in _rcsrc)
-    check("...and never writes a green ref", "update-ref" not in _rcsrc,
+    # `--record-green` (2026-08-16) gave the ref its second writer, because the
+    # first -- the auto-commit hook -- refuses past `max_files` and so left the
+    # largest units unable to record a verified tree at all. The rule is
+    # unchanged and now needs asserting rather than being structural: the write
+    # exists once, inside `record_green()`, and the flag is refused before any
+    # check runs unless the tier is `all` and the run is unscoped.
+    check("...and a SCOPED run still cannot write a green ref",
+          _rcsrc.count('"update-ref"') == 1
+          and _rcsrc.index("def record_green") < _rcsrc.index('"update-ref"'),
           "only the full tier may mark a tree verified")
+    check("...with the refusal decided before the checks, not after",
+          "--record-green needs `--tier all`" in _rcsrc,
+          "a refusal that reads the result can be argued with by the result")
 
 # Shape of the map, never its judgement -- see `_why_test_map`. A mapped command
 # that is not a registered check runs nothing for that path, silently.
@@ -1270,6 +1281,25 @@ check("capability-layer-maintenance names no-slop as the skill that sweeps",
 check("no-slop names capability-layer-maintenance as the skill that repairs",
       "capability-layer-maintenance" in _ns,
       "a sweep that repairs the layer's wiring is the structural edit this forbids")
+
+# --- memory is READ, at both ends of the chain -------------------------------
+#
+# `GOAL_CHECKLIST.md` §15 asks that stage 1 AND stage 4 query the durable
+# knowledge, and until 2026-08-16 only stage 1 did -- so everything the layer had
+# learned informed what got planned and nothing informed what got accepted.
+# Asserted on both, because a store nobody reads is a store nobody maintains,
+# and the write side has no symptom when the read side goes away.
+#
+# The two queries are deliberately not the same query: stage 1 asks about files
+# it is ABOUT to touch, stage 4 about files that WERE touched. Plans are wrong
+# about their file maps, which is exactly why the second one is worth having.
+_readers = sorted(
+    p.parent.name for p in SKILLS.glob("*/SKILL.md")
+    if "tools/memory.py" in p.read_text(encoding="utf-8", errors="replace"))
+check("stage 1 writing-plans queries durable memory",
+      "writing-plans" in _readers, str(_readers))
+check("stage 4 verifying-work queries it too, over what was ACTUALLY touched",
+      "verifying-work" in _readers, str(_readers))
 
 print()
 if failures:

@@ -22,6 +22,7 @@ import importlib.util
 import json
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -528,6 +529,46 @@ _self_hits = hl.scan_for_secrets(
     ROOT)
 check("this repo's own source does not match the credential patterns",
       _self_hits == [], f"self-matching: {_self_hits}")
+
+# --- a timeout must bound the wall clock, not just the verdict ----------------
+#
+# `subprocess.run(..., timeout=)` does not. It kills the shell; the grandchild
+# survives holding the inherited stdout pipe; `communicate()` blocks on that pipe
+# until the grandchild exits of its own accord. So the TimeoutExpired arrived
+# only after the check's FULL natural runtime -- measured 2026-08-16, a 3-second
+# timeout on a 30-second command returned after 30.1s. This function gates every
+# commit, so each hung check cost a whole turn while reporting that it had not.
+#
+# Asserted on elapsed time, which is the only thing that distinguishes the fix
+# from the bug: both produce the same verdict and the same message.
+
+_slow = f'"{sys.executable}" -c "import time; time.sleep(60)"'
+_hang = tree({".claude/project-checks.json": json.dumps(
+    {"test": _slow, "lint": False, "typecheck": False, "timeout": 3})})
+
+_t0 = time.monotonic()
+_ok, _detail, _ran = pc.run_checks(_hang, kinds=pc.FAST_KINDS)
+_elapsed = time.monotonic() - _t0
+
+# 15s, not 3.x: the bound being asserted is "the timeout, plus cleanup" against
+# a 60s natural runtime. A tight bound here would go red on a loaded machine and
+# teach people to delete the check, which is the failure this repo has already
+# had once with the concurrency timing assertion.
+check("a hung check returns within its timeout, not after its full runtime",
+      _elapsed < 15, f"{_elapsed:.1f}s elapsed against a 3s timeout on a 60s command")
+check("...and still reports the timeout rather than swallowing it",
+      not _ok and "timed out after 3s" in _detail, _detail)
+check("...and a check that timed out did not count as a test that ran",
+      not _ran, "passing and never finishing are different facts")
+
+_src = (ROOT / ".claude" / "hooks" / "_projectchecks.py").read_text(encoding="utf-8")
+check("the runner kills the process tree rather than only the shell",
+      "taskkill" in _src and "killpg" in _src,
+      "killing the shell orphans the grandchild that holds the pipe")
+check("the runner closes the child's stdin",
+      "stdin=subprocess.DEVNULL" in _src,
+      "this runs from the Stop hook; a check command that reads an inherited "
+      "stdin blocks the turn, and the symptom is a hang with no output")
 
 print()
 if failures:

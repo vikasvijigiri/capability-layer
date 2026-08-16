@@ -44,6 +44,13 @@ GOOD = """# Checkout retry Implementation Plan
 
 **Risk:** low — `scope.py --plan` reports no clause forces a tier above low.
 
+**Blast radius:** `src/checkout.ts` only; no schema, no public API, no
+configuration other repositories read.
+
+**Rollback:** revert the merge commit. The retry is behind no flag and holds no
+state, so a revert leaves nothing to clean up; if tasks land separately, revert
+in reverse order.
+
 **Source spec:** docs/specs/2026-08-07-checkout-retry-design.md
 
 ## Constitution gate
@@ -210,6 +217,33 @@ check("a plan whose Complexity tracking states the rollback/preconditions "
       not any(f["code"] == "untestable" and
               ("rollback" in f["finding"].lower() or "precondition" in f["finding"].lower())
               for f in az.analyze(exempt_text, exists=exists_good, slug="checkout-retry")))
+
+# --- what Gate 1 is specified to read, made a condition rather than a request --
+#
+# Added 2026-08-16, closing GOAL_CHECKLIST lines that had been prose since the
+# checklist was written -- and prose passes every suite, which is exactly why
+# that document counts "enforced by a mechanism" and "described somewhere"
+# separately.
+#
+# Plan-level `**Rollback:**` is NOT the per-task field checked above, and the
+# distinction is the whole point: undoing task 7 tells nobody how to undo a plan
+# whose tasks 1-6 already landed. `**Blast radius:**` is §1's sixth intake field,
+# and neither can be reconstructed from the task list, which is what makes them
+# sections rather than derived facts.
+for _field in ("**Rollback:**", "**Blast radius:**"):
+    check(f"{_field} is required in the plan preamble",
+          _field in az.PREAMBLE_HEADINGS, str(az.PREAMBLE_HEADINGS))
+    # `replace(..., 1)` hits the preamble copy, leaving every task's own field
+    # in place -- which is the case that matters. The first version of this
+    # check put both fields in REQUIRED_HEADINGS, a whole-document substring
+    # test, and task 3's `**Rollback:**` satisfied it: the plan-level
+    # requirement was unfalsifiable from the day it was written.
+    _without = GOOD.replace(_field, "**Unrelated:**", 1)
+    _found = az.analyze(_without, exists=exists_good, slug="checkout-retry")
+    check("...and a plan missing it from the preamble is a structure finding, "
+          "even when a task still carries the same field",
+          any(f["code"] == "structure" and _field in f["finding"] for f in _found),
+          str([f["finding"] for f in _found][:3]))
 
 print()
 if failures:

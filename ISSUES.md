@@ -6,6 +6,20 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-16 16:20 — the only saved eval result asserted a run that never happened
+
+- **Symptom**: `docs/evals/results-2026-08-07.json` carried `"dry_run": false`
+  on both rows — a claim of live measurement — while `LOG.md` 2026-08-14 records
+  that `eval_triggers.py` *"had never run live; it died on the first real call,
+  `message` being a string on error events."*
+- **Why it survived**: nothing reads the file — no suite, tool or skill — so it
+  could only be caught by reading two documents against each other.
+- **Fixed**: rows moved under `_voided_rows`, reason inline. Kept, not deleted:
+  two published audits quoted these numbers as real.
+- **Deliberately NOT fixed**: no replacement written. Writing the superseding
+  numbers into a file this session did not produce is the same defect with a
+  newer date. `python tools/eval_triggers.py` writes a real one, ~$0.45/query.
+
 ## 2026-08-16 — `code-review` never self-triggers, and no description fixes it
 
 - **Measured live**, ~$11 of `claude -p`: `verifying-work` 1.0,

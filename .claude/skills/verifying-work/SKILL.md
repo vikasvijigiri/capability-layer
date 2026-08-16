@@ -58,6 +58,31 @@ Tests passing is the cheap half. Did we build what was asked?
 Report as a table: requirement | evidence | verdict. Anything without a command
 in the evidence column is unbacked, however obviously true it looks.
 
+### Ask what is already known about these files
+
+Before writing the verdict, query the durable knowledge for the paths the change
+touched:
+
+    python tools/memory.py --paths <the changed files>
+
+It reads `MEMORY.md`, `ISSUES.md` and `decisions/` and returns entries naming
+those files or their directory. **Say what came back, including when nothing
+did** — "nothing recorded about these files" is itself a finding, and silence is
+indistinguishable from not having looked.
+
+Two things it catches that a green suite does not. A **past defect in this exact
+file that no test covers**: `ISSUES.md` holds several whose symptom was silence,
+and a verdict that does not check for the recurrence of a known silent failure is
+a verdict about the tests rather than about the work. And a **decision this
+change quietly reverses** — an ADR is evidence the reviewer is entitled to
+before signing off, not after.
+
+`writing-plans` runs the same query at stage 1, against files it is *about to*
+touch. This is the other end: files that were *actually* touched, which is a
+different set, because plans are wrong about their file maps. A returned entry is
+evidence, not an order; `python tools/memory.py --stale` names entries the tree
+has outgrown.
+
 ## What proves what
 
 | Claim | Requires | Not sufficient |
