@@ -1,5 +1,26 @@
 # Log
 
+## 2026-08-16 09:30
+
+**The layer broke the test runner of every repository it installed into.**
+`cd43a20`. In a fresh Python product: `INTERNALERROR ... sys.exit(0)` then
+`no tests ran in 32.16s`. Now `PASS: 52 checks green` here, and a host runs its
+own suite.
+
+~42 contract suites shipped into each host — standalone scripts that
+`sys.exit()` at import. pytest collects any `test_*.py` under its rootdir, so it
+imported one and died. Detection separately adopted them as the host's test set,
+so "the checks pass" in a product repo meant "the layer is fine".
+
+**Nothing caught it because `test_install.py`'s 102 assertions were all about
+installation *mechanics*.** Six now check the installed layer *works*.
+
+**The discriminator already existed** — the install manifest, written to stop
+`recon.py` counting the guest as the host. Two alternatives were rejected with
+evidence: gating on "no other test marker" hands THIS repo `pytest -q`, which
+cannot run its scripts at all. Shipping 61% of `tools/` bought nothing — no
+non-test tool imports any test module. Payload −26%.
+
 ## 2026-08-15 14:00
 
 **Two objectives fixed, one measured for the first time, one untouched.**

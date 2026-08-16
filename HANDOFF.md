@@ -14,10 +14,11 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**`feat/security-gate` holds sixteen commits, all local, none pushed, no PR.**
+**`feat/security-gate` holds nineteen commits, all local, none pushed, no PR.**
 Tree clean apart from this record. Full tier: `PASS: 52 check(s) green (audit, build,
 lint, smoke, test, typecheck)`.
 
+    cd43a20  Stop the layer breaking every host's test runner
     c4653f5  Add the direct-answer level; count calls objectives 4/5 need
     2a93290  Make commands user-only; merge the two post-tool hooks
     7f1f942  Route the small-work path; build the anti-repetition layer
@@ -102,6 +103,10 @@ weight; `feat/adaptive-workflow` @ `076914e` carries a superseded plan nothing
 marks as superseded.
 
 ## Next Steps
+
+**Portability was the worst defect and is fixed (2026-08-16, `cd43a20`): the
+layer no longer ships its internal suites, and a fresh install is green in a
+Python and a Node host. Verdict on the rest below.**
 
 **The Notion Primary Objectives, audited fairly on 2026-08-15: 4 green,
 3 amber, 3 red.** Two grades in the previous audit were generous and are
