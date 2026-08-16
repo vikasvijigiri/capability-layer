@@ -251,7 +251,8 @@ _ss_blocks = settings.get("hooks", {}).get("SessionStart", [])
 _cmds = [h.get("command", "") for _b in _ss_blocks for h in _b.get("hooks", [])]
 check("SessionStart has at least one registered hook", bool(_cmds))
 for _i, _cmd in enumerate(_cmds):
-    _script = _cmd.replace("$CLAUDE_PROJECT_DIR", str(ROOT)).replace('"', '')
+    _script = (_cmd.replace("${CLAUDE_PROJECT_DIR}", str(ROOT))
+               .replace("$CLAUDE_PROJECT_DIR", str(ROOT)).replace('"', ''))
     _script = _script.split(None, 1)[1] if " " in _script else _script
     _path = Path(_script)
     _name = _path.name

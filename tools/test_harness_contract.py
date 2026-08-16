@@ -34,7 +34,7 @@ except (OSError, json.JSONDecodeError) as exc:
 
 require("manifest names AGENTS.md source contract", manifest.get("source_contract") == "AGENTS.md")
 require("manifest declares host-managed execution", manifest.get("execution_model") == "host-managed")
-require("manifest lists IDE agent hosts", set(manifest.get("supported_hosts", [])) == {"Claude Code", "Codex", "Gemini", "VS Code agent"})
+require("manifest lists declared IDE agent hosts", set(manifest.get("supported_hosts", [])) == {"Claude Code", "Codex", "generic-agent"})
 require("manifest documents SDK-live as optional", "sdk-live" in manifest.get("runner_modes", {}))
 adapters = manifest.get("adapters", {})
 for name in ("claude-code", "codex", "generic-agent"):
@@ -54,6 +54,7 @@ require("generic adapter uses canonical source", adapters.get("generic-agent", {
 require("Claude settings path is explicit", adapters.get("claude-code", {}).get("settings_path") == ".claude/settings.json")
 require("Codex canonical hooks path is explicit", adapters.get("codex", {}).get("hooks_path") == ".claude/hooks")
 require("generic canonical hooks path is explicit", adapters.get("generic-agent", {}).get("hooks_path") == ".claude/hooks")
+require("Claude bootloader imports AGENTS.md", "@AGENTS.md" in (ROOT / "CLAUDE.md").read_text(encoding="utf-8"))
 
 if failures:
     raise SystemExit(1)

@@ -48,8 +48,9 @@ def main() -> int:
                 if hook.get("type") != "command":
                     fail(f"{event} uses unsupported/non-command hook type in this repo")
                 command = hook.get("command", "")
-                if "$CLAUDE_PROJECT_DIR" not in command:
-                    fail(f"{event} command is not rooted at $CLAUDE_PROJECT_DIR")
+                if ("$CLAUDE_PROJECT_DIR" not in command
+                        and "${CLAUDE_PROJECT_DIR}" not in command):
+                    fail(f"{event} command is not rooted at CLAUDE_PROJECT_DIR")
                 match = re.search(r"\.claude/hooks/([^\"']+\.py)", command)
                 if not match:
                     fail(f"{event} command does not name a repository hook script")

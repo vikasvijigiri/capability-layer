@@ -5,7 +5,8 @@ Usage:
   python tools/run_hook.py <event> '<json-payload>'
   python tools/run_hook.py <event> --file payload.json
 
-This will execute all scripts in `.claude/hooks/<event>/` in lexical order.
+This executes the event's registered dispatcher when one exists. Otherwise it
+executes scripts in `.claude/hooks/<event>/` in lexical order.
 Scripts should be executable Python scripts. The runner sets `HOOK_PAYLOAD`
 in the environment for each script.
 
@@ -28,7 +29,10 @@ def run_event(event, payload):
     if not event_dir.exists():
         print('No hooks for event', event)
         return 0
-    scripts = sorted([p for p in event_dir.iterdir() if p.is_file()])
+    dispatcher = event_dir / '00-dispatch.py'
+    scripts = [dispatcher] if dispatcher.is_file() else sorted(
+        [p for p in event_dir.iterdir() if p.is_file()]
+    )
     rc = 0
     for s in scripts:
         print('Running hook', s.name)

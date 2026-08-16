@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+@AGENTS.md
+
 A Claude Code capability layer: skills, lifecycle hooks and slash commands
 enforcing a spec → plan → build → verify workflow, plus the knowledge docs that
 carry state between sessions. There is no application code here.

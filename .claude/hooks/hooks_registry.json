@@ -20,6 +20,13 @@
       "description": "After a turn completes; snapshots recovery state, commits the turn as a wip checkpoint if the artefact gates pass, then records the unit's state and says so when the chain stops advancing",
       "claude_code_event": "Stop",
       "subscribers": [
+        ".claude/hooks/post-run/00-dispatch.py"
+      ]
+    },
+    "post-run-steps": {
+      "description": "The ordered Stop finalizers called by post-run/00-dispatch.py; manual-only registry entries prevent them being mistaken for independently concurrent Claude hooks",
+      "_note": "These scripts share recovery and git state and are intentionally not registered as separate Claude Stop hooks. Run the dispatcher, or invoke an individual script only for diagnosis.",
+      "subscribers": [
         ".claude/hooks/post-run/03-checkpoint.py",
         ".claude/hooks/post-run/06-artifact-autocommit.py",
         ".claude/hooks/post-run/07-layer-drift.py",

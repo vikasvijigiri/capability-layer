@@ -119,9 +119,10 @@ check("the stub does NOT decide `test` for the target",
       "a passing one are different facts, and the auto-commit distinguishes them")
 check("...but it says so in the file itself", "_first_decision" in stub)
 
-check("CLAUDE.md is not created for a target that has none",
-      not (target / "CLAUDE.md").exists(),
-      "a copied CLAUDE.md asserts this repo's facts about another repo")
+check("a missing CLAUDE.md gets a portable bootloader",
+      (target / "CLAUDE.md").is_file()
+      and "@AGENTS.md" in (target / "CLAUDE.md").read_text(encoding="utf-8"),
+      "Claude must load the universal contract in a fresh target")
 
 registered = json.loads((target / ".claude" / "settings.json").read_text(encoding="utf-8"))
 source_settings = json.loads(

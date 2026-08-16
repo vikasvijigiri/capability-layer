@@ -8,9 +8,10 @@ budget table in a different vocabulary, held run state in memory so a crash lost
 it, and could not be invoked as `/feature-delivery` because it never matched the
 dynamic-workflow contract. See `decisions/2026-08-07-one-workflow-engine.md`.
 
-The policy is harness-agnostic: Claude Code, Codex, Gemini, and VS Code agents
-must use the same states, artifacts, evidence, and approval boundaries. Both
-tools are plain scripts, so any harness can shell out to them.
+The policy is host-neutral at the tool and artifact level: Claude Code, Codex,
+and generic agent hosts use the same states, artifacts, evidence, and approval
+boundaries. Lifecycle registration remains host-specific; non-Claude hosts must
+invoke the canonical checks through their own lifecycle API.
 
 ## Product lifecycle
 
@@ -121,6 +122,10 @@ desync — the only exception is an attempt counter, which is not a fact about t
 tree and so cannot be derived from it.
 
 ## Parallelism and integration
+
+The Claude-native `executing-plans` skill is the dispatch surface. There is no
+unsupported `.claude/workflows/*.js` runtime; scheduling remains in the tested
+repository tools below.
 
 Parallel agents may work only on disjoint files or read-only review surfaces.
 Each implementation task gets its own worktree and branch. Shared interfaces,

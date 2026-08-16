@@ -15,10 +15,10 @@ that resolves to nothing, and its own entry point was an instance of it.
 
 Three rules, each because a fresh copy would otherwise discard a decision:
 
-  PRESERVE  `CLAUDE.md` and `.claude/project-checks.json` are never overwritten.
-            One states what the target repository is; the other states what
-            "the checks pass" means there. A source copy asserting this repo's
-            facts is worse than no file at all.
+  PRESERVE  an existing `CLAUDE.md` and `.claude/project-checks.json` are never
+            overwritten. A missing `CLAUDE.md` receives only a small bootloader
+            that imports `AGENTS.md`; a source copy asserting this repo's facts
+            is worse than no file at all.
   MERGE     `.claude/settings.json` is unioned by hook command string, so a
             target keeping its own hooks keeps them.
   SKIP      `__pycache__`, `.claude/hooks/state/`, and `.claude/workflow-state/`
@@ -101,6 +101,8 @@ SEED = (
     # a synthetic target rather than by reading either file.
     "CODEOWNERS",
 )
+
+CLAUDE_SEED = "@AGENTS.md\n\n# Capability layer\n\nThis repository uses the portable layer in `.claude/`. Read `.claude/workflow.md` for the execution policy and use the native skills, commands, and hooks registered by the active host.\n"
 
 # Never overwritten. Each carries a decision a fresh copy would silently discard.
 PRESERVE = (
@@ -421,6 +423,9 @@ def plan(target: Path) -> tuple[list[tuple[Path, str]], list[str]]:
         dst = target / name
         actions.append((Path(name), "preserve" if dst.exists() else "create"))
 
+    claude = target / "CLAUDE.md"
+    actions.append((Path("CLAUDE.md"), "preserve" if claude.exists() else "create-claude-stub"))
+
     for name in PRESERVE:
         dst = target / name
         if dst.exists():
@@ -472,7 +477,7 @@ def write_manifest(target: Path, actions: list[tuple[Path, str]]) -> int:
     """
     owned = sorted({
         rel.as_posix() for rel, action in actions
-        if action in ("create", "overwrite", "unchanged", "create-stub", "merge")
+        if action in ("create", "overwrite", "unchanged", "create-stub", "create-claude-stub", "merge")
         and rel.as_posix() not in PRESERVE
     } | {MANIFEST.as_posix()})
     # The hash of what was INSTALLED, per file. This is what lets `upgrade` tell
@@ -482,9 +487,10 @@ def write_manifest(target: Path, actions: list[tuple[Path, str]]) -> int:
     # from the target, so a file that fails to copy does not get a hash claiming
     # it succeeded.
     hashes = {
-        rel: file_hash(SOURCE / rel)
+        rel: (file_hash(SOURCE / rel) if rel != "CLAUDE.md"
+              else __import__("hashlib").sha256(CLAUDE_SEED.encode()).hexdigest())
         for rel in owned
-        if rel != MANIFEST.as_posix() and (SOURCE / rel).is_file()
+        if rel != MANIFEST.as_posix() and (rel == "CLAUDE.md" or (SOURCE / rel).is_file())
     }
 
     path = target / MANIFEST
@@ -511,6 +517,10 @@ def apply(target: Path, actions: list[tuple[Path, str]]) -> list[str]:
         if action in ("create", "overwrite"):
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(SOURCE / rel, dst)
+        elif action == "create-claude-stub":
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_text(CLAUDE_SEED, encoding="utf-8")
+            notes.append("wrote a Claude bootloader importing AGENTS.md")
         elif action == "create-stub":
             dst.parent.mkdir(parents=True, exist_ok=True)
             dst.write_text(json.dumps(CHECKS_STUB, indent=2) + "\n", encoding="utf-8")
