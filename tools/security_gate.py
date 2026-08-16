@@ -409,6 +409,33 @@ def _agent_facts(root: Path, paths: list[str]) -> list[dict]:
     return out
 
 
+def resolve_base(base: str, root: Path) -> str | None:
+    """The given ref if it resolves here, else its `origin/` form, else None.
+
+    `--base main` names a LOCAL branch, and on a CI pull-request checkout there
+    is no local `main`: `actions/checkout` checks out the merge commit and
+    leaves the base reachable only as `origin/main`. `merge-base main HEAD` then
+    fails, every fact this module reads comes back `None`, and all five clauses
+    degrade to `unknown` -- exit 2, which is correct fail-closed behaviour and a
+    useless diagnosis. Measured on PR #12: green locally, red on CI, and the one
+    line the runner reported was `not applicable to this diff: dependency-risk`,
+    which describes a different clause entirely.
+
+    Tried in order and never guessed past: an explicit ref the caller named wins
+    over a remote-tracking one with the same name, because a caller who says
+    `--base main` in a repository that HAS a local `main` means that one.
+
+    `None` means neither form resolved. The caller keeps the original string so
+    the failure still reports the ref the user actually asked for, rather than
+    an invented `origin/` variant they never mentioned.
+    """
+    for candidate in (base, f"origin/{base}", f"refs/remotes/origin/{base}"):
+        if _git(["rev-parse", "--verify", "--quiet", f"{candidate}^{{commit}}"],
+                root):
+            return candidate
+    return None
+
+
 def gather_facts(root: Path, base: str, offline: bool = False) -> dict:
     """Everything `evaluate` reads. `offline=True` returns None for every fact.
 
@@ -424,6 +451,7 @@ def gather_facts(root: Path, base: str, offline: bool = False) -> dict:
     if offline:
         return facts
 
+    base = resolve_base(base, root) or base
     merge_base = _git(["merge-base", base, "HEAD"], root)
     merge_base = merge_base.strip() if merge_base else None
 

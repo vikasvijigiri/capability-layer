@@ -14,9 +14,21 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**`feat/security-gate` holds 23 commits, all local, none pushed, no PR.** Full
-tier: `PASS: 52 check(s) green (audit, build, lint, smoke, test, typecheck)`.
-State is **`WAITING_DELIVERY`** — the first time the chain has ever reached it.
+**`feat/security-gate` is pushed and open as PR #12**, 58 commits against `main`
+— https://github.com/NG-VikasV/capability-layer/pull/12. Approved and pushed
+2026-08-16. Full tier before pushing: `PASS: 52 check(s) green (audit, build,
+lint, smoke, test, typecheck)`. The chain reached **`WAITING_DELIVERY`** first,
+which it had never done before.
+
+**PR #11 is superseded, not duplicated.** `feat/checklist-completion` is an
+ancestor of this branch (`git merge-base --is-ancestor` → yes), so its 17
+commits are inside #12. Decide which one merges; do not merge both.
+
+**A remote existed the whole time and this file said otherwise.** `/publish`
+stopped at its own step 2 — `origin` has been
+`NG-VikasV/capability-layer` since before this unit began, `main` at `9a65137`
+matching local. Anything here or in `workflow.md`'s `[state:no-remote]` block
+claiming nothing can be pushed was describing a repository this stopped being.
 
     a68d283  Close the buildable checklist partials; bound a hung check
     215c4dd  Three controls whose claim outran their wiring

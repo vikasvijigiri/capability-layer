@@ -237,6 +237,64 @@ for rel, names in sg.WATCHED_TABLES.items():
               sg.table_entries(src, name) is not None,
               "renamed or removed -- the clause silently guards nothing")
 
+# --- the base ref must resolve on a CI pull-request checkout ------------------
+#
+# `--base main` names a LOCAL branch. On a PR checkout `actions/checkout` checks
+# out the merge commit and leaves the base reachable only as `origin/main`, so
+# `merge-base main HEAD` fails, every fact comes back `None`, and all five
+# clauses degrade to `unknown` -- exit 2. Correct fail-closed behaviour and a
+# useless diagnosis: on PR #12 this was green locally and red on CI, and the one
+# line the runner surfaced named a different clause entirely.
+#
+# Proven against a real clone with no local `main` (exit 2 -> exit 0), and
+# asserted here on the resolution itself, which is the part that has to hold.
+
+import subprocess  # noqa: E402
+import tempfile  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+
+def _git(*args, cwd):
+    return subprocess.run(["git", *args], cwd=str(cwd), capture_output=True,
+                          text=True, stdin=subprocess.DEVNULL)
+
+
+_tmp = Path(tempfile.mkdtemp())
+_origin, _clone = _tmp / "origin", _tmp / "clone"
+_origin.mkdir()
+_git("init", "--quiet", "--initial-branch=main", cwd=_origin)
+_git("config", "user.email", "t@example.com", cwd=_origin)
+_git("config", "user.name", "t", cwd=_origin)
+(_origin / "a.txt").write_text("one\n", encoding="utf-8")
+_git("add", "-A", cwd=_origin)
+_git("commit", "--quiet", "-m", "base", cwd=_origin)
+_git("clone", "--quiet", str(_origin), str(_clone), cwd=_tmp)
+# The CI shape exactly: detach, then delete every local branch, so the base
+# exists only as a remote-tracking ref.
+_git("checkout", "--quiet", "--detach", "HEAD", cwd=_clone)
+_git("branch", "-D", "main", cwd=_clone)
+
+check("the CI shape really has no local base branch",
+      _git("rev-parse", "--verify", "--quiet", "main", cwd=_clone).returncode != 0,
+      "the fixture must reproduce the failure before it can prove the fix")
+check("resolve_base falls back to the remote-tracking ref",
+      sg.resolve_base("main", _clone) == "origin/main",
+      str(sg.resolve_base("main", _clone)))
+check("...and merge-base answers against what it returned",
+      bool(sg._git(["merge-base", sg.resolve_base("main", _clone) or "main",
+                    "HEAD"], _clone)),
+      "this is the call that returned nothing and unknown'd every clause")
+
+# A local branch WINS over a remote-tracking one of the same name: a caller who
+# says `--base main` in a repo that has one means that one, and silently
+# preferring `origin/main` would compare against whatever was last fetched.
+check("an explicit local ref is preferred over origin/",
+      sg.resolve_base("main", sg.ROOT) == "main",
+      str(sg.resolve_base("main", sg.ROOT)))
+check("a ref that resolves in neither form is None, not a guess",
+      sg.resolve_base("no-such-ref-anywhere", _clone) is None,
+      "inventing an origin/ variant would report a base nobody named")
+
 print()
 if failures:
     print(f"FAIL: {len(failures)} check(s) failed")
