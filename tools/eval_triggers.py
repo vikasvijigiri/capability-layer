@@ -29,6 +29,7 @@ skill tests nothing.
 from __future__ import annotations
 
 import argparse
+import collections
 import json
 import os
 import subprocess
@@ -256,6 +257,8 @@ def evaluate(skill: str, cases: list[dict], repeats: int, dry: bool,
              limit: int | None = None, cwd: Path | None = None) -> dict:
     hits = misses = false_fires = correct_silence = 0
     spent = 0.0
+    # Which skill set ran on each positive that did not fire.
+    instead: collections.Counter = collections.Counter()
     # Sample evenly across positives and negatives, so `--limit 4` is two of each
     # rather than four positives.
     if limit:
@@ -316,6 +319,21 @@ def evaluate(skill: str, cases: list[dict], repeats: int, dry: bool,
                             f"is on PATH, that the stream decodes, and that a "
                             f"tool_use block still names the skill. Nothing "
                             f"further was run.")
+            # What ran INSTEAD, on a positive that did not fire. A bare 0.0 says
+            # the skill lost and nothing about what beat it, so diagnosing one
+            # costs another live sweep -- $2.92 to learn that `code-review`
+            # scored 0.0, then $0.35 more to find that the model reviewed the
+            # diff with four Bash calls and invoked no skill at all.
+            #
+            # That distinction is the whole finding: a skill losing to ANOTHER
+            # skill is a description problem, and adding trigger words fixes it.
+            # A skill losing to the model doing the work itself is not, and no
+            # amount of trigger words touches it -- proven by adding ~600
+            # characters of phrases to `code-review` and measuring 0.0 both
+            # before and after.
+            if case["should_trigger"] and not fired and not dry:
+                instead[frozenset(invoked) or frozenset({"(no skill -- done directly)"})] += 1
+
             if case["should_trigger"]:
                 hits += fired
                 misses += not fired
@@ -330,6 +348,10 @@ def evaluate(skill: str, cases: list[dict], repeats: int, dry: bool,
         "false_fire_rate": round(false_fires / neg, 3) if neg else None,
         "positives": pos, "negatives": neg, "dry_run": dry,
         "cost_usd": round(spent, 4),
+        # Sorted for a stable report; empty on a dry run and on a
+        # clean sweep, which is the only time it says nothing useful.
+        "lost_to": [{"ran": sorted(k), "n": n}
+                    for k, n in instead.most_common()],
     }
 
 

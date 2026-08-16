@@ -19,9 +19,8 @@
 
 ### Rewrite skill frontmatter for triggering
 
-- **Status:** All 14 descriptions rewritten to the official pattern; bodies not
-  yet restructured except `code-review`. **Untested by request** — the user is
-  checking triggering manually.
+- **Status:** Closed 2026-08-16. All 14 rewritten and now MEASURED live rather
+  than assumed. Bodies unrestructured except `code-review`.
 - Create: `.claude/hooks/post-tool/02-repeat-detector.py`
 - Modify: `.claude/workflow.md`, `.claude/hooks/post-tool/01-context-cost.py`, `.claude/hooks/user-prompt/01-entry-classifier.py`, `tools/bench.py`, `.claude/commands/verify.md`, `.claude/hooks/post-tool/01-context-cost.py`, `tools/bench.py`, `.claude/hooks/user-prompt/01-entry-classifier.py`, `.claude/workflow.md`, `.claude/hooks/_projectchecks.py`, `.claude/hooks/hooks_registry.json`, `tools/test_project_checks.py`, `ISSUES.md`, `tools/test_no_slop.py`, `tools/test_process_router.py`, `tools/new_skill_check.py`, `.claude/settings.json`, `.claude/skills/brainstormer/SKILL.md`, `.claude/skills/capability-layer-maintenance/SKILL.md`, `.claude/skills/code-review/SKILL.md`, `.claude/skills/delivering/SKILL.md`, `.claude/skills/designer/SKILL.md`, `.claude/skills/executing-plans/SKILL.md`, `.claude/skills/knowledge-manager/SKILL.md`, `.claude/skills/no-slop/SKILL.md`, `.claude/skills/releasing/SKILL.md`, `.claude/skills/repo-recon/SKILL.md`, `.claude/skills/research/SKILL.md`, `.claude/skills/systematic-debugging/SKILL.md`, `.claude/skills/verifying-work/SKILL.md`, `.claude/skills/writing-plans/SKILL.md`
 - **Goal:** maximise the trigger surface so skills actually fire, after
@@ -36,8 +35,10 @@
   and `pdf` descriptions as the trigger-dense exemplars.
 - **Output:** descriptions 6,795 → 11,967 ch; listing 8,301 → 13,473 against a
   20,000 budget; largest entry 1,075 of 1,536.
-- **Done Checks:** the user confirms skills trigger on natural phrasing.
-  Not run here by request.
+- **Done Checks:** MET 2026-08-16 by live measurement (~$11): `verifying-work`
+  trigger_rate 1.0, `systematic-debugging` 0.5, `code-review` 0.0. Descriptions
+  trigger; the per-turn cost is bought function. `code-review`'s 0.0 is the
+  model doing the review itself and is reached by handoff -- see ISSUES.md.
 - **Out of Scope:** the 11 `.claude/commands/` descriptions; restructuring the
   13 remaining skill bodies.
 

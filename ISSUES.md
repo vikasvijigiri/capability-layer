@@ -6,6 +6,23 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-16 — `code-review` never self-triggers, and no description fixes it
+
+- **Measured live**, ~$11 of `claude -p`: `verifying-work` 1.0,
+  `systematic-debugging` 0.5, `code-review` **0.0** — before AND after ~600
+  characters of extra trigger phrases were added to it.
+- **Diagnosis**: on its own canonical prompt ("go through the diff before i open
+  a PR") the model runs `Bash` x4 and `Grep` x1 and invokes **no skill at all**.
+  It reviews the diff itself. That is not a description losing to another
+  description; it is a skill losing to the model doing the work directly, and
+  trigger words cannot reach it.
+- **Not a defect to fix.** Its real entry is the handoff from `verifying-work`,
+  which measures 1.0. The chain reaches it; only the direct prompt does not.
+- **What this settles**: descriptions DO trigger, so the per-turn listing cost is
+  bought function, not waste — a conclusion one step from being reversed on this
+  skill's evidence alone. `eval_triggers` now reports `lost_to`, so the next
+  0.0 explains itself instead of costing a second sweep.
+
 ## 2026-08-15 — A product repo earns `ran_test` from the layer's own suites
 
 - **Symptom**: an empty git repo with the layer installed and no product code
