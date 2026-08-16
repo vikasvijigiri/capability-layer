@@ -14,11 +14,22 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**`feat/security-gate` is pushed and open as PR #12**, 58 commits against `main`
-— https://github.com/NG-VikasV/capability-layer/pull/12. Approved and pushed
-2026-08-16. Full tier before pushing: `PASS: 52 check(s) green (audit, build,
-lint, smoke, test, typecheck)`. The chain reached **`WAITING_DELIVERY`** first,
-which it had never done before.
+**`feat/security-gate` is pushed and open as PR #12**, 60 commits against `main`
+— https://github.com/NG-VikasV/capability-layer/pull/12. **CI green on both
+tiers.** `delivery_check` reports one `unknown`: branch protection is 403 on
+this plan, so nothing enforces the gate at merge time. The chain reached
+**`WAITING_DELIVERY`**, which it had never done before.
+
+**The first push went red, and the cause is worth keeping.** `security_gate.py`
+took `--base main` as a local branch; a `pull_request` checkout leaves the base
+only as `origin/main`, so `merge-base` returned nothing, every fact came back
+`None`, and all five clauses degraded to `unknown` — exit 2. Correct
+fail-closed behaviour, useless diagnosis: the single line CI surfaced named a
+clause that was not the problem. `resolve_base()` now tries the ref, then
+`origin/<ref>`, preferring a local branch when one exists. **Then the fix's own
+test went red** for the same reason in miniature — it asserted `sg.ROOT` has a
+local `main`. Run a layer test in the CI shape (detached, local branches
+deleted) before pushing it; a clone takes thirty seconds.
 
 **PR #11 is superseded, not duplicated.** `feat/checklist-completion` is an
 ancestor of this branch (`git merge-base --is-ancestor` → yes), so its 17

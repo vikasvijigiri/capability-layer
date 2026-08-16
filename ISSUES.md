@@ -6,6 +6,23 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-16 18:30 — green locally, red on CI: the gate's base ref was a local branch
+
+- **Symptom**: PR #12's slow tier failed with `not applicable to this diff:
+  dependency-risk` — a line naming a clause that was not the problem. Local
+  `--tier all` was green on the same tree.
+- **Cause**: `--base main` names a *local* branch, and a `pull_request` checkout
+  leaves the base only as `origin/main` — so `merge-base` returned nothing,
+  every fact came back `None`, and all five clauses degraded to `unknown` → exit
+  2. The diagnosis was useless because `failure_reason` reports one line and the
+  gate's head line, naming the unknown clause, was not it.
+- **Fixed**: `resolve_base()` tries the ref, then `origin/<ref>`; a local branch
+  wins when one exists; neither resolving stays `None`. Proved in a clone in the
+  CI shape: exit 2 → `clean -- 4 clause(s) evaluated, 0 fired`.
+- **Then the fix's own test failed the same way** — it asserted `sg.ROOT` has a
+  local `main`, the exact assumption being removed. **Run a layer test in a
+  detached clone with local branches deleted before pushing it.**
+
 ## 2026-08-16 16:20 — the only saved eval result asserted a run that never happened
 
 - **Symptom**: `docs/evals/results-2026-08-07.json` carried `"dry_run": false`
