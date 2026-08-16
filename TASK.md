@@ -95,6 +95,28 @@
   (refused by ADR); adding an application to this repo (decided at Gate 1);
   merging PR #11.
 
+### Audit all ten objectives, then close what blocked "generic" and "world class"
+
+- **Status:** Done 2026-08-16. `4240e61`, `215c4dd`, `a68d283`.
+  `PASS: 52 check(s) green`; state reached `WAITING_DELIVERY` for the first time.
+- **Goal:** grade the layer against the ten Notion Primary Objectives and
+  `GOAL_CHECKLIST.md` with every grade measured, then fix everything blocking
+  the "generic" and "partly/in parts" verdicts.
+- **Output:** `templates/CODEOWNERS.seed` and a `SEED_SOURCE` indirection;
+  Python lint config seeded only into hosts that have Python;
+  `run_checks.py --record-green`; the budget's elapsed limb dropped;
+  `_projectchecks._run_bounded()`; plan-level `**Rollback:**`/`**Blast radius:**`
+  enforced positionally; memory queried at stage 4; `docs/objectives.md`,
+  `.claude/README.md`, `.claude/audit/README.md`.
+- **Done Checks:** met. Node host resolves 2 checks (its own), Python host 3,
+  both green from a fresh install. Hung check: 30.1s → 3.4s against a 3s
+  timeout. Both installer guards and the dormancy note proved red by mutation.
+- **Not verified:** Gate 2 has still never fired; no run has gone end to end.
+- **Out of Scope, and still out:** objective 2's per-turn listing (needs the
+  ~$81 trigger measurement, and the evidence points at *more* specific
+  descriptions, not shorter); reconciling the two routers (a decision, not a
+  merge); anything needing a running service.
+
 ### Implement world-class SessionStart bootstrap scaffolding
 - **Status:** In Progress
 - **Goal:** Implement a SessionStart bootstrap loader that scaffolds project skeleton files and a minimal, maintainable `docs/` structure without creating unnecessary subfolders or a copied `AGENTS.md`.

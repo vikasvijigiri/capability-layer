@@ -1,5 +1,26 @@
 # Log
 
+## 2026-08-16 17:40
+
+**Audited against all ten Primary Objectives, then closed what blocked
+"generic" and "world class".** `4240e61`, `215c4dd`, `a68d283`. `PASS: 52 checks
+green`. Audit: `claude.ai/code/artifact/1fd5a064-b0f5-48ff-8fd3-6339d027a9ee`.
+
+**Non-generic for two reasons, neither architectural.** Every install seeded a
+`CODEOWNERS` naming a real handle as owner of `*`, and `ruff.toml`/`mypy.ini`
+into hosts with no Python — both markers, so a Node repo resolved four fast
+checks, two of them the layer's. Now it resolves 2, its own.
+
+**Three controls were dormant or wrong and all three looked fine.** Agent file
+scope has no caller and cannot get one here — claim narrowed, suite fails if it
+widens. The budget's elapsed limb cried `escalate` on every healthy unit (the
+one complete one: 24.42h against 3.0h); dropped, not refit. The green ref's only
+writer refuses past `max_files`, so `resume.py` could never leave `BUILD` — with
+`--record-green` it reached `WAITING_DELIVERY` for the first time. And a
+`timeout` never bounded the wall clock: 3s timeout, 30s command, returned after
+30.1s; now 3.4s. The brief was a finding too — the ten objectives lived only in
+Notion; `docs/objectives.md`.
+
 ## 2026-08-16 09:30
 
 **The layer broke the test runner of every repository it installed into.**

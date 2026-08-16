@@ -14,16 +14,27 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**`feat/security-gate` holds nineteen commits, all local, none pushed, no PR.**
-Tree clean apart from this record. Full tier: `PASS: 52 check(s) green (audit, build,
-lint, smoke, test, typecheck)`.
+**`feat/security-gate` holds 23 commits, all local, none pushed, no PR.** Full
+tier: `PASS: 52 check(s) green (audit, build, lint, smoke, test, typecheck)`.
+State is **`WAITING_DELIVERY`** — the first time the chain has ever reached it.
 
+    a68d283  Close the buildable checklist partials; bound a hung check
+    215c4dd  Three controls whose claim outran their wiring
+    4240e61  Stop the installer shipping an identity and a language into every host
+    4b87fd6  Merge the four Stop hooks into one dispatcher
     cd43a20  Stop the layer breaking every host's test runner
-    c4653f5  Add the direct-answer level; count calls objectives 4/5 need
-    2a93290  Make commands user-only; merge the two post-tool hooks
-    7f1f942  Route the small-work path; build the anti-repetition layer
-    e136ec0  Delete CLAUDE.md's copy of the stage table
-    ...and twelve earlier, see LOG.md
+    ...and eighteen earlier, see LOG.md
+
+**The 2026-08-16 audit is the current verdict**, all ten objectives measured
+rather than quoted: **4 green (1, 6, 7, 9), 5 amber (3, 4, 5, 8, 10), 1 red
+(2)**. `claude.ai/code/artifact/1fd5a064-b0f5-48ff-8fd3-6339d027a9ee`. The ten
+now live in `docs/objectives.md` — they were Notion-only, which is why two
+earlier audits inherited grades they could not check.
+
+**Generic is closed; world-class is not.** What remains is objective 2 (the
+17,900 ch/turn listing), objective 8 (two routers disagree), and the fact that
+no run has ever gone end to end — Gate 2 has still never fired, and the ledger
+holds three gate-1 rows and zero gate-2.
 
 `TASK.md`'s S1 is **closed**: `CLAUDE.md`+rules 25,599 → 9,056 ch, SessionStart
 6,258 → 3,349, check tier 3.4x (68.2s → 20.2s interleaved). All four
@@ -71,31 +82,38 @@ local, and undelivered.
 Five follow-ups, all identified by the chain itself rather than by a person.
 Each is its own unit and enters at `writing-plans`:
 
-1. **`pre-edit/02-agent-scope-guard.py` has no caller.** It denies correctly
-   when `UAIOS_AGENT_NAME` is set, and **nothing sets it** — a grep finds the
-   name only in the guard and its test. On a real dispatch the hook runs and is
-   silent, so agent file scope is enforced in principle and not in practice.
-   Either the dispatch sets it, or the claim narrows.
+1. ~~**`pre-edit/02-agent-scope-guard.py` has no caller.**~~ **Closed
+   2026-08-16 by narrowing the claim, which was the only honest option** —
+   Claude Code spawns subagents itself and runs no hook inside one, so no
+   dispatcher in this layer can set `UAIOS_AGENT_NAME`. `workflow.md` now names
+   the precondition and says *dormant on this host*;
+   `test_agent_standards.py` fails if either stops being true, and also if
+   anything starts **setting** the variable — at which point the note is stale
+   and the claim can widen again, deliberately.
 2. **The ticked-task checkbox is defined four times** — `analyze.PROGRESS_RE`,
    `chain.PROGRESS_TICK`, `git_ops`' own, `resume._CHECKBOX`. They already
    disagree: three require `Task <n>`, `resume`'s matches any box under
    `## Progress`. Needs an owner chosen; `resume`'s looser match may be
    deliberate, so this is not a mechanical merge.
-3. **`budget.ELAPSED_CEILING_HOURS = 3.0` is wrong.** The first complete unit
-   it measured came in at 19.93h — 6.6× over. It was calibrated on two
-   *left-censored* samples, so it encoded how much of a unit happened to be
-   visible rather than how long one takes. Re-measure from complete units, or
-   drop the elapsed limb and keep turns.
+3. ~~**`budget.ELAPSED_CEILING_HOURS = 3.0` is wrong.**~~ **Closed 2026-08-16 by
+   dropping the limb, not refitting it.** Re-measured from 147 ledger rows: the
+   only unit that ran start to finish (`checklist-completion`) is 19 turns over
+   **24.42h**, so the two axes disagreed about one healthy unit and the turn
+   axis was right. Wall-clock span measures how long a session stayed open, not
+   what the unit cost. Still measured and printed; judged by nothing. The turn
+   ceiling stays 30 and was deliberately NOT refit from `security-gate`'s 118 —
+   that number is item 11's stale slug, and fitting a ceiling to a measurement
+   error bakes the error into the policy.
 4. **`ISSUES.md` carries two `0x08` bytes**, in the entry describing `0x08`
    bytes. See `ISSUES.md` 2026-08-11 21:15.
 
-5. **`refs/uaios/green/` has one writer, and it is the auto-commit hook.**
-   Commit by hand — or have the auto-commit refuse once, which the minimal-diff
-   gate is built to do — and the ref is never set, so `checks_green` stays
-   `None` and `derive_state` returns `BUILD` before it can reach
-   `WAITING_DELIVERY`. Setting the ref by hand on a verified tree resolved it
-   immediately, so the state machine is sound and the plumbing is not. See
-   `ISSUES.md` 2026-08-11 21:45.
+5. ~~**`refs/uaios/green/` has one writer.**~~ **Closed 2026-08-16.**
+   `python tools/run_checks.py --tier all --require-test --record-green` is the
+   second, refusing before any check runs unless the tier is `all` and unscoped,
+   and again unless a test actually ran. Proved on this branch: the state moved
+   `BUILD` → `WAITING_DELIVERY`, which the chain had never reached. The
+   prediction in the old note was exactly right — the state machine was sound
+   and only the plumbing was missing.
 
 Unchanged and still true: branch protection is unavailable on this repo tier
 (`403 Upgrade to GitHub Pro`); seven branches merged into `main` are dead
@@ -211,11 +229,31 @@ the state file resets per session.
     written, this one is the slug pointing at a finished unit. A unit worked
     without a plan is invisible to the chain, which is worth deciding about
     before the small-work path makes plan-less units routine.
-12. **A check `timeout` bounds the verdict, not the wall clock.** `shell=True`
-    kills the shell, the grandchild survives, `communicate()` blocks on the
-    inherited pipe. A hung check blocks a turn for its full runtime whatever
-    `timeout` says. `tools/smoke.py:57` already solved it with `taskkill /T`;
-    `run_checks` does not use it. Open, with the fix known — `ISSUES.md`
-    2026-08-12 08:40.
+12. ~~**A check `timeout` bounds the verdict, not the wall clock.**~~ **Closed
+    2026-08-16.** `_projectchecks._run_bounded()` kills the tree the way
+    `tools/smoke.py:kill_tree()` already did, and closes the child's stdin.
+    Measured both ways: `subprocess.run(timeout=3)` on a 30s command returned
+    after **30.1s**; the new path returns in **3.4s** against a 60s command.
+    Asserted on elapsed time, since the fix and the bug produce the same verdict
+    and the same message.
+
+### Added by the audit unit (2026-08-16)
+
+13. **Objective 2 is the only red, and it is the expensive one.** 17,900 ch
+    injected every turn. The one lever is trimming descriptions and the measured
+    evidence points the other way — `code-review` scores `trigger_rate 0.0` and
+    the docs say the fix for that is a *more* specific description. Needs the
+    ~$81 measurement, and its own unit; do not bundle it.
+14. **The two routers disagree, reproduced.** `add a --jobs flag to
+    run_checks.py` routes to the small path via the entry classifier while
+    `scope.py` calls that same file `control-surface`, risk `high`. The
+    classifier's own text lists the control-surface veto, so it self-mitigates
+    in prose — which is the weakest possible form of the fix. Deterministic
+    routing reaches 33 of 217 labelled queries (15%), independently re-measured.
+15. **No replacement eval result was written and that is deliberate.**
+    `docs/evals/results-2026-08-07.json` is voided in place; the superseding
+    numbers live in `ISSUES.md` and `TASK.md` only. Writing them into a results
+    file this session did not produce is the same defect with a newer date.
+    `python tools/eval_triggers.py` writes a real one, ~$0.45 a query.
 
 <!-- session-context:end -->
