@@ -288,9 +288,16 @@ check("...and merge-base answers against what it returned",
 # A local branch WINS over a remote-tracking one of the same name: a caller who
 # says `--base main` in a repo that has one means that one, and silently
 # preferring `origin/main` would compare against whatever was last fetched.
+#
+# Asserted against the fixture, NOT against `sg.ROOT`. The first version used
+# `sg.ROOT` and went red on CI within a minute of the fix landing -- because a
+# pull-request checkout has no local `main`, which is the entire condition this
+# function exists to survive. A test that assumes the environment it is meant to
+# stop assuming is worse than no test: it passes at home and fails only where
+# the answer matters.
 check("an explicit local ref is preferred over origin/",
-      sg.resolve_base("main", sg.ROOT) == "main",
-      str(sg.resolve_base("main", sg.ROOT)))
+      sg.resolve_base("main", _origin) == "main",
+      str(sg.resolve_base("main", _origin)))
 check("a ref that resolves in neither form is None, not a guess",
       sg.resolve_base("no-such-ref-anywhere", _clone) is None,
       "inventing an origin/ variant would report a base nobody named")
