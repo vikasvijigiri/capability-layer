@@ -479,6 +479,25 @@ check("...and a repo with genuinely no plans stays quiet",
       "NOTE:" not in rs.state_line(
           facts(plan_exists=False, plans_on_disk=0), "PLANNING"))
 
+# A finished plan under a slug nobody asked for. `resume.py` reported
+# `state=BUILD` for 57 turns on `security-gate` -- a plan whose tasks were all
+# ticked -- because the slug comes from the branch name and the branch outlived
+# its unit. BUILD was the right answer to the wrong question, and nothing on the
+# line said which question it was answering. Reported, never corrected:
+# `derive_state`'s clause order is the policy and this is a status line.
+_stale = facts(plan_exists=True, plan_approved=True, plan_tasks_done=True,
+               slug_inferred=True, branch_exists=True)
+check("a completed plan under a branch-inferred slug says so",
+      "NOTE:" in rs.state_line(_stale, "BUILD"), rs.state_line(_stale, "BUILD"))
+check("...but a slug the caller named stays quiet, however finished the plan",
+      "NOTE:" not in rs.state_line(
+          facts(plan_exists=True, plan_approved=True, plan_tasks_done=True,
+                slug_inferred=False, branch_exists=True), "BUILD"))
+check("...and an inferred slug with work still in flight stays quiet too",
+      "NOTE:" not in rs.state_line(
+          facts(plan_exists=True, plan_approved=True, plan_tasks_done=False,
+                slug_inferred=True, branch_exists=True), "BUILD"))
+
 # The live repository must resolve its own approved plan -- but ONLY where there
 # is one to resolve. A freshly installed target has an empty `docs/plans/`, and
 # asserting otherwise there made a correct install report a red suite. That is the

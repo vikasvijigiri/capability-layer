@@ -51,12 +51,36 @@ its last.
 
 Both samples are thin and both are left-censored, so the ceiling is not fit
 tightly around them. It sits at roughly 5x the larger sample on each axis,
-rounded to a number a person reads at a glance -- generous enough that a plan
-which fans work across many rounds is not choked by two afternoons of history,
-while a unit that blew past 30 recorded turns or ran 3 hours without finishing
-is well outside anything this repository has produced so far. Re-measure once
-several units have run ledger-recording start-to-finish; do not tighten this
-from two afternoons and one still-open plan.
+rounded to a number a person reads at a glance.
+
+Re-measured 2026-08-16, and the elapsed limb did not survive it
+--------------------------------------------------------------
+The ledger now holds 147 rows over four slugs:
+
+  * `target-workflow`       --   6 turns,   0.56h  (left-censored)
+  * `checklist-completion`  --  19 turns,  24.42h  (complete: 12/12 tasks)
+  * `close-remaining-gaps`  --   2 turns,   0.43h  (approved, never started)
+  * `security-gate`         -- 118 turns, 118.59h  (NOT one unit -- see below)
+
+`checklist-completion` is the only unit that ran start to finish, and it came
+in at **24.42h against a 3.0h ceiling, 8x over**, while its 19 turns sat
+comfortably under 30. So the two axes disagreed about the same healthy unit,
+and the turn axis was right.
+
+That is not a calibration error, it is the wrong quantity. Wall-clock span
+measures how long a person left a session open -- 19 turns of work spread
+across two calendar days -- not what the unit cost. **The elapsed limb is
+dropped.** It is still measured and still printed, because it is useful
+context; nothing is judged against it. A limb that reports `escalate` on every
+healthy unit is one people learn to ignore, and then it is worse than absent:
+the same failure the three-limb stall detector was rebuilt to avoid.
+
+The turn ceiling stays at 30 and is NOT refit from `security-gate`'s 118. That
+number is an artefact of the stale-slug defect -- `resume.py` keys the unit to
+the branch name, so four units' turns accumulated under one finished plan's
+slug. Refitting a ceiling to a measurement error would bake the error into the
+policy. Re-measure turns once two or three more units have run start to finish
+under slugs that are their own.
 
 It reports; it never halts
 ----------------------------
@@ -106,10 +130,13 @@ TS_FORMAT = "%Y-%m-%dT%H:%M:%S"
 # measurement behind this number and when to re-measure it.
 TURN_CEILING = 30
 
-# Wall-clock hours between a unit's first and last recorded turn before this
-# reports `over`. Same measurement, same re-measure clause -- see the module
-# docstring.
-ELAPSED_CEILING_HOURS = 3.0
+# Wall-clock hours between a unit's first and last recorded turn. MEASURED AND
+# REPORTED, NOT JUDGED: `verdict()` does not compare against this and no caller
+# should. It is kept as a named number only because the docstring above explains
+# why it was retired, and a reader arriving at that section needs the value it
+# is talking about. Dropped as a ceiling 2026-08-16 -- the one complete unit
+# measured 24.42h against it while its turns stayed under their ceiling.
+ELAPSED_CEILING_HOURS_RETIRED = 3.0
 
 
 def _load(rel: str, name: str):
@@ -198,41 +225,31 @@ def spent(entries: list[dict], slug: str | None = None) -> dict:
 def verdict(facts: dict) -> dict:
     """Pure. `spent()`'s facts -> `{budget, turns, elapsed_hours, reason}`.
 
-    Veto, not average, same principle as `scope.classify()`: either axis
-    crossing its ceiling is enough to report `over`, independent of the other.
-    Only when NEITHER axis fires does an unmeasurable one downgrade the
-    verdict to `unknown` rather than letting it pass as `within` -- Article V:
-    a ceiling that could not be checked is not evidence of staying under it.
+    One axis, turns. `elapsed_hours` is still measured and still reported --
+    it is useful context -- but it is no longer a ceiling anything is judged
+    against. See the module docstring for the measurement that removed it.
+
+    Article V still applies to the axis that remains: turns that could not be
+    counted give `unknown`, never `within`. A ceiling that could not be checked
+    is not evidence of staying under it.
     """
     turns = facts.get("turns")
     elapsed = facts.get("elapsed_hours")
-
-    fired: list[str] = []
-    unmeasurable: list[str] = []
+    span = "unmeasured" if elapsed is None else f"{elapsed:.2f}h"
 
     if turns is None:
-        unmeasurable.append("turns")
-    elif turns > TURN_CEILING:
-        fired.append(f"{turns} turn(s) past the {TURN_CEILING}-turn ceiling")
-
-    if elapsed is None:
-        unmeasurable.append("elapsed time")
-    elif elapsed > ELAPSED_CEILING_HOURS:
-        fired.append(f"{elapsed:.2f}h past the {ELAPSED_CEILING_HOURS}h ceiling")
-
-    if fired:
-        return {"budget": "over", "turns": turns, "elapsed_hours": elapsed,
-                "reason": "escalate -- " + "; ".join(fired)}
-
-    if unmeasurable:
         return {"budget": "unknown", "turns": turns, "elapsed_hours": elapsed,
-                "reason": "could not measure " + " or ".join(unmeasurable)
-                          + " for this unit -- unrun, not passed"}
+                "reason": "could not measure turns for this unit -- unrun, "
+                          "not passed"}
+
+    if turns > TURN_CEILING:
+        return {"budget": "over", "turns": turns, "elapsed_hours": elapsed,
+                "reason": f"escalate -- {turns} turn(s) past the "
+                          f"{TURN_CEILING}-turn ceiling ({span} elapsed)"}
 
     return {"budget": "within", "turns": turns, "elapsed_hours": elapsed,
-            "reason": f"{turns} turn(s), {elapsed:.2f}h elapsed -- under both "
-                      f"the {TURN_CEILING}-turn and {ELAPSED_CEILING_HOURS}h "
-                      f"ceilings"}
+            "reason": f"{turns} turn(s) under the {TURN_CEILING}-turn ceiling "
+                      f"({span} elapsed, not judged)"}
 
 
 def gather(root: Path | None = None, ledger: Path | None = None,

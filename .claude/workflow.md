@@ -253,11 +253,23 @@ Four mechanisms, each with a tool and a suite behind it rather than a paragraph:
 | | Command | What it refuses, or reports |
 |---|---|---|
 | **Kill switch** | `python tools/halt.py --halt "<reason>"` | While halted, `pre-run/01-halt-guard.py` DENIES every tool that changes state or spawns work. Reads stay allowed on purpose — a halt you cannot investigate is a lockout, not a stop. `--resume` lifts it |
-| **Agent file scope** | declared per agent as `allowed-paths:` | `pre-edit/02-agent-scope-guard.py` denies a write outside a dispatched agent's declared files. **Unscoped denies** — an unscoped write is the case it exists for |
+| **Agent file scope** | declared per agent as `allowed-paths:` | `pre-edit/02-agent-scope-guard.py` denies a write outside a dispatched agent's declared files, and an unscoped write with it. **Only when the host sets `UAIOS_AGENT_NAME`, and Claude Code does not** — see below |
 | **Licence and SBOM** | `python tools/deps.py [--sbom]` | A denied licence exits 1; one that could not be read exits 2. `0` ok, and undetermined is never ok |
 | **Release candidate** | `python tools/release_candidate.py --plan <plan>` | The report Gate 2 reads: wheel, rehearsal, licence, SBOM, risk tier, changed paths, and a **rollback that was executed** in a scratch repo |
 | **Budget** | `python tools/budget.py` | Turns and elapsed against a ceiling, from the ledger. Reports; never halts — that is the kill switch's job |
 | **Security gate** | `python tools/security_gate.py --base <ref>` | Five clauses, each a fact about the artefact: a security control that lost an entry, a secret anywhere in the branch, a sensitive path no suite maps, an agent that may write with no declared scope, a moved dependency tree `deps.py` rejects. Exit `1` fired, `2` unevaluated. Added 2026-08-11 |
+
+**Agent file scope is dormant on this host, and that is the honest word for
+it.** The guard reads `UAIOS_AGENT_NAME` to know which agent is writing, and
+**nothing sets it** — a repository-wide grep finds the name only in the guard
+and its own fixtures. Claude Code spawns subagents itself and has no hook that
+runs inside one, so no dispatcher in this layer can set it; on a real dispatch
+the guard runs and is silent. What *is* enforced on this host is each agent's
+`tools:` allowlist, by the harness. The guard stays because a host that can set
+the variable gets the file-glob half for free, and `tools/test_agent_standards.py`
+fails if this paragraph stops naming the precondition — a claim that outlives its
+wiring is the failure this layer is most prone to, and the one it is least able
+to see.
 
 **The security gate is deliberately not a receipt.** A receipt recording that a
 review happened is the obvious shape and this repository already built and

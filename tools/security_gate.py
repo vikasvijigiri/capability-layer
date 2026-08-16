@@ -92,8 +92,11 @@ DEPENDENCY_FILES = ("pyproject.toml", "requirements.txt", "requirements/*.txt",
                     "go.mod", "go.sum", "Gemfile.lock")
 
 # The tools that let an agent write. An agent holding one of these and declaring
-# no `allowed-paths:` is denied by `pre-edit/02-agent-scope-guard.py` at runtime,
-# which presents as a silent mid-dispatch failure rather than as an error.
+# no `allowed-paths:` is denied by `pre-edit/02-agent-scope-guard.py` -- but only
+# on a host that sets `UAIOS_AGENT_NAME`, and Claude Code does not, so on this
+# host the guard is silent and this clause is the only thing checking the pair.
+# See the dormancy note in `.claude/workflow.md`. That makes this a static check
+# with no runtime backstop here, which is a reason to keep it, not to drop it.
 WRITE_TOOLS = ("Write", "Edit", "NotebookEdit")
 
 # `--` and the em dash both, because this file is edited by hand and by tools
