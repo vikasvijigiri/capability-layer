@@ -296,6 +296,10 @@ OPEN = [
     r"\bwhich (approach|design|way|one)\b",
     r"\bhow (would|should|might) (we|you|i)\b",
     r"\bnot sure how to\b",
+    # "i do not know how to model it yet" is the same admission as "not sure how
+    # to", and was missed until a discrimination pair added on 2026-08-16 put it
+    # in the corpus. Both contractions, because a person types either.
+    r"\b(do not|don't|dont) know how to\b",
     r"\bopen question\b",
     r"\bapproach\b",
     r"\btrade[- ]?offs?\b",
