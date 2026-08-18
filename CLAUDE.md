@@ -7,6 +7,13 @@ carry state between sessions. There is no application code here.
 This file is a bootloader: point at the thing that owns the work rather than
 restating it. History belongs in `LOG.md` and git.
 
+**This file is Claude Code's own binding on top of a harness-neutral base.**
+`AGENTS.md` is the operating contract any host follows; `harnesses.json` maps
+each supported host (Claude Code, Codex, Gemini, VS Code agent) to the
+canonical `.claude/` paths it reads. `.claude/` is the only native source —
+nothing here is restated for another host to consume. `tools/test_harness_contract.py`
+fails if this file stops linking to either.
+
 Keep it roughly this length. There is no enforced ceiling any more: a hard number
 turned every real addition into a hunt for lines to delete elsewhere, which is
 editing by budget rather than by judgement. The cost is real and unchanged —
@@ -202,6 +209,9 @@ declaring any work done — it resolves every kind, and names any it had to skip
 | `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
 | `.claude/hooks/<event>/` | hooks over several events that act, deny or measure; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |
 | `.claude/settings.json` | what actually fires for this repository; `hooks_registry.json` documents the repository's hook contract |
+| `AGENTS.md` | harness-neutral operating contract every supported host follows; this file adds Claude Code's own binding on top |
+| `harnesses.json` | adapter manifest — which hosts are supported and which canonical `.claude/` path each reads |
+| `docs/harness-hook-bridge.md` | how a non-Claude-Code host invokes `.claude/hooks/` itself — payload delivery, exit-code semantics, ordering |
 | `.claude/commands/` | the twelve slash commands above |
 | `tools/` | `run_checks.py` (one entry point for green), `resume.py` (where this unit of work is), `loop.py` (the escalation ladder), `smoke.py`, `run_hook.py`, the suites |
 | `docs/specs/`, `docs/plans/`, `docs/research/` | skill outputs, one dated file each |
