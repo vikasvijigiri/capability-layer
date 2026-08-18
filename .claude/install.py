@@ -80,6 +80,11 @@ FILES = (
     ".claude/install.py",
     "AGENTS.md",
     "harnesses.json",
+    # AGENTS.md points a bridging non-Claude host here for the exact hook
+    # invocation contract. Unlike guide/ and templates/ (authoring references
+    # for someone changing the layer), this is operational documentation a
+    # TARGET needs, so it ships as a file rather than living only in docs/.
+    "docs/harness-hook-bridge.md",
 )
 
 # Written only when absent, never overwritten, but not in PRESERVE because a

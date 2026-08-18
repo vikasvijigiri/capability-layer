@@ -3,6 +3,7 @@
   "source_contract": "AGENTS.md",
   "canonical_root": ".claude",
   "execution_model": "host-managed",
+  "hook_bridge_doc": "docs/harness-hook-bridge.md",
   "supported_hosts": [
     "Claude Code",
     "Codex",
@@ -58,7 +59,7 @@
       "hooks_path": ".claude/hooks",
       "settings_path": ".claude/settings.json",
       "status": "canonical-source-with-optional-projection",
-      "hooks_note": "Codex does not auto-discover Claude lifecycle registration; invoke the canonical hook checks explicitly."
+      "hooks_note": "Codex does not auto-discover Claude lifecycle registration; invoke the canonical hook checks explicitly per docs/harness-hook-bridge.md."
     },
     "generic-agent": {
       "instruction_file": "AGENTS.md",
@@ -71,12 +72,7 @@
       "hooks_path": ".claude/hooks",
       "settings_path": ".claude/settings.json",
       "status": "canonical-source-with-optional-projection",
-      "hooks_note": "Generic hosts must invoke canonical hook checks through their own lifecycle API."
+      "hooks_note": "Generic hosts must invoke canonical hook checks through their own lifecycle API per docs/harness-hook-bridge.md."
     }
-  },
-  "runner_modes": {
-    "host-managed": "IDE agent executes the workflow using the repository contract; no provider API key is required.",
-    "dry-run": "Deterministic offline contract validation; no repository edits or model execution.",
-    "sdk-live": "Optional standalone Claude Agent SDK execution; requires provider credentials."
   }
 }

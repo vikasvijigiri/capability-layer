@@ -52,6 +52,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -319,6 +320,30 @@ def resolve_checks(root=None, kinds=FAST_KINDS):
     return checks, disabled
 
 
+def command_tokens(command: str) -> list[str]:
+    """Split a shell command into tokens, respecting a quoted path.
+
+    Plain `.split()` breaks on a quoted absolute path with a space in it --
+    `"C:\\Users\\Vikas Vijigiri\\...\\python.exe" -m mypy` becomes five
+    tokens instead of three, and the first one is not the interpreter. Found
+    2026-08-19 because this repository's own path has a space in it and
+    every check naming `{py}` (a quoted, expanded interpreter path) failed
+    "not installed" although it plainly was.
+
+    `shlex.split(..., posix=False)` rather than the default posix mode:
+    posix mode treats backslash as an escape character, which corrupts a
+    Windows path's backslashes. Non-posix mode still groups a quoted
+    space-containing token correctly; it just leaves the surrounding quotes
+    on, which every caller here already strips.
+    """
+    try:
+        return shlex.split(command, posix=False)
+    except ValueError:
+        # Unbalanced quote in a hand-written project-checks.json command --
+        # fall back rather than crashing the check that reports it.
+        return command.split()
+
+
 def tool_missing(command: str) -> bool:
     """True when the command's executable is not on PATH.
 
@@ -331,12 +356,12 @@ def tool_missing(command: str) -> bool:
     way; anything else is a plain executable lookup on the first token.
     """
     import shutil
-    parts = command.split()
+    parts = command_tokens(command)
     if not parts:
         return True
     if parts[0].strip('"').endswith(("python", "python.exe", "python3")) \
             and len(parts) > 2 and parts[1] == "-m":
-        return importlib.util.find_spec(parts[2].split(".")[0]) is None
+        return importlib.util.find_spec(parts[2].strip('"').split(".")[0]) is None
     exe = parts[0].strip('"')
     return shutil.which(exe) is None and not Path(exe).exists()
 
@@ -404,8 +429,8 @@ def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
             # thing this module exists to prevent. Name the *module* for
             # `python -m x`, not the interpreter -- "`python` not installed" is
             # both wrong and useless when the missing thing is `mypy`.
-            parts = command.split()
-            missing = (parts[2] if len(parts) > 2 and parts[1] == "-m"
+            parts = command_tokens(command)
+            missing = (parts[2].strip('"') if len(parts) > 2 and parts[1] == "-m"
                        else parts[0].strip('"'))
             skipped.append(f"{kind} (`{missing}` not installed)")
             continue

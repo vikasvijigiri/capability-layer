@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Validate the harness-neutral contract and explicit adapter boundaries."""
+"""Validate the harness-neutral contract, its Claude Code binding, and the
+explicit adapter and hook-bridge boundaries."""
 
 from __future__ import annotations
 
@@ -23,6 +24,26 @@ require("root AGENTS.md exists", agents.is_file())
 agent_text = agents.read_text(encoding="utf-8") if agents.is_file() else ""
 for heading in ("# Universal agent operating contract", "## SDLC contract", "## Evidence contract", "## Failure and safety", "## Runtime model"):
     require(f"AGENTS.md contains {heading}", heading in agent_text)
+# The deterministic guard against re-claiming an unbuilt runner lives on the
+# manifest below ("manifest does not claim an unbuilt runner"), not here --
+# AGENTS.md's prose is allowed to name the removed flags when explaining why,
+# the same way CLAUDE.md narrates other deleted mechanisms by name.
+
+# CLAUDE.md is deliberately not part of what an install ships -- the packaged
+# wheel installs into a target repo with no root CLAUDE.md, and each target
+# writes its own from guide/how_to_create_CLAUDE.md (see tools/test_package.py:
+# "the wheel ships no root CLAUDE.md"). So its presence is optional here; its
+# content is not, when it exists -- this repository always has one.
+claude_md = ROOT / "CLAUDE.md"
+if claude_md.is_file():
+    claude_text = claude_md.read_text(encoding="utf-8")
+    require("CLAUDE.md references AGENTS.md", "AGENTS.md" in claude_text)
+    require("CLAUDE.md references harnesses.json", "harnesses.json" in claude_text)
+    require("CLAUDE.md references the hook bridge doc", "docs/harness-hook-bridge.md" in claude_text)
+
+hook_bridge = ROOT / "docs" / "harness-hook-bridge.md"
+require("docs/harness-hook-bridge.md exists", hook_bridge.is_file())
+require("AGENTS.md references the hook bridge doc", "docs/harness-hook-bridge.md" in agent_text)
 
 manifest_path = ROOT / "harnesses.json"
 try:
@@ -35,7 +56,13 @@ except (OSError, json.JSONDecodeError) as exc:
 require("manifest names AGENTS.md source contract", manifest.get("source_contract") == "AGENTS.md")
 require("manifest declares host-managed execution", manifest.get("execution_model") == "host-managed")
 require("manifest lists IDE agent hosts", set(manifest.get("supported_hosts", [])) == {"Claude Code", "Codex", "Gemini", "VS Code agent"})
-require("manifest documents SDK-live as optional", "sdk-live" in manifest.get("runner_modes", {}))
+require("manifest names the hook bridge doc", manifest.get("hook_bridge_doc") == "docs/harness-hook-bridge.md")
+# `runner_modes` is deliberately absent, the same pattern as `workflows` below:
+# it named --host-managed/--dry-run/--sdk-live flags on a repository runner
+# that was never built. A manifest that promises a path with nothing behind it
+# is the same dead reference this suite exists to catch -- see AGENTS.md's
+# Runtime model section.
+require("manifest does not claim an unbuilt runner", "runner_modes" not in manifest)
 adapters = manifest.get("adapters", {})
 for name in ("claude-code", "codex", "generic-agent"):
     require(f"manifest declares {name} adapter", name in adapters)
