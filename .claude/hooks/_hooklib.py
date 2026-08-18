@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -168,11 +169,44 @@ def migration_paths(paths):
 VALUE_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
 
 
+def _tokenize(command: str) -> list[str]:
+    """Split a command into tokens, respecting a quoted path.
+
+    Plain `.split()` breaks a quoted absolute path with a space in it into
+    several bogus tokens -- the identical class of bug found and fixed in
+    `_projectchecks.command_tokens` on 2026-08-19, present here too since
+    both files tokenised independently. `posix=False` because posix mode's
+    backslash-escaping corrupts a Windows path.
+    """
+    try:
+        return shlex.split(command, posix=False)
+    except ValueError:
+        return command.split()
+
+
+def _is_git_token(tok: str) -> bool:
+    """True for `git`, `/usr/bin/git`, or a Windows `...\\git.exe`, quoted or not.
+
+    The prior check -- `tok == "git" or tok.endswith("/git")` -- never matched
+    any qualified Windows invocation: `git.exe` does not end in `/git`, and a
+    quoted `"C:\\Program Files\\Git\\bin\\git.exe"` (Git for Windows' own
+    default install path, which contains a space) matched neither that nor
+    the plain-`.split()` tokenisation feeding it. Proven live on 2026-08-19:
+    `is_git_commit('"C:\\Program Files\\Git\\bin\\git.exe" commit -m "x"')`
+    returned `False`. `02-branch-guard.py` and `03-attribution-guard.py` both
+    gate on this function's answer, so a qualified-path invocation passed
+    both guards unseen -- the same failure mode the tokeniser above this one
+    was written to close, in a place nothing had looked yet.
+    """
+    name = tok.strip("\"'").replace("\\", "/").rsplit("/", 1)[-1]
+    return name.lower() in ("git", "git.exe")
+
+
 def is_git_commit(command: str) -> bool:
     """True for a real `git commit` invocation, false for lookalikes."""
-    toks = command.split()
+    toks = _tokenize(command)
     for i, tok in enumerate(toks):
-        if tok != "git" and not tok.endswith("/git"):
+        if not _is_git_token(tok):
             continue
         j = i + 1
         while j < len(toks) and toks[j].startswith("-"):
@@ -216,10 +250,10 @@ def git_dash_c(command: str) -> str | None:
     `--flag=value` forms consume nothing extra, which is precisely what the old
     regex could not express.
     """
-    toks = command.split()
+    toks = _tokenize(command)
     found = None
     for i, tok in enumerate(toks):
-        if tok != "git" and not tok.endswith("/git"):
+        if not _is_git_token(tok):
             continue
         j = i + 1
         while j < len(toks) and toks[j].startswith("-"):
