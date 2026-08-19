@@ -63,6 +63,9 @@ For a large change, dispatch `diff-reviewer` for independent correctness,
 security, test-quality and scope passes; merge duplicate findings before
 applying recovery. For an independent security pass rather than a reading,
 dispatch `security-reviewer` — it reports, this skill still owns the verdict.
+For a diff wide enough that even those four passes would serialize slowly,
+`ultracode` parallelizes further across Claude Code's native dynamic-workflow
+subagents — worth suggesting to the user at that scale.
 
 ### 5. Report and decide
 

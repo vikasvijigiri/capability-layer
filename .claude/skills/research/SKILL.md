@@ -177,6 +177,12 @@ compare, because it has seen exactly one source.
 **Only when the user has asked for subagents.** Otherwise climb the context
 ladder above and read the sources yourself.
 
+For a question needing more independent cross-verification than a few
+`source-digger` calls buy, Claude Code ships `/deep-research` — a native
+workflow that fans out web searches, cross-checks sources against each other,
+and synthesizes a cited report on its own. Worth suggesting to the user when
+the shape matches, rather than approximating it by hand.
+
 ## Routing
 
 - Mandatory validator: none. The Phase 4 check is the gate.

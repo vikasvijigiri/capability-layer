@@ -186,7 +186,10 @@ COUNT_RE = re.compile(
 # Built-in Claude Code commands, not files in this repo.
 BUILTIN_COMMANDS = {"/verify", "/save", "/wip", "/git-state",
                     "/fast", "/config", "/help", "/clear", "/loop", "/simplify",
-                    "/code-review", "/run", "/init", "/review", "/schedule"}
+                    "/code-review", "/run", "/init", "/review", "/schedule",
+                    # Claude Code's own bundled dynamic workflow -- ships with
+                    # the harness, not something this repo defines a file for.
+                    "/deep-research"}
 
 
 def live_counts() -> dict:

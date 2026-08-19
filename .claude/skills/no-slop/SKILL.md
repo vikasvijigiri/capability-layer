@@ -55,6 +55,11 @@ in the report so the reader knows what was covered. Typical triggers:
 If the request doesn't specify, ask, or default to the smallest scope that would
 catch what prompted the request — and say which you picked.
 
+At a scope wide enough that Phase 1 would take many serial passes, `ultracode`
+(or "use a workflow to sweep `<scope>`") parallelizes it across Claude Code's
+native dynamic-workflow subagents — worth suggesting to the user rather than
+sweeping serially, when the scope is that wide.
+
 ## Two phases, and the gate between them is hard
 
 <HARD-GATE>
