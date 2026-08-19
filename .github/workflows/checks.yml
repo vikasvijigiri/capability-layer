@@ -97,6 +97,18 @@ jobs:
           node-version: '20'
         continue-on-error: true
 
+      # The slow tier installed nothing until 2026-08-11, which was fine while it
+      # only built a wheel. `tools/deps.py` reads *installed* metadata to answer
+      # "may we ship this licence", so with nothing installed it correctly
+      # reported `pyyaml (not-installed)` -> undetermined -> exit 2, and the tier
+      # failed. Article V says an unrunnable check is named rather than counted
+      # as a pass, so the fix is to let it run rather than to soften what it says.
+      #
+      # The project's own runtime dependencies, plus the audit tool. `build` is
+      # needed by `test_package.py`, which builds the wheel this tier exists for.
+      - name: Install what the slow tier actually audits
+        run: python -m pip install --quiet . build pip-audit
+
       - name: Run the slow tier
         env:
           PYTHONIOENCODING: utf-8

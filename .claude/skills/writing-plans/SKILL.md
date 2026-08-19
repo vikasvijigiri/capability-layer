@@ -5,7 +5,7 @@ when_to_use: when named work must be scoped and turned into executable tasks
 effort: high
 model: opus
 disable-model-invocation: false
-allowed-tools: Read Grep Glob Task
+allowed-tools: Read Grep Glob Task Bash EnterPlanMode ExitPlanMode
 ---
 
 # Writing Plans
@@ -63,28 +63,32 @@ cheap ones with `Grep`/`Glob`/`Read`. `references/framing.md` owns the method an
 what to do with a disputed premise. A brief built on a wrong one is worse than no
 brief, because it looks approved.
 
-### A2. Draft the six lines
+### A2. Draft the six fields
+
+Use these exact names — they carry unchanged into `TASK.md` in A3, and
+`tools/memory.py`, `tools/analyze.py`, and `tools/resume.py` all parse the
+document by these headings, so a renamed or re-pluralized field is invisible to
+them even though it reads fine to a person.
 
     Goal:         the one outcome, in a sentence.
     Constraints:  what it must (and must not) do. Stack, perf, style, security.
-    Inputs:       what the agent starts with. Files, data, an API, an example.
-    Outputs:      what exists when it's finished. Files, endpoints, behavior.
-    Done-check:   the concrete test that proves it works.
-    Out-of-scope: what NOT to touch, so it doesn't wander.
+    Input:        what the agent starts with. Files, data, an API, an example.
+    Output:       what exists when it's finished. Files, endpoints, behavior.
+    Done Checks:  the concrete test that proves it works.
+    Out of Scope: what NOT to touch, so it doesn't wander.
 
 - **Fill only from what was said or verified.** An unstated field stays blank. A
   guessed field is worse than an empty one — it gets approved as if the user had
   said it.
-- **Done-check must be runnable.** `python tools/test_hooks.py exits 0` and
+- **Done Checks must be runnable.** `python tools/test_hooks.py exits 0` and
   `POST /session returns 201 with an id` are checks. "It works", "tests pass",
   "performance is better" are not.
-- **Out-of-scope is never blank.** Name the adjacent thing you could plausibly
+- **Out of Scope is never blank.** Name the adjacent thing you could plausibly
   touch and won't.
 
 ### A3. Write `TASK.md`
 
-The six fields under its existing names (`Goal` / `Input` / `Output` /
-`Constraints` / `Done Checks` / `Out of Scope`) with `Status: In Progress`,
+The six fields, under the same names used in A2, with `Status: In Progress`,
 carrying the `(inferred)` markers through. Overwrite in place — it is current
 state, not history.
 
@@ -99,7 +103,7 @@ wait for the artifact, resume at A2 with the field filled.
 
 | What Stage A could not fill | Invoke | Resume when |
 |---|---|---|
-| **Goal or Outputs blank because the approach is undecided** | `brainstormer` | `docs/specs/` holds a chosen design |
+| **Goal or Output blank because the approach is undecided** | `brainstormer` | `docs/specs/` holds a chosen design |
 | A constraint turns on outside evidence — prior art, a library's real behaviour, whether it is possible at all | `research` | `docs/research/` holds the finding |
 | The work touches a user-facing surface with no design contract | `designer` | `DESIGN.md` exists |
 | The repository is unread and the brief would be written against a guess | `repo-recon` | `docs/recon/` holds the map |
@@ -111,7 +115,7 @@ Three rules that keep this from becoming a loop:
   the answer is not discoverable, so it becomes a `[NEEDS CLARIFICATION]` marker
   for Gate 1 instead.
 - **`brainstormer` outranks the brief.** If the approach is open, invoke it
-  *before* writing `TASK.md` — a finished brief commits Goal and Outputs to one
+  *before* writing `TASK.md` — a finished brief commits Goal and Output to one
   solution shape, and that anchor is what stage 2 exists to prevent. Everything
   else here can run against a written brief.
 - **Never dispatch to avoid deciding.** If the repository answers the question,
@@ -128,7 +132,14 @@ scope is thin, and continue anyway.
 
 ## Stage C — Plan
 
-### C1. Read the input, then the repository
+### C1. Enter plan mode, then read the input and the repository
+
+**Call `EnterPlanMode` first.** Planning is read-only work and this is the stage
+that does it, so the skill puts the session there rather than waiting to be put
+there. The tool raises its own consent prompt — that is the user's say, and it
+costs one click instead of remembering to pick a mode before asking for work.
+
+If the session is already in plan mode, skip it and carry on.
 
 Announce: "I'm using the writing-plans skill to create the implementation plan."
 
@@ -143,6 +154,30 @@ For a material feature or architectural change, apply
 Stage B; do not plan around an independently identified gap. For cross-cutting
 boundaries, dispatch `architecture-reviewer` — it reports risks, this skill keeps
 the plan and the gate.
+
+### C1b. Ask what this repository already knows
+
+Before the file map hardens, query the durable knowledge for the paths you are
+about to touch:
+
+    python tools/memory.py --paths <the files you expect to change>
+    python tools/memory.py --plan <the plan>      # once the map exists
+
+It reads `MEMORY.md`, `ISSUES.md` and `decisions/` and returns entries that name
+those files or their directory. **State what came back, including when nothing
+did** — "nothing recorded about these files" is a finding a reader can act on;
+silence is indistinguishable from not having looked.
+
+This was a write-only habit for a long time: every unit of work wrote to
+`MEMORY.md` and nothing ever read it, so a convention learned in one session
+could not change a plan written in the next. A knowledge store nobody queries is
+worse than none, because writing to it feels like the work is being retained.
+
+A returned entry is **evidence, not an order.** An ADR that settled a question
+still settles it; a convention recorded before the thing it describes was
+rewritten may be rot. `python tools/memory.py --stale` names entries whose paths
+or counts no longer match the tree — if one you are relying on shows up there,
+fix the entry as part of this work rather than planning against it.
 
 ### C2. Freeze the file map
 
@@ -198,33 +233,44 @@ for the plan approval gate. State the plan path, task count, key assumptions and
 known risks.
 
 <!-- GATE 1: plan approval. The chain has two; see .claude/workflow.md. -->
-**Then put every `[NEEDS CLARIFICATION]` marker into one `AskUserQuestion` call.**
-One batch, at the gate — not a question each time one arises. Scattered questions
-are what turned two gates into nine, and they interrupt at the moment the answer
+**Gate 1 is `ExitPlanMode`, and it is the only approval mechanism here.**
+
+That tool's contract *is* this gate — it "inherently requests user approval" and
+says not to pair it with a second question. **`ExitPlanMode` refuses outside plan
+mode**, which is why C1 enters it: a gate that only works when the session
+happened to start somewhere particular is not a gate.
+
+**The approval is `ExitPlanMode` and nothing else.** `AskUserQuestion` must never
+carry it — two mechanisms mean the plan is approved twice and one of them is
+theatre. Using it to *clarify an approach* while planning is fine and is what the
+tool's own documentation recommends; the ban is on the approval, not the tool.
+
+**Every `[NEEDS CLARIFICATION]` marker goes into the plan body before the exit**,
+beside the paragraph its answer belongs to. One batch, at the gate — scattered
+questions are what turned two gates into nine, and they interrupt when the answer
 is least informed.
 
-The same call carries the approval, with three real options:
+All three outcomes stay reachable. On approve, write `## Approved` into the plan
+— that exact heading, because `tools/resume.py` derives the unit's state from it
+and a paraphrase leaves an approved plan reading as unapproved. Revise and reject
+record the user's own words verbatim.
 
-| Option | Means |
-|---|---|
-| Approve | write `## Approved`, hand off to `executing-plans` |
-| Revise — say what to change | rejected, and the free text is the brief |
-| Reject — wrong approach | the plan is not the problem; return to `brainstormer` |
+Plan mode is read-only apart from the plan, so **`TASK.md` is written
+immediately after the exit** — ownership does not move, only the moment.
 
-**The revise and reject options take the user's own words**, recorded verbatim —
-a reason paraphrased is a reason lost. On anything but approve, append the
-rejection to the plan and stop; `references/plan-document.md` owns that block's
-format and what `tools/resume.py` and `tools/loop.py` do with it.
+`references/plan-mode.md` owns all of it: the one-tool rule, the three outcomes,
+why `TASK.md` moved, and the one thing no skill can do — switch permission mode.
+`references/plan-document.md` owns the rejection block's format.
 
 After the user approves, invoke `executing-plans` and pass it the plan path.
 Until approval is explicit, stop here.
 
 ## Red Flags — stop and re-read Stage A
 
-- "The Out-of-scope line is obvious, I'll leave it blank."
-- "They clearly meant X, I'll put it in Outputs." A guess wearing an approved
+- "The Out of Scope line is obvious, I'll leave it blank."
+- "They clearly meant X, I'll put it in Output." A guess wearing an approved
   field's clothes.
-- "Done-check: the tests pass." Name the command and its exit condition.
+- "Done Checks: the tests pass." Name the command and its exit condition.
 - "The scope is thin, I had better ask." State it `(inferred)` and continue.
 - "They said the file is at X, so it's at X." A1 verifies because that has
   been wrong before.
@@ -251,13 +297,15 @@ took out loud.
 - Entered directly from a named request — this skill owns framing.
   `.claude/workflow.md` §Entry owns when that happens.
 - Dispatches `brainstormer`, `research`, `designer`, `repo-recon` and
-  `systematic-debugging` itself, per the Stage B table. None of those is a
-  handoff — each returns here.
+  `systematic-debugging` per the Stage B table, plus `architecture-reviewer`
+  per C1 for cross-cutting boundaries. None of those is a handoff — each
+  returns here.
 - Terminal handoff: `executing-plans`, only after the plan approval gate.
 
-## Success criteria
+## Success
 
-- `TASK.md` holds the six fields, every inferred one marked `(inferred)`.
+- `TASK.md` holds the six fields, under the exact names given in A2, every
+  inferred one marked `(inferred)`.
 - A dated plan exists under `docs/plans/` whose `**Slug:**` matches the branch.
 - Every open question was a marker, and every marker was answered at the gate.
 - No dialogue was opened before Gate 1, and execution did not start before it.

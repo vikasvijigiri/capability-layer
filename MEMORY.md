@@ -21,7 +21,7 @@ in HANDOFF.md; chronological events belong in LOG.md. -->
   names must match exactly.
 - Skill descriptions are the trigger surface. They must include real trigger
   phrasings and a `Do NOT use` boundary.
-- The current layer has 22 skills and 10 agents. Product stages are defined by
+- The current layer has 14 skills and 11 agents. Product stages are defined by
   `.claude/workflow.md`; capability maintenance is off-chain.
 - There is no `routing/process-skills.md` keyword router. Do not recreate one.
 
@@ -48,6 +48,22 @@ in HANDOFF.md; chronological events belong in LOG.md. -->
   dependency audit.
 - A dry-run or host handoff is not evidence of a live product implementation;
   live IDE-hosted execution must be reported separately.
+- A check proved only on synthetic input is not proved. Two mechanisms shipped
+  green and completely inert this way, and both were found by running them
+  against the real input rather than by any test. Assert at least one case
+  against what the function actually returns here. See `ISSUES.md` 2026-08-10.
+- Hook runtime is a correctness property. A reporting hook runs on every turn,
+  and one shipped at 5.2s because nothing measured it; a per-turn tax that size
+  is how a mechanism gets switched off.
+- A threshold calibrated on partial samples fires on the first complete one.
+  `budget.py`'s 3.0h ceiling came from two units already in progress when the
+  ledger started, so it encoded how much of a unit was visible rather than how
+  long one takes; the first complete unit came in 6.6x over. Measure a bound
+  from finished instances, or state the censoring where the number is defined.
+- `isolation: worktree` bases an agent's tree on the **default** branch, not the
+  branch in play. Create the worktree explicitly with `tools/worktree.py`, naming
+  the base, and prove it with `git merge-base --is-ancestor` read from the tree —
+  never from the agent's own report.
 
 ## MCP and local configuration
 

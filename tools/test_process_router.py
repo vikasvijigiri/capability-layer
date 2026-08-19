@@ -16,6 +16,7 @@ Run: python tools/test_process_router.py
 """
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -296,6 +297,17 @@ NOT_SKILLS = {
     "task-brief-style", "session-context",
     # code-review angles handed to a diff-reviewer, not names of anything
     "test-quality",
+    # the scope vocabulary: verdicts and veto clauses from `tools/scope.py`.
+    # Backticked because they are exact values a reader will grep for, which is
+    # precisely why this checker mistook them for skills.
+    "small", "major", "undetermined",
+    "shared-surface", "control-surface", "spread", "unmapped", "volume",
+    # risk tiers, and the clause that forces one on its own
+    "low", "medium", "high", "sensitive-surface",
+    # chain-instrument verdicts
+    "stalled", "advancing", "waiting", "halt",
+    # git nouns
+    "base", "main",
 }
 
 # --- workflow.md's own names resolve --------------------------------------
@@ -406,9 +418,16 @@ check("writing-plans dispatches `brainstormer` before writing the brief",
 # The six fields moved here from a deleted skill. A merge that drops them is the
 # silent half of this change: planning would still work and framing would simply
 # stop happening.
-for _field in ("Goal", "Constraints", "Inputs", "Outputs", "Done-check",
-               "Out-of-scope"):
-    check(f"writing-plans still frames `{_field}`", _field in _wp,
+# Either spelling. The fields were renamed to match `TASK.md`'s own headings
+# (`Input`, `Output`, `Done Checks`, `Out of Scope`) -- the same field, spelled
+# the way the artefact it writes spells it. What this guards is that the field
+# SURVIVES the merge, never its punctuation, and a checker that fails on a
+# consistency improvement is one somebody edits around.
+for _field in (("Goal",), ("Constraints",), ("Inputs", "Input"),
+               ("Outputs", "Output"), ("Done-check", "Done Checks"),
+               ("Out-of-scope", "Out of Scope")):
+    check(f"writing-plans still frames `{_field[0]}`",
+          any(f in _wp for f in _field),
           "the six fields came from task-brief and are the framing contract")
 
 check("writing-plans keeps the (inferred) marking that replaced the brief gate",
@@ -849,15 +868,79 @@ check("no skill prompts the user outside the two gates",
       not _unexpected,
       f"{_unexpected} added a gate -- the chain allows two, see workflow.md")
 
+# Each gate names its OWN tool, rather than both being checked against
+# `AskUserQuestion`.
+#
+# Gate 1 is a plan approval, and `ExitPlanMode` is the tool built for exactly
+# that -- its contract says it "inherently requests user approval" and
+# explicitly says not to pair it with `AskUserQuestion`. Gate 2 is a shipment
+# approval with real alternatives to choose between, which is what
+# `AskUserQuestion` is for.
+#
+# The failure this shape exists to catch: swapping Gate 1's tool while leaving a
+# blanket "AskUserQuestion is somewhere in this file" assertion would pass on
+# any incidental mention -- a marker that reads as a gate and stops nothing.
+# Both limbs are asserted, so the wrong tool is as red as no tool.
+GATE_TOOL = {"writing-plans": "ExitPlanMode", "releasing": "AskUserQuestion"}
+check("every gate skill has a declared tool",
+      set(GATE_TOOL) == GATE_SKILLS,
+      f"{sorted(set(GATE_TOOL) ^ GATE_SKILLS)} is in one set and not the other")
+
 for _g in sorted(GATE_SKILLS):
     _gbody = (SKILLS / _g / "SKILL.md").read_text(encoding="utf-8")
     check(f"gate skill `{_g}` declares its gate", _g in _prompting,
           "a gate was removed; the chain would then have no human checkpoint here")
-    # The marker is a claim; the call is the mechanism. A marker with no
-    # AskUserQuestion beside it is a gate that announces itself and never stops.
-    check(f"gate skill `{_g}` actually calls the tool it declares",
-          "AskUserQuestion" in _gbody,
+    # The marker is a claim; the call is the mechanism. A marker with no call
+    # beside it is a gate that announces itself and never stops.
+    _tool = GATE_TOOL[_g]
+    check(f"gate skill `{_g}` actually calls `{_tool}`, the tool it declares",
+          _tool in _gbody,
           "the marker says there is a gate here and nothing implements it")
+
+# --- Gate 1 must be REACHABLE, not merely named -------------------------------
+#
+# The assertion here used to be "the marker's tool appears in the file", and it
+# passed for hours while Gate 1 could not be asked at all: `ExitPlanMode` refuses
+# outside plan mode, and the same change had removed `AskUserQuestion` from the
+# skill. A gate conditional on the session having started in a particular mode is
+# not a gate, and presence is not reachability.
+_wp = (SKILLS / "writing-plans" / "SKILL.md").read_text(encoding="utf-8")
+_pm_path = SKILLS / "writing-plans" / "references" / "plan-mode.md"
+_pm = _pm_path.read_text(encoding="utf-8") if _pm_path.is_file() else ""
+
+check("`writing-plans` enters plan mode itself, so Gate 1 can always be asked",
+      "EnterPlanMode" in _wp,
+      "ExitPlanMode refuses outside plan mode; without this the gate is "
+      "reachable only by luck")
+check("...and says so where the planning stage begins",
+      "EnterPlanMode" in _wp.split("## Stage C", 1)[-1],
+      "entering after the plan is written is too late to matter")
+
+# The correction that came with it: the ban is on the APPROVAL, not the tool.
+# `EnterPlanMode`'s own documentation recommends AskUserQuestion for clarifying
+# an approach inside plan mode, so an outright ban contradicted the contract and
+# was what left the gate unreachable.
+check("the approval itself is ExitPlanMode",
+      "ExitPlanMode" in _wp)
+_wp_flat = " ".join(_wp.split())
+check("...and the file says AskUserQuestion must not carry the approval",
+      "must never carry it" in _wp_flat,
+      "the narrow rule has to be written down, or the blanket one comes back")
+
+# Whitespace-flattened, because the phrase wraps across lines in the source and a
+# raw substring search reports a rule that is present as missing.
+#
+# Blockquoted lines are excluded: `plan-mode.md` QUOTES the false sentence in
+# order to record that it was false, and a checker that cannot tell a quotation
+# from a claim would force the correction to be deleted along with the error.
+_pm_claims = "\n".join(ln for ln in _pm.splitlines()
+                       if not ln.lstrip().startswith(">"))
+check("no file still CLAIMS plan mode cannot be entered",
+      "There is no tool for it" not in " ".join(_pm_claims.split()),
+      "that sentence was false and the gate was built on it")
+check("...and the correction is recorded rather than quietly deleted",
+      "EnterPlanMode" in _pm and "was false" in _pm,
+      "an error removed without a note is one the next reader re-introduces")
 
 # --- anything that leaves the machine asks with the tool ---------------------
 #
@@ -913,8 +996,23 @@ check("`delivering` warns that squash breaks a stacked PR",
 # Nothing may quietly acquire the ability to merge. `_MERGE_VERBS` are checked
 # across every skill and command, and a mention only passes where it is negated.
 _MERGE_VERBS = re.compile(r"(?<![`\w])gh pr merge(?![\w])")
+                  # `tools/*.py` joined the scan on 2026-08-11. The plan for
+                  # `git_ops.py` asserted that "test_process_router.py already
+                  # fails any file that acquires `gh pr merge`" -- and the agent
+                  # implementing it checked, found the scan globbed only skills
+                  # and commands, and said so rather than relying on the claim.
+                  # The tools are where a merge would actually be executed from,
+                  # so they are the half that most needed covering.
 for _p in sorted([*SKILLS.glob("*/SKILL.md"),
-                  *(ROOT / ".claude" / "commands").glob("*.md")]):
+                  *(ROOT / ".claude" / "commands").glob("*.md"),
+                  # ...but not `tools/test_*.py`. A suite that ASSERTS nothing
+                  # merges necessarily contains the phrase, and three of them
+                  # tripped this the moment it was widened -- including this
+                  # file, which holds the pattern itself. The scan is for code
+                  # that could execute a merge, and a test asserting the absence
+                  # is the opposite of that risk.
+                  *(p for p in (ROOT / "tools").glob("*.py")
+                    if not p.name.startswith("test_"))]):
     _t = _p.read_text(encoding="utf-8")
     _hits = [ln for ln in _t.splitlines() if _MERGE_VERBS.search(ln)
              and not re.search(r"\b(never|not|no|nor)\b", ln, re.I)]
@@ -1045,6 +1143,87 @@ check("no skill states half the entry rule",
       f"{_entry_failures} route to `brainstormer` without naming `writing-plans`, "
       f"calling it a dispatch, or deferring to workflow.md §Entry -- there is one "
       f"door as of 2026-08-09, and a second one lets work reach a plan unframed")
+
+# --- the scope decision is one decision, used in three places ----------------
+#
+# `small` and `major` decide how much of the repository a change is checked
+# against. Judged separately by each consumer, they drift -- and the drift is
+# invisible, because each consumer is individually green. So the decision is
+# computed once by `tools/scope.py` and every consumer names it.
+_cr = (SKILLS / "code-review" / "SKILL.md").read_text(encoding="utf-8")
+check("`code-review` reads the computed scope rather than judging it",
+      "tools/scope.py" in _cr,
+      "the review's breadth must come from the same decision the tier uses")
+check("...and a narrowed review declares its scope in the verdict",
+      "scope" in _cr.lower() and "passed: true" in _cr,
+      "a `small` verdict read as a whole-branch verdict is the failure here")
+
+# --- the risk tier never becomes permission -----------------------------------
+#
+# The checklist this was built against proposed auto-approving Gate 2 for
+# low-risk plans. It is refused, and the refusal needs an assertion rather than
+# a paragraph: a tier computed by the system that wants to ship must never be
+# able to waive the one rule that has no exceptions.
+_rel = (SKILLS / "releasing" / "SKILL.md").read_text(encoding="utf-8")
+check("`releasing` shows the risk tier at the shipment gate",
+      "tools/scope.py --plan" in _rel,
+      "a reader approving a shipment needs to know it touches a migration")
+check("...and states that the tier never waives the gate",
+      "never whether it is **asked**" in _rel or "still asks" in _rel,
+      "auto-approve-on-low would make the second gate conditional")
+_wf_text_risk = (ROOT / ".claude" / "workflow.md").read_text(encoding="utf-8")
+check("workflow.md owns the tier table",
+      "risk tier" in _wf_text_risk.lower() and "undetermined` is `high" in _wf_text_risk,
+      "an unclassifiable plan must not tier low")
+check("every plan must carry a computed risk tier",
+      '"**Risk:**"' in (ROOT / "tools" / "analyze.py").read_text(encoding="utf-8"),
+      "an untiered plan would reach Gate 1 with the tier unavailable downstream")
+
+# The scoped tier must not be able to produce the word every reader copies.
+#
+# `tools/` is NOT part of what `install.py` copies -- an installed layer is
+# `.claude/` plus the knowledge docs -- so in a target repo these files are
+# absent and the honest answer is to say so rather than to fail. The same shape
+# `test_entry_classifier.py` uses for its corpus, and for the same reason: this
+# suite went red in a fresh install while being green here.
+_rcpath = ROOT / "tools" / "run_checks.py"
+if not _rcpath.is_file():
+    print("SKIP: no tools/run_checks.py -- the scoped tier ships with the source "
+          "repository, not with an install; its rules are unmeasured here")
+else:
+    _rcsrc = _rcpath.read_text(encoding="utf-8")
+    check("a scoped run has a verdict word of its own",
+          'PARTIAL_VERDICT = "PARTIAL PASS"' in _rcsrc,
+          "`PASS` on a narrowed run is green reported on less evidence")
+    check("...and it refuses to narrow anything but a `small` change",
+          'verdict["scope"] != "small"' in _rcsrc)
+    check("...and never writes a green ref", "update-ref" not in _rcsrc,
+          "only the full tier may mark a tree verified")
+
+# Shape of the map, never its judgement -- see `_why_test_map`. A mapped command
+# that is not a registered check runs nothing for that path, silently.
+#
+# `project-checks.json` is never overwritten by an installer, so a target repo
+# has its own with no `test_map` at all. Absent is not a failure; a map that
+# names a command nothing registers is.
+_cfg = json.loads((ROOT / ".claude" / "project-checks.json").read_text(encoding="utf-8"))
+_tm = _cfg.get("test_map") or {}
+_reg: set = set()
+for _ckey, _cval in _cfg.items():
+    if _ckey.startswith("_") or _ckey == "test_map":
+        continue
+    if isinstance(_cval, str):
+        _reg.add(_cval)
+    elif isinstance(_cval, list):
+        _reg.update(x for x in _cval if isinstance(x, str))
+_badmap = sorted({c for c in _tm.values()
+                  if c not in _reg
+                  and not c.startswith("python tools/run_checks.py")})
+check("every test_map command is a registered check", not _badmap, str(_badmap))
+if _tm:
+    check("the test_map states that its judgement is unproven",
+          "silent" in (_cfg.get("_why_test_map") or ""),
+          "a coverage claim nothing verifies must say so where it lives")
 
 print()
 if failures:

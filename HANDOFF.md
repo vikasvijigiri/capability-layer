@@ -5,77 +5,99 @@ history belongs in LOG.md and TASK.md's Completed section. -->
 
 ## Completed
 
-The chain has now run end to end, once: spec → plan → execute → verify → sweep
-→ review → deliver, with two recovery loops back to stage 3. `HANDOFF.md` said
-"The chain has never completed once" until 2026-08-09; that is no longer true.
+Two units shipped on 2026-08-10/11, both closing gaps in the layer itself: the
+target-workflow architecture, then twelve tasks against `GOAL_CHECKLIST.md`.
+See `LOG.md` for both.
 
-Three units landed as stacked pull requests. See `LOG.md` 2026-08-09 20:48.
+**Parallel subagent dispatch works, six at a time.** This file once said *"No
+subagent has ever completed a task."* That is now two records out of date.
 
 <!-- session-context:start -->
 
 ## Current Work
 
-Nothing in flight. Five PRs are open and **none is merged**:
+Branch `feat/checklist-completion`, **17 commits ahead of `main`**
+(`c9f7ce6..198b559`), `63 files changed, 9175 insertions(+), 508 deletions(-)`.
+**Nothing is pushed and no PR is open** — kept local by explicit choice.
 
-| PR | Branch | Base |
-|---|---|---|
-| #7 | `merge-framing-into-planning` | `main` |
-| #5 | `feat/uninstall-verb` | #7 |
-| #6 | `fix/delivering-approval-gate` | #5 |
-| #8 | `docs/session-2026-08-09` | #5 |
-| #9 | `fix/unenforceable-claims` | #6 |
+Derived state is now `WAITING_DELIVERY` — *"a delivery decision is owed: push
+the branch and open the PR, or say why not"* — and the chain reports `waiting`
+rather than `stalled`.
 
-**Merge order: #7 → #5 → then #6 and #8 in either order → #9.** Each PR's
-declared base is its actual branch point, verified — #6 was opened against #7
-while cut from #5, which made it show all ten of #5's files; corrected to base
-`feat/uninstall-verb` and it now shows three.
+The unit is complete through the chain: 12/12 tasks ticked with quoted
+verifications, `verifying-work` returned **gaps** (named below), `no-slop`
+swept repo-wide and applied no local repairs, `code-review` returned
+**`passed: true`** with three P2 findings. Full tier at close:
+`PASS: 49 check(s) green (audit, build, lint, smoke, test, typecheck)`.
 
-`TASK.md` `## Active` holds three older items, none of them today's work.
+Nine new tools: `chain.py`, `memory.py`, `worktree.py`, `halt.py`, `deps.py`,
+`git_ops.py`, `release_candidate.py`, `budget.py`, plus risk tiering in
+`scope.py`. Two hooks now fire every turn: `pre-run/01-halt-guard.py` and
+`pre-edit/02-agent-scope-guard.py`.
 
 ## Pending
 
-- **Branch protection on `main` is unavailable, not merely unset.** The API
-  answers `403 Upgrade to GitHub Pro or make this repository public` — neither
-  protection nor rulesets are offered on a free private repository. This was
-  carried here as an actionable task and it never was one.
+Five follow-ups, all identified by the chain itself rather than by a person.
+Each is its own unit and enters at `writing-plans`:
 
-  What holds the line instead: `.github/workflows/checks.yml` runs on every pull
-  request and resolves the same `.claude/project-checks.json` the local gate
-  does, so a red branch is **visible** on the PR; and
-  `pre-commit/02-branch-guard.py` refuses commits on `main` in any tree with the
-  layer installed. What is genuinely uncovered: nothing prevents a direct
-  `git push` to `main` from a clone without the layer.
+1. **`pre-edit/02-agent-scope-guard.py` has no caller.** It denies correctly
+   when `UAIOS_AGENT_NAME` is set, and **nothing sets it** — a grep finds the
+   name only in the guard and its test. On a real dispatch the hook runs and is
+   silent, so agent file scope is enforced in principle and not in practice.
+   Either the dispatch sets it, or the claim narrows.
+2. **The ticked-task checkbox is defined four times** — `analyze.PROGRESS_RE`,
+   `chain.PROGRESS_TICK`, `git_ops`' own, `resume._CHECKBOX`. They already
+   disagree: three require `Task <n>`, `resume`'s matches any box under
+   `## Progress`. Needs an owner chosen; `resume`'s looser match may be
+   deliberate, so this is not a mechanical merge.
+3. **`budget.ELAPSED_CEILING_HOURS = 3.0` is wrong.** The first complete unit
+   it measured came in at 19.93h — 6.6× over. It was calibrated on two
+   *left-censored* samples, so it encoded how much of a unit happened to be
+   visible rather than how long one takes. Re-measure from complete units, or
+   drop the elapsed limb and keep turns.
+4. **`ISSUES.md` carries two `0x08` bytes**, in the entry describing `0x08`
+   bytes. See `ISSUES.md` 2026-08-11 21:15.
 
-  A real decision, for a human: make the repository public, upgrade the plan, or
-  accept the gap knowingly. `/publish` now probes and reports this rather than
-  printing instructions that cannot be followed.
-- **`ISSUES.md` 2026-08-09 (plan checkbox) — fixed in #9, entry still says
-  Open.** `executing-plans` claimed `writing-plans` mandated `- [ ]` checkboxes;
-  it did not, and zero existed across every plan. #9 makes the template emit a
-  `## Progress` block, has `analyze.py` count the boxes against the task
-  headings, and adds the check that closes the *class* — a consumer naming a
-  syntax must have a producer that emits it. Update the `ISSUES.md` entry to
-  Resolved when #9 merges.
-- **Commit `154b66a` was pushed** and holds the pre-fix path-traversal state.
-  Private repo, not rewritten — flagged in #5's body.
+5. **`refs/uaios/green/` has one writer, and it is the auto-commit hook.**
+   Commit by hand — or have the auto-commit refuse once, which the minimal-diff
+   gate is built to do — and the ref is never set, so `checks_green` stays
+   `None` and `derive_state` returns `BUILD` before it can reach
+   `WAITING_DELIVERY`. Setting the ref by hand on a verified tree resolved it
+   immediately, so the state machine is sound and the plumbing is not. See
+   `ISSUES.md` 2026-08-11 21:45.
+
+Unchanged and still true: branch protection is unavailable on this repo tier
+(`403 Upgrade to GitHub Pro`); seven branches merged into `main` are dead
+weight; `feat/adaptive-workflow` @ `076914e` carries a superseded plan nothing
+marks as superseded.
 
 ## Next Steps
 
-1. Review and merge #7, then #5 and #6.
-2. Configure branch protection on `main` before anything else lands.
-3. Decide the plan-checkbox contradiction.
+1. Decide whether `feat/checklist-completion` is pushed. It is reviewed and
+   green; `tools/delivery_check.py --base main --head feat/checklist-completion`
+   should be run and quoted first, and pushing needs an explicit yes.
+2. Take the five Pending items through `writing-plans` as one unit — they are
+   small, related, and all concern mechanisms whose claims currently exceed
+   their wiring.
+3. `GOAL_CHECKLIST.md` is still untracked at the repo root. It is the brief for
+   both audits; commit it or declare it.
 
 ## Open Questions
 
-- **Nothing carries the chain across a manual step.** Each skill's `## Next
-  step` names its successor, and that is the only link — there is no engine
-  tracking "stage 7 done, run stage 8". Doing a stage's work by hand, as
-  happened with the push, severs it silently. A `Stop` hook could *report* the
-  gap; it cannot invoke a skill, and
-  `decisions/2026-08-04-hooks-never-name-a-skill.md` constrains what it may say.
-- **Is mutation testing worth its cost given what it missed?** Eight mutations
-  reported `hollow: none` on code carrying a path traversal, because every
-  mutation assumed the manifest was trustworthy input. It proved the checks bite
-  and said nothing about coverage of categories nobody considered.
+- **Is the Gate 1 → Gate 2 span autonomous?** No, and it cannot be made so by a
+  hook — a hook may not invoke a skill. `chain.py` makes a missed handoff loud
+  instead of silent, which is the ceiling. Whether an external driver
+  (`tools/drive.py`) is worth building should be decided from the ledger it now
+  writes, not from argument. The ledger has been accumulating since 2026-08-10.
+- **What of the checklist cannot be built here?** 17 of 21 remaining absences
+  need a running service — canary rollout, auto-rollback on error rate,
+  alerting, bake time, DAST. This repository ships a wheel. They are recorded in
+  the plan's Out of Scope *with reasons*, so a later reader can tell "we decided
+  not to" from "we forgot". If a served surface ever appears, they become real
+  and get their own plan.
+- **Two audits are published and one is already wrong.** The second
+  (`claude.ai/code/artifact/789942aa-667f-443e-8910-661568f3aa4d`) says 38
+  mechanism; `verifying-work` found agent file scope overstated, so it is 37.
+  The artifact has not been corrected.
 
 <!-- session-context:end -->

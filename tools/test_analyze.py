@@ -42,6 +42,8 @@ GOOD = """# Checkout retry Implementation Plan
 
 **Goal:** retry a failed checkout once before surfacing an error.
 
+**Risk:** low — `scope.py --plan` reports no clause forces a tier above low.
+
 **Source spec:** docs/specs/2026-08-07-checkout-retry-design.md
 
 ## Constitution gate
@@ -68,6 +70,10 @@ GOOD = """# Checkout retry Implementation Plan
 **Files:**
 - Modify: `src/checkout.ts:submit` — wrap in one retry
 - Test: `tests/checkout.test.ts` — covers the retry
+
+**Rollback:** revert the commit; no data written, so nothing to unwind.
+
+**Preconditions:** `src/checkout.ts:submit` still makes exactly one network call.
 
 **Verification:**
 - Run: `npm test -- checkout`
@@ -172,6 +178,38 @@ check("an unticked article WITH a justification is not a finding",
 
 check("no plan at all is not an error",
       az.plan_text(ROOT, "no-such-slug-anywhere") == (None, ""))
+
+# --- Task 8: Rollback and Preconditions are per-task, not per-plan ----------
+#
+# A single plan-wide mention of "rollback" must not satisfy every task -- each
+# task carries its own `**Rollback:**` and `**Preconditions:**` fields, and a
+# task missing either is a finding just like a missing `Done when:`.
+check("a task with no Rollback: is found", has("untestable", "rollback"))
+check("a task with no Preconditions: is found", has("untestable", "precondition"))
+
+one_task_missing = az.analyze(
+    GOOD + "\n### Task 2: a second task with no rollback\n\n"
+    "**Purpose:** prove per-task, not per-plan.\n\n"
+    "**Files:**\n- Modify: `src/checkout.ts` — something else\n\n"
+    "**Verification:**\n- Run: `npm test`\n- Expect: pass\n\n"
+    "**Done when:** it does the thing.\n",
+    exists=exists_good, slug="checkout-retry")
+check("Task 1's Rollback: does not satisfy Task 2 -- per task, not per plan",
+      any(f["code"] == "untestable" and "task 2" in f["finding"].lower()
+          and "rollback" in f["finding"].lower() for f in one_task_missing),
+      str(one_task_missing))
+
+exempt_text = GOOD.replace("**Rollback:** revert the commit; no data written, so nothing to unwind.\n\n"
+                            "**Preconditions:** `src/checkout.ts:submit` still makes exactly one network call.\n\n",
+                            "") + (
+    "\n## Complexity tracking\nNo unticked boxes. One stated exemption: this "
+    "plan predates the `**Rollback:**` and `**Preconditions:**` task fields and "
+    "does not carry them.\n")
+check("a plan whose Complexity tracking states the rollback/preconditions "
+      "exemption is not a finding",
+      not any(f["code"] == "untestable" and
+              ("rollback" in f["finding"].lower() or "precondition" in f["finding"].lower())
+              for f in az.analyze(exempt_text, exists=exists_good, slug="checkout-retry")))
 
 print()
 if failures:

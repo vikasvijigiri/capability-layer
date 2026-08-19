@@ -4,6 +4,7 @@ description: Implements ONE task from an approved plan — writes the code, runs
 tools: Read, Write, Edit, Grep, Glob, Bash, PowerShell
 model: sonnet
 isolation: worktree
+allowed-paths: dispatched
 ---
 
 <!-- `isolation: worktree` gives each dispatch its own git worktree. This is the
@@ -15,7 +16,14 @@ concurrency from the plan's declared file sets instead of banning it outright.
 Isolation covers the two-writers half; the scheduler covers the half isolation
 does not -- frozen interfaces and shared surfaces like lockfiles and migrations,
 where the conflict is in the resource rather than the path. Neither alone is
-enough, which is why the ban stood as long as it did. -->
+enough, which is why the ban stood as long as it did.
+
+`allowed-paths: dispatched` above means the scope is not fixed in this file --
+it is whatever the dispatcher hands you this round. It still has a mechanism
+behind it: `.claude/hooks/pre-edit/02-agent-scope-guard.py` reads the round's
+declared files from `UAIOS_AGENT_SCOPE` and denies any write outside them.
+Reporting `NEEDS_CONTEXT` for a path your task did not declare is not just
+courtesy any more -- the guard denies the write regardless. -->
 
 
 You implement one task from a plan and prove it works.

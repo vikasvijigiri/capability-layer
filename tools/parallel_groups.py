@@ -121,7 +121,12 @@ BACKTICKED = re.compile(r"`([^`]+)`")
 def normalise(path: str) -> str:
     # Markdown emphasis is not part of a filename. Stripped rather than matched
     # around, because a plan may bold a path anywhere: `**a.py**`, `*a.py*`.
-    out = path.strip().strip("*_`").strip().strip(",;.").strip().replace("\\", "/")
+    # `rstrip`, never `strip`, on the punctuation pass. The trailing tidy-up
+    # exists so a path written `a.py,` in prose parses; nothing needs the leading
+    # one, and `strip` was silently turning `.claude/settings.json` into
+    # `claude/settings.json` -- which matches nothing in SHARED_PATTERNS, so
+    # every dotted shared surface was invisible to the scheduler.
+    out = path.strip().strip("*_`").strip().rstrip(",;.").strip().replace("\\", "/")
     while out.startswith("./"):
         out = out[2:]
     return out

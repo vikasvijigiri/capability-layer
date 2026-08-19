@@ -61,12 +61,26 @@ Each task MUST include:
 - [exact symbols, data flow, invariants, and edge cases]
 - [interfaces consumed and produced, including names and types where known]
 
+**Rollback:** [one line: how to undo this task's change if it must come out]
+
+**Preconditions:** [one line: what must still be true before starting this task]
+
 **Verification:**
 - Run: `[exact test or check command]`
 - Expect: [observable passing result]
 
 **Done when:** [a concrete, reviewable condition]
 ```
+
+**`Rollback:` and `Preconditions:` are per task, not per plan** — `tools/analyze.py`
+checks each task's own body, so a rollback line stated once for the whole plan
+does not cover the tasks after it. Keep both to one line: a field nobody can
+fill in a sentence becomes boilerplate, and boilerplate is worse than an absent
+field because it reads as considered when it was not. A plan written before
+these fields existed states its exemption once, by name, under `## Complexity
+tracking` — `analyze.py` only recognizes an exemption that names both fields;
+a bare "predates this" is not enough, or every later plan's silence would read
+as the same exemption.
 
 **`Files:` and `Dependencies:` are machine-read, so write them for a parser as
 well as a reader.** `tools/parallel_groups.py` turns them into the rounds

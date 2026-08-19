@@ -124,6 +124,19 @@ dependency is a concurrent dispatch over ordered work, which is the one failure
 worse than being slow. Depth is in
 `.claude/skills/executing-plans/references/parallel-dispatch.md`.
 
+**The worktree's base is named explicitly, never defaulted.** `isolation:
+worktree` bases an agent's tree on the repository's *default branch*, not the
+branch the session is on. Measured, more than once: a fan-out dispatched from
+a feature branch landed on the default branch instead. So the dispatcher creates
+the worktree itself:
+
+    python tools/worktree.py create <name> <base>   # base is a required positional
+
+`base` has no default because the default is the bug. `create()` returns the
+resolved SHA so the caller can assert `git merge-base --is-ancestor` rather than
+trust that the call exiting 0 meant the right thing happened — which is exactly
+what every agent in the first, failed fan-out did.
+
 A dispatch also needs a bounded ladder, because an agent fails in ways a check
 does not — it can report that its own brief was incomplete, or die before
 reporting at all:
@@ -140,6 +153,97 @@ security, scope, rollback, performance, and conflict status; tie-break by smalle
 diff, fewer dependencies, stronger tests, and lower risk. Configure protected
 branches, required checks, and merge queue in the hosting service; the workflow
 never force-pushes or bypasses them.
+
+## How much the pipeline may trust automation with it — the risk tier
+
+Separate from `small`/`major`, and answering a different question. That one asks
+how much of the repository a change should be checked against; this asks how far
+the work may travel before a person looks at it.
+
+    python tools/scope.py --plan <plan>     # 0 low · 1 medium · 2 high
+
+Assigned at **planning time**, from the plan's own `- Create:` / `- Modify:`
+lines — before any diff exists, which is the point: the tier has to be available
+to decide what the rest of the run does. Same veto discipline as the scope
+verdict, so it stays auditable:
+
+| Forced by | Tier |
+|---|---|
+| a shared surface — migration, lockfile, CI config | `high` |
+| a control surface — hooks, agents, `workflow.md`, `settings.json` | `high` |
+| a sensitive surface — auth, credentials, the installer, packaging | `high` |
+| volume, or spread across containers | `medium` |
+| nothing | `low` |
+
+**`undetermined` is `high`.** A plan that cannot be classified is not a low-risk
+plan, and this is the last place in the chain where guessing is cheap.
+
+`**Risk:**` is a required section of every plan — `tools/analyze.py` refuses a
+plan without it, so an untiered plan cannot reach Gate 1.
+
+### What the tier does *not* do
+
+**It never skips Gate 2.** A low-risk shipment still asks. Auto-approve-on-low
+was considered and refused: *never push, merge, publish or deploy without
+explicit user approval* is the one rule in this layer with no exceptions, and a
+tier computed by the same system that wants to ship is not the thing that should
+be allowed to waive it. The tier decides what Gate 2 is **shown**, not whether it
+is **asked**.
+
+## How much of the repository a change is checked against
+
+`small` and `major` decide the breadth of the tier, the sweep and the review.
+Judged, the answer under deadline pressure is always `small`, so it is computed:
+
+    python tools/scope.py            # 0 small · 1 major · 2 undetermined
+
+A **veto list**, not a score: any one of `shared-surface`, `control-surface`,
+`volume`, `spread` or `unmapped` forces `major`, and the verdict names every
+clause that fired. A score would let two cheap signals outvote one expensive one
+and turn an auditable decision into arithmetic nobody can check.
+
+| Consumer | `small` | `major` |
+|---|---|---|
+| `run_checks.py --scoped` | the suites `test_map` maps the changed paths to | refuses, exit 2 — run the full tier |
+| `no-slop --scope change` | sweeps only the changed files | `--scope repo`, the stage-5 cadence |
+| `code-review` | the changed files and their direct callers | the whole branch diff |
+
+Three rules keep "cheaper" from becoming "unmeasured", and they are the whole
+safety argument:
+
+- A scoped run prints **`PARTIAL PASS`, never `PASS`**, and names every suite it
+  skipped.
+- It **never moves `refs/uaios/green/<slug>`** — that ref means the full tier
+  passed, and `run_checks.py` contains no ref write at all.
+- An **unmapped** changed path escalates to the full tier rather than running
+  nothing, so the map's gaps fail safe.
+
+`undetermined` is read as `major` everywhere. Article V: a clause that could not
+be evaluated is not permission to check less. The `test_map` itself is a coverage
+*claim* — its shape is asserted, its judgement is not, and a wrongly-mapped path
+makes a change fast and under-checked with no symptom.
+
+## Safety rails added 2026-08-11
+
+Four mechanisms, each with a tool and a suite behind it rather than a paragraph:
+
+| | Command | What it refuses, or reports |
+|---|---|---|
+| **Kill switch** | `python tools/halt.py --halt "<reason>"` | While halted, `pre-run/01-halt-guard.py` DENIES every tool that changes state or spawns work. Reads stay allowed on purpose — a halt you cannot investigate is a lockout, not a stop. `--resume` lifts it |
+| **Agent file scope** | declared per agent as `allowed-paths:` | `pre-edit/02-agent-scope-guard.py` denies a write outside a dispatched agent's declared files. **Unscoped denies** — an unscoped write is the case it exists for |
+| **Licence and SBOM** | `python tools/deps.py [--sbom]` | A denied licence exits 1; one that could not be read exits 2. `0` ok, and undetermined is never ok |
+| **Release candidate** | `python tools/release_candidate.py --plan <plan>` | The report Gate 2 reads: wheel, rehearsal, licence, SBOM, risk tier, changed paths, and a **rollback that was executed** in a scratch repo |
+| **Budget** | `python tools/budget.py` | Turns and elapsed against a ceiling, from the ledger. Reports; never halts — that is the kill switch's job |
+
+**The chain ledger is the audit trail.** `.claude/hooks/state/chain-ledger.jsonl`
+is append-only: one row per turn with the derived state and the plan's ticked
+task count, plus `kind: "gate"` rows carrying each gate's decision and the user's
+reason verbatim. `python tools/chain.py --ledger` reads it back.
+
+**A stall needs three limbs, not two.** The state pinned, the tree churning, *and*
+the plan's progress flat. The first version had two and reported `stalled` through
+four turns of a healthy twelve-task execution — a detector nobody believes is
+worse than none.
 
 ## Artifacts and ownership
 
@@ -184,6 +288,21 @@ outward-facing and a repository, once public, can be indexed before it is delete
 The capability layer changed without a completed layer audit. Run the
 capability-layer-maintenance audit and the no-slop layer scan before delivery.
 [/state:layer-unreviewed]
+
+[state:chain-stalled]
+This unit's state has not advanced for several turns while its tree kept
+changing. That is the shape of a **missed handoff**: a stage finished and its
+successor was never invoked, which is silent by construction -- the turn ends,
+the checks are green, and a skipped stage looks exactly like a stage nothing
+needed.
+
+Read the stage table above, find the stage that owns the artefact that just
+changed, and invoke its stated successor. If the stage genuinely is still in
+progress, nothing is wrong and this will clear on the next transition.
+
+Nothing can force the handoff -- a hook cannot invoke a skill -- so this notice
+is the whole mechanism. Acting on it is yours.
+[/state:chain-stalled]
 
 [state:entry-unframed]
 This prompt names work with a done-state, and the **Entry** table above routes

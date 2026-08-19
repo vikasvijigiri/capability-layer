@@ -394,6 +394,235 @@ check("the hook names no skill in anything it emits", not _named, f"names {_name
 check("the loop never blocks the turn",
       '"decision"' not in _src and "block" not in _src.lower().split("deadlock")[0][-2000:])
 
+# --- Task 7: minimal-diff gate ----------------------------------------------
+#
+# The target says commits must be minimal-diff, mandatorily: every changed
+# path must be one TASK.md or the active plan names, or the commit is refused
+# with the unnamed paths printed -- a warning would be the one clause among
+# seven refusals that nobody reads.
+#
+# `_hooklib.declared_paths/minimal_diff_violations/minimal_diff_refusal` are
+# tested directly against `_hooklib` (already imported and registered in
+# `sys.modules` by `load()` above, since the hook module does
+# `from _hooklib import ...`) rather than through `mod.main()`. The pure
+# functions are worth testing directly whatever the hook does with them; the
+# wiring itself is asserted separately, further down, against the hook's source.
+
+_hooklib = sys.modules["_hooklib"]
+
+check("minimal_diff_violations is exposed",
+      hasattr(_hooklib, "minimal_diff_violations"))
+check("minimal_diff_refusal is exposed",
+      hasattr(_hooklib, "minimal_diff_refusal"))
+check("declared_paths is exposed", hasattr(_hooklib, "declared_paths"))
+
+check("a declared path is covered",
+      _hooklib.minimal_diff_violations(["tools/scope.py"], {"tools/scope.py"}) == [])
+# A bare DIRECTORY covers nothing. This assertion is inverted from what it
+# said when written, and the inversion is the fix: `tools/` covering
+# `tools/x.py` made a prose mention of a directory into a blanket declaration,
+# and twelve such tokens in this repo's plans turned the gate off completely.
+check("a bare directory does NOT cover the files under it",
+      _hooklib.minimal_diff_violations(["tools/scope.py"], {"tools/"})
+      == ["tools/scope.py"])
+# Declaring a directory on purpose still works -- as a glob, which somebody has
+# to type, rather than as a side effect of mentioning a path in a sentence.
+check("a declared glob still covers a directory deliberately",
+      _hooklib.minimal_diff_violations(["tools/scope.py"], {"tools/*"}) == [])
+check("a path matching a declared glob is covered",
+      _hooklib.minimal_diff_violations(
+          ["prisma/migrations/001/migration.sql"], {"**/migrations/*"}) == [])
+check("an undeclared path is a violation",
+      _hooklib.minimal_diff_violations(["src/unrelated.py"], {"tools/*"})
+      == ["src/unrelated.py"])
+check("only the undeclared paths are returned, declared order-preserved",
+      _hooklib.minimal_diff_violations(
+          ["tools/a.py", "src/b.py", "tools/c.py"], {"tools/*"}) == ["src/b.py"])
+
+# --- against the REAL harvested set, not a fixture ------------------------
+#
+# The one that would have caught it. Every assertion above drives a synthetic
+# `declared` set, and the defect lived in what `declared_paths()` actually
+# returns from this repository's own TASK.md and plans -- so all of them passed
+# while the running gate committed an undeclared file with no refusal.
+#
+# Anything asserted about the gate must therefore also be asserted against the
+# real input at least once.
+_real = _hooklib.declared_paths(root=ROOT)
+check("declared_paths harvests no bare directory token",
+      not [t for t in _real if t.endswith("/")],
+      str(sorted(t for t in _real if t.endswith("/"))[:8]))
+
+# --- the gate reads THIS unit's plan, never every plan ever written --------
+#
+# It read `docs/plans/*.md` wholesale until 2026-08-10, so a path any closed
+# unit had named stayed declared forever and every merged plan permanently
+# widened what may be committed unreviewed. The refusal text said "the active
+# plan" throughout, which is the defect class this repo names most: prose
+# asserting a scoping the wiring does not implement.
+_active = _hooklib.active_plans(ROOT)
+_all_plans = sorted(p for p in (ROOT / "docs" / "plans").glob("*.md")
+                    if p.name.lower() != "readme.md")
+check("active_plans selects a subset, not every plan",
+      len(_active) < len(_all_plans) or len(_all_plans) <= 1,
+      f"{len(_active)} of {len(_all_plans)} -- reading all of them is the defect")
+check("...and the refusal message's 'active plan' is now true",
+      "active plan" in (_hooklib.minimal_diff_refusal(["zz/undeclared.py"], _real) or ""))
+# Selection follows `tools/resume.py`: a `**Slug:**` declaration, then the
+# filename. Asserted as a pattern match rather than by importing resume, which
+# `_hooklib` must not depend on.
+check("the slug pattern matches what writing-plans emits",
+      bool(_hooklib.PLAN_SLUG.search("**Slug:** target-workflow\n")))
+check("a file no plan names is a violation against the REAL declared set",
+      _hooklib.minimal_diff_violations(
+          ["tools/_no_plan_names_this.py"], _real) == ["tools/_no_plan_names_this.py"],
+      f"{len(_real)} declared tokens covered a file nothing declares")
+check("...and the refusal names it",
+      "tools/_no_plan_names_this.py" in
+      (_hooklib.minimal_diff_refusal(["tools/_no_plan_names_this.py"], _real) or ""))
+
+# A file the active plan DOES name must still be committable, or the gate
+# refuses every turn and gets switched off.
+#
+# Only checkable where a plan exists. An installed layer ships no `docs/plans/`,
+# so `_real` there is the knowledge-doc floor and every source file is correctly
+# a violation -- which is why the running hook also requires a non-empty
+# declaration before applying the gate at all. Reporting that as a failure would
+# be asserting this repository's contents in somebody else's.
+_declared_beyond_floor = sorted(_real - set(_hooklib.KNOWLEDGE_DOCS))
+if not _declared_beyond_floor:
+    print("SKIP: no plan declares any path here -- the positive half of the "
+          "minimal-diff gate is unmeasured in this repository (the hook's own "
+          "guard is asserted separately, against the hook source)")
+else:
+    _sample = _declared_beyond_floor[0]
+    check("a file the plan names is still covered by the REAL declared set",
+          _hooklib.minimal_diff_violations([_sample], _real) == [],
+          f"the gate must not refuse the very files the plan declares: {_sample}")
+
+# The guard that makes the above safe: no declaration, no gate.
+_hooksrc = HOOK.read_text(encoding="utf-8")
+check("the hook applies the gate only when something is actually declared",
+      "KNOWLEDGE_DOCS" in _hooksrc and "_declared -" in _hooksrc,
+      "a source with zero declarations would otherwise refuse every turn")
+
+check("a clean diff refuses nothing",
+      _hooklib.minimal_diff_refusal(["tools/scope.py"], {"tools/*"}) is None)
+_mdmsg = _hooklib.minimal_diff_refusal(["src/unrelated.py"], {"tools/*"})
+check("an unrelated file is refused, not warned",
+      isinstance(_mdmsg, str) and "REFUSED" in _mdmsg, str(_mdmsg))
+check("the refusal prints the unnamed path",
+      isinstance(_mdmsg, str) and "src/unrelated.py" in _mdmsg, str(_mdmsg))
+check("many unnamed paths are truncated but the count is stated",
+      "6 path(s)" in (_hooklib.minimal_diff_refusal(
+          [f"x/{i}.py" for i in range(6)], set()) or ""))
+
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d4:
+    tmp4 = Path(d4)
+    # A real repo on a real branch. `declared_paths` now reads only the plan(s)
+    # belonging to THIS unit, resolved from the branch the way `tools/resume.py`
+    # resolves it -- so a fixture with no branch reads no plan at all, which is
+    # correct behaviour and useless as a fixture. Every plan below declares
+    # `**Slug:** work` to match.
+    new_repo(tmp4)
+    write(tmp4, "TASK.md",
+          "Prose naming `tools/prose_only.py` declares nothing.\n"
+          "- Modify: `tools/scope.py` — this one is a declaration\n")
+    (tmp4 / "docs" / "plans").mkdir(parents=True)
+    write(tmp4, "docs/plans/2026-08-10-x.md",
+          "**Slug:** work\n\n- Modify: `.claude/hooks/_hooklib.py`\n")
+    _declared = _hooklib.declared_paths(root=tmp4)
+    check("declared_paths reads a declaration line in TASK.md",
+          "tools/scope.py" in _declared)
+    # The fix, asserted from the other side: a path merely MENTIONED in prose is
+    # not declared. Harvesting every backtick is what made the gate inert.
+    check("...and ignores a path merely mentioned in prose",
+          "tools/prose_only.py" not in _declared, str(sorted(_declared)))
+    check("declared_paths reads docs/plans/*.md",
+          ".claude/hooks/_hooklib.py" in _declared)
+    # A root-level file is declarable. Requiring a `/` in the token was right
+    # for prose scanning and wrong on a declaration line: it silently made
+    # `CLAUDE.md`, `README.md` and `.gitignore` undeclarable, so the gate
+    # refused three files the plan explicitly named. Found by firing the hook.
+    write(tmp4, "docs/plans/2026-08-10-z.md",
+          "**Slug:** work\n\n- Modify: `CLAUDE.md` — policy\n"
+          "- Modify: `.gitignore` — ignore it\n")
+    _declared2 = _hooklib.declared_paths(root=tmp4)
+    check("a root-level file can be declared", "CLAUDE.md" in _declared2,
+          str(sorted(_declared2)))
+    check("...including a dotfile with no extension",
+          ".gitignore" in _declared2, str(sorted(_declared2)))
+    check("...while a bare directory still is not",
+          _hooklib.minimal_diff_violations(["docs/x.md"], _declared2)
+          == ["docs/x.md"])
+
+    # The File map TABLE is a declaration. `writing-plans` C2 calls it the
+    # frozen file map, and it is not always a subset of the per-task bullets:
+    # `.gitignore` was declared only there and was refused on that basis, while
+    # `README.md` looked covered purely because an unrelated older plan named
+    # it -- coverage right by accident, which is the hardest kind to notice
+    # going wrong.
+    write(tmp4, "docs/plans/2026-08-10-tbl.md",
+          "**Slug:** work\n\n"
+          "| File | Action | Responsibility |\n"
+          "|---|---|---|\n"
+          "| `src/only_in_table.py` | Create | nothing else names it |\n"
+          "| `a.md`, `b.md` | Modify | two in one row |\n")
+    _tbl = _hooklib.declared_paths(root=tmp4)
+    check("a File map table row declares its file",
+          "src/only_in_table.py" in _tbl, str(sorted(_tbl)))
+    check("...including every file in a multi-file row",
+          {"a.md", "b.md"} <= _tbl, str(sorted(_tbl)))
+    check("...while the Responsibility column is not harvested",
+          not [t for t in _tbl if " " in t], str(sorted(_tbl)))
+    check("declared_paths always covers the knowledge docs",
+          {"LOG.md", "HANDOFF.md", "TASK.md"} <= _declared)
+    check("declared_paths is silent, not raising, on a root with no plans dir",
+          isinstance(_hooklib.declared_paths(root=tmp4 / "nowhere"), set))
+
+# The gate is wired, and this assertion is the whole reason to keep it.
+#
+# It was written inverted -- "the running hook does NOT yet call the gate" --
+# by the agent that built the gate but was not permitted to wire it, its
+# declared files not including the hook. That is the correct behaviour and it
+# is why the inverted form existed: a gap asserted cannot be forgotten, where a
+# gap merely mentioned in a report can.
+#
+# The dispatcher then declared the file and wired it, so the assertion flips
+# rather than being deleted. A tested function nothing calls is prose with a
+# test suite attached, and that is the failure mode this repository names most
+# often: a document asserting what the wiring does not do.
+hook_src = HOOK.read_text(encoding="utf-8")
+check("the running hook calls the minimal-diff gate",
+      "minimal_diff_refusal(" in hook_src)
+check("...and speaks its refusal rather than committing anyway",
+      "speak(unrelated)" in hook_src)
+check("...and imports it from _hooklib rather than restating the rule",
+      "minimal_diff_refusal," in hook_src and "declared_paths," in hook_src)
+
+# The gate must not apply where nothing could declare a path. Ten end-to-end
+# cases below commit in a temp repo with no plan in it, and every one refused
+# when the gate was first wired -- this layer installs into repositories that
+# have never written a plan, and a gate that stops every checkpoint there is
+# not strict, it is broken.
+check("the hook checks a declaration source exists before applying the gate",
+      "declaration_sources(REPO_ROOT)" in hook_src)
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as _dn:
+    _bare = Path(_dn)
+    check("a repo with no TASK.md and no plans has no declaration source",
+          _hooklib.declaration_sources(root=_bare) == [],
+          str(_hooklib.declaration_sources(root=_bare)))
+    write(_bare, "TASK.md", "Goal: something\n")
+    check("...and a TASK.md alone is a source",
+          _hooklib.declaration_sources(root=_bare) == ["TASK.md"],
+          str(_hooklib.declaration_sources(root=_bare)))
+    (_bare / "docs" / "plans").mkdir(parents=True)
+    write(_bare, "docs/plans/2026-08-10-y.md", "- Modify: `tools/x.py`\n")
+    check("...as is a plan, and both are listed",
+          _hooklib.declaration_sources(root=_bare) ==
+          ["TASK.md", "docs/plans/2026-08-10-y.md"],
+          str(_hooklib.declaration_sources(root=_bare)))
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

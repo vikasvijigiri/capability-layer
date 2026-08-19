@@ -6,6 +6,249 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-11 22:05 — Local green, CI red: the rot detector flagged a gitignored file
+
+- **Phase/Context**: the first CI run this branch has ever had, immediately
+  after its first push. Local full tier had been `PASS: 49 check(s) green`.
+- **Symptom**: `lint · typecheck · test` failed in CI in 26s —
+  `test_memory.py: FAIL: it is clean of path rot and count rot right now --
+  stale=[{'source': 'MEMORY.md', ... '.claude/settings.loc...`
+- **Diagnosis**: `MEMORY.md` names `.claude/settings.local.json`, which is
+  **gitignored** (`.gitignore:16`). It exists on a developer machine and is
+  absent from a fresh checkout, so `_definitely_missing` correctly found it
+  missing — in CI only. The assertion "the real tree is clean of rot" was
+  environment-dependent, and no local run could ever have caught it.
+- **Attempts**:
+  - 1. Reproduced in a clean clone of the pushed branch, where the file is
+    genuinely absent — the same condition CI runs in.
+  - 2. Skip a path that `git check-ignore` claims. A deliberately ignored file
+    is not rot; it is a file the repository has decided not to track.
+- **Fix**: `_definitely_missing` consults `git check-ignore -q` and returns
+  False for an ignored path. A git that cannot run yields no opinion rather
+  than a false positive. Verified in the clean clone: `All memory tests passed
+  (210 entries)` with the file absent.
+- **Status**: `Resolved`. Fourth calibration of this detector, and the first
+  that was environment-dependent rather than pattern-dependent — which is
+  precisely the class only CI can find.
+
+## 2026-08-11 21:45 — WAITING_DELIVERY is unreachable when commits are made by hand
+
+- **Phase/Context**: after `knowledge-manager` closed the unit, the chain
+  instrument was still reporting `stalled` — on a unit that was finished.
+- **Symptom**: `resume.py` derives `BUILD` for a branch where every fact
+  `WAITING_DELIVERY` requires is true: `plan_tasks_done=True`,
+  `commits_ahead=18`, `pr_number=None`. The state Task 1 built for exactly this
+  situation never fires.
+- **Diagnosis**: `derive_state` returns `BUILD` at `resume.py:496` —
+  `if green is None: return "BUILD"` — before it ever reaches the
+  `WAITING_DELIVERY` branch at :499. `checks_green` is `None` because it is read
+  from `refs/uaios/green/<slug>`, and **only `post-run/06-artifact-autocommit.py`
+  ever writes that ref**, at the end of a successful auto-commit.
+
+  This unit's commits were made by hand. The auto-commit additionally refused
+  several turns outright — correctly — on the minimal-diff gate, because
+  undeclared files were in the tree. So the green ref for `checklist-completion`
+  was never set: `git for-each-ref refs/uaios/green/` lists five slugs and not
+  this one.
+
+  The chain then compounds it. Pinned `BUILD` + a churning tree + flat progress
+  is precisely the three-limb stall condition, so the instrument reported a
+  missed handoff on every turn after the plan finished — correctly, by its own
+  rule, about a unit that had none.
+- **Attempts**: none — this is a fifth mechanism-does-not-fire finding in one
+  session and belongs in a plan, not in an ad-hoc edit to the state machine.
+  `tools/resume.py` is a control surface: `scope.py` tiers a change touching it
+  `high`.
+- **Fix**: not applied. Three shapes are open and the choice is not obvious:
+  derive `checks_green` from a fresh check run rather than from the ref; let
+  `WAITING_DELIVERY` be reachable on `green is None` since an unverified branch
+  still awaits a delivery decision; or have something other than the auto-commit
+  move the ref. Each changes what a *different* consumer sees.
+- **Correction, same day**: the state machine is **not** broken. Setting the
+  ref by hand — `git update-ref refs/uaios/green/checklist-completion HEAD`,
+  after confirming a clean tree and `PASS: 44 check(s) green`, which is exactly
+  the hook's own precondition — makes `resume.py` report
+  `state=WAITING_DELIVERY ... next=human: a delivery decision is owed` and the
+  chain report `waiting`, exit 0. Task 1's mechanism is correct and now proven
+  end to end for the first time.
+
+  The real defect is narrower and worth stating precisely: **`refs/uaios/green/`
+  has exactly one writer**, and it is the auto-commit hook. Any unit whose
+  commits are made by hand — or whose auto-commit refuses once, which the
+  minimal-diff gate is designed to do — never gets a green ref, and then every
+  state downstream of `checks_green` is wrong for the rest of that unit's life.
+- **Status**: `Open` — narrowed. The fifth item in `HANDOFF.md` Pending, and it
+  is about the ref's single writer, not about `derive_state`.
+
+## 2026-08-11 20:10 — The first gate could not be asked, and its guard passed
+
+- **Phase/Context**: presenting a finished plan at Gate 1, hours after Gate 1
+  was changed from `AskUserQuestion` to `ExitPlanMode`.
+- **Symptom**: `ExitPlanMode` refused outright — *"You are not in plan mode. To
+  enter plan mode, call the EnterPlanMode tool first."* The same change had
+  removed `AskUserQuestion` from `writing-plans` and added an assertion
+  forbidding it, so **the chain's first gate had no working mechanism** unless
+  the session happened to already be in plan mode.
+- **Diagnosis**: two compounding errors. The gate depended on a mode nothing
+  entered; and `references/plan-mode.md`, written to explain the gate, asserted
+  *"There is no tool for it"* about entering plan mode. `EnterPlanMode` exists —
+  the refusal message names it. The guard passed the whole time because it
+  checked the tool was **named in the file**, not that the gate was
+  **reachable**. Presence is not reachability.
+- **Attempts**:
+  - 1. Called `ExitPlanMode` to present the plan → refused, which is how the
+    defect surfaced at all.
+  - 2. Read `EnterPlanMode`'s actual contract → it exists, it raises its own
+    consent prompt, and it recommends `AskUserQuestion` for *clarifying* inside
+    plan mode. So the blanket ban was over-tight as well as load-bearing.
+- **Fix**: `writing-plans` calls `EnterPlanMode` itself at Stage C, so planning
+  happens in plan mode without anyone selecting it. The ban narrowed from the
+  tool to the approval: Gate 1's approval is `ExitPlanMode` only, a
+  clarification may use `AskUserQuestion`. The assertion now checks
+  reachability, and a further one fails if the false sentence returns. The
+  quotation of it survives in a blockquote, and the checker excludes
+  blockquoted lines so recording an error is not itself an error.
+- **Status**: `Resolved`
+
+## 2026-08-11 19:05 — A licence gate that let every denied licence through
+
+- **Phase/Context**: first run of `tools/deps.py`'s own suite, immediately after
+  writing it.
+- **Symptom**: every one of the five denied families reported `ok`. `AGPL-3.0`,
+  `GPL-3.0`, `SSPL`, `BUSL` and `CC-BY-NC` all passed a denylist naming them.
+- **Diagnosis**: the tokeniser's character class was `[A-Za-z0-9.+-]+`, which
+  **includes the hyphen**, so `AGPL-3.0` stayed a single token and never equalled
+  `AGPL`. The gate would have shipped green and enforced nothing.
+- **Attempts**:
+  - 1. Substring matching (`"GPL" in licence`) → rejected before writing: it
+    matches `LGPL-2.1`, which is permitted, and the fix people reach for is a
+    blanket exception that then covers the licences that should block.
+  - 2. Tokenise on non-alphanumerics → breaks `CC-BY-NC`, whose own name is
+    hyphenated.
+  - 3. Match the denied name where it is not flanked by a **letter** → correct in
+    both directions: `GPL` blocks `GPL-3.0`, does not block `LGPL-2.1`, and
+    `AGPL` matches its own entry.
+- **Fix**: `_denies()` with a letter-boundary lookaround, and both directions
+  asserted. The suite caught this before any commit, which is the whole argument
+  for writing the failing case first.
+- **Status**: `Resolved`
+
+## 2026-08-11 18:40 — The stall detector cried wolf on a healthy execution
+
+- **Phase/Context**: executing a twelve-task plan, rounds landing normally.
+- **Symptom**: `chain: stalled` on four consecutive turns while every round was
+  green and committing.
+- **Diagnosis**: `assess()` read two facts — has the state changed, has the tree
+  changed — and a long plan legitimately sits in `BUILD` for many turns while
+  files change constantly. A healthy execution and a dropped handoff are
+  identical under that rule. The instrument was reporting a false break on the
+  very run that built it, which is the failure its own suite warns about: a
+  detector nobody believes is worse than none.
+- **Attempts**:
+  - 1. Raising `STALL_TURNS` → rejected: it delays the true positive by exactly
+    as much as it suppresses the false one.
+  - 2. Adding a third limb from a signal already on disk — the plan's ticked
+    `## Progress` boxes. A rising count is proof of advance whatever the state
+    machine says.
+- **Fix**: a stall now requires the state pinned **and** the tree churning
+  **and** progress flat. Each limb has its own case. An absent plan yields
+  `None`, not `0`, and falls back to the two-limb rule — no plan is not evidence
+  of no progress. It then stayed quiet through five further rounds and fired
+  correctly once the plan finished with its successor un-invoked.
+- **Status**: `Resolved`
+
+## 2026-08-11 21:15 — The incident report about corrupt bytes contains corrupt bytes
+
+- **Phase/Context**: `code-review` over the whole branch, running a byte scan
+  across every changed file.
+- **Symptom**: two literal `0x08` bytes at `ISSUES.md:4245` and `:4317` — inside
+  the 2026-08-10 entry that documents literal `0x08` bytes.
+- **Diagnosis**: that entry was written through a bash heredoc, and describing
+  the bug required writing the escape sequence that causes it. The heredoc
+  converted it exactly as it had in the original defect. The report reproduced
+  the failure it reports.
+- **Attempts**: none yet.
+- **Fix**: none yet. It is documentation corruption rather than a behavioural
+  defect, so it was recorded rather than repaired mid-review — a reviewer that
+  edits produces a verdict covering a tree that no longer exists.
+- **Status**: `Open` — grouped with three other follow-ups in `HANDOFF.md`.
+
+## 2026-08-10 18:30 — A commit gate passed 76 assertions while doing nothing
+
+- **Phase/Context**: `verifying-work` on the target-workflow plan, immediately
+  after `code-review` returned `passed: true` on the minimal-diff gate.
+- **Symptom**: none. That is the whole entry. The gate reported nothing, the
+  suite was green, and an undeclared file committed cleanly.
+- **Diagnosis**: `_hooklib.declared_paths` harvested every backticked token
+  containing `/` from `TASK.md` and the plans. Plan prose mentions directories,
+  so `.claude/`, `tools/` and `decisions/` all became declarations, and
+  directory-prefix matching then covered the whole repository.
+  `minimal_diff_violations(["tools/_probe.py"], declared)` returned `[]`.
+  Every test drove a synthetic declared set like `{"tools/scope.py"}`; not one
+  used what the function actually returns. Found by firing the hook against one
+  deliberately unrelated file, which committed it (`a737818` -> `7de48bc`).
+- **Attempts**:
+  - 1. Drop directory-shaped tokens → still inert: `tools/**` and `.claude/**`
+    survived, harvested out of a *reason clause* after an em-dash.
+  - 2. Cut the reason clause before reading backticks → correct, then
+    over-refused: the `/` requirement meant no root-level file could ever be
+    declared, so `CLAUDE.md`, `README.md` and `.gitignore` were all refused
+    while the plan declared all three.
+  - 3. Drop the `/` requirement on a declaration line → correct.
+  - 4. Parse only `- Create:` / `- Modify:` / `**Files:**` lines instead of
+    scanning prose → the shape the plan format already defines. 173 harvested
+    tokens became 44, zero directories, zero blanket globs.
+- **Fix**: declarations come from declaration lines with the reason clause
+  removed; directory-prefix coverage is gone (an explicit glob still works); the
+  gate applies only where something is actually declared, so a repo with no plan
+  is not blocked. Live: `Auto-commit REFUSED: ... tools/_minimal_diff_probe.py`
+  with HEAD unmoved. A later hardening narrowed it further to the *active*
+  plan -- reading `docs/plans/*.md` wholesale meant every merged plan
+  permanently widened what could be committed unreviewed.
+- **Status**: `Resolved`
+
+## 2026-08-10 18:20 — A reporting hook cost 5.2 seconds of every turn
+
+- **Phase/Context**: `code-review` over the whole branch, reviewing
+  `post-run/08-chain-continuity.py` written earlier the same session.
+- **Symptom**: nothing visible. The hook worked correctly and was registered on
+  every turn.
+- **Diagnosis**: it calls `chain.gather`, which calls `resume.gather_facts`,
+  which makes two `gh pr list` network calls. `time` on the hook: `real
+  0m5.170s`. With `_gh_json` stubbed: `real 0m1.005s`, and the derived state was
+  identical (`BUILD`) either way — stall detection turns on whether the state
+  *moved*, never on which state it is.
+- **Attempts**:
+  - 1. Looked for an existing offline flag on `resume.gather_facts` → none.
+  - 2. Made `chain.gather(offline=True)` the default, stubbing only the network
+    probe → 1.3s.
+- **Fix**: offline by default, with the reason at the seam. Two assertions now
+  pin it: the default must be `True`, and elapsed time must stay under 3s.
+  Nothing had ever measured hook runtime, which is why a 5s regression could
+  ship green.
+- **Status**: `Resolved`
+
+## 2026-08-10 17:50 — Two regexes silently corrupted by a literal 0x08 byte
+
+- **Phase/Context**: building `tools/memory.py`'s count-rot check via a bash
+  heredoc.
+- **Symptom**: `COUNT_CLAIM.findall("has 22 skills and 10 agents")` returned
+  `[]` while the same pattern typed directly matched both. `grep` showed the
+  pattern as correct.
+- **Diagnosis**: the heredoc turned an intended `` into an actual backspace
+  byte. `repr(pattern)` ended `...(suites?)` — invisible to `grep`, and it
+  silently anchored the pattern to a character that never appears.
+- **Attempts**:
+  - 1. Rewrite the line through another heredoc → same corruption.
+  - 2. Build the backslash as `chr(92)` → fixed `COUNT_CLAIM`, but a second
+    constant on an adjacent line kept its own two bad bytes.
+  - 3. Byte-level scan of every changed file during `code-review` → found the
+    survivor in dead code that nothing referenced.
+- **Fix**: the corrupt constant was deleted (it was unused), and the live one is
+  built without heredoc escaping. A byte scan for control characters is now part
+  of reviewing a diff here.
+- **Status**: `Resolved`
+
 ## 2026-08-09 19:30 — uninstall deleted a file outside the target
 
 - **Phase/Context**: `code-review` of the `uninstall` verb, after three

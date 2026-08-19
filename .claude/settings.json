@@ -44,11 +44,26 @@
             "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-run/07-layer-drift.py\"",
             "statusMessage": "Checking capability-layer drift..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-run/08-chain-continuity.py\"",
+            "statusMessage": "Recording chain state..."
           }
         ]
       }
     ],
     "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-run/01-halt-guard.py\"",
+            "statusMessage": "Checking for a halt..."
+          }
+        ],
+        "matcher": "Bash|PowerShell|Edit|Write|NotebookEdit|Task"
+      },
       {
         "matcher": "Bash|PowerShell",
         "hooks": [
@@ -81,6 +96,11 @@
             "type": "command",
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-edit/01-forbidden-change-guard.py\"",
             "statusMessage": "Checking the target is not generated or vendored..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-edit/02-agent-scope-guard.py\"",
+            "statusMessage": "Checking agent write scope..."
           }
         ]
       }

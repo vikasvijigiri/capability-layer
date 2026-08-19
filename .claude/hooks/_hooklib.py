@@ -686,6 +686,247 @@ def failure_signature(detail: str) -> str:
 LAYER_MANIFEST = ".claude/layer-manifest.json"
 
 
+# --- minimal-diff gate -------------------------------------------------------
+#
+# Task 7 (docs/plans/2026-08-10-target-workflow.md): the target says every
+# auto-commit must be minimal-diff, mandatorily, and nothing enforced it.
+# "Minimal" means no unrelated file, not "few lines" -- a forty-file
+# formatting sweep is not minimal, a hundred-line change in one file is.
+#
+# The check: every changed path is one the current TASK.md or the active plan
+# names, or it is refused and the unnamed paths are printed. Resolved at the
+# plan's own Gate 1 as refuse-and-name, not warn: a warning would be the one
+# clause among seven refusals that nobody reads, and the specification called
+# this mandatory.
+#
+# KNOWLEDGE_DOCS are always covered without being individually spelled out in
+# a plan -- a checkpoint routinely touches LOG.md/HANDOFF.md/etc regardless of
+# which plan is active, and making every plan restate that would be noise the
+# gate itself would have to read past.
+
+
+def declaration_sources(root=None) -> list:
+    """The files that could declare a path: `TASK.md` and `docs/plans/*.md`.
+
+    Separate from `declared_paths` because "no source exists" and "sources exist
+    and name nothing" are different facts, and collapsing them disables the
+    auto-commit outright in every repository that has no plan. `declared_paths`
+    always returns at least `KNOWLEDGE_DOCS`, so it cannot answer this on its
+    own -- an empty declaration is indistinguishable from an absent one once the
+    floor is added.
+
+    Found the same turn the gate was wired, by ten end-to-end cases that commit
+    in a temp repo with no plan in it. Every one refused. This layer installs
+    into repositories that have never written a plan, and a gate that stops
+    every checkpoint there is not strict, it is broken.
+    """
+    root = Path(root) if root else HOOKS_DIR.parents[1]
+    found = []
+    if (root / "TASK.md").is_file():
+        found.append("TASK.md")
+    plans_dir = root / "docs" / "plans"
+    if plans_dir.is_dir():
+        found.extend(f"docs/plans/{p.name}" for p in sorted(plans_dir.glob("*.md")))
+    return found
+
+
+# A declaration line, as `writing-plans` emits them and `parallel_groups.py`
+# parses them:
+#
+#     - Create: `tools/worktree.py` -- what it is for
+#     - Modify: `tools/run_checks.py:main` -- what changes
+#     **Files:** `a.py`, `b.py`
+#
+# Deliberately NOT "any backtick containing a slash". That was the first
+# implementation and it made the gate inert: plan prose mentions directories,
+# recursive globs and even shell one-liners containing slashes, and each became
+# a blanket declaration covering everything beneath it -- so an undeclared file
+# committed with no refusal at all. Every test passed throughout, because each
+# drove a synthetic declared set rather than what this function returns.
+#
+# Parsing the declaration SHAPE means a file counts only where somebody wrote it
+# down as a file the work touches, which is what the plan format already says.
+DECLARE_LINE = re.compile(
+    r"(?im)^\s*[-*]\s*(?:create|modify|delete|move|rename|add)\s*:\s*(.+)$")
+FILES_INLINE = re.compile(r"(?im)^\s*\**files?\**\s*:\s*\**\s*(.+)$")
+
+# The File map TABLE, which `writing-plans` C2 calls the frozen file map:
+#
+#     | `tools/worktree.py` | Create | what it owns afterwards |
+#     | `README.md`, `.gitignore` | Modify | suite count; ignore the holder |
+#
+# Parsed because it is the canonical list and the per-task bullets are not
+# always a superset of it. `.gitignore` was declared ONLY here and was refused
+# on that basis, while `README.md` looked covered purely because an unrelated
+# older plan happened to name it -- coverage that is right by accident is the
+# thing hardest to notice going wrong.
+TABLE_ROW = re.compile(
+    r"(?im)^\s*\|([^|]+)\|\s*(?:create|modify|delete|move|rename|add)\b[^|]*\|")
+
+# `**Slug:** target-workflow` -- the same declaration `tools/resume.py` keys
+# every derived fact off. Duplicated as a pattern rather than imported because
+# `_hooklib` is loaded by hooks and must not depend on `tools/`; the string it
+# matches is the contract, and `test_artifact_autocommit.py` pins the two
+# together.
+PLAN_SLUG = re.compile(r"(?im)^\*\*Slug:\*\*\s*`?([a-z0-9][a-z0-9._-]*)`?\s*$")
+BRANCH_PREFIXES = ("feat/", "fix/", "docs/", "chore/", "refactor/")
+
+
+def active_plans(root) -> list:
+    """The plan(s) belonging to THIS unit of work, newest first. Never all of them.
+
+    The gate read every `docs/plans/*.md` until this was written, so a path any
+    past plan had ever named stayed declared forever -- `capability_layer/cli.py`
+    was declared by a closed unit from a different week. Every merged plan
+    widened what may be committed unreviewed, and the refusal text said "the
+    active plan" while the code meant "any plan": prose asserting a scoping the
+    wiring did not implement.
+
+    Belonging is decided the way `tools/resume.py` decides it, in the same
+    order: a `**Slug:**` declaration first, then the filename convention. The
+    filename alone breaks the moment a plan is named after a feature while the
+    branch is named after something else, which has happened here.
+
+    An empty result is correct and safe: the caller then has only `TASK.md`, and
+    the auto-commit applies no minimal-diff gate at all when nothing beyond the
+    knowledge docs is declared. Falling back to "all plans" would restore the
+    defect exactly.
+    """
+    plans_dir = Path(root) / "docs" / "plans"
+    if not plans_dir.is_dir():
+        return []
+    candidates = sorted((p for p in plans_dir.glob("*.md")
+                         if p.name.lower() != "readme.md"), reverse=True)
+    branch = current_branch(root) or ""
+    for prefix in BRANCH_PREFIXES:
+        if branch.startswith(prefix):
+            branch = branch[len(prefix):]
+            break
+    if not branch:
+        return []
+
+    declared_match = []
+    for path in candidates:
+        try:
+            head = path.read_text(encoding="utf-8", errors="ignore")[:4000]
+        except OSError:
+            continue
+        found = PLAN_SLUG.search(head)
+        if found and found.group(1) == branch:
+            declared_match.append(path)
+    if declared_match:
+        return declared_match
+    return [p for p in candidates if branch in p.name]
+
+
+def declared_paths(root=None) -> set:
+    """Repo-relative paths a plan or `TASK.md` DECLARES that the work touches.
+
+    Only declaration-shaped lines count -- see `DECLARE_LINE`. Unreadable or
+    absent sources contribute nothing rather than raising: a missing plan must
+    not silently widen what counts as declared, which would defeat the gate in
+    exactly the case it exists for.
+
+    A trailing `:symbol` is stripped (`run_checks.py:main` declares the file), a
+    bare directory is ignored, and a token carrying whitespace is a sentence or
+    a shell command rather than a path.
+    """
+    root = Path(root) if root else HOOKS_DIR.parents[1]
+    texts = []
+    task_md = root / "TASK.md"
+    if task_md.is_file():
+        try:
+            texts.append(task_md.read_text(encoding="utf-8", errors="ignore"))
+        except OSError:
+            pass
+    for p in active_plans(root):
+        try:
+            texts.append(p.read_text(encoding="utf-8", errors="ignore"))
+        except OSError:
+            pass
+    declared: set = set()
+    for text in texts:
+        values = [m.group(1) for m in DECLARE_LINE.finditer(text)]
+        values += [m.group(1) for m in FILES_INLINE.finditer(text)]
+        values += [m.group(1) for m in TABLE_ROW.finditer(text)]
+        for value in values:
+            # Cut the reason clause first. The plan format is
+            #
+            #     - Create: `MANIFEST.in` — sdist inclusion for `.claude/**`
+            #
+            # and everything after the dash is prose that may itself contain
+            # backticked paths. Taking the whole line harvested `.claude/**` and
+            # `tools/**` out of one reason and re-inerted the gate -- the second
+            # time the same defect appeared in a different disguise.
+            value = re.split(r"\s+(?:—|–|--)\s+|\s+#\s+", value, maxsplit=1)[0]
+            for raw in re.findall(r"`([^`\n]+)`", value):
+                token = raw.strip().rstrip(",;.").replace("\\", "/")
+                if not token or " " in token or "\t" in token:
+                    continue          # a sentence or a shell command, not a path
+                token = token.split(":", 1)[0]   # `file.py:symbol` declares the file
+                # No `/` requirement. A slash was the only signal that a
+                # backtick in PROSE was a path; on a declaration line the line
+                # itself is the signal, and demanding one meant no root-level
+                # file could ever be declared -- `CLAUDE.md`, `README.md` and
+                # `.gitignore` were refused while the plan declared all three.
+                # Caught by firing the hook, not by the suite.
+                if not token or token.endswith("/"):
+                    continue          # a directory is not a file
+                declared.add(token)
+    return declared | set(KNOWLEDGE_DOCS)
+
+
+def minimal_diff_violations(paths, declared) -> list:
+    """`paths` covered by no entry in `declared`, in `paths`' own order.
+
+    Covered means an **exact** match or an fnmatch glob (`.claude/hooks/**`).
+    Pure -- the caller gathers `paths` and `declared` itself (typically from
+    `changed_paths()` and `declared_paths()`), which keeps this testable
+    without touching a filesystem.
+
+    **Directory-prefix coverage was removed**, and that is the whole fix: with
+    it, a declared `tools/scope.py` was fine but a prose mention of `tools/`
+    silently covered every file in the tree. Declaring a directory on purpose is
+    still possible and now has to be said explicitly, as a glob -- `tools/*` or
+    `.claude/hooks/**` -- which is a thing somebody types rather than a thing
+    prose does by accident.
+    """
+    import fnmatch
+    out = []
+    for p in paths:
+        norm = str(p).replace("\\", "/")
+        covered = False
+        for d in declared:
+            if norm == d:
+                covered = True
+                break
+            if ("*" in d or "?" in d) and fnmatch.fnmatch(norm, d):
+                covered = True
+                break
+        if not covered:
+            out.append(p)
+    return out
+
+
+def minimal_diff_refusal(paths, declared) -> str | None:
+    """The refusal message for an unrelated file, or None when the diff is clean.
+
+    Formatted the way every other gate in `post-run/06-artifact-autocommit.py`
+    speaks a refusal -- a REFUSED message naming what tripped it -- so a
+    caller can `speak()` it verbatim once wired in.
+    """
+    unnamed = minimal_diff_violations(paths, declared)
+    if not unnamed:
+        return None
+    shown = unnamed[:5]
+    more = f" ...and {len(unnamed) - 5} more" if len(unnamed) > 5 else ""
+    return (f"Auto-commit REFUSED: this turn touches {len(unnamed)} path(s) "
+            f"named by neither TASK.md nor the active plan -- "
+            f"{', '.join(shown)}{more}. Minimal-diff is mandatory: name the "
+            f"file in the plan, or stop touching it. {len(paths)} file(s) "
+            f"left uncommitted.")
+
+
 def layer_paths(root):
     """The repo-relative posix paths this layer installed, or an empty set.
 

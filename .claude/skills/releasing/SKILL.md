@@ -15,6 +15,39 @@ At the shipment gate, present the release candidate, smoke evidence, rollback,
 and target, then use `AskUserQuestion` for the single explicit shipment
 approval. Do not ask for approval earlier in the workflow.
 
+**Bring the release candidate report.** It is what this gate reviews:
+
+    python tools/release_candidate.py --plan <plan>
+
+Wheel version and hash, the target repository's own tier, the SBOM, the licence
+verdict, the risk tier, the changed-path count, and **the rollback result** —
+which comes from an uninstall that actually ran in a scratch repo, not from a
+paragraph promising one. Exit `0` ready · `1` a check failed · `2` a fact could
+not be determined, and **2 is not 0**: a candidate with an unestablished fact is
+not one anybody can approve.
+
+Slow by design — it builds a wheel and a virtualenv. Run it before opening the
+gate, not during.
+
+**Show the risk tier in the question**, from
+`python tools/scope.py --plan <plan>` — `0` low, `1` medium, `2` high, with the
+clause that forced it. A reader deciding whether to ship needs to know that this
+change touches a migration or the installer, and that fact is computed rather
+than remembered.
+
+**Record the decision**, whichever way it went:
+
+    python tools/chain.py --gate 2 --decision ship|hold|reject --reason "<their words>"
+
+Same ledger, same shape as Gate 1, reason verbatim. A shipment decision that
+exists only in a transcript is not a record anybody can audit afterwards.
+
+**The tier never waives this gate.** A low-risk shipment still asks. Nothing in
+this layer may push, merge, publish or deploy on an inferred yes, and a tier
+computed by the system that wants to ship is not the thing that gets to waive
+the one rule with no exceptions. The tier decides what the question **shows**,
+never whether it is **asked**.
+
 Offer ship, hold, and reject as real options, and **say in the question that
 hold and reject take the reason as free text** — the tool appends its own
 "Other" for that; never add one. Record the answer verbatim, including anything
