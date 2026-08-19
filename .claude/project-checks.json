@@ -81,6 +81,7 @@
     "tools/budget.py": "python tools/test_budget.py",
     "tools/release_candidate.py": "python tools/test_release_candidate.py",
     "tools/security_gate.py": "python tools/test_security_gate.py",
+    "pyproject.toml": "python tools/test_package.py",
     ".github/workflows/**": "python tools/test_ci_shape.py",
     "LOG.md": "python tools/test_doc_entries.py",
     "ISSUES.md": "python tools/test_doc_entries.py",

@@ -9,7 +9,10 @@ carry state between sessions. There is no application code here.
 **This file is a bootloader.** Point at the thing that owns the work; never
 restate it. History belongs in `LOG.md`, decisions in `decisions/`. It loads on
 every session, so every paragraph is paid for on every session — prefer a
-pointer to a paragraph.
+pointer to a paragraph. The line above, `@AGENTS.md`, is that paragraph for the
+harness-neutral base: it loads the operating contract every host follows
+inline, so nothing here restates what `AGENTS.md` and `harnesses.json` already
+say. `tools/test_harness_contract.py` fails if this file stops importing it.
 
 ---
 
@@ -93,6 +96,9 @@ before declaring work done — it resolves every kind and names any it skipped.
 
 `ls .claude/` answers most of this. Only the parts a listing gets wrong:
 
+- **`AGENTS.md`, `harnesses.json`, and `docs/harness-hook-bridge.md`** aren't
+  under `.claude/` at all, so a listing of it won't show them — `@AGENTS.md`
+  above already loaded the first; it names the other two.
 - **`.claude/workflow.md`** owns the chain and its invariants;
   **`.claude/operating.md`** the commit loop, tiers, failure budgets and
   gotchas. Those two carry what used to be here.

@@ -64,5 +64,5 @@ path = "hatch_build.py"
 include = ["capability_layer", ".claude", "tools", "AGENTS.md", "harnesses.json",
            "hatch_build.py",
            "ruff.toml", "mypy.ini", "README.md", "templates/target-CLAUDE.md",
-           "docs/pilots", "docs/baselines", "CODEOWNERS",
+           "docs/pilots", "docs/baselines", "docs/harness-hook-bridge.md", "CODEOWNERS",
            ".github/workflows/checks.yml"]

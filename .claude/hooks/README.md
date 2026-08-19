@@ -9,6 +9,11 @@ routing decision. Skills trigger from their own `description:`.
 the only thing that actually fires them. This file does
 not restate either; it says what a hook author needs that is not in those two.
 
+This file is for someone *writing* a hook for Claude Code. Someone *bridging*
+these hooks into a different host (Codex, Gemini, VS Code agent) needs
+`../../docs/harness-hook-bridge.md` instead — the invocation contract, not the
+authoring one.
+
 Until 2026-08-03 this README carried its own event list. It named six events with
 no directory on disk (`on-validate-fail`, `on-blueprint-promote`,
 `on-human-approval-request`, `on-deploy-failure`, `on-error`, plus a
