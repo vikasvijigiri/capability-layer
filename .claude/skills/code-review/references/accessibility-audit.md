@@ -41,7 +41,8 @@ manual test case for each fix.
 
 ## Next step
 
-Hand UI fixes to `test-driven-development` and `designer`; hand final evidence
+Hand UI fixes to `designer`, built test-first per
+`.claude/skills/executing-plans/references/test-driven-development.md`; hand final evidence
 to `verifying-work` and `code-review`.
 
 ## Routing

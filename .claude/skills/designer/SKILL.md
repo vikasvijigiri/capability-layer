@@ -1,7 +1,7 @@
 ---
 name: designer
-description: Decide a surface's visual and interaction rules, and write them into DESIGN.md. Triggers include "design this screen", "what should this look like", "set up a design system", "pick the colors", "make this look better", "our UI is inconsistent", "define the color tokens". Do NOT use to build the screen (executing-plans), sweep a finished repo (no-slop), or choose between product approaches (brainstormer). Use this whenever work touches a user-facing surface with no design contract.
-when_to_use: when a product surface needs a coherent design system or visual/UX audit
+description: Decide a surface's visual and interaction rules, writing them into DESIGN.md. Colour tokens, typography, spacing, component states, motion and the accessibility contract. Triggers include "design this screen", "design this page", "what should this look like", "make this look better", "make it prettier", "our UI is inconsistent", "set up a design system", "define the design tokens", "pick the colors", "choose a font", "improve the UX", "this feels off". Do NOT use to build the screen (executing-plans), to sweep a finished repository (no-slop), or to choose between product approaches (brainstormer). Use this whenever work touches a user-facing surface with no design contract.
+when_to_use: Trigger when the user says design this screen, design this page, what should this look like, make this look better, make it prettier, make it look professional, our UI is inconsistent, set up a design system, define the design tokens, pick the colors, choose a font, improve the UX, or this feels off.
 allowed-tools: Read Grep Glob
 effort: high
 model: sonnet

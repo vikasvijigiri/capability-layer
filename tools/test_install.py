@@ -119,9 +119,10 @@ check("the stub does NOT decide `test` for the target",
       "a passing one are different facts, and the auto-commit distinguishes them")
 check("...but it says so in the file itself", "_first_decision" in stub)
 
-check("CLAUDE.md is not created for a target that has none",
-      not (target / "CLAUDE.md").exists(),
-      "a copied CLAUDE.md asserts this repo's facts about another repo")
+check("a missing CLAUDE.md gets a portable bootloader",
+      (target / "CLAUDE.md").is_file()
+      and "@AGENTS.md" in (target / "CLAUDE.md").read_text(encoding="utf-8"),
+      "Claude must load the universal contract in a fresh target")
 
 registered = json.loads((target / ".claude" / "settings.json").read_text(encoding="utf-8"))
 source_settings = json.loads(
@@ -404,8 +405,12 @@ check("an existing mypy.ini is NOT overwritten",
       "strict = True" in (cfg / "mypy.ini").read_text(encoding="utf-8"))
 
 seeded = fresh_repo()
+# Python of its own, and no lint configuration -- which is the case this seed
+# exists for. A repo with NO Python is a different case and must not be seeded
+# at all; that one is asserted further down.
+(seeded / "app.py").write_text("def main():\n    return 1\n", encoding="utf-8")
 inst.apply(seeded, inst.plan(seeded)[0])
-check("...but a repo with none is given a working starting point",
+check("...but a Python repo with none is given a working starting point",
       (seeded / "ruff.toml").is_file() and (seeded / "mypy.ini").is_file(),
       "otherwise the layer's own hooks and tools go unchecked in the target")
 
@@ -437,6 +442,80 @@ check("the seeded ruff config does not narrow itself to the layer",
       "include" not in seeded_ruff.split("[lint]")[0],
       "an include list here would scope linting to whatever this repo happens "
       "to contain")
+
+# --- the layer must not decide what a host's checks are ----------------------
+#
+# `ruff.toml` and `mypy.ini` are markers in `_projectchecks.MARKER_CHECKS`, so
+# seeding them does not merely add files -- it adds `ruff check .` and `mypy` to
+# the HOST's own fast tier. Measured 2026-08-16 in a Node-only repository: four
+# checks resolved, two of them the layer's, passing only because the layer's own
+# Python happened to be clean. The stated goal of the portability work was that
+# installing must not change what the host's checks MEAN, and this was the half
+# of it that the manifest exclusion did not reach.
+
+_pc_seed = load(".claude/hooks/_projectchecks.py", "pc_for_seed")
+
+_nopy = fresh_repo()
+(_nopy / "package.json").write_text(
+    '{"name":"n","version":"1.0.0","scripts":{"test":"echo ok",'
+    '"lint":"echo ok"}}\n', encoding="utf-8")
+(_nopy / "index.mjs").write_text("export const a = 1;\n", encoding="utf-8")
+_nopy_actions, _nopy_warnings = inst.plan(_nopy)
+inst.apply(_nopy, _nopy_actions)
+
+check("a host with no Python of its own is not given ruff.toml",
+      not (_nopy / "ruff.toml").is_file(),
+      "seeding it adds `ruff check .` to a Node repo's own gate")
+check("...nor mypy.ini",
+      not (_nopy / "mypy.ini").is_file())
+check("...and the skip is reported, never silent",
+      sum("not seeded" in w for w in _nopy_warnings) == 2,
+      str(_nopy_warnings))
+
+_nopy_checks, _ = _pc_seed.resolve_checks(_nopy, _pc_seed.FAST_KINDS)
+check("...so the Node host resolves only its own checks",
+      not any("ruff" in c or "mypy" in c for _, c in _nopy_checks),
+      str([c for _, c in _nopy_checks]))
+
+# The repeat install is the case that makes this non-trivial: by then `tools/`
+# alone is 26 Python files, so a naive `rglob("*.py")` answers yes and seeds
+# what the first install correctly refused. `_layer_owned()` -- the same
+# manifest discriminator that stops detection adopting the layer's suites -- is
+# what keeps the question about the host.
+inst.apply(_nopy, inst.plan(_nopy)[0])
+check("a REPEAT install still does not seed Python config into a Node host",
+      not (_nopy / "ruff.toml").is_file(),
+      "the layer's own tools/ must not count as the host having Python")
+
+# --- the shipped CODEOWNERS names nobody in particular -----------------------
+#
+# It was seeded from this repository's own copy until 2026-08-16, whose first
+# rule is a catch-all pointing at a real GitHub handle. In a third-party repo
+# that requests review from a stranger on every PR, or -- because GitHub ignores
+# an owner who is not a collaborator -- silently does nothing while still
+# looking like governance. The quiet failure is the one that matters.
+
+_owners = (seeded / "CODEOWNERS").read_text(encoding="utf-8")
+check("the seeded CODEOWNERS carries a placeholder owner",
+      "@OWNER-REPLACE-ME" in _owners, _owners[:80])
+check("...and no other @handle rides along with it",
+      {tok for ln in _owners.splitlines() if not ln.lstrip().startswith("#")
+       for tok in ln.split() if tok.startswith("@")} == {"@OWNER-REPLACE-ME"},
+      "a real handle here is an identity shipped into every install")
+check("...and it says on its first line that it must be replaced",
+      "REPLACE" in _owners.splitlines()[0].upper(),
+      _owners.splitlines()[0])
+
+# The manifest hash must be of what was INSTALLED. Hashing the same-named file
+# at this repository's root would record a hash the target never had, and
+# `upgrade` reads any difference as a local edit -- so every later improvement
+# to the template would be refused for a change nobody made.
+_seed_hashes = json.loads(
+    (seeded / inst.MANIFEST).read_text(encoding="utf-8")).get("files", {})
+check("the manifest records the hash of the CODEOWNERS actually written",
+      _seed_hashes.get("CODEOWNERS") == inst.file_hash(seeded / "CODEOWNERS"),
+      "otherwise upgrade refuses the file forever as a phantom local edit")
+
 
 # --- uninstall: what may be removed, and what must never be -----------------
 #
@@ -770,6 +849,78 @@ for _d in (un, _virgin):
 
 for _d in (cfg, seeded):
     shutil.rmtree(_d.parent, ignore_errors=True)
+
+# --- the installed layer must not become the host's test suite ---------------
+#
+# This file had 102 assertions and every one of them checked installation
+# MECHANICS -- which files land, which are preserved, which merge. None checked
+# that the installed layer WORKS in the host, and that is how the worst defect
+# this layer has shipped went unnoticed for months.
+#
+# Measured 2026-08-16 in a freshly installed Python product, before the fix:
+#
+#     INTERNALERROR> File ".../product/tools/test_package.py", line 109
+#     INTERNALERROR>   sys.exit(0)
+#     no tests ran in 32.16s
+#
+# `install.py` ships `tools/`, so the host got ~42 standalone contract suites
+# that `sys.exit()` at import. pytest collected them, died, and the host's own
+# suite never ran. Detection separately adopted them as the host's test set, so
+# `the checks pass` in a product repo meant `the capability layer is fine`.
+#
+# Two mechanisms fix it and both are asserted here: `tools/conftest.py` keeps
+# pytest out of the shipped suites, and `layer_paths()` -- the install manifest
+# that already existed to stop `recon.py` counting the guest as the host -- is
+# what detection now uses to skip them.
+
+
+def _product_repo(marker: str, body: str, extra: dict) -> Path:
+    d = fresh_repo()
+    (d / marker).write_text(body, encoding="utf-8")
+    for rel, text in extra.items():
+        p = d / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(text, encoding="utf-8")
+    inst.apply(d, inst.plan(d)[0])
+    return d
+
+
+_pc = load(".claude/hooks/_projectchecks.py", "pc_for_install")
+
+_py_product = _product_repo(
+    "pyproject.toml", "[project]\nname='demo'\nversion='0.1.0'\n",
+    {"tests/test_demo.py": "def test_ok():\n    assert True\n"})
+_py_checks, _ = _pc.resolve_checks(_py_product, _pc.FAST_KINDS)
+_py_tests = [c for k, c in _py_checks if k == "test"]
+_leaked = [c for c in _py_tests if "tools" in c and "test_" in c]
+
+check("a Python host does not adopt the layer's shipped suites",
+      _leaked == [], f"{len(_leaked)} leaked, e.g. {_leaked[:1]}")
+check("...and its own test runner is what resolves",
+      any("pytest" in c for c in _py_tests), str(_py_tests))
+check("...and tools/conftest.py ships, so pytest cannot import them",
+      (_py_product / "tools" / "conftest.py").is_file(),
+      "without it, collecting a shipped suite runs its sys.exit() and pytest dies")
+
+_node_product = _product_repo(
+    "package.json", '{"name":"d","version":"1.0.0","scripts":{"test":"echo ok"}}', {})
+_node_checks, _ = _pc.resolve_checks(_node_product, _pc.FAST_KINDS)
+_node_tests = [c for k, c in _node_checks if k == "test"]
+check("a Node host does not adopt the layer's shipped suites",
+      [c for c in _node_tests if "tools" in c and "test_" in c] == [],
+      str(_node_tests[:2]))
+check("...and `npm test` is what resolves",
+      any("npm test" in c for c in _node_tests), str(_node_tests))
+
+# The manifest is the discriminator. If it is missing the layer must fail OPEN
+# -- finding the suites -- because hiding a repo's own tests is the worse error.
+_no_manifest = _product_repo("README.md", "# x\n", {})
+(_no_manifest / inst.MANIFEST).unlink(missing_ok=True)
+_open_checks, _ = _pc.resolve_checks(_no_manifest, _pc.FAST_KINDS)
+check("without a manifest, detection fails OPEN and still finds the suites",
+      any(k == "test" for k, _ in _open_checks),
+      "an unreadable manifest must not silence a repository's tests")
+
 
 print()
 if failures:

@@ -46,6 +46,7 @@ that calls this obeys the same rule: it reports a state key, and
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import re
@@ -118,7 +119,37 @@ def tree_fingerprint(root: Path) -> str | None:
     status = _git(["status", "--porcelain=v1", "-uall"], root)
     if head is None or status is None:
         return None
-    return f"{head}:{hash(status) & 0xffffffff:08x}"
+    return fingerprint_of(head, status)
+
+
+def fingerprint_of(head: str, status: str) -> str:
+    """Pure, and **deterministic across processes** -- which is the whole point.
+
+    This was `hash(status)`, and Python's builtin `hash()` on a `str` is SipHash
+    with a per-process random seed. Every hook run is a new process, so the
+    fingerprint changed on every turn even when the tree was byte-identical, and
+    the "did the tree move?" limb was therefore ALWAYS true.
+
+    That is not a cosmetic bug. `.claude/workflow.md` records that a two-limb
+    stall detector "reported `stalled` through four turns of a healthy twelve-task
+    execution -- a detector nobody believes is worse than none", and that the
+    third limb was added to fix it. With a random fingerprint the third limb
+    contributed nothing and the detector was two-limbed the entire time: the
+    documented fix was never in effect.
+
+    Measured on an unchanged tree, three separate processes:
+
+        0eb45474...:b30ad4dc
+        0eb45474...:1bf90e40
+        0eb45474...:e519ed51
+
+    Same process twice, or with `PYTHONHASHSEED` pinned: identical. That is the
+    signature of the defect, and it is why `test_chain.py` asserts a hard-coded
+    digest -- any per-process randomness fails that assertion immediately,
+    whereas comparing two calls inside ONE process passes happily.
+    """
+    digest = hashlib.sha256(status.encode("utf-8", "replace")).hexdigest()[:8]
+    return f"{head}:{digest}"
 
 
 def plan_progress(root: Path) -> int | None:
@@ -261,7 +292,35 @@ def assess(entries: list[dict], state: str | None, fingerprint: str | None,
     progress_moved = bool(progress is not None and prior and progress > min(prior))
 
     if same >= STALL_TURNS and tree_moved and not progress_moved:
+        # Two ways to reach here and they are not the same finding. With a plan,
+        # flat ticks across a churning tree is the missed handoff this detector
+        # was built for. WITHOUT a plan the third limb was never evaluated, and
+        # saying "the plan's progress did not [move]" asserts a fact about a
+        # file that does not exist -- which is what this notice did for 64
+        # consecutive turns on 2026-08-12 while its stated cause was benign.
+        #
+        # Whether a plan-less unit should report `stalled` AT ALL is a genuine
+        # design question, left open deliberately: `test_chain.py` says "an
+        # absent plan must not read as a stall", but going silent would blind
+        # the detector to exactly the units `workflow.md`'s small-work path is
+        # about to make routine. Silence is the worse failure. So the verdict is
+        # unchanged and only the reason is made true.
+        if progress is None:
+            return {"chain": "stalled", "turns_in_state": same,
+                    # The caller renders this key from workflow.md. Returned
+                    # rather than string-matched on the reason, because a body
+                    # chosen by grepping a sentence breaks the moment the
+                    # sentence is reworded -- and the reason above is prose.
+                    "block": "chain-stalled-no-plan",
+                    "reason": f"state has been {state} for {same} recorded "
+                              f"turn(s) while the tree kept changing, and this "
+                              f"unit has NO active plan -- so progress could not "
+                              f"be measured and this rests on two limbs, not "
+                              f"three. Either the work never had a plan to tick, "
+                              f"or the state is being derived from a finished "
+                              f"unit's slug"}
         return {"chain": "stalled", "turns_in_state": same,
+                "block": "chain-stalled",
                 "reason": f"state has been {state} for {same} recorded turn(s) "
                           f"while the tree kept changing and the plan's progress "
                           f"did not -- a stage finished and its successor was "

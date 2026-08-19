@@ -1,24 +1,18 @@
 # CLAUDE.md
 
-A Claude Code capability layer: skills, lifecycle hooks and slash commands that
-enforce a spec → plan → build → verify workflow, plus the knowledge docs that
+@AGENTS.md
+
+A Claude Code capability layer: skills, lifecycle hooks and slash commands
+enforcing a spec → plan → build → verify workflow, plus the knowledge docs that
 carry state between sessions. There is no application code here.
 
-This file is a bootloader: point at the thing that owns the work rather than
-restating it. History belongs in `LOG.md` and git.
-
-**This file is Claude Code's own binding on top of a harness-neutral base.**
-`AGENTS.md` is the operating contract any host follows; `harnesses.json` maps
-each supported host (Claude Code, Codex, Gemini, VS Code agent) to the
-canonical `.claude/` paths it reads. `.claude/` is the only native source —
-nothing here is restated for another host to consume. `tools/test_harness_contract.py`
-fails if this file stops linking to either.
-
-Keep it roughly this length. There is no enforced ceiling any more: a hard number
-turned every real addition into a hunt for lines to delete elsewhere, which is
-editing by budget rather than by judgement. The cost is real and unchanged —
-this file loads every session — so prefer a pointer to a paragraph, and put
-history in `LOG.md`.
+**This file is a bootloader.** Point at the thing that owns the work; never
+restate it. History belongs in `LOG.md`, decisions in `decisions/`. It loads on
+every session, so every paragraph is paid for on every session — prefer a
+pointer to a paragraph. The line above, `@AGENTS.md`, is that paragraph for the
+harness-neutral base: it loads the operating contract every host follows
+inline, so nothing here restates what `AGENTS.md` and `harnesses.json` already
+say. `tools/test_harness_contract.py` fails if this file stops importing it.
 
 ---
 
@@ -30,369 +24,119 @@ history in `LOG.md`.
   rewriting it from memory.
 - **Be terse.** Cap skill and command responses at ~500 tokens.
 - **Prefer deterministic mechanisms** — a hook or a test over a written rule.
+- **Take the cheapest tier that answers the question.** `--scoped` mid-chain,
+  `--tier all` once before delivery. Cost is why: the fast tier gates every turn
+  and the full tier gates delivery, so the gap between them is paid over and
+  over. Both got ~4x cheaper on 2026-08-12 when the checks began running
+  concurrently — the rule did not change, only how much it saves.
 
 ---
 
 ## Skills
 
-In `.claude/skills/<name>/SKILL.md`. Each states its own triggers, gates and
-handoffs — read the skill, don't infer an order from this list.
+In `.claude/skills/<name>/SKILL.md`, triggered **only** by their own
+`description:` frontmatter. Each states its own triggers, gates and handoffs —
+read the skill, don't infer an order from this list.
 
-**`.claude/workflow.md` owns the order**: which skill owns which stage, what each
-consumes and produces, and the two shapes (linear and loop). Read it before
-adding a skill or wondering what comes next.
+**`.claude/workflow.md` owns the order** — stage → owner → entry condition →
+artefact, for all nine, plus the `[state:*]` blocks. Read it before adding a
+skill. A table here would be a lossier second copy of the one at its top, and a
+rule stated twice is a rule that drifts.
 
-**The chain has exactly two workflow approval gates** — the finished plan at the
-end of `writing-plans`, and the shipment approval in `releasing`. **Each has its
-own tool**: Gate 1 is `ExitPlanMode`, whose contract is precisely a plan approval
-and which says not to pair it with a second question; Gate 2 is
-`AskUserQuestion`, which is what real alternatives need. Neither is ever asked in
-prose: a prose question is answerable by silence and scrolls away, so approval
-must be a click the user made rather than something inferred from their next
-message. `test_process_router.py` holds the set to those two and checks each
-against *its own* tool — a blanket check would pass on any incidental mention,
-which is a marker that reads as a gate and stops nothing. Plan mode is read-only
-apart from its plan, so `TASK.md` is written immediately after the exit;
-ownership does not move, only the moment. **A rejection is durable**: it appends `## Rejected <date> (plan <hash>)`
-plus the user's words verbatim to the artifact, and `loop.py` refuses to
-re-present a body whose hash has not changed, then retreats at three. A gate has
-no retry budget — there is none on a person's judgement — but re-asking does. This file said gate 2 was the `code-review` sign-off until 2026-08-07, which
-contradicted `workflow.md`, the suite, and `code-review` itself — it returns a
-verdict and asks nothing. Operational safety checks may still require
-confirmation, such as choosing a worktree or target; they do not grant approval
-to bypass either gate.
-Each gate DECLARES itself with a `<!-- GATE n: ... -->` marker, and
-`test_process_router.py` checks three things: no third marker exists, both
-markers are still there, and each has its own declared tool behind it. The
-check used to be a substring search for the tool name, which broke the moment a
-skill named it in order to forbid it — `brainstormer` now does, four times, and a
-substring test read those prohibitions as a new gate. A marker somebody has to
-type on purpose is also the right property: a tenth gate should be hard to add by
-accident.
+Three things that table does not tell you:
 
-**`brainstormer` opened ten of these until 2026-08-08**, exempted on the argument
-that clarify/converge ask "which direction" rather than "may I proceed". The
-distinction is real and it did not survive contact — ten blocking questions before
-any artefact exists is the opposite of a two-gate chain. They are
-`[NEEDS CLARIFICATION]` markers now, resolved together in the Gate 1 call, and
-`tools/resume.py` will not leave `WAITING_PLAN_APPROVAL` while one is open.
-Delivery is separate and not counted: `delivering` and `releasing` still need an explicit yes,
-because unapproved push, merge and deploy are forbidden outright below.
+- `repo-recon` sits *before* stage 1, at the entry boundary, and `research`,
+  `designer` and `systematic-debugging` are dispatched or entered on failure
+  rather than held in the sequence.
+- `capability-layer-maintenance` is the way in when **this layer** is what
+  changes — not a stage, an owner.
+- `<skill>/references/` holds depth loaded per task, never per turn.
 
-**Framing merged into planning on 2026-08-09, and ten stages became nine.**
-`task-brief` is gone; `writing-plans` owns the six fields, the dispatch, and the
-plan. The boundary between them had been the layer's most restated rule — a
-`FORBIDDEN_SUCCESSOR` check existed only to stop a brief reaching a plan — and it
-was deleted rather than defended, because the seam it guarded was where work
-actually fell through: nothing watched for a finished brief, so an un-handed-off
-one was simply forgotten. What replaced it is Stage B, where a blank field
-dispatches `brainstormer`, `research`, `designer`, `repo-recon` or
-`systematic-debugging` and **each returns to the caller**. A dispatch is not a
-handoff, and `test_process_router.py` pins that distinction:
-`DISPATCHED_STAGES` are numbered in the table but never appear in the handoff
-walk. `decisions/2026-08-09-one-door-into-the-chain.md` carries the argument.
-
-| Skill | Stage | Produces |
-|---|---|---|
-| `repo-recon` | — entry boundary | `docs/recon/YYYY-MM-DD-<repo>.md` — the map, and up to five candidates |
-| `writing-plans` | 1 frame and plan | `TASK.md` — six fields, inferred ones marked — then `docs/plans/YYYY-MM-DD-<feature>.md` |
-| `brainstormer` | 2 design | `docs/specs/YYYY-MM-DD-<topic>-design.md` |
-| `executing-plans` | 3 execute | the thing itself; ticked plan checkboxes |
-| `verifying-work` | 4 validate | coverage verdict + the unbacked set |
-| `no-slop` | 5 sweep | repo-wide findings; local repairs applied, structural reported |
-| `code-review` | 6 review | findings + a sign-off receipt |
-| `delivering` | 7 deliver | merged / pushed / PR opened |
-| `releasing` | 8 release | the change serving at a named target + a quoted smoke check |
-| `knowledge-manager` | 9 record | `LOG.md`, `HANDOFF.md`, `ISSUES.md`, `decisions/` |
-| `research` | — dispatched by stage 1, or entered from any stage | `docs/research/YYYY-MM-DD-<topic>.md` |
-| `designer` | — dispatched by stage 1 before surface work | `DESIGN.md`, forked from `templates/DESIGN.md` |
-| `systematic-debugging` | — entered on any failure | root cause + `ISSUES.md` entry |
-| `capability-layer-maintenance` | — entered to change this layer | aligned contracts, wiring, hooks, and green validators |
-| references | each stage keeps its depth in `<skill>/references/` — review lenses, worktrees, TDD, artifact review, design contract, SRE | loaded per task, not per turn |
-
-**Skills trigger from their own `description:` frontmatter, and nothing else** —
-and that only became true on 2026-08-07. Twelve of thirteen carried
-`disable-model-invocation: true`, which per the official docs means *"Claude can
-invoke: No. Description not in context."* So no chain handoff could execute — a
-skill saying "invoke `executing-plans` next" had that call blocked — and the
-descriptions everything here optimises were not being loaded at all. All thirteen
-are now `false`. The gates are what keep that safe, not the flag:
-`releasing` still asks for shipment approval, and `test_process_router.py` pins
-the gate set to two.
-A `UserPromptSubmit` hook and a `routing/process-skills.md` keyword table were
-deleted on 2026-08-04. A hook whose only output is the name of a skill couples two
-independent things and duplicates a routing decision nothing validated -- pointing
-one at a fabricated skill was tried, and every suite passed. The cost of removing
-it is real: there is no second signal when a description misses a phrasing.
-
-### Subagents
-
-Dispatched by the skill that owns the stage, only when the user has asked for
-subagents. `Explore.md` is different: it overrides the built-in to pin haiku.
-
-`source-digger` (research), `failure-investigator` (debugging),
-`diff-reviewer` (review), `spec-reviewer` (spec compliance), `test-verifier`
-(verification), `architecture-reviewer` (design), `security-reviewer` (security),
-and `release-verifier` (release evidence) fan out; `task-implementer` **never
-runs two at once**.
-`.claude/workflow.md` carries the table. `tools/test_process_router.py` asserts
-each has a "do NOT use" clause, a `tools:` allowlist, a pinned model, and a
-dispatcher that names it — and that it names its dispatcher back.
-
-`tools/test_process_router.py` asserts the skill and agent layer resolves against
-itself: frontmatter parses, names match directories, every skill named in prose
-exists, and each chain skill states its successor imperatively.
+Two approval gates, each with its own tool: **Gate 1 `ExitPlanMode`** (the
+plan), **Gate 2 `AskUserQuestion`** (shipment). Never asked in prose. Delivery
+approval is separate and not counted. `.claude/operating.md` owns the rules and
+the subagent dispatch table; `test_process_router.py` pins both.
 
 ---
 
 ## Model and effort budget
 
-Every skill declared `model: opus` + `effort: high` until 2026-08-02 — a default
-nobody revisited, and it applied on every turn. The policy now:
-
-`opus` for planning and diagnosis, `sonnet` for coding and procedure, `haiku`
-for pure extraction — the per-skill values are in each `SKILL.md` frontmatter,
-which is the source of truth. `effort` tracks the same axis.
-`systematic-debugging` keeps `opus` though diagnosis is not planning: three
-2026-08-02 bugs were caught in reasoning alone and were invisible in the diff.
-
-Two other levers: **`/fast`** (same Opus 5, less extended thinking — right for
-doc sweeps and bulk edits, wrong for debugging), and **request shape**, which is
-the biggest and is the user's. Deliberation goes on resolving ambiguity, not
-solving problems; one goal per request cuts it directly.
-
-Descriptions are injected **every turn** and are the only trigger surface, so
-breadth is paid for there. `tools/test_process_router.py` prints the running
-total; it measured 7,813 chars before the 2026-08-07 tightening, and is smaller
-now because framing was cut and four audit skills became `code-review` lenses. Every one carries a
-`Do NOT use` clause, and two checkers fail without it.
-`session-start/02-bootstrap-docs.py` is budgeted for the same reason: it injected
-26,990 chars before anyone typed, and now clips to ~5,500.
+`opus` plans and diagnoses, `sonnet` codes, `haiku` extracts — per-skill
+frontmatter is the source of truth. Descriptions are injected **every turn** and
+are the only trigger surface, so breadth is paid there; `test_process_router.py`
+prints the running total and fails a description with no `Do NOT use` clause.
+The largest lever is request shape, and it is the user's: one goal per request.
 
 ---
 
 ## Commands
 
-    /verify          canonical full lint, test, typecheck and capability checks
-    /verify-change   fast checks for the current change
-    /save            explicitly confirmed local commit; never pushes
-    /wip             branch, uncommitted work, and documentation staleness
-    /git-state       exact Git counts and branch accounting
-    /skills-doctor   deterministic capability-layer diagnosis
-    /plan-review     independent spec/plan review before execution
-    /security-review independent trust-boundary review
-    /release-check   non-destructive release-readiness evidence
-    /handoff         durable read-only session-state report
-    /pr-review       high-confidence pull-request review; local by default
-    /publish         create the repo, push, open the PR — one explicit yes, and
-                     it never configures its own merge gates
+`.claude/commands/` holds them and each states its own contract. `/verify` and
+`/verify-change` (checks), `/save` (confirmed local commit, never pushes),
+`/wip` `/git-state` `/handoff` (state), `/plan-review` `/security-review`
+`/pr-review` (independent review), `/release-check` `/publish` (delivery).
 
-Safety rails, each a tool with a suite behind it — `.claude/workflow.md` owns the
-table:
+Safety rails, one tool each with a suite behind it — `.claude/workflow.md` owns
+the table: `security_gate.py` (artefact facts, not a receipt) · `halt.py` ·
+`deps.py` (licences) · `release_candidate.py` · `budget.py` · `chain.py --ledger`.
 
-    python tools/halt.py --halt "<reason>"     halt every mutating tool; --resume lifts it
-    python tools/deps.py [--sbom]              licence verdict; undetermined is not ok
-    python tools/release_candidate.py          the report Gate 2 reads, rollback executed
-    python tools/budget.py                     turns and elapsed against a ceiling
-    python tools/chain.py --ledger             the append-only audit trail
+    python tools/run_checks.py --scoped                    # mid-chain
+    python tools/run_checks.py --tier all --require-test   # before delivery
+    python tools/resume.py       # which state this unit of work is in
+    python tools/loop.py         # what the escalation ladder says next; --restore resets
+    python tools/bench.py        # what this layer costs per session and per turn
+    python tools/run_hook.py <event> '<json>'   # fire one hook manually
 
-Raw equivalents, run from the repo root:
-
-    python tools/run_checks.py --tier all --require-test   # both tiers
-    python tools/resume.py            # which state this unit of work is in
-    python tools/analyze.py           # is the plan internally consistent (pre-Gate 1)
-    python tools/loop.py              # what the escalation ladder says to do next
-    python tools/loop.py --restore    # reset to the last verified-green tree
-    python tools/new_skill_check.py <name>|--all   # is one skill actually reachable
-    python tools/smoke.py --url <url> --expect-status 200   # is it actually serving
-    python tools/run_hook.py <event> '<json-payload>'   # fire one hook manually
-
-Individual suites live in `.claude/project-checks.json`, which is the only place
-they are listed. A copy sat here once and named a fraction of them; the correction
-then carried its own count and went stale in turn, which is the argument against
-restating a number anywhere but the file that owns it. Run `/verify` before
-declaring any work done — it resolves every kind, and names any it had to skip.
+`.claude/project-checks.json` is the only place suites are listed. Run `/verify`
+before declaring work done — it resolves every kind and names any it skipped.
 
 ---
 
 ## Repository map
 
-| Path | What it is |
-|---|---|
-| `.claude/skills/` | the 14 skills above, one directory each; `<skill>/references/` holds depth loaded on demand, not per turn |
-| `.claude/agents/` | eleven agents: the fan-out set dispatched by skills, plus `Explore` overriding the built-in onto haiku |
-| `.claude/workflow.md` | stage → owning skill → artefact; the chain and its invariants |
-| `.claude/hooks/<event>/` | hooks over several events that act, deny or measure; `session-start`, `post-run`, `pre-commit`, `pre-edit`, `pre-deploy`, `on-artifact-create` |
-| `.claude/settings.json` | what actually fires for this repository; `hooks_registry.json` documents the repository's hook contract |
-| `AGENTS.md` | harness-neutral operating contract every supported host follows; this file adds Claude Code's own binding on top |
-| `harnesses.json` | adapter manifest — which hosts are supported and which canonical `.claude/` path each reads |
-| `docs/harness-hook-bridge.md` | how a non-Claude-Code host invokes `.claude/hooks/` itself — payload delivery, exit-code semantics, ordering |
-| `.claude/commands/` | the twelve slash commands above |
-| `tools/` | `run_checks.py` (one entry point for green), `resume.py` (where this unit of work is), `loop.py` (the escalation ladder), `smoke.py`, `run_hook.py`, the suites |
-| `docs/specs/`, `docs/plans/`, `docs/research/` | skill outputs, one dated file each |
-| `docs/archive/` | the pre-2026-08-01 design layer; superseded, see `docs/archive/ARCHIVE.md` |
-| `decisions/` | dated ADRs |
-| `.claude/skills/releasing/references/` | platform packs — deploy/smoke/rollback per target |
-| `.github/workflows/checks.yml` | CI; calls the same resolver, so it cannot drift from local |
-| `.mcp.json`, `.vscode/mcp.json` | MCP servers, kept in sync by hand |
+`ls .claude/` answers most of this. Only the parts a listing gets wrong:
 
-`~/.claude/` holds no skills or agents. `session-start/02-bootstrap-docs.py`
-initialises scaffolding in place; nothing copies the layer into other repos.
+- **`AGENTS.md`, `harnesses.json`, and `docs/harness-hook-bridge.md`** aren't
+  under `.claude/` at all, so a listing of it won't show them — `@AGENTS.md`
+  above already loaded the first; it names the other two.
+- **`.claude/workflow.md`** owns the chain and its invariants;
+  **`.claude/operating.md`** the commit loop, tiers, failure budgets and
+  gotchas. Those two carry what used to be here.
+- **`.claude/settings.json` is what actually fires.** `hooks_registry.json`
+  documents the contract and cannot enforce it — when they disagree, the
+  registry is the one that is wrong.
+- **`.github/workflows/checks.yml` calls the same resolver as local**, so CI
+  cannot drift from your machine. `.mcp.json` and `.vscode/mcp.json` are kept
+  in sync **by hand** and can.
+- `docs/archive/` is superseded material; see its `ARCHIVE.md` before reviving
+  anything.
 
-**`../physrun/` is a sibling repo, not part of this one** — the first product
-built with this layer, and the first test of whether it ports. Copying this file
-wholesale would be wrong: it asserts "there is no application code here" and a
-hook count, both false there. Porting found three bugs in a day, none findable
-from inside this repo. See `LOG.md` 2026-08-03 14:30.
-
----
+`~/.claude/` holds no skills or agents. **`../physrun/` is a sibling repo, not
+part of this one** — the first product built with this layer; copying this file
+there would be wrong, since it asserts there is no application code here.
 
 ## Knowledge docs
 
-Six files at the repo root carry state between sessions. Hooks read and gate on
-them, so they are code, not commentary:
+`TASK.md` · `HANDOFF.md` · `LOG.md` · `ISSUES.md` · `MEMORY.md` · `README.md`
+carry state between sessions. Hooks read and gate on them, so they are code, not
+commentary, and `knowledge-manager` owns their formats.
 
-`TASK.md` (active task) · `HANDOFF.md` (current work, pending, next)
-· `LOG.md` (history) · `ISSUES.md` · `MEMORY.md` · `README.md`
+**Keep every entry minimal** — length is paid on every session that loads them.
+Record only what a future reader could not reconstruct from the diff: a decision
+and the option it beat, a failure whose symptom misled, what was verified and
+what was not.
 
-**`session-start/03-state-report.py` measures them.** It counts commits since
-`LOG.md`/`HANDOFF.md`/`ISSUES.md` last changed, and `.claude/` files changed since
-the branch point, then renders the matching `[state:<key>]` block from
-`.claude/workflow.md`. It names no skill — workflow.md decides what a state means,
-and `tools/test_hook_registration.py` fails if any hook names one. Measured
-against git alone, so there is no counter to clear.
+## The commit loop, the tiers, and the gotchas
 
-## The commit loop
+`.claude/operating.md` owns all three: the eight auto-commit gates and what each
+refuses on, the fast/slow tier split, the failure-class budgets and the
+escalation ladder, and the traps that cost a session each (`PYTHONIOENCODING`, a
+hook whose failure symptom is silence, a skill invisible for its filename, a
+per-process `hash()`).
 
-Commits are automatic and local. `post-run/06-artifact-autocommit.py` fires at
-the end of every turn and commits what changed, as a `wip:` checkpoint, if and
-only if all six hold. What "the checks pass" means is `.claude/project-checks.json`
-resolved over detection by `.claude/hooks/_projectchecks.py` — the same code
-`/verify` calls, so the two can never disagree:
-
-| Gate | Refuses when |
-|---|---|
-| branch | on `main`/`master`/`develop`/`release` |
-| size | more than `MAX_FILES = 25` changed — that is a unit of work, not a checkpoint |
-| secrets | any changed file matches `_hooklib.SECRET_PATTERNS` |
-| checks | any **fast-tier** command exits non-zero — lint, typecheck, test |
-| unverified code | the change contains code and **no test check ran** — passing and having nothing to run are different facts |
-| migration | the change touches `_hooklib.MIGRATION_PATH_PATTERNS` — the least reversible thing here, and no suite proves it |
-| minimal diff | a changed path is named by neither `TASK.md` nor any `docs/plans/*.md` — **and the refusal prints those paths** |
-| message | the generated subject matches `_hooklib.AI_ATTRIBUTION_PATTERNS` |
-
-**Minimal means "no unrelated file", not "few lines"**: a formatting sweep across
-forty files is not minimal; a hundred-line change in one file is. It refuses
-rather than warns, because a lone warning among seven refusals is the clause
-nobody reads. The accepted cost is real — a turn touching an unplanned file gets
-no checkpoint at all — which is why the refusal names the paths: the fix is to
-declare them or stop touching them, never to wonder why nothing committed.
-The gate applies only where a declaration source exists; a repo with no
-`TASK.md` and no plans has nothing to be minimal against, and refusing there
-would disable the auto-commit in every repo this layer installs into.
-
-Every clause is a fact about the artefact, never about process. A refusal is
-always spoken. It **never pushes**, never `git add .`.
-
-Checks come in **two tiers**, because cost differs by an order of magnitude and a
-gate nobody can afford to run gets switched off:
-
-| Tier | Kinds | Runs | Gates |
-|---|---|---|---|
-| fast | lint · typecheck · test | every turn, seconds | the auto-commit |
-| slow | build · audit · e2e · smoke | before delivery, minutes | push / PR, and CI |
-
-    python tools/run_checks.py --tier all --require-test
-    python tools/run_checks.py --scoped         # only what the change touches
-
-`--scoped` narrows the fast tier on a change `tools/scope.py` calls `small`, and
-refuses one it calls `major` or `undetermined`. **"Fast" means *ran fewer checks
-and said which*, never *green on less evidence*** — the three rules that keep
-that true are in `.claude/workflow.md`, which owns the scope table, the three
-consumers and the veto list. Stated once there, not restated here.
-
-**Review moves to the push/PR**, over the whole branch — a commit that needs a
-human is not a checkpoint. `wip:` is deliberate: squash-merge collapses them.
-
-Two things this depends on, both easy to break:
-
-- `UAIOS_AUTOCOMMIT_RUNNING` guards re-entry. `tools/test_hooks.py` fires the
-  whole `post-run` event, so without it the hook runs the suites which run the
-  hook, unbounded — presenting as a hang, not an error.
-- Its commits **bypass `PreToolUse`**, so the secret and attribution checks run
-  *inline* from `_hooklib`; `pre-commit/01-secret-scan.py` never sees them.
-
-**`pre-commit/02-branch-guard.py` resolves the command's target repo, not the
-session's.** `cd ../other && git commit` and `git -C ../other commit` both commit
-somewhere else, and until 2026-08-03 the guard read *this* repo's branch and let
-eight commits onto a sibling's protected `main` — silently. Both hooks now use
-`_hooklib.is_git_commit`, a tokeniser rather than a regex, because `-C` takes a
-value and no regex repetition can consume it. See `ISSUES.md` 2026-08-03 14:20.
-
-Nineteen hooks were deleted on 2026-08-02, including every process-compliance
-gate and the staging guards. Why, and the deadlock that proved it: `LOG.md`
-2026-08-02 19:26 / 21:30, and `docs/2026-08-02-git-flow-walkthrough.md`.
-
-## When the checks go red
-
-The refusal is not the end of the message. `06-artifact-autocommit.py` writes
-the failing output to `.claude/hooks/state/check-failure-report.md`, counts
-consecutive failures of the *same* failure (digits normalised, so a partial fix
-does not reset the budget), and names `systematic-debugging` — whose stated
-trigger a failing check is.
-
-It **suggests**, never triggers: a hook cannot invoke a skill, confirmed in the
-official docs. And it never blocks — `post-run/05-docs-gate.py` blocked a turn
-until a skill ran, deadlocked, and was deleted on 2026-08-02.
-
-**The budget depends on the kind**, decided by `_hooklib.FAILURE_CLASSES` — a
-table, not a judgement — before anything is spent: `security` 0, `transient` 2,
-`merge` 2, `deterministic`/`unknown` 3. Unmatched output is a defect, never
-noise. Until 2026-08-07 every red check cost the same three attempts, so a locked
-file escalated like a type error, and "repairing" it meant editing product code
-to chase a fault that was not in it. `tools/loop.py` turns class + attempt into
-one of six rungs (retry, repair, restore, rebase, retreat, block); `test_loop.py`
-proves by exhaustion that every path terminates. **`restore` is load-bearing** —
-three failed repairs leave the tree worse than they found it, so a fourth debugs
-the loop's own damage. Green updates `refs/uaios/green/<slug>`; restore goes
-there.
-
-Green closes the loop **forward**: `verifying-work` → `code-review` →
-`delivering`, so "no longer failing" is not mistaken for "finished".
-
-**The slow tier is the only thing that verifies the running system.** Everything
-else reads the source. A repo can lint, typecheck and unit-test green and still
-fail to build or fail to boot — `tools/smoke.py` starts the app, waits, probes and
-tears the process tree down, which is what `releasing` had mandated for months
-with no mechanism behind it.
-
-Detection is a data table (`MARKER_CHECKS`) covering Node, Deno, Python, Rust, Go,
-Java, Kotlin, Ruby, PHP, Elixir, .NET and `make`; a new ecosystem is a row.
-`.claude/project-checks.json` overrides any of it, `false` disables a kind as a
-stated decision, and a configured tool that is not installed is **skipped and
-named**, never failed.
-
----
-
-## Gotchas
-
-- **Set `PYTHONIOENCODING=utf-8` before running any tool script.** Several print
-  `→` and `—`; the Windows console default (cp1252) raises `UnicodeEncodeError`
-  and turns a passing run into a fake failure.
-- **A hook bug's symptom is silence** — identical to "no problem". After editing
-  any hook, fire it with `tools/run_hook.py` against a realistic payload.
-- Hook scripts read input via `_hooklib.load_payload()`, so both stdin and
-  `HOOK_PAYLOAD` work.
-- **A skill is silently invisible** if it is a flat `.md` rather than
-  `<name>/SKILL.md`, or if its frontmatter `name:` differs from its directory.
-  Nothing errors — it just never appears. `tools/test_process_router.py` checks
-  both.
-- The `github` MCP server needs `GITHUB_TOKEN` in the environment. `gh` itself is
-  already authenticated on this machine; if it ever needs redoing, `gh auth login`
-  is an interactive browser flow that cannot be scripted, and the MSI installer
-  needs admin rights — the working install is a user-local zip on `PATH`.
-
----
+Two that are cheaper to know than to look up: **set `PYTHONIOENCODING=utf-8`
+before any tool script**, and **fire a hook with `tools/run_hook.py` after
+editing it** -- a broken hook is silent, which reads exactly like a working one.
 
 ## Never
 
@@ -401,8 +145,7 @@ named**, never failed.
 - Commit secrets or credentials.
 - Push, merge, publish or deploy without explicit user approval.
 - Create a duplicate implementation of something that already exists.
-- Put AI attribution in git history. Two layers now: `attribution.commit`/`pr`
-  are `""` in `~/.claude/settings.json` so the harness appends nothing, and
-  `pre-commit/03-attribution-guard.py` DENIES a hand-written `-m` carrying a
-  trailer — plus a `user.name`/`user.email` that resolves to an AI, which no
-  per-message check would ever see. The "yours are unchecked" gap is closed.
+- Put AI attribution in git history. Two layers: `attribution.commit`/`pr` are
+  `""` in `~/.claude/settings.json`, and `pre-commit/03-attribution-guard.py`
+  DENIES a hand-written `-m` carrying a trailer, plus a `user.name`/`user.email`
+  resolving to an AI.

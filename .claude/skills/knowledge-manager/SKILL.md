@@ -1,7 +1,7 @@
 ---
 name: knowledge-manager
-description: Update the durable docs when they stop matching reality. Owns README, TASK, MEMORY, HANDOFF, LOG, ISSUES and decisions/. Triggers include "update the README", "log this", "record this", "handoff", "where did we get to", "note this decision". Do NOT use for CLAUDE.md or layer contracts, or to restate a diff. Use this whenever a unit of work ends, even if unasked.
-when_to_use: when persistent docs must be updated
+description: Update the durable project docs when they stop matching reality. Owns README, TASK, MEMORY, HANDOFF, LOG, ISSUES and decisions/, recording only what a future reader could not reconstruct from the diff. Triggers include "update the README", "update the docs", "log this", "record this", "write this down", "note this decision", "write an ADR", "handoff", "hand this over", "where did we get to", "what did we do", "catch me up". Do NOT use for CLAUDE.md or agent-layer contracts (capability-layer-maintenance), or to restate a diff. Use this whenever a unit of work ends, even if unasked.
+when_to_use: Trigger when the user says update the README, update the docs, log this, record this, write this down, note this decision, document the decision, write an ADR, handoff, hand this over, where did we get to, what did we do, or catch me up.
   - formats.md
 effort: low
 model: sonnet
@@ -19,6 +19,13 @@ That is the gap this fills, and nothing now reminds you it is open.
 
 Cap visible output at ~500 tokens. The written entries are the deliverable; do
 not also narrate them back.
+
+**Cap each written entry too.** A `LOG.md` entry is ~15 lines, a `HANDOFF.md`
+section ~10, an `ISSUES.md` incident ~12. These files are re-read on every
+session that loads them, so length is a recurring cost, not a one-off. Write the
+one thing a future reader could not reconstruct from the diff and stop. If an
+entry needs more, it is carrying detail that belongs in the diff, the plan, or
+an ADR.
 
 ## The order
 

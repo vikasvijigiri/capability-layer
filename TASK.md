@@ -4,101 +4,119 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
-### Make the layer match the target workflow architecture
+### Make the layer portable: it broke every host's test runner
 
-- **Status:** Done — 9/9 tasks, reviewed, `PASS: 42 check(s) green`. Moved to
-  Completed below; the remaining checklist scope is a NEW unit and enters at
-  `writing-plans`.
-- **Goal:** The chain the user specified, running end to end: decompose into
-  independent tasks, a workflow per task, plan in plan mode, Gate 1, execute
-  with minimal diffs, verify, bounded retry, scoped sweep and review, a
-  confirmed push, Gate 2, release, record.
-- **Constraints:** Two lifecycle gates only — the push confirmation stays an
-  operational safety check with no `<!-- GATE n -->` marker. The retry budget
-  stays **class-aware** (`security 0, merge 2, transient 2, deterministic 3,
-  unknown 3`), not flattened to 3. A skipped check is **named as skipped**,
-  never counted as a pass. Nothing acquires `gh pr merge`. Every rule added is
-  enforced by a test or a hook, not prose.
-- **Input:** `main` @ `9a65137`, clean, 37 checks green, 0 open PRs.
-  `tools/parallel_groups.py` (scheduler + the live `normalise` bug),
-  `tools/loop.py` + `_hooklib.FAILURE_BUDGETS`, `tools/test_no_slop.py`
-  (scopes `repo|layer|portability`), `.claude/agents/task-implementer.md`
-  (`isolation: worktree`), `executing-plans/references/{using-git-worktrees,
-  parallel-dispatch}.md`, `docs/plans/2026-08-10-adaptive-workflow.md`
-  (small-vs-major veto rule, to be folded in).
-- **Output:** a corrected scheduler; `tools/worktree.py` with a mandatory base;
-  one *proved* parallel dispatch or a deleted claim; `tools/scope.py`; a change
-  scope for `no-slop` and `code-review`; scoped test selection; minimal-diff
-  enforcement; plan-mode wiring where `ExitPlanMode` replaces Gate 1's
-  `AskUserQuestion`.
-- **Done Checks:** `python tools/run_checks.py --tier all --require-test` exits 0
-  and prints the suite count; `python tools/parallel_groups.py <this plan>` shows
-  `.claude/settings.json` correctly serialised rather than schedulable; and one
-  live two-agent dispatch whose worktrees are proved based on the working branch
-  by `git merge-base --is-ancestor`, read from the tree rather than from an
-  agent's report.
-- **Out of Scope:** merging anything; branch protection (403 on this plan tier);
-  an external chain driver (`tools/drive.py`) — deferred until the
-  chain-continuity instrument has measured how often the chain actually breaks.
+- **Status:** Fixed and proven in Python and Node targets. Payload 1,586,874 ->
+  1,172,851 bytes; a fresh install is green in both.
+- Create: `tools/conftest.py`
+- Modify: `.claude/install.py`, `.claude/hooks/_projectchecks.py`, `tools/test_install.py`, `tools/test_package.py`, `.claude/project-checks.json`, `.claude/constitution.md`, `tools/README.md`, `.claude/skills/writing-plans/SKILL.md`, `.claude/skills/writing-plans/references/plan-document.md`
+- **Goal:** installing the layer must not change what the host's own checks mean
+  or break the host's test runner.
+- **Done Checks:** a fresh install into a Python product runs the product's
+  pytest and resolves only the product's checks; the same for a Node product;
+  the six shipped validators pass in a target; `--tier all --require-test` green.
+- **Out of Scope:** the 36 internal suites no longer ship at all.
 
-### Add `tools/delivery_check.py` — delivery facts, computed not asserted
+### Rewrite skill frontmatter for triggering
 
-- **Status:** Done — merged to `main` as PR #10; it has since blocked two of its
-  own unsafe deliveries, which is the evidence it works.
-- **Goal:** One script that computes seven delivery facts about a branch and its
-  PR, reports them, and refuses to decide — in the shape of `resume.py`,
-  `analyze.py` and `git_identity.py`.
-- **Constraints:** Reports, never decides; **never merges, pushes or rebases**
-  (`test_process_router.py` already fails anything acquiring `gh pr merge`).
-  Exit `0` ready / `1` a check failed / `2` could not determine — and `2` is not
-  `0`, because a check that could not run is unrun, not passed. IO behind a
-  `gather_facts()` seam with an `offline` escape, decisions in a pure
-  `evaluate(facts)` the tests drive directly, mirroring
-  `git_identity.gather(root, offline=)` + `render()`. **Not** in the fast tier:
-  it needs a network and a remote, and that tier gates every auto-commit in
-  seconds.
-- **Input:** `docs/specs/2026-08-09-delivery-preflight-design.md`;
-  `tools/git_identity.py` (API seam), `tools/analyze.py` (injected-`exists`
-  test pattern), `tools/resume.py`; `.claude/skills/delivering/SKILL.md`.
-- **Output:** `tools/delivery_check.py`; `tools/test_delivery_check.py`; a step
-  in `delivering` that runs and quotes it; an entry in
-  `.claude/project-checks.json` only if it proves fast enough to belong.
-- **Done Checks:** `python tools/test_delivery_check.py` exits 0 with an
-  assertion per check, each proved red first; and the base-alignment check flags
-  a fixture where `merge-base(base, head) != tip(base)`, which is the case that
-  stranded three merged units outside PR #7.
-- **Out of Scope:** repo-settings-as-code (its own unit, and the only preventive
-  option available); stacked-PR tooling such as Graphite (rejected in the spec);
-  merging anything; configuring branch protection.
+- **Status:** Closed 2026-08-16. All 14 rewritten and now MEASURED live rather
+  than assumed. Bodies unrestructured except `code-review`.
+- Create: `.claude/hooks/post-tool/02-repeat-detector.py`
+- Modify: `.claude/workflow.md`, `.claude/hooks/post-tool/01-context-cost.py`, `.claude/hooks/user-prompt/01-entry-classifier.py`, `tools/bench.py`, `.claude/commands/verify.md`, `.claude/hooks/post-tool/01-context-cost.py`, `tools/bench.py`, `.claude/hooks/user-prompt/01-entry-classifier.py`, `.claude/workflow.md`, `.claude/hooks/_projectchecks.py`, `.claude/hooks/hooks_registry.json`, `tools/test_project_checks.py`, `ISSUES.md`, `tools/test_no_slop.py`, `tools/test_process_router.py`, `tools/new_skill_check.py`, `.claude/settings.json`, `.claude/skills/brainstormer/SKILL.md`, `.claude/skills/capability-layer-maintenance/SKILL.md`, `.claude/skills/code-review/SKILL.md`, `.claude/skills/delivering/SKILL.md`, `.claude/skills/designer/SKILL.md`, `.claude/skills/executing-plans/SKILL.md`, `.claude/skills/knowledge-manager/SKILL.md`, `.claude/skills/no-slop/SKILL.md`, `.claude/skills/releasing/SKILL.md`, `.claude/skills/repo-recon/SKILL.md`, `.claude/skills/research/SKILL.md`, `.claude/skills/systematic-debugging/SKILL.md`, `.claude/skills/verifying-work/SKILL.md`, `.claude/skills/writing-plans/SKILL.md`
+- **Goal:** maximise the trigger surface so skills actually fire, after
+  `code-review` measured `trigger_rate 0.0` on canonical prompts.
+- **Constraints:** the listing budget is 1% of context by default and drops
+  descriptions least-used-first when it overflows, so trigger words added to one
+  skill silently delete another's — `skillListingBudgetFraction` raised to 0.02
+  first. Per-entry cap is 1,536 chars. Every `Do NOT use` clause and every
+  successor/agent reference preserved.
+- **Input:** `code.claude.com/docs/en/skills` frontmatter reference and
+  troubleshooting; `anthropics/skills` `template/`, and the `doc-coauthoring`
+  and `pdf` descriptions as the trigger-dense exemplars.
+- **Output:** descriptions 6,795 → 11,967 ch; listing 8,301 → 13,473 against a
+  20,000 budget; largest entry 1,075 of 1,536.
+- **Done Checks:** MET 2026-08-16 by live measurement (~$11): `verifying-work`
+  trigger_rate 1.0, `systematic-debugging` 0.5, `code-review` 0.0. Descriptions
+  trigger; the per-turn cost is bought function. `code-review`'s 0.0 is the
+  model doing the review itself and is reached by handoff -- see ISSUES.md.
+- **Out of Scope:** the 11 `.claude/commands/` descriptions; restructuring the
+  13 remaining skill bodies.
 
-### Decide whether `/skills-doctor` still has a job
+### S1: make every turn cheap
 
-- **Status:** Not started — raised by a `no-slop` sweep on 2026-08-03
-- **Goal:** Decide whether `/skills-doctor` is retired, narrowed, or kept as is.
-- **Why now:** `tools/test_no_slop.py` and `tools/test_process_router.py` between
-  them now cover the static half of what the command checks — description budget,
-  YAML parse, `name:`/directory mismatch, loose `.md` files. Three owners of one
-  question is the Duplicate Knowledge smell, and the routing keyword
-  "skill layer health" already points at `no-slop` rather than at the command
-  whose own description uses that exact phrase.
-- **The part that is NOT duplicated,** and the reason this is a decision rather
-  than a deletion: `/skills-doctor` compares the files on disk against what
-  **actually rendered in the live session's skill listing**, which is truncated
-  against a token budget. No file-reading script can see that. A skill can be
-  valid on disk and absent from the listing on the exact turn that needed it —
-  that has happened here.
-- **Done check:** either the command is deleted and `CLAUDE.md`'s command list
-  updated, or its text is narrowed to the live-listing measurement with the
-  static checks removed and a pointer to the suites that own them.
-- **Out of scope:** changing what the suites check. They are green and correct.
+- **Status:** Closed 2026-08-14. Preamble 25,599 -> 9,056 ch, tier 3.4x. The
+  per-turn description cost is deliberately unpaid -- see HANDOFF Next Step 0(a).
+- Modify: `.claude/hooks/_projectchecks.py`, `tools/test_project_checks.py`, `tools/test_session_start_contract.py`, `CLAUDE.md`, `.claude/skills/verifying-work/SKILL.md`, `.claude/hooks/session-start/02-bootstrap-docs.py`, `README.md`, `.claude/project-checks.json`, `tools/chain.py`, `tools/test_chain.py`, `.claude/workflow.md`, `.claude/hooks/post-run/08-chain-continuity.py`, `tools/eval_triggers.py`, `tools/new_skill_check.py`
+- Create: `.claude/operating.md`, `tools/bench.py`, `tools/test_doc_entries.py`
+- **Goal:** cut the per-turn cost of this layer without changing what any gate
+  decides. Session 1 of three; the router (E0–E5) and the surface trim are S2/S3
+  and are not in scope here.
+- **Constraints:** no gate may decide differently after this than before it; a
+  speedup that costs determinism is a regression, not an optimisation; `--scoped`
+  already exists and wiring it into the auto-commit is a *policy* change, so it
+  belongs to S2 and is explicitly not done here.
+- **Input:** measured baseline — fast tier 61.4s/45 checks serial, `CLAUDE.md`
+  14,829 chars, SessionStart output 6,245 chars, descriptions 12,732 chars/turn;
+  the Notion target architecture (Universal Adaptive SDLC v2) §15, §20, §21.
+- **Output:** `.claude/hooks/_projectchecks.py` (thread pool, `jobs` config knob,
+  `DEFAULT_JOBS=8`); `tools/test_project_checks.py` (ordering, `jobs: 1`
+  equivalence, timeout vs `ran_test`); `tools/test_session_start_contract.py`
+  (label said six, list has seven); then `CLAUDE.md` → ≤5k and the SessionStart
+  trim; then `tools/bench.py` as the acceptance gate for S2/S3.
+- **Done Checks:** `python tools/run_checks.py --tier all --require-test` exits 0;
+  the fast tier is under 20s; `jobs: 1` produces byte-identical output to the
+  parallel run (asserted in `test_project_checks.py`).
+- **Out of Scope:** the router ADR; description compression (dangerous before the
+  router exists); deleting anything from `tools/` — measured at 24/24 live tools
+  and a 1.5:1 test:code ratio, so there is no dead weight to remove.
 
-### Decide which capability owns layer retirement
+### Close the remaining GOAL_CHECKLIST gaps
 
-- **Status:** Done — `capability-layer-maintenance` owns capability-layer audits, contract changes, migration, and retirement.
-- **Goal:** Keep one owner for retiring or replacing capability-layer components.
-- **Output:** Replaced `skill-authoring`, migrated active references, added hook-policy enforcement, and verified the complete suite.
-- **Done check:** Skill routing, hook registration, hook policy, and the full all-tier suite pass.
-- **Out of scope:** Product-code changes or project-history updates owned by `knowledge-manager`.
+- **Status:** Approved at Gate 1, not started. Branch `feat/close-remaining-gaps`.
+- **Goal:** close every remaining checklist gap that has an honest
+  implementation here, and prove the deploy stages against a repo with a real
+  surface rather than simulating them in one that has none.
+- **Constraints:** two lifecycle gates; class-aware retry budgets; a skipped
+  check named never counted; nothing acquires `gh pr merge`; every rule needs a
+  test or a hook, not prose.
+- **Input:** `GOAL_CHECKLIST.md`; the audit at
+  `claude.ai/code/artifact/789942aa-667f-443e-8910-661568f3aa4d` (37 mechanism /
+  16 partial / 2 prose / 21 absent); the five follow-ups in `HANDOFF.md`.
+- **Output:** `tools/preconditions.py`; a checkable `**Preconditions:**` field;
+  one owner for the ticked-task pattern; a second writer for the green ref; a
+  re-measured budget ceiling; `.claude/README.md`; plan-level rollback and blast
+  radius; changelog/semver from the plan; deploy stages proven against
+  `../physrun`.
+- **Done Checks:** `python tools/run_checks.py --tier all --require-test` exits
+  0 with nothing skipped; `python tools/analyze.py --slug close-remaining-gaps`
+  reports consistent; `python tools/preconditions.py --plan <this plan>` runs
+  against its own plan; the re-audit publishes corrected counts.
+- **Out of Scope:** Gate 2 auto-approve (refused, asserted); `state/*.json`
+  (refused by ADR); adding an application to this repo (decided at Gate 1);
+  merging PR #11.
+
+### Audit all ten objectives, then close what blocked "generic" and "world class"
+
+- **Status:** Done 2026-08-16. `4240e61`, `215c4dd`, `a68d283`.
+  `PASS: 52 check(s) green`; state reached `WAITING_DELIVERY` for the first time.
+- **Goal:** grade the layer against the ten Notion Primary Objectives and
+  `GOAL_CHECKLIST.md` with every grade measured, then fix everything blocking
+  the "generic" and "partly/in parts" verdicts.
+- **Output:** `templates/CODEOWNERS.seed` and a `SEED_SOURCE` indirection;
+  Python lint config seeded only into hosts that have Python;
+  `run_checks.py --record-green`; the budget's elapsed limb dropped;
+  `_projectchecks._run_bounded()`; plan-level `**Rollback:**`/`**Blast radius:**`
+  enforced positionally; memory queried at stage 4; `docs/objectives.md`,
+  `.claude/README.md`, `.claude/audit/README.md`.
+- **Done Checks:** met. Node host resolves 2 checks (its own), Python host 3,
+  both green from a fresh install. Hung check: 30.1s → 3.4s against a 3s
+  timeout. Both installer guards and the dormancy note proved red by mutation.
+- **Not verified:** Gate 2 has still never fired; no run has gone end to end.
+- **Out of Scope, and still out:** objective 2's per-turn listing (needs the
+  ~$81 trigger measurement, and the evidence points at *more* specific
+  descriptions, not shorter); reconciling the two routers (a decision, not a
+  merge); anything needing a running service.
+
 ### Implement world-class SessionStart bootstrap scaffolding
 - **Status:** In Progress
 - **Goal:** Implement a SessionStart bootstrap loader that scaffolds project skeleton files and a minimal, maintainable `docs/` structure without creating unnecessary subfolders or a copied `AGENTS.md`.
@@ -108,30 +126,69 @@
 - **Done Checks:** `python tools/test_session_start_contract.py` exits 0; the loader creates only the intended placeholders; the task brief remains in `TASK.md` and is ready to implement.
 - **Out of scope:** generating full content for the skeleton files, creating actual `.claude/agents/` definitions, or changing hooks outside SessionStart.
 
-### Close the GOAL_CHECKLIST gaps that have an honest implementation
-
-- **Status:** Done — 12/12 tasks, reviewed `passed: true`, `PASS: 49 check(s)
-  green`. Branch `feat/checklist-completion`, local and unpushed.
-- **Goal:** close every `GOAL_CHECKLIST.md` line with a real implementation
-  here, and state plainly in the plan which lines have none.
-- **Output:** nine tools (`chain`, `memory`, `worktree`, `halt`, `deps`,
-  `git_ops`, `release_candidate`, `budget`, plus risk tiering in `scope`), two
-  per-turn hooks, the gate log, and the release-candidate report Gate 2 reads.
-- **Done Checks:** met — the full tier is green, rollback is executed rather
-  than described (`True` in 0.4s, `'uninstall exited 1'` when disabled), and
-  memory demonstrably changed this plan's Task 1.
-- **Not verified:** Gate 2 has still never run end to end; the kill switch is
-  proven in its suite but never mid-run; the meta-eval corpus has never been
-  paid-run; three of four definition-of-done scenarios have never fired.
-- **Out of Scope, and still out:** canary rollout, auto-rollback on production
-  metrics, alerting, bake time, DAST — no running service exists. Gate 2
-  auto-approve, refused on purpose.
-
 ## Completed
 
 <!-- Append-only, newest entry at the top. Never delete or rewrite an
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
+
+### 2026-08-12 — Retire `/skills-doctor`; three layer-audit doors become two
+
+- **Goal**: decide whether `/skills-doctor` is retired, narrowed, or kept —
+  raised by a `no-slop` sweep on 2026-08-03 and open since.
+- **Decision**: retired. Its five commands are *all* already registered in
+  `.claude/project-checks.json`, so it was a strict subset of `/verify`:
+  `ALREADY IN TIER` for `new_skill_check --all`, `test_process_router`,
+  `test_agent_standards`, `test_referenced_paths`, `test_command_standards`.
+- **What closed the question**: the 2026-08-03 entry kept it alive on one
+  argument — that it alone compared disk against the session's *rendered* skill
+  listing, which no file-reading script can see. Its own text had since been
+  changed to say the opposite: *"Do not claim to inspect the current session's
+  rendered system listing; that is not repository-observable."* The narrowing
+  option was therefore already impossible, and nothing unique remained.
+- **Output**: `.claude/commands/skills-doctor.md` deleted; removed from
+  `CLAUDE.md`'s command list, `test_process_router.NOT_SKILLS`, and
+  `test_referenced_paths.BUILTIN_COMMANDS`. The two surviving surfaces —
+  `no-slop` (sweeps, reports) and `capability-layer-maintenance` (owns the
+  contract, repairs) — now state the division on both sides, with two
+  assertions in `test_process_router.py` that fail if either stops naming the
+  other. Both proved red by breaking each direction.
+- **Done Check**: met, by the first of the two branches the 2026-08-03 entry
+  offered. `OK: 11 command contracts validated` (was 12).
+- **Out of Scope, and still out**: changing what the suites check.
+- **Status**: Done
+
+### 2026-08-12 — Deterministic security gate, and the review surfaces it exposed
+
+- **Goal**: a check that refuses a branch which weakens a security control or
+  leaves one unchecked — asserting facts about the artefact, never that a review
+  happened.
+- **Output**: `tools/security_gate.py` + `tools/test_security_gate.py` (64
+  assertions); the `audit`-kind entry and two `test_map` rows; a `security`
+  finding in `delivery_check.evaluate`; `code-review`'s security lens made
+  computed rather than judged; the `no-slop`/`code-review` boundary stated on
+  both sides with a suite behind it; `/plan-review`'s dangling `artifact-review`
+  fixed and `test_referenced_paths.py` widened to catch that whole class;
+  `decisions/2026-08-12-escape-hatches-inherit-trust.md`.
+- **Done Checks**: all met. `python tools/test_security_gate.py` exits 0; a real
+  removal from `_hooklib.SECRET_PATTERNS` gives `GATE EXIT=1` naming the entry,
+  and restoring it gives 0; `PASS: 51 check(s) green (audit, build, lint, smoke,
+  test, typecheck)`; `test_referenced_paths.py` exits 0.
+- **Result**: `code-review` round 1 returned `passed: false` on a P0 of my own
+  making — the inline waiver applied to every clause, so a committed credential
+  plus one comment line exited 0. `WAIVABLE_CLAUSES` now holds two of five.
+  Round 2 passed. The gate found three real defects on its own repository before
+  any of this: an unmapped CI config, five bare-stem reference rots, and two
+  bugs in itself.
+- **Not verified**: `secret-in-branch` and `dependency-risk` have never fired on
+  an organic branch. The `/git-state` fold was planned, attempted and reverted —
+  the two commands' bodies do not overlap, so the audit's "five state reporters"
+  finding is still open.
+- **Out of Scope, and still out**: a fifteenth skill; any receipt or
+  process-compliance gate; DAST and offensive testing; the ten unstarted tasks
+  of `docs/plans/2026-08-11-close-remaining-gaps.md`.
+- **Status**: Done — local on `feat/security-gate` (`d654ee5..4fece17`), not
+  pushed, no PR.
 
 ### 2026-08-09 — Add an `uninstall` verb, mirroring `install`
 
@@ -230,3 +287,98 @@ from day one. Move a task here the moment it reaches a terminal Status. -->
   argument dropped; `github` unblocked via `GITHUB_TOKEN`; `figma`, `sentry`, `notion`,
   `linear` added to `.mcp.json` and `.vscode/mcp.json`. 18 of 19 servers connected.
 - **Status**: Done
+
+### Make the layer match the target workflow architecture
+
+- **Status:** Done — 9/9 tasks, reviewed, `PASS: 42 check(s) green`. Moved to
+  Completed below; the remaining checklist scope is a NEW unit and enters at
+  `writing-plans`.
+- **Goal:** The chain the user specified, running end to end: decompose into
+  independent tasks, a workflow per task, plan in plan mode, Gate 1, execute
+  with minimal diffs, verify, bounded retry, scoped sweep and review, a
+  confirmed push, Gate 2, release, record.
+- **Constraints:** Two lifecycle gates only — the push confirmation stays an
+  operational safety check with no `<!-- GATE n -->` marker. The retry budget
+  stays **class-aware** (`security 0, merge 2, transient 2, deterministic 3,
+  unknown 3`), not flattened to 3. A skipped check is **named as skipped**,
+  never counted as a pass. Nothing acquires `gh pr merge`. Every rule added is
+  enforced by a test or a hook, not prose.
+- **Input:** `main` @ `9a65137`, clean, 37 checks green, 0 open PRs.
+  `tools/parallel_groups.py` (scheduler + the live `normalise` bug),
+  `tools/loop.py` + `_hooklib.FAILURE_BUDGETS`, `tools/test_no_slop.py`
+  (scopes `repo|layer|portability`), `.claude/agents/task-implementer.md`
+  (`isolation: worktree`), `executing-plans/references/{using-git-worktrees,
+  parallel-dispatch}.md`, `docs/plans/2026-08-10-adaptive-workflow.md`
+  (small-vs-major veto rule, to be folded in).
+- **Output:** a corrected scheduler; `tools/worktree.py` with a mandatory base;
+  one *proved* parallel dispatch or a deleted claim; `tools/scope.py`; a change
+  scope for `no-slop` and `code-review`; scoped test selection; minimal-diff
+  enforcement; plan-mode wiring where `ExitPlanMode` replaces Gate 1's
+  `AskUserQuestion`.
+- **Done Checks:** `python tools/run_checks.py --tier all --require-test` exits 0
+  and prints the suite count; `python tools/parallel_groups.py <this plan>` shows
+  `.claude/settings.json` correctly serialised rather than schedulable; and one
+  live two-agent dispatch whose worktrees are proved based on the working branch
+  by `git merge-base --is-ancestor`, read from the tree rather than from an
+  agent's report.
+- **Out of Scope:** merging anything; branch protection (403 on this plan tier);
+  an external chain driver (`tools/drive.py`) — deferred until the
+  chain-continuity instrument has measured how often the chain actually breaks.
+
+### Add `tools/delivery_check.py` — delivery facts, computed not asserted
+
+- **Status:** Done — merged to `main` as PR #10; it has since blocked two of its
+  own unsafe deliveries, which is the evidence it works.
+- **Goal:** One script that computes seven delivery facts about a branch and its
+  PR, reports them, and refuses to decide — in the shape of `resume.py`,
+  `analyze.py` and `git_identity.py`.
+- **Constraints:** Reports, never decides; **never merges, pushes or rebases**
+  (`test_process_router.py` already fails anything acquiring `gh pr merge`).
+  Exit `0` ready / `1` a check failed / `2` could not determine — and `2` is not
+  `0`, because a check that could not run is unrun, not passed. IO behind a
+  `gather_facts()` seam with an `offline` escape, decisions in a pure
+  `evaluate(facts)` the tests drive directly, mirroring
+  `git_identity.gather(root, offline=)` + `render()`. **Not** in the fast tier:
+  it needs a network and a remote, and that tier gates every auto-commit in
+  seconds.
+- **Input:** `docs/specs/2026-08-09-delivery-preflight-design.md`;
+  `tools/git_identity.py` (API seam), `tools/analyze.py` (injected-`exists`
+  test pattern), `tools/resume.py`; `.claude/skills/delivering/SKILL.md`.
+- **Output:** `tools/delivery_check.py`; `tools/test_delivery_check.py`; a step
+  in `delivering` that runs and quotes it; an entry in
+  `.claude/project-checks.json` only if it proves fast enough to belong.
+- **Done Checks:** `python tools/test_delivery_check.py` exits 0 with an
+  assertion per check, each proved red first; and the base-alignment check flags
+  a fixture where `merge-base(base, head) != tip(base)`, which is the case that
+  stranded three merged units outside PR #7.
+- **Out of Scope:** repo-settings-as-code (its own unit, and the only preventive
+  option available); stacked-PR tooling such as Graphite (rejected in the spec);
+  merging anything; configuring branch protection.
+
+### Decide which capability owns layer retirement
+
+- **Status:** Done — `capability-layer-maintenance` owns capability-layer audits, contract changes, migration, and retirement.
+- **Goal:** Keep one owner for retiring or replacing capability-layer components.
+- **Output:** Replaced `skill-authoring`, migrated active references, added hook-policy enforcement, and verified the complete suite.
+- **Done check:** Skill routing, hook registration, hook policy, and the full all-tier suite pass.
+- **Out of scope:** Product-code changes or project-history updates owned by `knowledge-manager`.
+
+### Close the GOAL_CHECKLIST gaps that have an honest implementation
+
+- **Status:** Done — 12/12 tasks, reviewed `passed: true`, `PASS: 49 check(s)
+  green`. Branch `feat/checklist-completion`, local and unpushed.
+- **Goal:** close every `GOAL_CHECKLIST.md` line with a real implementation
+  here, and state plainly in the plan which lines have none.
+- **Output:** nine tools (`chain`, `memory`, `worktree`, `halt`, `deps`,
+  `git_ops`, `release_candidate`, `budget`, plus risk tiering in `scope`), two
+  per-turn hooks, the gate log, and the release-candidate report Gate 2 reads.
+- **Done Checks:** met — the full tier is green, rollback is executed rather
+  than described (`True` in 0.4s, `'uninstall exited 1'` when disabled), and
+  memory demonstrably changed this plan's Task 1.
+- **Not verified:** Gate 2 has still never run end to end; the kill switch is
+  proven in its suite but never mid-run; the meta-eval corpus has never been
+  paid-run; three of four definition-of-done scenarios have never fired.
+- **Out of Scope, and still out:** canary rollout, auto-rollback on production
+  metrics, alerting, bake time, DAST — no running service exists. Gate 2
+  auto-approve, refused on purpose.
+

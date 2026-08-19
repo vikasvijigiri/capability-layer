@@ -217,15 +217,70 @@ INFO_QUESTION = [
     r"^(can|does) (it|this|that|claude)\b",
 ]
 
+# Of those, the ones answerable by reading the current tree -- the cheapest
+# execution level there is: answer directly, load no procedure, run no chain.
+#
+# The exclusions are the whole correctness argument, and they are measured
+# rather than guessed. Two question shapes wear the same grammar and are NOT
+# direct answers:
+#
+#   * recall of a past decision or session -- "where did we get to last
+#     session" is labelled a should-trigger for the docs stage in
+#     `docs/evals/trigger-queries.json`, and routing it to a direct answer
+#     would have broken that label. It was the ONLY such collision in 180
+#     queries, and it is the reason this pass is a subset rather than the whole
+#     of INFO_QUESTION.
+#   * what other people or teams do, which is outside evidence rather than a
+#     fact about this repository.
+DIRECT_ANSWER = [
+    r"^what (does|do|is|are) (the|this|that|it|a|an)\b",
+    r"^where (is|are|does|do)\b",
+    r"^how (does|do|is|are) (the|this|that|it|a|an)\b",
+]
+
+NOT_DIRECT = [
+    # recall: another stage owns the durable record
+    r"\b(last|previous|earlier) (session|week|time)\b",
+    r"\bdid we (decide|agree|choose)\b",
+    r"\bwhere did we get to\b",
+    r"\bwhat did we\b",
+    # outside evidence rather than this repository
+    r"\b(other|another) (team|teams|project|projects|people|company)\b",
+    r"\busually\b",
+    r"\bcommon practice\b",
+]
+
 # --- pass 2: below the floor where a brief pays for itself -------------------
-TOO_SMALL = [
-    # an explicit path: the change has already been located
-    r"\b[\w./-]+\.(py|js|jsx|ts|tsx|md|json|ya?ml|toml|css|html|rs|go|java|rb)\b",
+#
+# Two tiers, and the split is load-bearing. While this pass returned None its
+# breadth was invisible: silence happened to match what the corpus expected of
+# every OTHER stage, so an over-broad pattern here cost nothing and proved
+# nothing. Routing it to a state key made that accident visible immediately --
+# "before this goes out, look at what changed in src/" and "CLAUDE.md says ten
+# agents and there are eleven" are a review and a layer observation, and both
+# were being called small work purely for naming a path.
+#
+# Naming a file is not a smallness signal. Almost every concrete request names
+# one. What signals smallness is a file named TOGETHER WITH a change verb, or a
+# word that means small on its own.
+SMALL_ALONE = [
     r"\brename\b",
     r"\btypo\b",
     r"\bone[- ]lin(e|er)\b",
     r"\bbump (the )?version\b",
 ]
+
+_PATH = (r"\b[\w./-]+\.(py|js|jsx|ts|tsx|md|json|ya?ml|toml|css|html|rs|go|"
+         r"java|rb)\b")
+_CHANGE_VERB = (r"\b(fix|change|update|set|replace|remove|delete|add|drop|"
+                r"tweak|correct|bump|swap|edit)\b")
+
+# A path AND a change verb: the change is located and the action is named, so
+# the brief would restate what the prompt already says.
+SMALL_LOCATED = [_PATH + r"[^.]{0,60}" + _CHANGE_VERB,
+                 _CHANGE_VERB + r"[^.]{0,60}" + _PATH]
+
+TOO_SMALL = SMALL_ALONE + SMALL_LOCATED
 
 # --- pass 3: the approach is not settled -------------------------------------
 OPEN = [
@@ -241,6 +296,10 @@ OPEN = [
     r"\bwhich (approach|design|way|one)\b",
     r"\bhow (would|should|might) (we|you|i)\b",
     r"\bnot sure how to\b",
+    # "i do not know how to model it yet" is the same admission as "not sure how
+    # to", and was missed until a discrimination pair added on 2026-08-16 put it
+    # in the corpus. Both contractions, because a person types either.
+    r"\b(do not|don't|dont) know how to\b",
     r"\bopen question\b",
     r"\bapproach\b",
     r"\btrade[- ]?offs?\b",
@@ -284,10 +343,29 @@ def classify(prompt: str) -> str | None:
     if _hit(HARD_STAGE, text):
         return None
     if _hit(TOO_SMALL, text):
-        return None
+        # Named, not silent -- changed 2026-08-15. This pass detects exactly the
+        # shape `workflow.md` wrote its narrow path for, and returning None meant
+        # the path existed in prose that nothing ever surfaced: the nine stages
+        # cost the same for a two-file change as for a twelve-task plan, which
+        # that file calls the single biggest source of overhead here.
+        #
+        # Silence is not neutral. It reads as "no entry rule applies", so the
+        # full chain runs by default on precisely the changes that least need it.
+        #
+        # Safe to route: of the labelled should-trigger queries in
+        # `docs/evals/trigger-queries.json`, ZERO reach this pass, so naming a
+        # key here cannot reclassify anything the corpus asserts. Measured before
+        # the change, not after.
+        return "entry-small"
     if _hit(OPEN, text):
         return "entry-open"
     if _hit(INFO_QUESTION, text):
+        # The cheapest sufficient level, named rather than left implicit. A
+        # question about the current tree needs no procedure loaded and no chain
+        # run, and saying so is the one execution level this layer never had --
+        # everything else it knows how to do is a stage.
+        if _hit(DIRECT_ANSWER, text) and not _hit(NOT_DIRECT, text):
+            return "entry-direct"
         return None
     if _hit(TASK, text):
         # Breadth overrides the settled reading. A request naming this many

@@ -49,6 +49,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+try:
+    import security_gate  # noqa: E402
+except Exception:  # pragma: no cover -- an unimportable gate is `unknown`, not a crash
+    security_gate = None  # type: ignore[assignment]
+
 # Squash, resolved at Gate 1: squash-merge onto short-lived independent branches
 # is the dominant trunk-based convention, and `CLAUDE.md` already assumed it --
 # `wip:` checkpoints are deliberate "because squash-merge collapses them". The
@@ -210,6 +216,19 @@ def gather_facts(root: Path, base: str, head: str,
     else:
         facts["behind"] = facts["ahead"] = None
 
+    # The security gate reads git, not the network, so it runs on both sides of
+    # the offline escape. Imported rather than shelled out to: both are `tools/`
+    # modules and a subprocess would repeat the blob reads already done here.
+    facts["security"] = None
+    try:
+        sec_facts = security_gate.gather_facts(root, base, offline=offline)
+        facts["security"] = {
+            "findings": security_gate.evaluate(sec_facts),
+            "considered": security_gate.considered(sec_facts),
+        }
+    except Exception:
+        facts["security"] = None      # unreadable is `unknown`, never a pass
+
     if offline:
         facts["ci"] = None
         facts["protection"] = None
@@ -334,6 +353,24 @@ def evaluate(facts: dict) -> list[dict]:
         add("worktree", "blocking",
             f"{len(dirty)} uncommitted path(s) -- the branch does not match the "
             f"tree these checks just read")
+
+    # --- security: the gate's verdict, carried rather than re-derived
+    sec = facts.get("security")
+    if sec is None:
+        unknown("security", "whether this branch weakens a security control")
+    else:
+        blocking = [f["clause"] for f in sec.get("findings", [])
+                    if f.get("severity") == "blocking"]
+        unsure = [f["clause"] for f in sec.get("findings", [])
+                  if f.get("severity") == "unknown"]
+        if blocking:
+            add("security", "blocking",
+                f"`tools/security_gate.py` fired: {', '.join(sorted(blocking))}. "
+                f"Run it directly for the paths behind each clause.")
+        elif unsure:
+            add("security", "unknown",
+                f"the security gate could not evaluate {', '.join(sorted(unsure))} "
+                f"-- unrun, not passed")
 
     # --- enforcement: the ceiling, stated so a green run is not over-read
     if facts.get("protection") is None:

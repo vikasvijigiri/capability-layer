@@ -6,6 +6,139 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-16 18:30 — green locally, red on CI: the gate's base ref was a local branch
+
+- **Symptom**: PR #12's slow tier failed with `not applicable to this diff:
+  dependency-risk` — a line naming a clause that was not the problem. Local
+  `--tier all` was green on the same tree.
+- **Cause**: `--base main` names a *local* branch, and a `pull_request` checkout
+  leaves the base only as `origin/main` — so `merge-base` returned nothing,
+  every fact came back `None`, and all five clauses degraded to `unknown` → exit
+  2. The diagnosis was useless because `failure_reason` reports one line and the
+  gate's head line, naming the unknown clause, was not it.
+- **Fixed**: `resolve_base()` tries the ref, then `origin/<ref>`; a local branch
+  wins when one exists; neither resolving stays `None`. Proved in a clone in the
+  CI shape: exit 2 → `clean -- 4 clause(s) evaluated, 0 fired`.
+- **Then the fix's own test failed the same way** — it asserted `sg.ROOT` has a
+  local `main`, the exact assumption being removed. **Run a layer test in a
+  detached clone with local branches deleted before pushing it.**
+
+## 2026-08-16 16:20 — the only saved eval result asserted a run that never happened
+
+- **Symptom**: `docs/evals/results-2026-08-07.json` carried `"dry_run": false`
+  on both rows — a claim of live measurement — while `LOG.md` 2026-08-14 records
+  that `eval_triggers.py` *"had never run live; it died on the first real call,
+  `message` being a string on error events."*
+- **Why it survived**: nothing reads the file — no suite, tool or skill — so it
+  could only be caught by reading two documents against each other.
+- **Fixed**: rows moved under `_voided_rows`, reason inline. Kept, not deleted:
+  two published audits quoted these numbers as real.
+- **Deliberately NOT fixed**: no replacement written. Writing the superseding
+  numbers into a file this session did not produce is the same defect with a
+  newer date. `python tools/eval_triggers.py` writes a real one, ~$0.45/query.
+
+## 2026-08-16 — `code-review` never self-triggers, and no description fixes it
+
+- **Measured live**, ~$11 of `claude -p`: `verifying-work` 1.0,
+  `systematic-debugging` 0.5, `code-review` **0.0** — before AND after ~600
+  characters of extra trigger phrases were added to it.
+- **Diagnosis**: on its own canonical prompt ("go through the diff before i open
+  a PR") the model runs `Bash` x4 and `Grep` x1 and invokes **no skill at all**.
+  It reviews the diff itself. That is not a description losing to another
+  description; it is a skill losing to the model doing the work directly, and
+  trigger words cannot reach it.
+- **Not a defect to fix.** Its real entry is the handoff from `verifying-work`,
+  which measures 1.0. The chain reaches it; only the direct prompt does not.
+- **What this settles**: descriptions DO trigger, so the per-turn listing cost is
+  bought function, not waste — a conclusion one step from being reversed on this
+  skill's evidence alone. `eval_triggers` now reports `lost_to`, so the next
+  0.0 explains itself instead of costing a second sweep.
+
+## 2026-08-15 — A product repo earns `ran_test` from the layer's own suites
+
+- **Symptom**: an empty git repo with the layer installed and no product code
+  resolves 44 checks and reports `ran_test` True — the layer's 42 shipped
+  `tools/test_*.py` self-tests.
+- **Why it matters**: `ran_test` is what `06-artifact-autocommit.py` reads to
+  allow committing code. A product change clears that gate on evidence about
+  the *layer* rather than about itself.
+- **Not the shipping**: `install.py:50` ships `tools/` on purpose so the layer
+  validates itself in the target. That decision stands.
+- **Two fixes tried and rejected, with evidence**: gating the glob on "no other
+  test marker" hands THIS repo `pytest -q`, which spends 72s collecting scripts
+  that `sys.exit()` at import and dies having run nothing.
+- **Status**: **open.** Needs a way to tell a shipped test from the repo's own;
+  an install manifest is the likely shape. A weaker discriminator is worse than
+  the hole, so this is recorded rather than patched.
+
+## 2026-08-12 08:40 — A check `timeout` bounds the verdict, not the wall clock
+
+- **Phase/Context**: found while parallelising `_projectchecks.run_checks`. A new
+  test fixture — a check sleeping 30s under `"timeout": 1` — made
+  `test_project_checks.py` the longest check in the fast tier at 33.9s against a
+  61s baseline for all 45. The verdict was correct throughout; only the clock
+  was wrong, which is why nothing had ever caught it.
+- **Root cause**: `run_checks` calls `subprocess.run(..., shell=True, timeout=T)`.
+  The timeout kills the *shell*; on Windows the grandchild interpreter survives,
+  and `communicate()` then blocks on the pipe it inherited until that grandchild
+  exits on its own. So `T` decides when the failure is *reported*, not when the
+  process stops consuming the turn.
+- **Status**: **open, not fixed.** The fixture was reduced to a 3s sleep so the
+  tier stays fast; that hides the cost, it does not remove it.
+- **Known fix**: `tools/smoke.py:57` already solved exactly this for the slow
+  tier — `taskkill /F /T /PID` on Windows, `os.killpg` on POSIX — with the
+  comment "`taskkill /T` is the only reliable way". `run_checks` should use the
+  same teardown. The two runners disagreeing about how a child dies is the same
+  class of drift that `run_checks` itself exists to prevent.
+- **Why it matters**: the fast tier gates the auto-commit at the end of every
+  turn. One hung check blocks a turn for its full natural runtime no matter what
+  `timeout` says, and the configured value reads like a bound that holds.
+
+## 2026-08-12 01:10 — The stall detector's third limb had never worked
+
+- **Phase/Context**: after fifteen consecutive `chain-continuity` notices in one
+  session, all reporting the same unit as stalled while the work was finished
+  and committed.
+- **Symptom**: `chain: stalled -- state has been BUILD for N turn(s) while the
+  tree kept changing`, firing on turns that made **no edit at all** — including
+  four consecutive turns whose only output was a one-line reply.
+- **Diagnosis**: `tools/chain.py:121` computed the tree fingerprint as
+  `f"{head}:{hash(status) & 0xffffffff:08x}"`. Python's builtin `hash()` on a
+  `str` is SipHash with a **per-process random seed**, and every hook run is a
+  new process, so the fingerprint changed on every turn regardless of the tree.
+  The ledger shows it plainly: the head SHA is identical across rows while the
+  second half differs every time.
+- **Why it survived**: the wrong answer and the right one look the same. A
+  fingerprint is expected to be opaque, so a changing one reads as a changing
+  tree. The obvious unit test — call the function twice and compare — passes
+  with the bug present, because the seed is fixed for the life of one process.
+- **What it actually broke**: `.claude/workflow.md` says a stall needs three
+  limbs (state pinned, tree churning, progress flat) and that the third was
+  added because a two-limb version *"reported `stalled` through four turns of a
+  healthy twelve-task execution"*. With a fingerprint that always differs, the
+  churn limb was permanently true — the detector was two-limbed for its entire
+  life and the documented fix was never in effect.
+- **Attempts**:
+  - 1. Blamed the green-ref bug (`HANDOFF.md` Pending). True, and the cause of
+    the pinned `BUILD` state, but it does not explain the churn limb — the two
+    are independent.
+  - 2. Read the ledger instead of the code, which is what exposed the constant
+    head and the varying tail.
+  - 3. Proved it directly: three processes on an unchanged tree gave
+    `b30ad4dc`, `1bf90e40`, `e519ed51`; one process twice, and
+    `PYTHONHASHSEED=0` across processes, both gave one value.
+- **Fix**: `fingerprint_of(head, status)` extracted as a pure function using
+  `hashlib.sha256(...)[:8]`. `tools/test_chain.py` asserts a **hard-coded**
+  digest — the only shape that catches per-process randomness, since a
+  same-process comparison cannot. Proved red by reinstating the old line.
+- **Verification**: after the fix the last three ledger rows share one
+  fingerprint (the first time any two consecutive rows have matched), and
+  `python tools/chain.py` reports `chain: advancing` where every prior run
+  reported `stalled`. Full tier `PASS: 51 check(s) green`.
+- **Status**: `Resolved` in `f641681`. `resume.py:plan_body_hash` was audited as
+  the only other hashing site and already used `hashlib.sha256`, so the durable
+  plan-rejection mechanism was never affected.
+
 ## 2026-08-11 22:05 — Local green, CI red: the rot detector flagged a gitignored file
 
 - **Phase/Context**: the first CI run this branch has ever had, immediately

@@ -69,7 +69,12 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 # about listing-truncation budget; richer trigger coverage is worth spending
 # some of it, so going over prints a NOTE and does not fail the suite.
 
-HARD_FRONTMATTER = 1024
+# 1024 -> 1300 on 2026-08-15, in step with `new_skill_check.HARD_FRONTMATTER`
+# and `test_no_slop.desc_budget`. Three copies of one budget is a defect in
+# itself; until they are merged, changing one means changing all three, or a
+# skill passes here and fails there. The reasoning is recorded once, at
+# `test_no_slop.py`'s `desc_budget`.
+HARD_FRONTMATTER = 1300
 SOFT_DESC = 500
 
 # Every description is injected on every turn, so their sum is a standing cost
@@ -289,8 +294,6 @@ NOT_SKILLS = {
     # hook event directories
     "pre-commit", "post-run", "pre-edit", "pre-deploy", "session-start",
     "pre-compact", "on-artifact-create", "global-session-start",
-    # slash commands
-    "skills-doctor",
     # Claude Code agent types
     "general-purpose", "statusline-setup",
     # document sections and prose
@@ -1197,8 +1200,19 @@ else:
           "`PASS` on a narrowed run is green reported on less evidence")
     check("...and it refuses to narrow anything but a `small` change",
           'verdict["scope"] != "small"' in _rcsrc)
-    check("...and never writes a green ref", "update-ref" not in _rcsrc,
+    # `--record-green` (2026-08-16) gave the ref its second writer, because the
+    # first -- the auto-commit hook -- refuses past `max_files` and so left the
+    # largest units unable to record a verified tree at all. The rule is
+    # unchanged and now needs asserting rather than being structural: the write
+    # exists once, inside `record_green()`, and the flag is refused before any
+    # check runs unless the tier is `all` and the run is unscoped.
+    check("...and a SCOPED run still cannot write a green ref",
+          _rcsrc.count('"update-ref"') == 1
+          and _rcsrc.index("def record_green") < _rcsrc.index('"update-ref"'),
           "only the full tier may mark a tree verified")
+    check("...with the refusal decided before the checks, not after",
+          "--record-green needs `--tier all`" in _rcsrc,
+          "a refusal that reads the result can be argued with by the result")
 
 # Shape of the map, never its judgement -- see `_why_test_map`. A mapped command
 # that is not a registered check runs nothing for that path, silently.
@@ -1224,6 +1238,68 @@ if _tm:
     check("the test_map states that its judgement is unproven",
           "silent" in (_cfg.get("_why_test_map") or ""),
           "a coverage claim nothing verifies must say so where it lives")
+
+# --- the two skills that read the same files must each name the other -------
+#
+# `no-slop` (stage 5) and `code-review` (stage 6) run back to back and can read
+# the same changed files. The division is real -- no-slop reads standing
+# artefacts INCLUDING files the change never touched, code-review reads the diff
+# -- and until 2026-08-11 it was held by one sentence in `no-slop` saying "this
+# is not a diff review", with nothing checking that either skill still agreed.
+#
+# This is the weakest mechanism that is still a mechanism, and it is deliberately
+# the same shape as the agent/dispatcher back-reference above: it cannot verify
+# that the division is OBSERVED, only that neither side has quietly forgotten the
+# other exists. A stronger check would have to judge prose, which is how the gate
+# markers ended up needing a declared comment rather than a substring search.
+_ns = (SKILLS / "no-slop" / "SKILL.md").read_text(encoding="utf-8")
+_cr = (SKILLS / "code-review" / "SKILL.md").read_text(encoding="utf-8")
+check("no-slop names code-review as the skill that owns the diff",
+      "code-review" in _ns,
+      "the boundary is stated on one side only, which is how it drifts")
+check("code-review names no-slop as the skill that owns standing artefacts",
+      "no-slop" in _cr,
+      "the boundary is stated on one side only, which is how it drifts")
+
+# The security lens stopped being judged on 2026-08-11. If `code-review` no
+# longer names the gate, lens selection has silently gone back to a judgement
+# call -- which is invisible, because the skill still reads correctly.
+check("code-review names the gate that decides its security lens",
+      "tools/security_gate.py" in _cr,
+      "the security lens is computed only while the skill names the command")
+
+# The other pair that reads the same directory. `.claude/` is swept by `no-slop`
+# and owned by `capability-layer-maintenance`, and until 2026-08-12 there were
+# THREE surfaces over it -- `/skills-doctor` was the third, and it turned out to
+# run five suites that `/verify` already resolves, with its one unique claim
+# (inspecting the session's rendered listing) already disowned in its own text.
+# It was retired; these two remain and divide by question, not by directory.
+_clm = (SKILLS / "capability-layer-maintenance" / "SKILL.md").read_text(encoding="utf-8")
+check("capability-layer-maintenance names no-slop as the skill that sweeps",
+      "no-slop" in _clm,
+      "one side naming the other is how the audit surfaces stayed distinct")
+check("no-slop names capability-layer-maintenance as the skill that repairs",
+      "capability-layer-maintenance" in _ns,
+      "a sweep that repairs the layer's wiring is the structural edit this forbids")
+
+# --- memory is READ, at both ends of the chain -------------------------------
+#
+# `GOAL_CHECKLIST.md` §15 asks that stage 1 AND stage 4 query the durable
+# knowledge, and until 2026-08-16 only stage 1 did -- so everything the layer had
+# learned informed what got planned and nothing informed what got accepted.
+# Asserted on both, because a store nobody reads is a store nobody maintains,
+# and the write side has no symptom when the read side goes away.
+#
+# The two queries are deliberately not the same query: stage 1 asks about files
+# it is ABOUT to touch, stage 4 about files that WERE touched. Plans are wrong
+# about their file maps, which is exactly why the second one is worth having.
+_readers = sorted(
+    p.parent.name for p in SKILLS.glob("*/SKILL.md")
+    if "tools/memory.py" in p.read_text(encoding="utf-8", errors="replace"))
+check("stage 1 writing-plans queries durable memory",
+      "writing-plans" in _readers, str(_readers))
+check("stage 4 verifying-work queries it too, over what was ACTUALLY touched",
+      "verifying-work" in _readers, str(_readers))
 
 print()
 if failures:

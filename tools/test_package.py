@@ -43,6 +43,20 @@ ROOT = Path(__file__).resolve().parents[1]
 failures: list[str] = []
 skipped: list[str] = []
 
+
+def _load_install():
+    """The installer, by path -- it is not an importable module."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "install_for_package", ROOT / ".claude" / "install.py")
+    assert spec is not None and spec.loader is not None, "cannot load install.py"
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+inst = _load_install()
+
 # Free space below which a wheel build and two venvs cannot be attempted. Not a
 # guess: the venvs alone are ~60MB each and the staged payload plus wheel is a
 # few more. Checked up front so the failure is "no disk" rather than a build
@@ -163,8 +177,18 @@ names = zf.namelist()
 
 check("the payload carries the skills",
       any("payload/.claude/skills/repo-recon/SKILL.md" in n for n in names))
-check("...and the suites, which are what prove an install worked",
-      len([n for n in names if "/payload/tools/test_" in n]) >= 20)
+# The VALIDATORS ship -- the suites that check an installed layer is intact and
+# wired. The layer's internal suites do not, and the count is the assertion:
+# ~42 used to ship and it broke every Python host, because they are standalone
+# scripts that `sys.exit()` at import and pytest collected them during the
+# HOST'S run. See `install.SHIPPED_SUITES`.
+_shipped = {n.rsplit("/", 1)[-1] for n in names if "/payload/tools/test_" in n}
+check("...and the validators, which are what prove an install worked",
+      _shipped == set(inst.SHIPPED_SUITES),
+      f"shipped {sorted(_shipped)}")
+check("...and NOT the layer's internal suites, which break a host's pytest",
+      not any(n.endswith("payload/tools/test_package.py") for n in names),
+      "a host has no use for the layer testing its own packaging")
 check("...and settings.json, which the merge needs as a SOURCE",
       any(n.endswith("payload/.claude/settings.json") for n in names),
       "without it every install registers zero hooks, silently")
@@ -244,6 +268,25 @@ try:
                 "def charge():\n    raise NotImplementedError\n", encoding="utf-8")
             (product / "test_app.py").write_text(
                 "def test_charge():\n    assert True\n", encoding="utf-8")
+            # The product declares its OWN check, which is the documented way a
+            # repository says what "the checks pass" means, and `install.py`
+            # preserves an existing `project-checks.json` rather than seeding
+            # over it.
+            #
+            # Without this the fixture passed for the wrong reason: detection
+            # found nothing of the product's and fell back to the ~42 layer
+            # suites that used to ship, so `--require-test` was satisfied by the
+            # layer testing ITSELF while `test_app.py` never ran. The layer
+            # stopped shipping its internals on 2026-08-16 and this went red
+            # immediately -- the assertion working, not breaking.
+            #
+            # Declared rather than detected via `pyproject.toml`, because this
+            # venv has no pytest: a detected runner that is not installed is
+            # skipped, and a skipped test is not a test that ran.
+            (product / ".claude").mkdir(parents=True, exist_ok=True)
+            (product / ".claude" / "project-checks.json").write_text(
+                json.dumps({"test": "python test_app.py"}, indent=2) + "\n",
+                encoding="utf-8")
             run(["git", "add", "-A"], cwd=product)
             run(["git", "commit", "--quiet", "-m", "product"], cwd=product)
 

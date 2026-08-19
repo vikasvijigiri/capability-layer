@@ -176,9 +176,57 @@ if decision != "deny":
         f"guard allowed task-implementer outside its dispatched scope: {out!r}"
     )
 
+# --- the claim may not outlive the wiring ------------------------------------
+#
+# Everything above proves the guard works WHEN `UAIOS_AGENT_NAME` is set. On
+# this host nothing sets it: Claude Code spawns subagents itself and runs no
+# hook inside one, so on a real dispatch the guard runs and is silent. Audited
+# 2026-08-16, where `workflow.md` still listed agent file scope among six
+# shipped rails with no precondition -- a reader of the contract got the
+# stronger statement, which is the failure mode this layer is least able to see,
+# because a dormant control and a working one look identical from outside.
+#
+# So the dormancy is asserted, in the file that makes the claim. If the wiring
+# ever arrives, this fails and the sentence gets rewritten in the same change.
+
+WORKFLOW = ROOT / ".claude" / "workflow.md"
+_workflow_text = WORKFLOW.read_text(encoding="utf-8", errors="replace")
+
+_rail_row = next((ln for ln in _workflow_text.splitlines()
+                  if "**Agent file scope**" in ln), "")
+if not _rail_row:
+    failures.append("workflow.md no longer has an Agent file scope rail row")
+elif "UAIOS_AGENT_NAME" not in _rail_row:
+    failures.append(
+        "workflow.md's Agent file scope rail claims enforcement without naming "
+        "`UAIOS_AGENT_NAME`, the variable no dispatcher on this host sets")
+
+if "dormant on this host" not in _workflow_text:
+    failures.append(
+        "workflow.md dropped the dormancy note for agent file scope -- the "
+        "guard is silent on this host and the contract must say so")
+
+# Looks for the variable being SET, not merely named -- `env["UAIOS_AGENT_NAME"]
+# = ...` or a `{"UAIOS_AGENT_NAME": ...}` literal. A prose mention is how the
+# dormancy gets documented, so matching those would make this check fire on its
+# own explanation, which it did on the first run.
+_SETS_AGENT_NAME = re.compile(r"""UAIOS_AGENT_NAME["']?\s*[:=]""")
+_env_setters = [
+    path for path in ROOT.rglob("*.py")
+    if "node_modules" not in path.parts and "build" not in path.parts
+    and path.name not in ("test_agent_standards.py", "02-agent-scope-guard.py")
+    and _SETS_AGENT_NAME.search(path.read_text(encoding="utf-8", errors="replace"))
+]
+if _env_setters:
+    failures.append(
+        "something now SETS UAIOS_AGENT_NAME outside the guard and this suite "
+        f"({[p.name for p in _env_setters]}) -- agent file scope may no longer "
+        "be dormant, so the note in workflow.md must be rewritten")
+
 if failures:
     for failure in failures:
         print(f"FAIL: {failure}")
     raise SystemExit(1)
 
 print("OK: 02-agent-scope-guard.py denies out-of-scope writes and stays silent in-scope")
+print("OK: the file-scope claim names its precondition and is marked dormant")

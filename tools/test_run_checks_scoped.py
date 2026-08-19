@@ -165,20 +165,28 @@ check("...and the refusal exits 2, not 0", "return 2" in scoped_body)
 check("a missing test_map is a refusal, not an empty selection",
       'verdict["test_map"] is None' in scoped_body)
 
-# --- the green ref is never moved here ----------------------------------------
+# --- a SCOPED run can never move the green ref --------------------------------
 #
-# Structural rather than promised: `run_checks.py` contains no ref write at all,
-# so a scoped run cannot move one. Asserted because the guarantee is what makes
-# `PARTIAL PASS` safe, and a future edit adding a convenience ref-write would
-# break it invisibly.
+# This was structural until 2026-08-16: `run_checks.py` contained no ref write at
+# all, so the guarantee needed no argument. `--record-green` ends that, because
+# the ref's only other writer -- the auto-commit hook -- refuses past `max_files`
+# and left the largest units unable to record a verified tree at all.
 #
-# Asserted on the ref WRITE, not on the ref name: the module docstring names
-# `refs/uaios/green/<slug>` in order to explain the guarantee, and a substring
-# scan for the name failed on the very prose that documents it. A check that
-# goes red when you write down why it exists is the wrong check.
-check("run_checks.py never writes a green ref",
-      "update-ref" not in src,
-      "a scoped run must not be able to mark a tree verified")
+# The guarantee is now conditional and therefore asserted properly, below and in
+# the `--record-green` section at the foot of this file: exactly one `update-ref`
+# exists, it lives in `record_green()`, and nothing on the scoped path can reach
+# it. Asserted on the ref WRITE and not the ref NAME -- the docstring names
+# `refs/uaios/green/<slug>` to explain the guarantee, and a scan for the name
+# failed on the very prose documenting it.
+# Counted as the argv element `"update-ref"`, not as the bare word: the
+# surrounding prose says "git update-ref failed" and matching that would make
+# the check red for explaining itself.
+check("exactly one ref write exists in run_checks.py",
+      src.count('"update-ref"') == 1, str(src.count('"update-ref"')))
+check("...and it is inside record_green(), not on any check path",
+      src.index("def record_green") < src.index('"update-ref"')
+      < src.index("def main"),
+      "a ref write reachable from a scoped run would launder PARTIAL PASS")
 
 # --- the map itself is real ---------------------------------------------------
 #
@@ -233,6 +241,51 @@ out = subprocess.run([sys.executable, "tools/test_no_slop.py", "--scope", "chang
                      stdin=subprocess.DEVNULL, timeout=300)
 check("the change sweep runs and states its scope",
       "scope=change" in out.stdout, out.stdout[-300:] or out.stderr[-300:])
+
+# --- the green ref means the FULL tier passed, and only that -------------------
+#
+# `--record-green` (2026-08-16) gives the ref a second writer, because the first
+# -- the auto-commit hook -- refuses past `max_files`, so the largest units never
+# recorded a verified tree and `resume.py` could not leave BUILD. The danger a
+# second writer introduces is laundering: a scoped run prints PARTIAL PASS
+# precisely because it has NOT earned the word PASS, and letting it move the ref
+# would turn the weaker claim into the stronger one with no evidence added.
+#
+# Refused before any check runs, so the refusal cannot depend on the result.
+
+
+def _rc(*argv: str) -> tuple[int, str]:
+    proc = subprocess.run([sys.executable, "tools/run_checks.py", *argv],
+                          cwd=str(ROOT), capture_output=True, text=True,
+                          stdin=subprocess.DEVNULL, timeout=60)
+    return proc.returncode, (proc.stderr or "") + (proc.stdout or "")
+
+
+_rc_scoped, _out_scoped = _rc("--scoped", "--record-green")
+check("--scoped --record-green refuses", _rc_scoped == 2, str(_rc_scoped))
+check("...and says which run it refused, not just that it refused",
+      "scoped" in _out_scoped, _out_scoped[-200:])
+
+_rc_fast, _out_fast = _rc("--tier", "fast", "--record-green")
+check("--tier fast --record-green refuses too -- fast is not the full tier",
+      _rc_fast == 2, str(_rc_fast))
+
+_src = (ROOT / "tools" / "run_checks.py").read_text(encoding="utf-8")
+# Ordering asserted inside main()'s body. Against the whole file it is
+# meaningless: `run_scoped` and `pc.run_checks` both appear in the helper
+# definitions ABOVE main, so a whole-file index compares the guard against a
+# function definition rather than against the call it must precede.
+_main = _src[_src.index("def main() -> int:"):]
+check("the refusal is decided before any check runs",
+      _main.index("--record-green needs `--tier all`")
+      < _main.index("return run_scoped(") < _main.index("pc.run_checks(ROOT"),
+      "a refusal that runs after the checks can be influenced by their result")
+check("recording is additionally gated on a test having run",
+      "--record-green needs a test check to have run" in _src,
+      "a tier that tested nothing has not verified the tree it would vouch for")
+check("the docstring no longer claims run_checks contains no ref write",
+      "contains no ref write" not in _src,
+      "the module documented a guarantee it stopped providing")
 
 print()
 if failures:

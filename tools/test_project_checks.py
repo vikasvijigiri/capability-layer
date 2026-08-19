@@ -22,6 +22,7 @@ import importlib.util
 import json
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -327,6 +328,168 @@ check("a lockfile alone does not",
 check("a mixed change does", pc.changed_includes_code(["README.md", "src/a.go"]))
 
 
+# --- concurrency must change the clock and nothing else ---------------------
+#
+# Checks run on a thread pool (DEFAULT_JOBS=8) because the serial fast tier cost
+# 61.4s at the end of every turn. The speedup is worthless if it costs
+# determinism, so both properties are pinned here rather than described.
+#
+# The ordering fixture is the load-bearing one. `test_a_slow` is declared first
+# and finishes last; `test_b_fast` is declared second and finishes first. Under
+# `as_completed` -- the obvious way to write this pool -- the verdict would name
+# them in completion order, so the same red tree would produce two different
+# failure strings on different runs, and a diff of two reports would show
+# phantom changes. `.map` yields in submission order, and this fixture is what
+# says so.
+
+racy = tree({"tools/test_a_slow.py":
+             "import sys,time\ntime.sleep(0.6)\nprint('FAIL: slow one')\nsys.exit(1)\n",
+             "tools/test_b_fast.py":
+             "import sys\nprint('FAIL: fast one')\nsys.exit(1)\n"})
+
+ok, detail, _ = pc.run_checks(racy)
+check("a red tree with two failures is red", not ok, detail)
+check("failures are reported in declaration order, not completion order",
+      detail.index("test_a_slow") < detail.index("test_b_fast"), detail)
+
+# Same tree, forced serial. Identical output is the whole claim: `jobs` is a
+# knob on the clock, not on the verdict.
+serial = tree({"tools/test_a_slow.py":
+               "import sys,time\ntime.sleep(0.6)\nprint('FAIL: slow one')\nsys.exit(1)\n",
+               "tools/test_b_fast.py":
+               "import sys\nprint('FAIL: fast one')\nsys.exit(1)\n",
+               ".claude/project-checks.json": json.dumps({"jobs": 1})})
+ok_s, detail_s, _ = pc.run_checks(serial)
+check("`jobs: 1` restores serial execution", not ok_s, detail_s)
+check("...and produces byte-identical output to the parallel run",
+      detail_s == detail, f"parallel={detail!r} serial={detail_s!r}")
+
+# The equivalence check above cannot fail if `jobs` is ignored: both fixtures are
+# bounded by the same slow check, so a parallel run and a serial run of them
+# produce the same string either way. Deleting the config lookup entirely left
+# the suite green -- found by mutating the module and re-running, which is the
+# only reason this block exists.
+#
+# The observable is OVERLAP, not elapsed time. Each check records the interval
+# it ran in; two intervals that intersect prove concurrency, and two that do not
+# prove serialisation. That is a fact about what happened, so it holds on a
+# loaded machine exactly as it does on an idle one.
+#
+# It replaces a timing ratio, which was the obvious approach and was wrong. An
+# absolute threshold needs a long sleep to clear the noise (3s of every turn at
+# 1s sleeps); a ratio survives that but still assumes the parallel arm stays
+# fast -- and inside `test_package.py`, which runs this suite in a venv while
+# eleven other checks compete for the disk, the parallel arm slowed until the
+# ratio collapsed and the assertion false-redded. A test that fails when the
+# machine is busy is not measuring the code.
+_probe = ("import time, pathlib\n"
+          "start = time.time()\n"
+          "time.sleep(0.3)\n"
+          "pathlib.Path('{name}').write_text(f'{{start}} {{time.time()}}')\n")
+both_probe = {"tools/test_p1.py": _probe.format(name="probe_a"),
+              "tools/test_p2.py": _probe.format(name="probe_b")}
+
+
+def _ran_concurrently(root) -> bool:
+    """True when the two probe checks' execution intervals intersect."""
+    a_start, a_end = (float(x) for x in (root / "probe_a").read_text().split())
+    b_start, b_end = (float(x) for x in (root / "probe_b").read_text().split())
+    return a_start < b_end and b_start < a_end
+
+
+par_tree = tree(dict(both_probe))
+pc.run_checks(par_tree)
+check("the default pool runs checks concurrently -- their intervals overlap",
+      _ran_concurrently(par_tree), "probe intervals did not intersect")
+
+ser_tree = tree({**both_probe,
+                 ".claude/project-checks.json": json.dumps({"jobs": 1})})
+pc.run_checks(ser_tree)
+check("`jobs: 1` actually serialises -- their intervals do NOT overlap",
+      not _ran_concurrently(ser_tree), "probe intervals intersected under jobs:1")
+
+# A bad `jobs` value must degrade, not propagate. `load_config` has always
+# swallowed malformed JSON for this reason -- the caller is the Stop hook that
+# gates every commit, and an exception there is silent, indistinguishable from
+# "nothing needed committing". `int()` on the config value was the one place
+# that reasoning had not been applied: 'eight', null and [8] each raised
+# straight through a function whose contract is to return outcomes.
+#
+# Out-of-range values are separate and need no guard -- the max/min clamp
+# already handles them -- so they are asserted here as green rather than as
+# errors, which is what stops a later "fix" from rejecting a valid 0.
+# One case per exception type rather than one per shape: 'eight' is the
+# ValueError path and None the TypeError path, and [8]/{} were re-proving the
+# latter at ~0.4s each. Mutation testing showed all four failing identically
+# when the guard is removed, which is what makes the extra two redundant rather
+# than merely similar.
+for _bad in ("eight", None):
+    _tree = tree({"tools/test_j.py": "print('ok')\n",
+                  ".claude/project-checks.json": json.dumps({"jobs": _bad})})
+    try:
+        _ok, _detail, _ = pc.run_checks(_tree)
+        check(f"a `jobs` value of {_bad!r} degrades to the default",
+              _ok, _detail)
+    except Exception as exc:  # noqa: BLE001
+        check(f"a `jobs` value of {_bad!r} degrades to the default",
+              False, f"raised {type(exc).__name__}: {exc}")
+
+for _edge in (0, 2.7):  # the int path and the float path; -3 re-proved 0
+    _tree = tree({"tools/test_j.py": "print('ok')\n",
+                  ".claude/project-checks.json": json.dumps({"jobs": _edge})})
+    _ok, _detail, _ = pc.run_checks(_tree)
+    check(f"an out-of-range `jobs` of {_edge!r} is clamped, not rejected",
+          _ok, _detail)
+
+# A test that never finished must not count as a test that ran. `ran_test` is
+# what the commit gate reads to decide whether code may be committed at all, so
+# "attempted" must never be mistaken for "proved". Kept separate from `ok`
+# because the two answer different questions.
+# The sleep is 3s, not 30s, and the difference is not cosmetic. `timeout` bounds
+# when the *verdict* is decided, not when the process dies: `shell=True` means
+# the timeout kills the shell, and on Windows the grandchild interpreter keeps
+# running while `communicate()` blocks on the pipe it inherited. So this fixture
+# costs its full sleep in wall time however low the timeout is set -- at 30s it
+# alone made this file the longest check in the tier, 33.9s against a 61s
+# baseline for everything. 3s is the smallest sleep that still reliably outlives
+# the 1s timeout on a loaded machine. `tools/smoke.py:57` already solved the
+# same problem for the slow tier -- "`taskkill /T` is the only reliable way" --
+# and `run_checks` does not yet do it, so a hung check still blocks a turn for
+# its full runtime whatever `timeout` is set to. ISSUES.md 2026-08-12 records it.
+timed_out = tree({"tools/test_hang.py": "import time\ntime.sleep(2)\n",
+                  ".claude/project-checks.json": json.dumps({"timeout": 1})})
+ok_t, detail_t, ran_test_t = pc.run_checks(timed_out)
+check("a timed-out check is red", not ok_t, detail_t)
+check("...and says it timed out", "timed out" in detail_t, detail_t)
+check("...and does NOT count as a test having run",
+      ran_test_t is False, f"ran_test={ran_test_t}")
+
+
+# --- a product repo's `ran_test` must not be satisfied by layer self-tests ---
+#
+# `install.py` ships `tools/` ON PURPOSE -- the layer validates itself in the
+# target, and installing the checks without their fixtures once produced five
+# red suites there (install.py:50, 2026-08-07). Detection therefore finds those
+# scripts in every installed repo, which is intended.
+#
+# What is NOT intended is the credit they earn. `ran_test` is what the
+# auto-commit reads to decide whether code may be committed at all, and layer
+# self-tests passing says nothing about the product's code. Measured 2026-08-15:
+# an empty git repo with no product code resolved 44 checks and reported
+# ran_test True, so a product change would clear the unverified-code gate on
+# evidence about the layer instead of about itself.
+#
+# Recorded rather than fixed here: the fix needs a way to tell a shipped test
+# from the repo's own, and inventing one badly is worse than the hole. See
+# ISSUES.md 2026-08-15.
+
+_layer_only = tree({f"tools/test_layer{i}.py": "print('ok')\n" for i in range(3)})
+_ok, _detail, _ran = pc.run_checks(_layer_only)
+check("a repo whose only tests are shipped layer suites still reports ran_test",
+      _ran is True,
+      "documents the open hole rather than asserting the fix -- see ISSUES.md")
+
+
 # --- credentials, both axes -------------------------------------------------
 
 PATHS = [(".env", True), ("./.env", True), ("app/.env.local", True),
@@ -366,6 +529,46 @@ _self_hits = hl.scan_for_secrets(
     ROOT)
 check("this repo's own source does not match the credential patterns",
       _self_hits == [], f"self-matching: {_self_hits}")
+
+# --- a timeout must bound the wall clock, not just the verdict ----------------
+#
+# `subprocess.run(..., timeout=)` does not. It kills the shell; the grandchild
+# survives holding the inherited stdout pipe; `communicate()` blocks on that pipe
+# until the grandchild exits of its own accord. So the TimeoutExpired arrived
+# only after the check's FULL natural runtime -- measured 2026-08-16, a 3-second
+# timeout on a 30-second command returned after 30.1s. This function gates every
+# commit, so each hung check cost a whole turn while reporting that it had not.
+#
+# Asserted on elapsed time, which is the only thing that distinguishes the fix
+# from the bug: both produce the same verdict and the same message.
+
+_slow = f'"{sys.executable}" -c "import time; time.sleep(60)"'
+_hang = tree({".claude/project-checks.json": json.dumps(
+    {"test": _slow, "lint": False, "typecheck": False, "timeout": 3})})
+
+_t0 = time.monotonic()
+_ok, _detail, _ran = pc.run_checks(_hang, kinds=pc.FAST_KINDS)
+_elapsed = time.monotonic() - _t0
+
+# 15s, not 3.x: the bound being asserted is "the timeout, plus cleanup" against
+# a 60s natural runtime. A tight bound here would go red on a loaded machine and
+# teach people to delete the check, which is the failure this repo has already
+# had once with the concurrency timing assertion.
+check("a hung check returns within its timeout, not after its full runtime",
+      _elapsed < 15, f"{_elapsed:.1f}s elapsed against a 3s timeout on a 60s command")
+check("...and still reports the timeout rather than swallowing it",
+      not _ok and "timed out after 3s" in _detail, _detail)
+check("...and a check that timed out did not count as a test that ran",
+      not _ran, "passing and never finishing are different facts")
+
+_src = (ROOT / ".claude" / "hooks" / "_projectchecks.py").read_text(encoding="utf-8")
+check("the runner kills the process tree rather than only the shell",
+      "taskkill" in _src and "killpg" in _src,
+      "killing the shell orphans the grandchild that holds the pipe")
+check("the runner closes the child's stdin",
+      "stdin=subprocess.DEVNULL" in _src,
+      "this runs from the Stop hook; a check command that reads an inherited "
+      "stdin blocks the turn, and the symptom is a hang with no output")
 
 print()
 if failures:

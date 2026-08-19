@@ -20,6 +20,7 @@ Run: python tools/test_chain.py
 
 from __future__ import annotations
 
+import hashlib
 import sys
 import tempfile
 from pathlib import Path
@@ -218,12 +219,30 @@ check("...and the reason names all three limbs",
       "progress" in stuck_plan["reason"] and "tree kept changing" in stuck_plan["reason"],
       stuck_plan["reason"])
 
-# An absent plan must not read as a stall. `plan_progress` returns None rather
-# than 0 for exactly this: no plan to read is not the same as no progress.
+# An absent plan still reports `stalled` -- on two limbs, and SAYING SO.
+#
+# The comment here used to read "an absent plan must not read as a stall",
+# directly contradicting the assertion three lines below it, and the reason
+# string contradicted both: it announced "the plan's progress did not [move]"
+# about a file that does not exist. That notice fired 64 consecutive times on
+# 2026-08-12 for a benign cause, which is how a detector stops being read.
+#
+# The verdict stays. Going silent for plan-less units would blind this to
+# exactly the work `workflow.md`'s small-work path is about to make routine, and
+# silence is the worse failure. What changed is that the reason now names the
+# limb it could not evaluate, the same way `security_gate.considered()` omits a
+# clause it could not check rather than claiming it.
 no_plan = chain.assess(
     entries(("BUILD", "a"), ("BUILD", "b"), ("BUILD", "c")), "BUILD", "d", None)
-check("an absent plan falls back to the two-limb rule rather than erroring",
+check("an absent plan still reports stalled, on two limbs",
       no_plan["chain"] == "stalled", str(no_plan))
+check("...and the reason says the plan limb was UNEVALUATED, not flat",
+      "NO active plan" in no_plan["reason"], no_plan["reason"])
+check("...and never claims progress failed to move",
+      "progress did not" not in no_plan["reason"], no_plan["reason"])
+check("...while a real flat-progress stall still says progress did not move",
+      "progress" in stuck_plan["reason"] and "NO active plan" not in stuck_plan["reason"],
+      stuck_plan["reason"])
 
 check("plan_progress returns None, not 0, when there is no plan to read",
       chain.plan_progress(Path(tempfile.gettempdir())) is None,
@@ -319,6 +338,30 @@ check(f"assess() is fast on a long ledger ({_big_elapsed:.3f}s)",
       _big_elapsed < 0.5,
       "the ledger only grows; a scan proportional to all of history would make "
       "the instrument slower every day it runs")
+
+# --- the fingerprint must be stable ACROSS processes -------------------------
+#
+# `tree_fingerprint` used the builtin `hash()`, which on a `str` is SipHash with
+# a per-process random seed. Every hook run is a new process, so the fingerprint
+# changed on every turn whatever the tree did, and the "did the tree move?" limb
+# was ALWAYS true -- leaving the stall detector two-limbed, which is the exact
+# failure `.claude/workflow.md` says the third limb was added to fix.
+#
+# The assertion is a HARD-CODED digest, and that choice is the test. Calling the
+# function twice inside one process passes happily with the bug present, because
+# the seed is fixed for the life of a process; only a value computed in a
+# different process -- or written down here once -- can catch it.
+_STATUS = " M TASK.md\n?? new.py\n"
+_EXPECTED = hashlib.sha256(_STATUS.encode("utf-8")).hexdigest()[:8]
+check("the fingerprint is a stable digest of the status, not a random hash",
+      chain.fingerprint_of("a" * 40, _STATUS) == "a" * 40 + ":" + _EXPECTED,
+      chain.fingerprint_of("a" * 40, _STATUS))
+check("...so an unchanged status gives an unchanged fingerprint",
+      chain.fingerprint_of("b" * 40, "x") == chain.fingerprint_of("b" * 40, "x"))
+check("...and a changed status changes it",
+      chain.fingerprint_of("b" * 40, "x") != chain.fingerprint_of("b" * 40, "y"))
+check("...and the head half still distinguishes two commits",
+      chain.fingerprint_of("b" * 40, "x") != chain.fingerprint_of("c" * 40, "x"))
 
 print()
 if failures:

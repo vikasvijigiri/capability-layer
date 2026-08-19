@@ -49,12 +49,15 @@ typed; an absent key means "detect it".
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import json
 import os
 import shlex
+import signal
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HOOKS_DIR = Path(__file__).resolve().parent
@@ -62,6 +65,30 @@ REPO_ROOT = HOOKS_DIR.parents[1]
 
 CONFIG_NAME = ".claude/project-checks.json"
 DEFAULT_TIMEOUT = 300
+
+# Checks run concurrently. They are separate processes with captured output, so
+# concurrency changes only how long the tier takes, never what it decides -- the
+# verdict is assembled in `checks` order regardless of completion order, so two
+# runs over the same tree print the same failures in the same sequence.
+#
+# One worker per core, measured rather than guessed -- and measured twice,
+# because the first answer went stale within the day. On this 12-core machine:
+#
+#     workers   4      8     12     16
+#     wall    31.8s  26.6s  17.7s  26.2s
+#
+# A hard-coded 8 was right when the suite was lighter and wrong an hour later,
+# which is the argument for deriving it rather than pinning it: the correct
+# number tracks the machine, and a constant cannot.
+#
+# These suites are disk-bound, not CPU-bound -- `test_install.py` takes 8.6s
+# alone and 22.5s with eleven neighbours -- so this schedules contention rather
+# than removing it. Removing it means spawning fewer child processes, which is a
+# change to the fixtures, not to this number.
+#
+# Override with `jobs` in the config for a project whose suites are heavier or
+# genuinely not concurrency-safe; `"jobs": 1` restores serial behaviour exactly.
+DEFAULT_JOBS = os.cpu_count() or 4
 
 # Two tiers, because cost differs by an order of magnitude and a gate nobody can
 # afford to run is a gate that gets disabled.
@@ -270,7 +297,43 @@ def detect_checks(root=None):
     # standalone `tools/test_*.py` scripts rather than a pytest project. Treat
     # each script as a test command so temporary fixtures and layer-only repos
     # still get real test evidence without inventing a package marker.
-    tool_tests = sorted((root / "tools").glob("test_*.py"))
+    #
+    # Skip the ones the LAYER installed. `install.py` ships `tools/` into every
+    # target, so without this a product repo adopts ~42 of the layer's contract
+    # suites as its own test suite: measured 2026-08-15, an empty git repo with
+    # no product code resolved 44 checks, all of them the layer testing itself,
+    # and the auto-commit then gated that product's commits on them.
+    #
+    # The discriminator is the install manifest, which already existed for
+    # exactly this class of question -- `layer_paths()` is what stops
+    # `recon.py` counting the guest as the host. It is the right one because it
+    # records what the installer actually wrote rather than guessing from a
+    # pattern: a host may have its own `tools/`, and the installer merges into
+    # it, so `tools/*` is not a safe exclusion.
+    #
+    # In THIS repository there is no manifest -- the layer is not installed into
+    # itself -- so `layer_paths()` is empty and every suite is found, unchanged.
+    #
+    # Gating on "no other test marker was found" was tried first and is wrong:
+    # this repo has a `pyproject.toml`, so that gate handed it `pytest -q`,
+    # which cannot run standalone scripts that `sys.exit()` at import. A
+    # marker's presence does not mean the tool it names can run these tests.
+    # By path, not by name: `_hooklib` is a sibling file rather than an
+    # installed module, and this runs from whatever cwd the caller had. Fails
+    # open to an empty set -- an unreadable manifest must not hide a repo's own
+    # suites, because over-reporting them is recoverable and losing them is not.
+    owned: set = set()
+    try:
+        _spec = importlib.util.spec_from_file_location(
+            "_hooklib_for_checks", HOOKS_DIR / "_hooklib.py")
+        if _spec is not None and _spec.loader is not None:
+            _hl = importlib.util.module_from_spec(_spec)
+            _spec.loader.exec_module(_hl)
+            owned = _hl.layer_paths(root)
+    except Exception:  # noqa: BLE001
+        owned = set()
+    tool_tests = [p for p in sorted((root / "tools").glob("test_*.py"))
+                  if p.relative_to(root).as_posix() not in owned]
     found.extend(
         ("test", f'"{sys.executable}" "{p.relative_to(root)}"')
         for p in tool_tests
@@ -285,6 +348,66 @@ def detect_checks(root=None):
             seen.add((kind, cmd))
             unique.append((kind, cmd))
     return unique
+
+
+def _run_bounded(command: str, root: Path, timeout: int, env: dict):
+    """`subprocess.run(shell=True)` whose timeout bounds the WALL CLOCK.
+
+    `subprocess.run(..., timeout=)` does not. It kills the shell, the shell's
+    grandchild survives holding the inherited stdout pipe, and the `communicate()`
+    inside `run` blocks on that pipe until the grandchild exits -- so a hung check
+    blocked a whole turn for its full natural runtime whatever `timeout` said, and
+    the TimeoutExpired arrived only afterwards. Measured; `ISSUES.md`
+    2026-08-12 08:40. This is the gate that fires on every commit, so the cost of
+    it was a turn each time.
+
+    `tools/smoke.py:kill_tree()` already solved the same problem for the dev
+    server. Same shape here: `taskkill /T` on Windows, the process group on
+    POSIX, then a bounded second wait so a child ignoring SIGTERM cannot hang the
+    cleanup either.
+
+    Raises `subprocess.TimeoutExpired` exactly as `run` did, so every caller and
+    every existing test sees the same contract -- only sooner.
+    """
+    kwargs = {}
+    if sys.platform != "win32":
+        kwargs["start_new_session"] = True  # its own process group to signal
+    # nosec B602 -- see the annotation at the call site; same provenance.
+    proc = subprocess.Popen(  # noqa: S602
+        command, cwd=str(root), shell=True, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True,
+        encoding="utf-8", errors="replace", env=env, **kwargs,
+    )
+    try:
+        out, err = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        _kill_tree(proc)
+        # Bounded: `communicate()` here reaps the pipes now that the tree is
+        # gone. Without a timeout of its own, a survivor would reintroduce the
+        # exact hang this function exists to remove.
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            proc.communicate(timeout=10)
+        raise
+    return subprocess.CompletedProcess(command, proc.returncode, out, err)
+
+
+def _kill_tree(proc) -> None:
+    """Kill the shell and everything it spawned. Reported, never fatal."""
+    if proc.poll() is not None:
+        return
+    try:
+        if sys.platform == "win32":
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                           capture_output=True, timeout=20)
+        else:
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    except Exception:  # noqa: BLE001 -- a timeout must not become a crash
+        with contextlib.suppress(Exception):
+            proc.kill()
 
 
 def resolve_checks(root=None, kinds=FAST_KINDS):
@@ -399,7 +522,14 @@ def failure_reason(proc) -> str:
 
 
 def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
-    """(ok, detail, ran_test) for one tier. Never raises.
+    """(ok, detail, ran_test) for one tier.
+
+    Every *check* outcome is returned rather than raised -- a suite that fails,
+    times out, cannot start or is not installed all come back as values, because
+    the caller is a commit gate and an exception there is silent. The two things
+    that can still propagate are a check command whose executable lookup itself
+    throws, and a result/check length mismatch, which is asserted rather than
+    absorbed precisely because it would mean reporting on fewer checks than ran.
 
     `ran_test` is separate from `ok` on purpose. "Everything passed" and "there
     was nothing to run" are the same boolean and completely different facts, and
@@ -421,9 +551,23 @@ def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
         return True, f"no checks detected{note}", False
 
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", **(extra_env or {})}
-    failed, ran, ran_test, skipped = [], 0, False, []
 
-    for kind, command in checks:
+    def run_one(check):
+        """One check, to a ('skipped'|'errored'|'failed'|'ran', detail) pair.
+
+        Every outcome is a returned value rather than a mutation, because this
+        runs on a worker thread. Nothing here touches shared state, so the
+        reduction below stays the only place the verdict is decided.
+
+        `errored` and `failed` both count as failures and differ in one way that
+        matters: a check that timed out or could not start never *ran*, so it
+        must not mark `ran_test`. "A test proved this" and "a test was attempted
+        and never finished" are different facts, and only the first may let code
+        through the commit gate. Today a failure of either kind returns `ok`
+        False before `ran_test` is read -- the distinction is kept because that
+        ordering is not something this function should have to promise.
+        """
+        kind, command = check
         if tool_missing(command):
             # Skipped, and named in the detail. A silently absent check is the
             # thing this module exists to prevent. Name the *module* for
@@ -432,8 +576,7 @@ def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
             parts = command_tokens(command)
             missing = (parts[2].strip('"') if len(parts) > 2 and parts[1] == "-m"
                        else parts[0].strip('"'))
-            skipped.append(f"{kind} (`{missing}` not installed)")
-            continue
+            return "skipped", f"{kind} (`{missing}` not installed)"
         try:
             # nosec B602 -- shell=True is required and the input is not hostile.
             # `command` comes from detection or from .claude/project-checks.json,
@@ -441,27 +584,58 @@ def run_checks(root=None, extra_env=None, kinds=FAST_KINDS):
             # write the hooks themselves. Commands are strings like `npm test`,
             # which need a shell to resolve. Annotated per-site rather than
             # silencing B602 repo-wide, so a NEW shell=True elsewhere still fails.
-            proc = subprocess.run(  # noqa: S602
-                command, cwd=str(root), shell=True, capture_output=True,
-                text=True, encoding="utf-8", errors="replace",
-                timeout=timeout, env=env,
-            )
+            proc = _run_bounded(command, root, timeout, env)
         except subprocess.TimeoutExpired:
             # claudekit's call, and it is right: a slow suite is a configuration
             # problem, not a broken change. Blocking on it trains people to
             # disable the gate entirely.
-            failed.append(f"{kind} timed out after {timeout}s -- set a faster "
-                          f"command in {CONFIG_NAME}")
-            continue
+            return "errored", (f"{kind} timed out after {timeout}s -- set a "
+                               f"faster command in {CONFIG_NAME}")
         except Exception as exc:  # noqa: BLE001
-            failed.append(f"{kind} could not run ({exc})")
-            continue
+            return "errored", f"{kind} could not run ({exc})"
 
+        if proc.returncode != 0:
+            return "failed", f"{kind} `{command}`: {failure_reason(proc)}"
+        return "ran", ""
+
+    # A bad `jobs` value degrades to the default; it never propagates. This
+    # function runs from the Stop hook that gates every commit, and an exception
+    # there is silent -- indistinguishable from "nothing needed committing". The
+    # same reasoning already governs `load_config`, which swallows malformed
+    # JSON rather than raising, and `int()` on a config value was the one place
+    # that reasoning had not been applied. Out-of-range values need no guard:
+    # the clamp below already handles 0, negatives and floats.
+    try:
+        configured = int(config.get("jobs", DEFAULT_JOBS))
+    except (TypeError, ValueError):
+        configured = DEFAULT_JOBS
+    jobs = max(1, min(configured, len(checks)))
+    if jobs == 1:
+        results = [run_one(c) for c in checks]
+    else:
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            # `.map` yields in submission order, not completion order. That is
+            # the whole reason the verdict is deterministic: the same tree
+            # produces the same failure list in the same sequence every run,
+            # however the scheduler happens to interleave the processes.
+            results = list(pool.map(run_one, checks))
+
+    failed, ran, ran_test, skipped = [], 0, False, []
+    # strict=True: a length mismatch here would silently drop checks from the
+    # verdict, reporting green on fewer results than there were checks. That is
+    # precisely the failure this module exists to prevent, so it raises.
+    for (kind, _command), (outcome, detail) in zip(checks, results, strict=True):
+        if outcome == "skipped":
+            skipped.append(detail)
+            continue
+        if outcome == "errored":
+            failed.append(detail)
+            continue
         ran += 1
         if kind == "test":
             ran_test = True
-        if proc.returncode != 0:
-            failed.append(f"{kind} `{command}`: {failure_reason(proc)}")
+        if outcome == "failed":
+            failed.append(detail)
 
     if failed:
         return False, "; ".join(failed), ran_test

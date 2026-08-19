@@ -1,5 +1,11 @@
 ---
 description: Where was I — branch, uncommitted work, and which knowledge docs have gone stale relative to the actual diff
+# User entry point: typed explicitly, never auto-invoked. Notion section 8 -
+# commands are optional shortcuts, not workflow stages, and the router must work
+# without them. Left invocable, their descriptions cost 1,506 chars of the skill
+# listing on EVERY turn for a capability only the user triggers; per
+# code.claude.com/docs/en/skills this flag also keeps them out of context.
+disable-model-invocation: true
 ---
 
 Mode: read-only
@@ -13,6 +19,12 @@ Report:
 1. **Position.** Current branch, whether it is a protected one (`main`, `master`,
    `develop`, `release` — the branch guard denies commits there), how far ahead of
    the base branch, and the last three commit subjects.
+
+   **Detect the base; never assume `main`.** A repository's base has been
+   `master` while the session banner said `main`, and `git merge-base HEAD main`
+   then fails outright. `/git-state` §1 owns the detection and the commands
+   behind every number — run it rather than restating it here. This command
+   judges; that one counts, and the split is the reason both exist.
 
 2. **Uncommitted work.** `git status --porcelain` and `git diff --stat`. Group the
    changes by area (`.claude/skills/`, `tools/`, docs) rather than listing every

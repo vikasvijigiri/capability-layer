@@ -1,5 +1,11 @@
 ---
 description: Review a saved specification or implementation plan for requirement coverage, architecture, file accuracy, testability, and scope before execution.
+# User entry point: typed explicitly, never auto-invoked. Notion section 8 -
+# commands are optional shortcuts, not workflow stages, and the router must work
+# without them. Left invocable, their descriptions cost 1,506 chars of the skill
+# listing on EVERY turn for a capability only the user triggers; per
+# code.claude.com/docs/en/skills this flag also keeps them out of context.
+disable-model-invocation: true
 ---
 
 # Plan Review
@@ -7,8 +13,9 @@ description: Review a saved specification or implementation plan for requirement
 Mode: read-only
 Arguments: `$ARGUMENTS` must identify the saved spec or plan path.
 
-Read the complete artifact and the relevant repository files. Invoke
-`artifact-review`; for cross-cutting boundaries also invoke
+Read the complete artifact and the relevant repository files. Apply
+`.claude/skills/writing-plans/references/artifact-review.md`; for cross-cutting
+boundaries also invoke
 `architecture-reviewer`. Return the verdict, findings with file or section
 evidence, unresolved assumptions, and the exact next routing decision.
 

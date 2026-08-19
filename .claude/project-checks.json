@@ -46,7 +46,9 @@
     "python tools/eval_triggers.py --list",
     "python tools/test_deps.py",
     "python tools/test_budget.py",
-    "python tools/test_release_candidate.py"
+    "python tools/test_release_candidate.py",
+    "python tools/test_security_gate.py",
+    "python tools/test_doc_entries.py"
   ],
   "_why_test": "Every executable suite in the repository runs as the test tier, so `--require-test` distinguishes real evidence from a disabled check. No count is stated here on purpose -- the last one said eleven while there were seventeen, and a number nothing enforces is a number that rots.",
   "test_map": {
@@ -77,15 +79,25 @@
     "**/*.md": "python tools/test_referenced_paths.py",
     "tools/deps.py": "python tools/test_deps.py",
     "tools/budget.py": "python tools/test_budget.py",
-    "tools/release_candidate.py": "python tools/test_release_candidate.py"
+    "tools/release_candidate.py": "python tools/test_release_candidate.py",
+    "tools/security_gate.py": "python tools/test_security_gate.py",
+    "pyproject.toml": "python tools/test_package.py",
+    ".github/workflows/**": "python tools/test_ci_shape.py",
+    "LOG.md": "python tools/test_doc_entries.py",
+    "ISSUES.md": "python tools/test_doc_entries.py",
+    "tools/test_doc_entries.py": "python tools/test_doc_entries.py",
+    ".claude/install.py": "python tools/test_install.py",
+    "tools/conftest.py": "python tools/test_install.py"
   },
   "_why_test_map": "Read by `run_checks.py --scoped` to narrow the test set on a change `tools/scope.py` calls `small`. It is a coverage CLAIM and nothing proves its judgement -- `test_process_router.py` asserts its shape (every command is a real registered suite, every key is a plausible path) but cannot assert that the mapped suite actually covers the mapped file. A wrongly-mapped path makes a small change fast and under-checked, and that failure is silent. An unmapped code path escalates to the full tier rather than running nothing, so the gaps fail safe; the wrong entries do not.",
   "_why_typecheck_absent": "Absent, not false: detection finds mypy.ini and runs it. It was disabled on the assumption an unannotated codebase would drown in findings -- measured instead, it was six errors across nineteen files, all one pattern, all real. A fresh clone without mypy installed skips the check with a note rather than failing.",
   "audit": [
     "python -m pip_audit . --progress-spinner off",
     "python tools/deps.py",
-    "python tools/deps.py --sbom"
+    "python tools/deps.py --sbom",
+    "python tools/security_gate.py --base main"
   ],
+  "_why_security_gate": "Added 2026-08-11. Security review here had three doors -- code-review's lens, /security-review, the security-reviewer agent -- and no gate: the lens loaded when the model judged the diff had earned it, and `scope.py` already computed `sensitive-surface` and `control-surface` while nothing consumed either for security. This is the check that consumes them.\nEvery clause is a fact about the artefact. The obvious alternative -- a receipt recording that a review happened -- is the one shape this repository must not rebuild: `pre-commit/03-review-gate.py` self-invalidated every receipt it wrote because the receipts file was tracked, and the model then forged one asserting a sign-off that never happened. Deleted 2026-08-02; see `tools/security_gate.py`'s docstring.\n`audit` and not `lint`: it reads git blobs at two revisions and may shell out to `deps.py`, and the fast tier gates every auto-commit in seconds. `--base main` is written out rather than defaulted, for the reason `tools/worktree.py` takes a mandatory base -- the default is the bug.\nThe `.github/workflows/**` row in `test_map` is this gate's first real find: `checks.yml` is a `SENSITIVE_PATTERNS` path, it had changed, and no glob mapped it to `tools/test_ci_shape.py`, which had existed and covered it all along.",
   "timeout": 300,
   "max_files": 25,
   "build": "python tools/test_package.py",

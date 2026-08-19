@@ -26,28 +26,30 @@ preserve user changes, and report failures as failures.
 ## Capability adapters
 
 `.claude/` is the only repository-native source of truth for skills, agents,
-commands, workflows, rules, hooks, settings, output styles, memory, and
-workflow state. Every host must follow the complete path map in
-`harnesses.json`. Claude Code consumes `.claude/` natively; Codex,
-Gemini, VS Code, and other hosts must read or project from `.claude/` without
+commands, workflow policy, rules, hooks, settings, output styles, memory, and
+workflow state. Every declared host must follow the complete path map in
+`harnesses.json`. Claude Code consumes `.claude/` natively; Codex and generic
+agents must read or project from `.claude/` without
 creating a second, untracked source of truth.
 
 No generated adapter directory is required. Hosts must consume or project the
 canonical `.claude/` content directly.
 
 Hosts that cannot auto-discover Claude lifecycle hooks must invoke the canonical
-checks under `.claude/hooks/` through their own lifecycle API. A null or absent
-native hook registration must not be interpreted as an absent hook contract.
-`docs/harness-hook-bridge.md` is the exact invocation contract for doing this —
-payload delivery, exit-code semantics, and ordering — so a bridging host does
-not have to reverse it from Claude Code's own behavior.
+checks under `.claude/hooks/` through their own lifecycle API. This repository
+ships a native Claude Code adapter plus canonical source paths for Codex and a
+generic agent; it does not claim native lifecycle registration for arbitrary
+IDE extensions. A null or absent native hook registration must not be
+interpreted as an absent hook contract. `docs/harness-hook-bridge.md` is the
+exact invocation contract for doing this — payload delivery, exit-code
+semantics, and ordering — so a bridging host does not have to reverse it from
+Claude Code's own behavior.
 
 ## Runtime model
 
-Execution is host-managed: Claude Code, Codex, Gemini, or a VS Code agent
-extension **is** the runner. It reads this contract directly and drives the
-session; no `ANTHROPIC_API_KEY` and no separate script are required for that
-path.
+Execution is host-managed: Claude Code, Codex, or a generic agent host **is**
+the runner. It reads this contract directly and drives the session; no
+`ANTHROPIC_API_KEY` and no separate script are required for that path.
 
 There is no standalone repository runner today. An earlier draft of this file
 described one with `--host-managed`/`--dry-run`/`--sdk-live` flags before any

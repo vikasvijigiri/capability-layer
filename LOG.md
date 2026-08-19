@@ -1,5 +1,274 @@
 # Log
 
+## 2026-08-16 17:40
+
+**Audited against all ten Primary Objectives, then closed what blocked
+"generic" and "world class".** `4240e61`, `215c4dd`, `a68d283`. `PASS: 52 checks
+green`. Audit: `claude.ai/code/artifact/1fd5a064-b0f5-48ff-8fd3-6339d027a9ee`.
+
+**Non-generic for two reasons, neither architectural.** Every install seeded a
+`CODEOWNERS` naming a real handle as owner of `*`, and `ruff.toml`/`mypy.ini`
+into hosts with no Python — both markers, so a Node repo resolved four fast
+checks, two of them the layer's. Now it resolves 2, its own.
+
+**Three controls were dormant or wrong and all three looked fine.** Agent file
+scope has no caller and cannot get one here — claim narrowed, suite fails if it
+widens. The budget's elapsed limb cried `escalate` on every healthy unit (the
+one complete one: 24.42h against 3.0h); dropped, not refit. The green ref's only
+writer refuses past `max_files`, so `resume.py` could never leave `BUILD` — with
+`--record-green` it reached `WAITING_DELIVERY` for the first time. And a
+`timeout` never bounded the wall clock: 3s timeout, 30s command, returned after
+30.1s; now 3.4s. The brief was a finding too — the ten objectives lived only in
+Notion; `docs/objectives.md`.
+
+## 2026-08-16 09:30
+
+**The layer broke the test runner of every repository it installed into.**
+`cd43a20`. In a fresh Python product: `INTERNALERROR ... sys.exit(0)` then
+`no tests ran in 32.16s`. Now `PASS: 52 checks green` here, and a host runs its
+own suite.
+
+~42 contract suites shipped into each host — standalone scripts that
+`sys.exit()` at import. pytest collects any `test_*.py` under its rootdir, so it
+imported one and died. Detection separately adopted them as the host's test set,
+so "the checks pass" in a product repo meant "the layer is fine".
+
+**Nothing caught it because `test_install.py`'s 102 assertions were all about
+installation *mechanics*.** Six now check the installed layer *works*.
+
+**The discriminator already existed** — the install manifest, written to stop
+`recon.py` counting the guest as the host. Two alternatives were rejected with
+evidence: gating on "no other test marker" hands THIS repo `pytest -q`, which
+cannot run its scripts at all. Shipping 61% of `tools/` bought nothing — no
+non-test tool imports any test module. Payload −26%.
+
+## 2026-08-15 14:00
+
+**Two objectives fixed, one measured for the first time, one untouched.**
+`7f1f942`, `2a93290`, `c4653f5`. 21 files, +489/-91. `PASS: 52 checks green`.
+
+**The router gained two execution levels it never had** — small-work and
+direct-answer, coverage 13% → 15%. Both are subsets guarded by measurement:
+routing all questions would have broken `"where did we get to last session"`,
+the single collision in 180 labelled queries.
+
+**Objective 4 was ungradeable, not merely failing.** Nothing counted tool calls,
+so §21's `tools_called` could be asserted forever. The post-tool hook now keeps
+totals and `bench.py` prints them.
+
+**Two instruments were blind to their own subject.** Each PostToolUse script
+costs a spawn on *every* shell call (215+226ms), so the detector added that
+morning already cost more than it saved — merged, 204ms. And `bench.py` counted
+command descriptions regardless of `disable-model-invocation`, the exact flag
+that removes them from the listing. Prior art was searched and is empty: ECC
+(240k stars) ships skills and rules with no hooks, router or telemetry.
+
+## 2026-08-14 11:49
+
+**Three instruments were lying; $3.61 to find out.** `07930af`, `0c87e90`,
+`e136ec0`. `CLAUDE.md`+rules 9,986 → 9,056 ch; fast tier 10.9s; 52 green.
+
+**The description cut was approved and should not happen.** `eval_triggers.py`
+had never run live — it died on the first real call, `message` being a string
+on error events. Fixed, it measured what nobody had: ~$0.45 a query, so the
+approved "180 invocations" is **~$81**, and `code-review` scored trigger_rate
+0.0 — a probe of "review this diff before I merge it" shows twelve Bash calls
+and no skill invocation. Descriptions may need to be *more* specific, not
+shorter.
+
+**The docs settle the router question the other way.** Routing is
+description-driven invocation plus `disable-model-invocation: true` for
+side-effecting skills; `delivering` and `releasing` are deliberately `false` so
+the chain can hand off, and `test_process_router.py` records that twelve of
+thirteen were once `true`, blocking every handoff with the suite green.
+`CLAUDE.md` also held a lossier copy of `workflow.md`'s stage table; deleting it
+broke `new_skill_check.py`, retargeted at the file that names all 14.
+
+## 2026-08-12 16:53
+
+**Session preamble down 61%.** `3974610`, `5e9eaf6`, `ee6e56d`. `CLAUDE.md`+rules
+25,599 → 9,986 ch; SessionStart 6,258 → 3,349. `PASS: 52 check(s) green`.
+
+**The SessionStart task pointer had never worked.** It split on `^## ` while
+tasks are `###`, so every session got one block named after an HTML comment;
+the regex wanted `**Status**:` and every `TASK.md` writes `**Status:**`. Four
+Done tasks still sat in `## Active`.
+
+**Corrected: the speedup is 3.4x, not the 5x logged at 16:12** — one favourable
+run. Interleaved: 68.2s against 20.2s; the same tree gave 11s and 27s within an
+hour, so `bench.py` now prints that caveat.
+
+**Two instruments were wrong before their subject was.** The `jobs` timing
+assertion false-redded in a venv and now rests on interval overlap, which load
+cannot move; `test_doc_entries.py` demanded a rewrite of append-only history and
+now checks only what is in flight. Memory rot: none, 0 stale of 236 — the
+problem is the opposite, LOG's median entry ran 39 lines to a cap of 15.
+
+## 2026-08-12 16:12
+
+**The checks now run concurrently: 61.4s to 12s on the tier that gates every
+turn.** `2ce3d71` and `73a1ef4` on `feat/security-gate`, 18 files, +885/-818
+against `8944553`. Full tier at close: `PASS: 51 check(s) green (audit, build,
+lint, smoke, test, typecheck)`, 51s against a ~196s baseline. Local, unpushed.
+
+**The measurement decided the design, and twice it overturned what looked
+obvious.** Interpreter startup was only 2.3s of the original 56.6s, and 97-99%
+of test time is inside child processes — so a faster harness language was never
+the lever, and `tools/` was never a token cost at all since none of it enters
+context. 8 workers, not 16: 11.5s against 12.2s, where the suites start
+contending for the disk.
+
+**Three would-be optimisations were retracted after measuring.** "Verification
+theatre" was wrong — tests are 79% code and 11,229 lines against 7,558 of tools,
+a healthy ratio. "One dead tool" was wrong — the grep searched for a filename
+with `.py`, which no import statement contains; 24/24 are live. And `--scoped`
+already existed, so the per-turn cost was never a missing feature, only an
+unwired one.
+
+**Both new tests were initially unfalsifiable in part, and mutation testing is
+the only reason that surfaced.** The `jobs` equivalence check passed with the
+config lookup deleted entirely, because both fixtures were bounded by the same
+slow check; it now asserts on timing. Code review then found the guard missing
+on `int()` itself — a bad `jobs` value crashed the Stop hook that gates every
+commit, in a module whose own test says malformed config must degrade.
+
+**`resume.py` has been reporting `BUILD` for 57 turns against a stale slug.**
+The chain tracks `security-gate`, whose plan is complete; this unit never had a
+plan, so there was nothing to advance and the continuity notice fired five times
+correctly describing a unit it was not watching.
+
+## 2026-08-12 01:20
+
+**Two small units, and the second is the more important: a detector's third
+limb had never once worked.** `26eb41b` (7 files, +59/-50) and `f641681` (2
+files, +57/-1) on `feat/security-gate`. Full tier at close: `PASS: 51 check(s)
+green (audit, build, lint, smoke, test, typecheck)`. Local, unpushed.
+
+**`/skills-doctor` retired; three layer-audit surfaces become two.** The
+question had been open since 2026-08-03 on a single argument — that it alone
+compared disk against the session's *rendered* skill listing, which no
+file-reading script can see. That argument had already expired: its own text had
+been changed to say *"Do not claim to inspect the current session's rendered
+system listing; that is not repository-observable."* Measured, all five of its
+commands were already registered in `project-checks.json`, so it was a strict
+subset of `/verify`. The two survivors, `no-slop` and
+`capability-layer-maintenance`, now divide by **question rather than by
+directory** — sweep and report there, own the contract and repair here — with
+two back-reference assertions that were each proved red by breaking their own
+direction.
+
+**`tools/chain.py` fingerprinted the tree with the builtin `hash()`.** On a
+`str` that is SipHash with a per-process random seed, and every hook run is a
+new process, so the fingerprint changed on every turn no matter what the tree
+did. Measured on an unchanged tree across three processes: `b30ad4dc`,
+`1bf90e40`, `e519ed51`; same process twice, or with `PYTHONHASHSEED` pinned,
+identical.
+
+The consequence is larger than the noise it produced. `.claude/workflow.md`
+records that a two-limb stall detector *"reported `stalled` through four turns of
+a healthy twelve-task execution — a detector nobody believes is worse than
+none"*, and that a third limb was added to fix it. With a random fingerprint
+that limb was **always true**, so the detector had been two-limbed for its whole
+life and the documented fix was never in effect. This is the class the layer
+keeps finding in itself: prose asserting a property the wiring does not
+implement, invisible because the wrong answer and the right one look the same.
+
+Found by disbelieving an instrument rather than by reading code. The
+chain-continuity notice fired fifteen consecutive times; the first fourteen were
+blamed on a known green-ref bug, which was true and incomplete. Reading the
+ledger showed the head SHA identical across rows while the fingerprint half
+changed every time — on turns that made no edit at all.
+
+The regression test asserts a **hard-coded** digest, and that choice is the
+test: calling the function twice inside one process passes happily with the bug
+present, because the seed is fixed for a process lifetime. `resume.py`'s
+`plan_body_hash` was the other candidate and was already correct, so the durable
+plan-rejection mechanism was never affected. Those were the only two `hash()`
+call sites in the repository.
+
+**Verified in situ, not just in the suite.** After the fix the last three ledger
+rows share one fingerprint — the first time any two consecutive entries have
+matched — and `python tools/chain.py` reports `chain: advancing` instead of
+`stalled`, having reported `stalled` on every turn before it.
+
+**Still not fixed, and unrelated:** `refs/uaios/green/<slug>` has one writer, the
+auto-commit hook, which refuses on units over `MAX_FILES = 25`. So this unit's
+state stayed `BUILD` throughout and would have regardless of the fingerprint.
+`HANDOFF.md` Pending carries it.
+
+
+## 2026-08-12 00:30
+
+**A security gate that asserts facts about the artefact, and the escape hatch
+that nearly turned it back into a receipt.** Branch `feat/security-gate`, two
+commits `d654ee5..4fece17`, `21 files changed, 1748 insertions(+), 19
+deletions(-)` against `feat/close-remaining-gaps`. Full tier at close: `PASS: 51
+check(s) green (audit, build, lint, smoke, test, typecheck)`. Local, unpushed,
+no PR.
+
+**The unit started as an audit question, not a build request** — whether an
+online pipeline diagram beat this layer's chain, and whether any skills
+duplicate each other. The answer to the first was that it is a topology with no
+gate before implementation, an unbounded fix loop, and no durable state between
+nodes. The second found the thing worth building: security review here had
+**three doors and no gate** — `code-review`'s lens, `/security-review`, the
+`security-reviewer` agent — all reviewers, none of them forced, with the lens
+loaded "when the diff earns it" by model judgement. `tools/scope.py` had been
+computing `sensitive-surface` and `control-surface` for the risk tier since
+2026-08-11 and **nothing consumed either for security.**
+
+**The obvious design was the forbidden one.** A receipt recording that a review
+happened is what `pre-commit/03-review-gate.py` was: every receipt
+self-invalidated because the file was tracked, and then the model forged one
+asserting a sign-off that had not happened. Reading that history changed the
+design before a line was written — five clauses, each computable from two git
+revisions, no state to keep and none to forge.
+
+**Then the escape hatch re-introduced it anyway, and `code-review` caught it.**
+`# security-gate: allow <clause> -- <reason>`, modelled on `# noqa`, was applied
+to all five clauses on an argument only tested against the easiest one. Round 1
+returned `passed: false`: `F1 waived-credential exit: 0` — a committed
+credential plus one comment line, green. That is a self-certified pass, and it
+contradicted a rule shipped in the same commit. `WAIVABLE_CLAUSES` now holds two
+of five, and a marker naming an unwaivable clause is reported rather than
+ignored. `decisions/2026-08-12-escape-hatches-inherit-trust.md` carries the
+argument. Round 2 passed.
+
+**What the gate found on its own repository, unprompted:**
+`.github/workflows/checks.yml` matched `SENSITIVE_PATTERNS`, had changed, and
+was mapped to no suite — while `tools/test_ci_shape.py` had covered it all
+along. A new bare-stem check found five more instances of the `artifact-review`
+defect: reference files still handing work to `test-driven-development` and
+`observability-sre` as though the 2026-08-07 consolidation had not happened. And
+two defects in the gate itself on its first real run — `subprocess.run(text=True)`
+decoding `git show` as cp1252, so an emoji in `AI_ATTRIBUTION_PATTERNS`
+mojibaked and `control-weakened` reported a guard removed that nobody touched;
+and `_agent_facts` written and never called, so `agent-unscoped` had never once
+been evaluated.
+
+**A planned task was executed as a revert, and that is the more useful result.**
+The audit reported five overlapping state reporters and the plan folded
+`/git-state` into `/wip`. Read in full, `/git-state`'s eight counting sections
+have no counterpart in `/wip` — the overlap was between their *descriptions*.
+One line was genuinely duplicated, and it hid a bug: `/wip` asked for "how far
+ahead of the base branch" while `/git-state` exists partly to warn that assuming
+`main` fails outright on a repository whose base is `master`. Both commands
+stand; the reasoning is in the plan's Deviations.
+
+**Two things not verified.** `secret-in-branch` and `dependency-risk` have never
+fired on an organic branch — the credential proof was a deliberate injection,
+reverted. And the "five state reporters" question is unresolved: the fold was
+the wrong answer, not the wrong question.
+
+**One self-inflicted loss worth recording.** `git checkout --` on
+`code-review/SKILL.md`, to undo a deliberate break, discarded uncommitted work;
+no `wip:` checkpoint held it, because the auto-commit had refused every turn of
+this unit (past `MAX_FILES = 25`, and for the early turns the plan was not yet
+the active one). The edits were rewritten. A unit this size gets **no automatic
+recovery point at all**, which is a property of the commit loop worth knowing
+before relying on it.
+
+
 <!-- Append new entries at the TOP, never rewrite old ones.
 Format: ## YYYY-MM-DD HH:MM -->
 

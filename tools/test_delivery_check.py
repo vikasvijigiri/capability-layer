@@ -67,6 +67,7 @@ CLEAN = {
     "behind": 0,
     "dirty": [],
     "protection": {"required_status_checks": {"contexts": ["conclusion"]}},
+    "security": {"findings": [], "considered": ["control-weakened"]},
 }
 
 
@@ -183,7 +184,7 @@ check("...and it says the result is advisory only",
 # Article V: a check that could not run is unrun, not passed. Every fact is
 # nulled in turn, and none may vanish from the report.
 for _fact in ("merge_base", "base_tip", "stack_depth", "merge_methods",
-              "ahead", "dirty"):
+              "ahead", "dirty", "security"):
     _missing = {**CLEAN, _fact: None}
     _sev = {f["severity"] for f in dc.evaluate(_missing)}
     check(f"a missing `{_fact}` yields a finding, not silence",
@@ -192,6 +193,31 @@ for _fact in ("merge_base", "base_tip", "stack_depth", "merge_methods",
 
 
 # --- exit codes ----------------------------------------------------------------
+
+# --- the security gate's verdict, carried rather than re-derived ---------------
+#
+# `delivery_check` does not decide security; it refuses to call a branch ready
+# while the gate says otherwise. The three cases are the three things the gate
+# can say.
+_BLOCKED = {**CLEAN, "security": {
+    "findings": [{"clause": "control-weakened", "severity": "blocking",
+                  "finding": "…", "detail": []}],
+    "considered": ["control-weakened"]}}
+check("a blocking security clause is a blocking delivery finding",
+      "security" in codes(_BLOCKED, "blocking"), str(codes(_BLOCKED)))
+check("...and the run cannot exit 0 from there",
+      dc.exit_code(dc.evaluate(_BLOCKED)) == 1)
+
+_UNSURE = {**CLEAN, "security": {
+    "findings": [{"clause": "secret-in-branch", "severity": "unknown",
+                  "finding": "…", "detail": []}],
+    "considered": ["secret-in-branch"]}}
+check("an unevaluated security clause is `unknown`, never a pass",
+      "security" in codes(_UNSURE, "unknown"), str(codes(_UNSURE)))
+check("...and exits 2, not 0", dc.exit_code(dc.evaluate(_UNSURE)) == 2)
+
+check("a clean gate adds no finding at all",
+      "security" not in codes(CLEAN), str(codes(CLEAN)))
 
 check("no blocking finding exits 0", dc.exit_code(dc.evaluate(CLEAN)) == 0)
 check("a blocking finding exits 1",

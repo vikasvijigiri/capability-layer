@@ -1,7 +1,7 @@
 ---
 name: releasing
-description: Get delivered work running in a real environment, with signals. Triggers include "deploy this", "push it live", "release to staging", "is it live", "roll it back", "add SLOs", "set up alerts", "is this observable". Do NOT use to merge or open a PR (delivering), to prove it meets the brief (verifying-work), or to debug a failed deploy - roll back first. Use this whenever a change must reach a running target.
-when_to_use: when work must reach a running environment
+description: Get delivered work running in a real environment, with signals. Deploy, smoke check, health, SLOs, alerts and rollback, proving the change is actually serving. Triggers include "deploy this", "deploy to staging", "push it live", "release this", "cut a release", "ship to production", "go live", "is it live", "did the deploy work", "roll it back", "revert the deploy", "add SLOs", "set up alerts", "is this observable". Do NOT use to merge or open a pull request (delivering), to prove the change meets the brief (verifying-work), or to debug a failed deploy - roll back first, diagnose second. Use this whenever a change must reach a running target.
+when_to_use: Trigger when the user says deploy this, deploy to staging, deploy to prod, push it live, release this, cut a release, ship to production, go live, is it live, is it up, did the deploy work, roll it back, revert the deploy, add SLOs, set up alerts, add monitoring, or is this observable.
 effort: low
 model: sonnet
 disable-model-invocation: false
@@ -229,29 +229,19 @@ working. Never route around it by switching tool or shell.
 
 ## Red Flags — stop, do not release
 
-- "The deploy CLI exited 0, so it's live."
-- "I'll find the rollback if we end up needing it."
-- "They approved the merge, so the deploy is approved."
-- "Staging and prod are basically the same."
-- "It's only a config change, it doesn't need a smoke test."
-- "The migration is fine, it's backward compatible." Proven how?
-- "Roll forward — rolling back loses the fix."
-- "The spend guard is noisy, I'll run it through the other shell."
-- "It's probably Vercel, there's a `next.config.js`."
+Each of these means: stop and ask, in this conversation.
 
-**Each of these means: stop and ask, in this conversation.**
-
-## Common Mistakes
-
-| Mistake | Why it bites |
+| Said | Why it bites |
 |---|---|
-| Treating the deploy tool's exit code as the smoke check | The upload succeeded; the app may be crash-looping |
-| Naming the rollback after the deploy | You find out it doesn't exist at the worst moment |
-| Inferring the target from a framework file | Framework ≠ host; the wrong environment gets the change |
-| One approval covering staging and production | Two blast radii, two decisions |
-| Debugging the live failure before rolling back | Every minute of diagnosis is a minute of outage |
-| Skipping the "what rollback does not undo" line | The reversible deploy sat on an irreversible migration |
-| Branching on the platform inside this file | The next platform adds another branch, forever |
+| "The deploy CLI exited 0, so it's live." | The upload succeeded; the app may be crash-looping. Exit code is not health |
+| "I'll find the rollback if we end up needing it." | You find out it doesn't exist at the worst moment. Name it before the deploy |
+| "It's probably Vercel, there's a `next.config.js`." | Framework ≠ host; the wrong environment gets the change |
+| "They approved the merge, so the deploy is approved." | Two blast radii, two decisions — and staging is not production |
+| "It's only a config change, it doesn't need a smoke test." | Config is what most outages are |
+| "The migration is fine, it's backward compatible." | Proven how? A reversible deploy can sit on an irreversible migration — say what rollback does *not* undo |
+| "Roll forward — rolling back loses the fix." | Every minute of diagnosis is a minute of outage. Roll back, then diagnose |
+| "The spend guard is noisy, I'll run it through the other shell." | Routing around a guard is not clearing it |
+| Branching on the platform inside this file | The next platform adds another branch, forever — platform packs live in `references/` |
 
 After the smoke check and observation window, dispatch `release-verifier` for
 an independent readiness check when the harness supports subagents. Missing

@@ -67,7 +67,7 @@ def check_session_start_hooks() -> None:
 
 def check_bootstrap_whitelist() -> None:
     files = contract.list_bootstrap_files()
-    check("bootstrap whitelist is exactly the six known docs",
+    check("bootstrap whitelist is exactly the seven known docs",
           files == contract.EXPECTED_BOOTSTRAP_FILES,
           f"got {files}")
 

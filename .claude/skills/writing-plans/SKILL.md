@@ -1,17 +1,17 @@
 ---
 name: writing-plans
-description: Turn named work into a bounded brief, then an ordered verifiable plan. Triggers include "add X", "we need a way to", "users should be able to", "make it so that", "write the implementation plan", "break this down", "what order to build this in", or anything if "PLAN" word is present. Do NOT use to implement it (executing-plans), to diagnose a failure (systematic-debugging), or for a direct question. Use this whenever work is named and needs scoping or sequencing, even if the user does not ask.
-when_to_use: when named work must be scoped and turned into executable tasks
+description: Turn named work into a bounded brief and an ordered, verifiable plan. Tasks in dependency order, the files each touches, the check that proves each, risks and rollback. Triggers include "add X", "build X", "we need a way to", "users should be able to", "make it so that", "write the implementation plan", "plan this out", "break this down", "what order should I build this in", "where do I start", "scope this", or the word PLAN. Do NOT use to implement it (executing-plans), to diagnose a failure (systematic-debugging), to choose between approaches (brainstormer), or for a direct question. Use this whenever work is named and needs scoping, even if the user does not ask.
+when_to_use: Trigger when the user says add X, build X, we need a way to, users should be able to, make it so that, I want to support, can we have, write the implementation plan, plan this out, break this down, what order should I build this in, where do I start, how long will this take, scope this, or uses the word PLAN.
 effort: high
 model: opus
 disable-model-invocation: false
-allowed-tools: Read Grep Glob Task Bash EnterPlanMode ExitPlanMode
+allowed-tools: Read Grep Glob Task Bash EnterPlanMode ExitPlanMode AskUserQuestion
 ---
 
 # Writing Plans
 
 Owns the whole path from a named request to an approved plan: frame it, fetch
-whatever is missing, then decompose it. The deliverable is `TASK.md` and a plan
+whatever is missing, then decompose it. The deliverable is one plan
 document — not production code, scaffolding, migrations, tests, or
 implementation edits.
 
@@ -22,7 +22,7 @@ nothing watched for a finished brief. Stage B is what replaces it.
 ## Hard boundary
 
 - Read and inspect the repository; do not modify source, tests, configuration,
-  or documentation other than `TASK.md` and the plan being created.
+  or documentation other than the plan being created and `TASK.md`'s status line.
 - Do not execute the plan while writing it. Do not invoke `executing-plans`,
   implement a task, or claim that the feature is built.
 - Do not invent requirements. **Never guess.** Write
@@ -38,11 +38,11 @@ Six lines someone could act on without re-reading the chat.
 
 <HARD-GATE>
 **Do not ask the user to approve the brief.** The chain has exactly two gates and
-this is not one of them: state the six fields, write `TASK.md`, and continue into
+this is not one of them: fill the six fields, put them in the plan, and continue into
 Stage B.
 
 Every field filled by inference rather than by the user's words must be marked
-`(inferred)` in `TASK.md`. That is what replaces the approval — the user reads
+`(inferred)` in the plan. That is what replaces the approval — the user reads
 one artefact instead of answering a dialogue, and an assumption that was never
 stated is visible rather than silently blessed.
 </HARD-GATE>
@@ -65,10 +65,9 @@ brief, because it looks approved.
 
 ### A2. Draft the six fields
 
-Use these exact names — they carry unchanged into `TASK.md` in A3, and
-`tools/memory.py`, `tools/analyze.py`, and `tools/resume.py` all parse the
-document by these headings, so a renamed or re-pluralized field is invisible to
-them even though it reads fine to a person.
+Use these exact names — they carry unchanged into the plan header in A3, so a
+renamed or re-pluralized field reads fine to a person and matches nothing a
+later reader greps for.
 
     Goal:         the one outcome, in a sentence.
     Constraints:  what it must (and must not) do. Stack, perf, style, security.
@@ -80,17 +79,28 @@ them even though it reads fine to a person.
 - **Fill only from what was said or verified.** An unstated field stays blank. A
   guessed field is worse than an empty one — it gets approved as if the user had
   said it.
-- **Done Checks must be runnable.** `python tools/test_hooks.py exits 0` and
+- **Done Checks must be runnable.** `<the suite that covers it> exits 0` and
   `POST /session returns 201 with an id` are checks. "It works", "tests pass",
   "performance is better" are not.
 - **Out of Scope is never blank.** Name the adjacent thing you could plausibly
   touch and won't.
 
-### A3. Write `TASK.md`
+### A3. The brief goes in ONE place — the plan file
 
-The six fields, under the same names used in A2, with `Status: In Progress`,
-carrying the `(inferred)` markers through. Overwrite in place — it is current
-state, not history.
+Write the six fields into the plan document's header (C4), carrying the
+`(inferred)` markers through. Nowhere else.
+
+**Do not print them in the reply, and do not copy them into `TASK.md`.** They
+were living in three places at once — terminal, `TASK.md`, plan — so a reader
+saw the same six fields three times and every later edit had to hit all three or
+drift. `TASK.md` keeps a one-line status pointing at the plan; the plan holds
+the brief; Gate 1 shows the plan. One artefact, read once.
+
+Nothing breaks by moving them. `analyze.py` requires its headings in the **plan**
+(`**Goal:**`, `**Risk:**`, `## File map`, `## Tasks`); `_hooklib.declared_paths`
+reads `TASK.md` only for `- Create:`/`- Modify:` lines. `CLAUDE.md` claimed
+three tools parsed the six fields out of `TASK.md` — none does, and that claim
+is the reason the duplication survived.
 
 ---
 
@@ -115,7 +125,7 @@ Three rules that keep this from becoming a loop:
   the answer is not discoverable, so it becomes a `[NEEDS CLARIFICATION]` marker
   for Gate 1 instead.
 - **`brainstormer` outranks the brief.** If the approach is open, invoke it
-  *before* writing `TASK.md` — a finished brief commits Goal and Output to one
+  *before* filling the six fields — a finished brief commits Goal and Output to one
   solution shape, and that anchor is what stage 2 exists to prevent. Everything
   else here can run against a written brief.
 - **Never dispatch to avoid deciding.** If the repository answers the question,
@@ -255,11 +265,11 @@ All three outcomes stay reachable. On approve, write `## Approved` into the plan
 and a paraphrase leaves an approved plan reading as unapproved. Revise and reject
 record the user's own words verbatim.
 
-Plan mode is read-only apart from the plan, so **`TASK.md` is written
-immediately after the exit** — ownership does not move, only the moment.
+Plan mode is read-only apart from the plan, so **`TASK.md`'s one-line status is
+written immediately after the exit** — ownership does not move, only the moment.
 
 `references/plan-mode.md` owns all of it: the one-tool rule, the three outcomes,
-why `TASK.md` moved, and the one thing no skill can do — switch permission mode.
+why the status line moved, and the one thing no skill can do — switch permission mode.
 `references/plan-document.md` owns the rejection block's format.
 
 After the user approves, invoke `executing-plans` and pass it the plan path.
@@ -276,7 +286,7 @@ Until approval is explicit, stop here.
   been wrong before.
 - "The approach is open, but I'll write the brief anyway and let the plan sort it
   out." That is the anchor Stage B exists to prevent; dispatch `brainstormer`
-  first — after `TASK.md` exists, the brief is already the anchor.
+  first — once the six fields exist, the brief is already the anchor.
 - "This is a two-line change, but I'll plan it properly." Overhead exceeds the
   work. Say "too small to plan" and do it.
 
@@ -304,8 +314,8 @@ took out loud.
 
 ## Success
 
-- `TASK.md` holds the six fields, under the exact names given in A2, every
-  inferred one marked `(inferred)`.
+- The plan holds the six fields, under the exact names given in A2, every
+  inferred one marked `(inferred)`, and they appear nowhere else.
 - A dated plan exists under `docs/plans/` whose `**Slug:**` matches the branch.
 - Every open question was a marker, and every marker was answered at the gate.
 - No dialogue was opened before Gate 1, and execution did not start before it.

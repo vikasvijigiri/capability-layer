@@ -8,9 +8,10 @@ budget table in a different vocabulary, held run state in memory so a crash lost
 it, and could not be invoked as `/feature-delivery` because it never matched the
 dynamic-workflow contract. See `decisions/2026-08-07-one-workflow-engine.md`.
 
-The policy is harness-agnostic: Claude Code, Codex, Gemini, and VS Code agents
-must use the same states, artifacts, evidence, and approval boundaries. Both
-tools are plain scripts, so any harness can shell out to them.
+The policy is host-neutral at the tool and artifact level: Claude Code, Codex,
+and generic agent hosts use the same states, artifacts, evidence, and approval
+boundaries. Lifecycle registration remains host-specific; non-Claude hosts must
+invoke the canonical checks through their own lifecycle API.
 
 ## Product lifecycle
 
@@ -45,6 +46,24 @@ require its own platform permission prompt for an irreversible tool operation;
 that is execution control, not a lifecycle gate.
 
 ## Entry
+
+### The small-work path — take it when it applies
+
+The nine stages cost the same for a two-file change as for a twelve-task plan,
+and that is the single biggest source of overhead in this layer. When
+`tools/scope.py` says `small` **and** the work is not a control, shared or
+sensitive surface:
+
+    frame it in one line -> do it -> `--scoped` checks -> record one LOG line
+
+No plan, no Gate 1, no sweep, no separate review pass — read your own diff
+before you stop. Say **"small path"** out loud so the choice is visible and
+reversible; anything that turns out `major` mid-flight re-enters at stage 1.
+
+This is a narrowing of the stage table below, not an exception to it: the
+invariants at the foot of this file still hold, and nothing here waives the two
+gates or the delivery approval.
+
 
 **This section owns the entry rule. Nowhere else states it.** It was written in
 seven places until 2026-08-08 and the suite needed a special-case
@@ -103,6 +122,10 @@ desync — the only exception is an attempt counter, which is not a fact about t
 tree and so cannot be derived from it.
 
 ## Parallelism and integration
+
+The Claude-native `executing-plans` skill is the dispatch surface. There is no
+unsupported `.claude/workflows/*.js` runtime; scheduling remains in the tested
+repository tools below.
 
 Parallel agents may work only on disjoint files or read-only review surfaces.
 Each implementation task gets its own worktree and branch. Shared interfaces,
@@ -230,10 +253,35 @@ Four mechanisms, each with a tool and a suite behind it rather than a paragraph:
 | | Command | What it refuses, or reports |
 |---|---|---|
 | **Kill switch** | `python tools/halt.py --halt "<reason>"` | While halted, `pre-run/01-halt-guard.py` DENIES every tool that changes state or spawns work. Reads stay allowed on purpose — a halt you cannot investigate is a lockout, not a stop. `--resume` lifts it |
-| **Agent file scope** | declared per agent as `allowed-paths:` | `pre-edit/02-agent-scope-guard.py` denies a write outside a dispatched agent's declared files. **Unscoped denies** — an unscoped write is the case it exists for |
+| **Agent file scope** | declared per agent as `allowed-paths:` | `pre-edit/02-agent-scope-guard.py` denies a write outside a dispatched agent's declared files, and an unscoped write with it. **Only when the host sets `UAIOS_AGENT_NAME`, and Claude Code does not** — see below |
 | **Licence and SBOM** | `python tools/deps.py [--sbom]` | A denied licence exits 1; one that could not be read exits 2. `0` ok, and undetermined is never ok |
 | **Release candidate** | `python tools/release_candidate.py --plan <plan>` | The report Gate 2 reads: wheel, rehearsal, licence, SBOM, risk tier, changed paths, and a **rollback that was executed** in a scratch repo |
 | **Budget** | `python tools/budget.py` | Turns and elapsed against a ceiling, from the ledger. Reports; never halts — that is the kill switch's job |
+| **Security gate** | `python tools/security_gate.py --base <ref>` | Five clauses, each a fact about the artefact: a security control that lost an entry, a secret anywhere in the branch, a sensitive path no suite maps, an agent that may write with no declared scope, a moved dependency tree `deps.py` rejects. Exit `1` fired, `2` unevaluated. Added 2026-08-11 |
+
+**Agent file scope is dormant on this host, and that is the honest word for
+it.** The guard reads `UAIOS_AGENT_NAME` to know which agent is writing, and
+**nothing sets it** — a repository-wide grep finds the name only in the guard
+and its own fixtures. Claude Code spawns subagents itself and has no hook that
+runs inside one, so no dispatcher in this layer can set it; on a real dispatch
+the guard runs and is silent. What *is* enforced on this host is each agent's
+`tools:` allowlist, by the harness. The guard stays because a host that can set
+the variable gets the file-glob half for free, and `tools/test_agent_standards.py`
+fails if this paragraph stops naming the precondition — a claim that outlives its
+wiring is the failure this layer is most prone to, and the one it is least able
+to see.
+
+**The security gate is deliberately not a receipt.** A receipt recording that a
+review happened is the obvious shape and this repository already built and
+deleted it: `pre-commit/03-review-gate.py` invalidated every receipt it wrote
+because the receipts file was tracked, and the model then wrote one asserting a
+sign-off that had not happened — *"a forged receipt and a real one are the same
+file."* It went out on 2026-08-02 under *"Every hook verifies an artefact. Not
+one enforces process."* Every clause of the gate is therefore computable from two
+git revisions by anyone, with no state to keep and none to forge. It consumes
+`scope.py`'s `sensitive-surface` and `control-surface`, which had been computed
+for the risk tier since 2026-08-11 with nothing reading them for security, and it
+is what makes `code-review`'s security lens mandatory rather than judged.
 
 **The chain ledger is the audit trail.** `.claude/hooks/state/chain-ledger.jsonl`
 is append-only: one row per turn with the derived state and the plan's ticked
@@ -303,6 +351,71 @@ progress, nothing is wrong and this will clear on the next transition.
 Nothing can force the handoff -- a hook cannot invoke a skill -- so this notice
 is the whole mechanism. Acting on it is yours.
 [/state:chain-stalled]
+
+[state:entry-direct]
+This prompt asks what the current tree already contains -- what something does,
+where it lives, how it works. **Answer it directly.** Read what you need, say
+what is true, stop.
+
+No procedure applies, so load none. No plan, no gate, no checks, no record: a
+question that changes nothing has nothing to verify and nothing to log. This is
+the cheapest path there is and it is the correct one far more often than the
+shape of this repository suggests.
+
+Two questions wear the same grammar and are **not** this:
+
+- **Recall of a past decision or session** -- what the durable record says,
+  rather than what the code says. The stage that owns those records answers it.
+- **What other teams or projects do** -- outside evidence, gathered rather than
+  read.
+
+If answering turns out to need a change, that is a new prompt and it re-enters
+at the stage table above.
+[/state:entry-direct]
+
+[state:entry-small]
+This prompt names a change small enough that framing it costs more than doing
+it -- a named file, a concrete value, a rename, a typo, a version bump. **The
+small-work path above applies**: frame it in one line, do it, run the scoped
+checks, record one line. No plan, no Gate 1, no separate sweep or review pass;
+read your own diff before you stop.
+
+Say **"small path"** out loud, so the choice is visible and reversible.
+
+Three things veto it, and the first two are cheap to check before starting:
+
+1. A **control or shared surface** -- anything under the agent layer, a hook, a
+   settings file, a check definition, or a module most of the tree imports.
+   These change what fires for every later change.
+2. A **sensitive surface** -- auth, credentials, permissions, personal data.
+3. The work turning out `major` once there is a diff. `tools/scope.py` is the
+   arbiter and it refuses to narrow what it cannot classify; anything it calls
+   `major` re-enters at stage 1 mid-flight, which is expected rather than a
+   failure.
+
+If any veto fires, take the full chain from the stage table above.
+[/state:entry-small]
+
+[state:chain-stalled-no-plan]
+The state has been pinned for several turns while the tree kept changing, and
+this unit has no active plan -- so two of the three signals fired and the third
+could not be asked. This is **weaker evidence than a missed handoff**, and it is
+shown rather than suppressed because going quiet would blind the detector to
+exactly the units the small-work path above makes routine.
+
+Three things produce it, and only the first is a problem:
+
+1. A unit that finished a stage without invoking the successor -- the real
+   missed handoff. Read the stage table above and invoke it.
+2. Work taken on the small-work path, which by design has no plan to tick.
+   Nothing is wrong; this clears when the work lands.
+3. State derived from a **finished** unit's slug, because the branch name still
+   points at it. Run tools/resume.py: if the slug names work that is already
+   complete, this notice is about that unit and not about what you are doing.
+
+Case 3 repeats every turn until the branch is delivered or the current work gets
+a plan of its own, so recognise it once rather than re-reading it.
+[/state:chain-stalled-no-plan]
 
 [state:entry-unframed]
 This prompt names work with a done-state, and the **Entry** table above routes

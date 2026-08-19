@@ -43,7 +43,8 @@ scanner passed.
 
 ## Next step
 
-Route code changes to `test-driven-development` and `verifying-work`; route
+Route code changes to `verifying-work`, built test-first per
+`.claude/skills/executing-plans/references/test-driven-development.md`; route
 release blockers to `systematic-debugging` and `releasing` after remediation.
 
 ## Routing

@@ -1,7 +1,7 @@
 # Constitution
 
 Seven articles. Every plan ticks each one or justifies the exception in writing.
-`tools/test_constitution.py` fails if an article has no gate or a gate names no
+This repository's constitution suite fails if an article has no gate or a gate names no
 article, so the two cannot drift.
 
 These are not aspirations. Each exists because its absence caused a specific

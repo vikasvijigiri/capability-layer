@@ -140,17 +140,26 @@ check("turns past the ceiling reports over",
 check("...and the reason names the ceiling that fired",
       str(budget.TURN_CEILING) in past_turns["reason"], past_turns["reason"])
 
-past_elapsed = budget.verdict(
-    {"turns": 1, "elapsed_hours": budget.ELAPSED_CEILING_HOURS + 0.01})
-check("elapsed past the ceiling reports over",
-      past_elapsed["budget"] == "over", str(past_elapsed))
+# Elapsed is measured and printed; it is NOT a ceiling. It was one until
+# 2026-08-16, when the only unit that had ever run start to finish measured
+# 24.42h against a 3.0h limit while its 19 turns sat under 30 -- the two axes
+# disagreeing about one healthy unit, with the turn axis right. Wall-clock span
+# measures how long somebody left a session open, not what the unit cost.
+long_span = budget.verdict({"turns": 19, "elapsed_hours": 24.42})
+check("a real complete unit -- 19 turns over 24.42h -- is within budget",
+      long_span["budget"] == "within", str(long_span))
+check("...and its span is still reported, just not judged",
+      "24.42h" in long_span["reason"], long_span["reason"])
+check("the retired ceiling is not resurrected under its old name",
+      not hasattr(budget, "ELAPSED_CEILING_HOURS"),
+      "a live ELAPSED_CEILING_HOURS is how the limb comes back by accident")
 
 at_turns = budget.verdict({"turns": budget.TURN_CEILING, "elapsed_hours": 0.0})
 check("exactly at the turn ceiling does not fire (a real boundary, not off-by-one)",
       at_turns["budget"] == "within", str(at_turns))
 
 within = budget.verdict({"turns": 1, "elapsed_hours": 0.1})
-check("comfortably under both ceilings is within",
+check("comfortably under the ceiling is within",
       within["budget"] == "within", str(within))
 
 # --- verdict(): unknown is not within budget, ever ----------------------------
@@ -164,18 +173,22 @@ unknown_verdict = budget.verdict(unknown_facts)
 check("an empty ledger's facts verdict as unknown, not within budget",
       unknown_verdict["budget"] == "unknown", str(unknown_verdict))
 
-# A verdict must never call an unmeasurable pair "within" even when nothing
-# fired -- that is the silent-pass Article V forbids.
-half_unknown = budget.verdict({"turns": 1, "elapsed_hours": None})
-check("one measurable axis under ceiling + one unmeasurable is unknown, "
-      "not within", half_unknown["budget"] == "unknown", str(half_unknown))
+# Article V binds the axis that is JUDGED. An unreadable timestamp used to make
+# the whole verdict `unknown`, because elapsed was a ceiling; now it costs only
+# the reported span. Countable turns are a complete answer, and calling that
+# `unknown` would be the opposite error -- withholding a fact that was measured.
+no_span = budget.verdict({"turns": 1, "elapsed_hours": None})
+check("countable turns with an unreadable span is a real answer, not unknown",
+      no_span["budget"] == "within", str(no_span))
+check("...and the missing span is named rather than printed as 0.00h",
+      "unmeasured" in no_span["reason"], no_span["reason"])
 
-# But an axis that DID fire still wins over an unmeasurable partner -- a real
-# overrun must not be hidden behind a missing timestamp.
-fired_over_unmeasurable = budget.verdict(
+# Turns are the axis Article V now guards: uncountable turns is `unknown`, and
+# an overrun is still reported when the span is missing.
+fired_no_span = budget.verdict(
     {"turns": budget.TURN_CEILING + 5, "elapsed_hours": None})
-check("a fired ceiling outranks an unmeasurable partner axis",
-      fired_over_unmeasurable["budget"] == "over", str(fired_over_unmeasurable))
+check("an overrun is still reported when the span cannot be measured",
+      fired_no_span["budget"] == "over", str(fired_no_span))
 
 # --- gather(): the real IO seam, against a real temp ledger -------------------
 with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
@@ -250,5 +263,5 @@ print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")
     sys.exit(1)
-print(f"All budget tests passed (turn ceiling {budget.TURN_CEILING}, "
-      f"elapsed ceiling {budget.ELAPSED_CEILING_HOURS}h)")
+print(f"All budget tests passed (turn ceiling {budget.TURN_CEILING}; "
+      f"elapsed measured and reported, not judged)")

@@ -1,7 +1,7 @@
 ---
 name: capability-layer-maintenance
-description: Audit or repair the agent layer itself. Covers .claude/, CLAUDE.md, AGENTS.md, skills, agents, hooks, commands, rules and validators. Triggers include "add a skill", "the hook is not firing", "fix the layer", "audit .claude", "this skill never triggers", "wire up a subagent", "the layer has drifted". Do NOT use for product code, product docs, or a plain question about how the layer works. Use this whenever .claude/ is what changes.
-when_to_use: when the agent layer or its governing contracts need audit, repair, migration, or ownership clarification
+description: Audit or repair the agent layer itself, and its governing contracts. Covers .claude/, CLAUDE.md, AGENTS.md, skills, subagents, hooks, slash commands, rules, settings.json and their validators. Triggers include "add a skill", "create a skill", "add a hook", "wire up a subagent", "the hook is not firing", "this skill never triggers", "my skill is not being used", "the slash command is broken", "fix the layer", "audit .claude", "the layer has drifted", "update CLAUDE.md". Do NOT use for product code, product documentation, or a plain question about how the layer works. Use this whenever .claude/ is what changes.
+when_to_use: Trigger when the user says add a skill, create a skill, write a skill, add a hook, wire up a subagent, add an agent, the hook is not firing, the hook does nothing, this skill never triggers, my skill is not being used, the slash command is broken, fix the layer, audit .claude, the layer has drifted, update CLAUDE.md, or add a slash command.
 effort: high
 model: opus
 disable-model-invocation: false
@@ -27,6 +27,17 @@ This skill owns the capability contract and its wiring:
 `HANDOFF.md`, `MEMORY.md`, `LOG.md`, `ISSUES.md`, and `decisions/`. Hand off
 those files when the requested change is project history or state rather than
 the capability contract.
+
+`no-slop` also reads `.claude/`, and the division is by **question, not by
+directory**: it asks whether slop has accumulated and reports findings; this
+skill asks whether the contract and its wiring are correct, and changes them. A
+dead reference found by a sweep is reported there and repaired here. Running a
+sweep is not maintenance, and neither is running the validators — `/verify`
+resolves every one of them, so a command that re-runs a subset of them is a
+second, weaker answer to a settled question.
+
+`tools/test_process_router.py` fails if either skill stops naming the other. A
+boundary held by one side's prose is one that drifts.
 
 ## Non-negotiable contract
 

@@ -1,7 +1,7 @@
 ---
 name: code-review
-description: Review the actual branch diff and return a verdict. Triggers include "review this", "check the diff", "threat model this", "check auth", "audit dependencies", "is this accessible", "why is this slow", "is this safe to merge". Do NOT use to implement fixes, to release, or to replace verification. Use this whenever a diff is about to be delivered, even if the user does not ask for a review.
-when_to_use: when a verified change needs an independent review
+description: Review a code change and return a verdict with findings at file:line. Covers correctness, security, auth, secrets, injection, dependency risk, accessibility, performance, test quality and scope creep, over a diff, branch, PR or working tree. Triggers include "review this", "code review", "review the PR", "check the diff", "look over my changes", "find bugs", "is this safe to merge", "critique this", "threat model this", "check auth", "audit dependencies", "why is this slow". Do NOT use to implement the fixes it finds, to release or deploy, or to substitute for running the tests. Use this whenever a diff is about to be delivered, even if the user does not ask.
+when_to_use: Trigger when the user says review this, review my code, code review, review the PR, review the diff, check the diff, look over my changes, look at this before I merge, find bugs, any bugs in this, is this correct, is this safe to merge, safe to ship, sanity check this, critique this, give me feedback on this code, threat model this, check auth, check permissions, audit dependencies, any vulnerabilities, is this accessible, or why is this slow.
 effort: high
 model: sonnet
 disable-model-invocation: false
@@ -10,45 +10,69 @@ allowed-tools: Read Grep Glob Bash Task
 
 # Code Review
 
-Perform an independent, evidence-based review of the actual delivery surface.
-This skill is automated by the feature workflow. The only human decisions are
-plan approval before implementation and shipment approval before release.
+## Overview
+
+Return an independent, evidence-based verdict on the actual delivery surface.
+Every finding carries a severity, a `file:line`, the defect, its impact, and the
+evidence. Runs after verification and before delivery; the only human decisions
+in the chain are plan approval and shipment approval.
 
 <HARD-GATE>
 Never report a review without reading the complete relevant diff, including
 untracked files. Never treat passing tests as a substitute for reading the diff.
 </HARD-GATE>
 
-## Steps
+## Workflow
 
-1. Establish the surface: working tree for a local change, or
-   `git diff <merge-base> HEAD` for a branch/PR. Include `git status --porcelain`
-   so untracked files are not missed.
-2. Run `python tools/scope.py` (add `--base <ref>` for a branch/PR) to get the
-   computed scope. `small` reviews the changed files and their direct callers;
-   `major` reviews the whole branch diff as today; `undetermined` is read as
-   `major` — the veto list exists so nobody has to guess, and a clause that
-   could not be evaluated is not permission to look at less.
-3. Inspect correctness, security, silent failures, test quality, scope drift,
-   dependency risk, and repository policy violations, within the scope from
-   step 2.
-4. Report every finding with severity, `file:line`, defect, impact, and evidence.
-5. Return `passed: true` only when no blocking finding remains. A `small`
-   review states its scope in the verdict, so `passed: true` is never read as
-   broader than it was — four review rounds on `delivery_check.py` each found
-   what the previous missed, and a narrowed review must not hide that. Return
-   `passed: false` when repair is required. Do not edit, commit, push, merge,
-   or ask the user a mid-run question.
+1. **Establish the surface.** Working tree for a local change, `git diff
+   <merge-base> HEAD` for a branch or PR. Always include `git status
+   --porcelain` so untracked files are not missed.
+2. **Compute the scope** with `tools/scope.py`, and review exactly that much.
+3. **Run the security gate** — its exit code decides the security lens, step 6.
+4. **Inspect** correctness, security, silent failures, test quality, scope
+   drift, dependency risk and policy violations, within the scope from step 2.
+5. **Report** every finding with severity, `file:line`, defect, impact, evidence.
+6. **Decide** the verdict, and never edit, commit, push or merge.
 
-For a large change, the workflow may dispatch `diff-reviewer` for independent
-correctness, security, test-quality, and scope passes; merge duplicate findings
-before applying recovery.
+Each step in full below.
 
-## Lenses — load one only when the diff earns it
+### Step 2 — compute the scope
 
-Four specialist reviews were separate skills. Each cost its own
-description on every turn, for depth that applies to a minority of diffs. They
-are now references: same content, read on demand, nothing charged when unused.
+Run `python tools/scope.py` (add `--base <ref>` for a branch or PR).
+
+| Verdict | Review |
+|---|---|
+| `small` | the changed files and their direct callers |
+| `major` | the whole branch diff |
+| `undetermined` | read as `major` |
+
+A clause that could not be evaluated is not permission to look at less.
+
+### 3. Run the security gate
+
+`python tools/security_gate.py --base <merge-base> --json`. Exit `1` names the
+clauses that fired; exit `2` names the ones it could not evaluate, and `2` is
+not `0`. **This decides the security lens in step 5 — it is not advice.**
+
+### 4. Inspect
+
+Correctness, security, silent failures, test quality, scope drift, dependency
+risk, and repository policy violations, within the scope from step 2.
+
+For a large change, dispatch `diff-reviewer` for independent correctness,
+security, test-quality and scope passes; merge duplicate findings before
+applying recovery. For an independent security pass rather than a reading,
+dispatch `security-reviewer` — it reports, this skill still owns the verdict.
+
+### 5. Report and decide
+
+Return `passed: true` only when no blocking finding remains. A `small` review
+states its scope in the verdict, so `passed: true` is never read as broader than
+it was. Return `passed: false` when repair is required.
+
+**Never** edit, commit, push, merge, or ask a mid-run question.
+
+## Reference files — load one only when the diff earns it
 
 | The diff touches | Read |
 |---|---|
@@ -58,26 +82,35 @@ are now references: same content, read on demand, nothing charged when unused.
 | hot paths, queries, bundle size, startup, anything with a budget | `references/performance-engineering.md` |
 
 Pick by what changed, not by habit — reading all four on a typo fix is the cost
-this consolidation exists to remove. A lens that produces a finding reports it
-through the same severity/`file:line`/evidence format as everything else.
+this consolidation exists to remove.
+
+**The security lens is computed, not picked.** If step 3's gate exits non-zero,
+`references/security-review.md` is mandatory and the fired clause names where to
+start. A rule whose whole content is a judgement call made under time pressure
+has one reliable answer.
 
 **A high-severity security finding is never auto-waived**, whichever lens found
 it: it blocks, and `_hooklib.classify_failure` gives its class a budget of zero.
 
-When the security lens needs an independent pass rather than a reading, dispatch
-`security-reviewer`; it reports, this skill still owns the verdict.
+## Boundaries
+
+**`no-slop` runs at the stage before this one** and can read the same files. It
+reads standing artefacts — including files the change never touched — and asks
+whether slop has accumulated. This reads **the diff** and asks whether the
+change is correct and safe to ship. A finding about an unchanged file belongs
+there, not here. `tools/test_process_router.py` fails if either skill stops
+naming the other.
 
 ## Recovery
 
-The workflow sends failed findings to `systematic-debugging`, applies one
-bounded repair at a time, and runs this review again. A repeated root cause,
-security finding, scope escape, or exhausted repair budget blocks the run or
-returns it to the plan gate.
+Failed findings go to `systematic-debugging`, one bounded repair at a time, then
+this review runs again. A repeated root cause, security finding, scope escape,
+or exhausted repair budget blocks the run or returns it to the plan gate.
 
 ## Next step
 
-On `passed: true`, hand off to `delivering`. On failure, hand off to
-`systematic-debugging`; never deliver unresolved findings.
+On `passed: true`, hand off to `delivering`. On `passed: false`, hand off to
+`systematic-debugging` — never deliver unresolved findings.
 
 ## Routing
 
@@ -87,5 +120,5 @@ On `passed: true`, hand off to `delivering`. On failure, hand off to
 
 ## Success
 
-The result is a structured, reproducible verdict tied to the actual diff, with
-no unlocated findings and no unresolved blocking issue hidden by prose.
+A structured, reproducible verdict tied to the actual diff, with no unlocated
+findings and no unresolved blocking issue hidden by prose.

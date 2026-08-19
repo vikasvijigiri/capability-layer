@@ -41,6 +41,19 @@ def _load(rel: str, name: str):
 _rs = _load("tools/resume.py", "resume_for_analyze")
 
 REQUIRED_HEADINGS = ["**Goal:**", "**Risk:**", "## File map", "## Tasks"]
+
+# Required in the plan's PREAMBLE -- everything before the first task heading.
+#
+# Added 2026-08-16, closing `GOAL_CHECKLIST.md` lines that had been prose since
+# the checklist was written; prose passes every suite, which is why that document
+# counts "enforced by a mechanism" and "described somewhere" separately.
+#
+# Positional and not a plain substring, which the first version got wrong. Tasks
+# carry their own `**Rollback:**`, so a whole-document search is satisfied by
+# task 3's revert line and the plan-level requirement adds nothing. The two are
+# different claims: undoing task 7 tells nobody how to undo a plan whose tasks
+# 1-6 already landed, and Gate 1 is specified to be shown the second one.
+PREAMBLE_HEADINGS = ["**Rollback:**", "**Blast radius:**"]
 TASK_RE = re.compile(r"(?m)^###\s+Task\s+(\d+)\s*:?(.*)$")
 GATE_RE = re.compile(r"(?m)^- \[( |x|X)\]\s+([IVX]+)\s")
 # `- [ ] Task 3 — title`. Distinguished from GATE_RE by what follows the box:
@@ -94,6 +107,17 @@ def analyze(text: str, exists=None, slug: str = "") -> list[dict]:
     for heading in REQUIRED_HEADINGS:
         if heading not in text:
             add(1, "structure", f"missing required section {heading!r}")
+
+    # The preamble is everything before the first task. A plan with no tasks at
+    # all has already been reported above; here the whole document is preamble,
+    # which is the reading that cannot produce a false pass.
+    _first_task = TASK_RE.search(text)
+    preamble = text[:_first_task.start()] if _first_task else text
+    for heading in PREAMBLE_HEADINGS:
+        if heading not in preamble:
+            add(1, "structure",
+                f"missing required section {heading!r} -- it must appear in the "
+                f"plan's preamble; a task's own field is a different claim")
 
     # --- open questions. The gate cannot be passed while one remains, so
     # finding them here is the difference between a fixable draft and a

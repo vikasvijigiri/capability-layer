@@ -68,8 +68,19 @@ check was proven red against a deliberately-wrong script before being relied on.
 - The workflow cannot read the plan or run Python — no filesystem, no subprocess.
   The schedule is computed outside by `parallel_groups.py` and passed as `args`,
   which is the hybrid the tool's own guidance recommends.
-- `.claude/workflows/` exists again. The contract suite fails on an empty one, so
-  it cannot decay into a directory that looks like a capability and is not.
+- `.claude/workflows/` exists again. The contract suite fails on a directory
+  holding non-`.js` leftovers, so it cannot decay into something that looks like
+  a capability and is not.
+
+**Corrected 2026-08-16.** The line above read *"the contract suite fails on an
+empty one"* and that was never what the suite did:
+`test_workflow_contract.py:80` asserts `bool(scripts) or not
+any(WORKFLOWS.iterdir())`, so a **fully empty** directory passes and an
+absent one is explicitly a valid state. `execute-rounds.js` was deleted this
+same day and the directory removed with it — the policy spine (`resume.py` +
+`loop.py`) has been the only engine since 2026-08-07. Nothing about this
+decision changes; only the sentence describing the guard, which asserted a
+stricter check than exists and would have blocked a correct cleanup.
 
 ## What is still unproven
 

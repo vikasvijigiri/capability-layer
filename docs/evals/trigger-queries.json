@@ -80,6 +80,22 @@
     {
       "query": "add a test for the empty-cart case",
       "should_trigger": false
+    },
+    {
+      "query": "look over the diff on this branch before it merges",
+      "should_trigger": true
+    },
+    {
+      "query": "is the repo tidy enough to hand over",
+      "should_trigger": false
+    },
+    {
+      "query": "is the retry work finished",
+      "should_trigger": false
+    },
+    {
+      "query": "why did the retry test go red after my change",
+      "should_trigger": false
     }
   ],
   "systematic-debugging": [
@@ -162,6 +178,14 @@
     {
       "query": "clean up the repo before we ship, there's placeholder text somewhere",
       "should_trigger": false
+    },
+    {
+      "query": "why did the retry test go red after my change",
+      "should_trigger": true
+    },
+    {
+      "query": "this skill never fires when i ask for it",
+      "should_trigger": false
     }
   ],
   "repo-recon": [
@@ -211,6 +235,14 @@
     },
     {
       "query": "the test suite is failing on main, figure out why",
+      "should_trigger": false
+    },
+    {
+      "query": "what is already built in this repo and what is half done",
+      "should_trigger": true
+    },
+    {
+      "query": "how do other teams usually do idempotency keys",
       "should_trigger": false
     }
   ],
@@ -262,6 +294,14 @@
     {
       "query": "prove this actually meets what the brief asked for",
       "should_trigger": false
+    },
+    {
+      "query": "get the merged change onto staging",
+      "should_trigger": false
+    },
+    {
+      "query": "land the reviewed branch on main",
+      "should_trigger": true
     }
   ],
   "capability-layer-maintenance": [
@@ -312,6 +352,10 @@
     {
       "query": "update the README to describe the new CLI",
       "should_trigger": false
+    },
+    {
+      "query": "this skill never fires when i ask for it",
+      "should_trigger": true
     }
   ],
   "executing-plans": [
@@ -362,6 +406,18 @@
     {
       "query": "commit what we have done so far",
       "should_trigger": false
+    },
+    {
+      "query": "is the retry work finished",
+      "should_trigger": false
+    },
+    {
+      "query": "add csv export to the reports page",
+      "should_trigger": false
+    },
+    {
+      "query": "start on task 2 of the approved plan",
+      "should_trigger": true
     }
   ],
   "brainstormer": [
@@ -403,6 +459,22 @@
     },
     {
       "query": "start building the onboarding flow",
+      "should_trigger": false
+    },
+    {
+      "query": "we need multi-currency support, and i do not know how to model it yet",
+      "should_trigger": true
+    },
+    {
+      "query": "add csv export to the reports page",
+      "should_trigger": false
+    },
+    {
+      "query": "how do other teams usually do idempotency keys",
+      "should_trigger": false
+    },
+    {
+      "query": "the settings screen looks inconsistent with the rest",
       "should_trigger": false
     }
   ],
@@ -498,6 +570,19 @@
     {
       "query": "the export endpoint 500s on empty invoices, why",
       "should_trigger": false
+    },
+    {
+      "query": "we need multi-currency support, and i do not know how to model it yet",
+      "should_trigger": false
+    },
+    {
+      "query": "add csv export to the reports page",
+      "should_trigger": true,
+      "entry": "unframed"
+    },
+    {
+      "query": "start on task 2 of the approved plan",
+      "should_trigger": false
     }
   ],
   "verifying-work": [
@@ -539,6 +624,18 @@
     },
     {
       "query": "what is left to do in this repo",
+      "should_trigger": false
+    },
+    {
+      "query": "look over the diff on this branch before it merges",
+      "should_trigger": false
+    },
+    {
+      "query": "is the retry work finished",
+      "should_trigger": true
+    },
+    {
+      "query": "why did the retry test go red after my change",
       "should_trigger": false
     }
   ],
@@ -582,6 +679,26 @@
     {
       "query": "what is unfinished in this codebase",
       "should_trigger": false
+    },
+    {
+      "query": "look over the diff on this branch before it merges",
+      "should_trigger": false
+    },
+    {
+      "query": "is the repo tidy enough to hand over",
+      "should_trigger": true
+    },
+    {
+      "query": "write down what we decided about the retry backoff",
+      "should_trigger": false
+    },
+    {
+      "query": "this skill never fires when i ask for it",
+      "should_trigger": false
+    },
+    {
+      "query": "the settings screen looks inconsistent with the rest",
+      "should_trigger": false
     }
   ],
   "releasing": [
@@ -623,6 +740,14 @@
     },
     {
       "query": "is the branch ready to land",
+      "should_trigger": false
+    },
+    {
+      "query": "get the merged change onto staging",
+      "should_trigger": true
+    },
+    {
+      "query": "land the reviewed branch on main",
       "should_trigger": false
     }
   ],
@@ -666,6 +791,18 @@
     {
       "query": "add a docs page for the api",
       "should_trigger": false
+    },
+    {
+      "query": "is the repo tidy enough to hand over",
+      "should_trigger": false
+    },
+    {
+      "query": "what is already built in this repo and what is half done",
+      "should_trigger": false
+    },
+    {
+      "query": "write down what we decided about the retry backoff",
+      "should_trigger": true
     }
   ],
   "research": [
@@ -708,6 +845,14 @@
     {
       "query": "the stripe webhook is timing out",
       "should_trigger": false
+    },
+    {
+      "query": "what is already built in this repo and what is half done",
+      "should_trigger": false
+    },
+    {
+      "query": "how do other teams usually do idempotency keys",
+      "should_trigger": true
     }
   ],
   "designer": [
@@ -762,6 +907,10 @@
       "query": "review this diff for accessibility problems",
       "should_trigger": false,
       "owner": "code-review"
+    },
+    {
+      "query": "the settings screen looks inconsistent with the rest",
+      "should_trigger": true
     }
   ]
 }

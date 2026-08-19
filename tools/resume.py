@@ -334,8 +334,17 @@ def read_ledger(root: Path, slug: str) -> dict:
 def gather_facts(root: Path, slug: str | None = None) -> dict:
     """Everything `derive_state` needs, read from git, gh, and one small ledger."""
     _, branch = _git(root, "rev-parse", "--abbrev-ref", "HEAD")
+    slug_arg = slug
     if not slug:
         slug = slug_from_branch(branch) if branch else ""
+
+    # Where the slug came from. A slug the CALLER named is about the work in
+    # hand; one taken from the branch is about whatever that branch was named
+    # after, which may be a unit that finished days ago -- measured 2026-08-16,
+    # `security-gate` accumulated 118 ledger turns across four units because the
+    # branch outlived its plan. The distinction is reported rather than guessed
+    # at: `derive_state` is unchanged, because its clause order is the policy.
+    slug_inferred = not bool(slug_arg)
 
     plan, plan_reason = plan_path(root, slug) if slug else (None, "no slug")
     plan_text = ""
@@ -429,6 +438,7 @@ def gather_facts(root: Path, slug: str | None = None) -> dict:
         "plan_approved": APPROVAL_MARKER in plan_text,
         "clarifications": plan_text.count(CLARIFICATION_MARKER),
         "plan_tasks_done": plan_tasks_done(plan_text),
+        "slug_inferred": slug_inferred,
         "commits_ahead": commits_ahead_of_base(root, branch),
         "rejections": _rejections,
         "rejection_reasons": _reject_log,
@@ -525,6 +535,16 @@ def state_line(facts: dict, state: str) -> str:
     orphan = ""
     if not facts.get("plan_exists") and facts.get("plans_on_disk"):
         orphan = f" | NOTE: {facts.get('plan_reason')}"
+    # A finished plan under an inferred slug is the shape of work being scored
+    # against a unit that ended. It reported `state=BUILD` for 57 turns here
+    # while four separate units ran, and BUILD was the correct answer to the
+    # wrong question -- nothing said which question was being asked. Reported,
+    # not corrected: whether the branch should be delivered or the new work
+    # should get a slug of its own is a decision, and this is a status line.
+    elif facts.get("slug_inferred") and facts.get("plan_tasks_done"):
+        orphan = (" | NOTE: this plan's tasks are all ticked and the slug came "
+                  "from the branch name -- if you are working on something "
+                  "else, it has no plan and this line is about the old unit")
     return (
         f"slug={facts.get('slug') or '-'} "
         f"state={state} "

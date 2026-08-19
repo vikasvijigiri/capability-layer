@@ -1,5 +1,11 @@
 ---
 description: Route a high-risk or trust-boundary change through an independent security review with evidence and residual-risk reporting.
+# User entry point: typed explicitly, never auto-invoked. Notion section 8 -
+# commands are optional shortcuts, not workflow stages, and the router must work
+# without them. Left invocable, their descriptions cost 1,506 chars of the skill
+# listing on EVERY turn for a capability only the user triggers; per
+# code.claude.com/docs/en/skills this flag also keeps them out of context.
+disable-model-invocation: true
 ---
 
 # Security Review

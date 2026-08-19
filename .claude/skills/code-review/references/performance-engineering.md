@@ -42,8 +42,9 @@ single fast local run is not a performance claim.
 
 ## Next step
 
-Hand code changes to `test-driven-development` and `verifying-work`; hand
-production thresholds and dashboards to `observability-sre`.
+Hand code changes to `verifying-work`, built test-first per
+`.claude/skills/executing-plans/references/test-driven-development.md`; hand production thresholds and dashboards to `releasing`, whose
+`.claude/skills/releasing/references/observability-sre.md` carries the depth.
 
 ## Routing
 

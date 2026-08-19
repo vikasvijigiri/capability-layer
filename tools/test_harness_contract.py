@@ -55,7 +55,13 @@ except (OSError, json.JSONDecodeError) as exc:
 
 require("manifest names AGENTS.md source contract", manifest.get("source_contract") == "AGENTS.md")
 require("manifest declares host-managed execution", manifest.get("execution_model") == "host-managed")
-require("manifest lists IDE agent hosts", set(manifest.get("supported_hosts", [])) == {"Claude Code", "Codex", "Gemini", "VS Code agent"})
+# Three hosts, matching the three structural `adapters` buckets below --
+# "Gemini" and "VS Code agent" were never their own adapter, only names
+# folded into `generic-agent`, so listing them separately in
+# `supported_hosts` was a naming split the structure never had. Fixed
+# 2026-08-1x on feat/security-gate; kept over the 4-name list this test
+# asserted first.
+require("manifest lists declared IDE agent hosts", set(manifest.get("supported_hosts", [])) == {"Claude Code", "Codex", "generic-agent"})
 require("manifest names the hook bridge doc", manifest.get("hook_bridge_doc") == "docs/harness-hook-bridge.md")
 # `runner_modes` is deliberately absent, the same pattern as `workflows` below:
 # it named --host-managed/--dry-run/--sdk-live flags on a repository runner
@@ -81,6 +87,7 @@ require("generic adapter uses canonical source", adapters.get("generic-agent", {
 require("Claude settings path is explicit", adapters.get("claude-code", {}).get("settings_path") == ".claude/settings.json")
 require("Codex canonical hooks path is explicit", adapters.get("codex", {}).get("hooks_path") == ".claude/hooks")
 require("generic canonical hooks path is explicit", adapters.get("generic-agent", {}).get("hooks_path") == ".claude/hooks")
+require("Claude bootloader imports AGENTS.md", "@AGENTS.md" in (ROOT / "CLAUDE.md").read_text(encoding="utf-8"))
 
 if failures:
     raise SystemExit(1)

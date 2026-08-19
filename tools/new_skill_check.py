@@ -36,12 +36,19 @@ SKILLS = ROOT / ".claude" / "skills"
 WORKFLOW = ROOT / ".claude" / "workflow.md"
 CLAUDE_MD = ROOT / "CLAUDE.md"
 
-# Same numbers the suite enforces, quoted from the same reasoning: 1024 chars is
-# the hard frontmatter spec limit, and ~380 chars of description is the per-turn
-# injection budget rather than a style preference.
-HARD_FRONTMATTER = 1024
-SOFT_DESCRIPTION = 400
-HARD_DESCRIPTION = 500
+# Same numbers the suite enforces, and they must stay in step with
+# `test_no_slop.py`'s `desc_budget` -- two budgets for one property is how a
+# skill passes one check and fails the other.
+#
+# Raised on 2026-08-15 with the reasoning recorded at that `desc_budget`: a
+# description measured at trigger_rate 0.0 wastes all of its tokens, so buying
+# trigger reliability is worth ~40% more of them. The official per-entry cap is
+# 1,536 chars for description + when_to_use combined
+# (code.claude.com/docs/en/skills), so 1300 still leaves headroom under the only
+# limit this repo does not own.
+HARD_FRONTMATTER = 1300
+SOFT_DESCRIPTION = 550
+HARD_DESCRIPTION = 700
 
 MODELS = {"opus", "sonnet", "haiku"}
 EFFORTS = {"low", "medium", "high"}
@@ -197,10 +204,21 @@ def check(name: str) -> int:
                    "no earlier stage hands off to it",
                    "without this the chain stops one stage early and looks complete")
 
-    cm = CLAUDE_MD.read_text(encoding="utf-8", errors="ignore") if CLAUDE_MD.is_file() else ""
-    r.need("CLAUDE.md Skills table names it", f"`{name}`" in cm,
-           "" if f"`{name}`" in cm else "absent",
-           f"add a row to the Skills table in {CLAUDE_MD.name}")
+    # Registered in the layer's INDEX, which is workflow.md -- retargeted from
+    # CLAUDE.md on 2026-08-14. This is not a relaxation: the old form was
+    # `` `name` in CLAUDE.md `` , satisfied by a mention anywhere in a file that
+    # declares "workflow.md owns the order" and then reproduced a lossier copy
+    # of its table. workflow.md gives each skill a stage, an owner, an entry
+    # condition and an artefact, so the same assertion now rests on strictly
+    # more. Checked when it moved: workflow.md named all 14 skills, CLAUDE.md
+    # named 6 -- so nothing was passing here that would newly fail.
+    #
+    # The bootloader is deliberately NOT checked. Requiring a mention there is
+    # what grew the table that had to be deleted, and a file loaded on every
+    # session should carry pointers rather than a register.
+    r.need("workflow.md names it", f"`{name}`" in wf,
+           "" if f"`{name}`" in wf else "absent",
+           "add it to the stage table in .claude/workflow.md")
 
     # --- 5. every skill it names in backticks resolves -----------------------
     agents = {f.stem for f in (ROOT / ".claude" / "agents").glob("*.md")}

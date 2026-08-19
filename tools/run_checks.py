@@ -27,9 +27,17 @@ is cheap, and every rule below exists so cheap never becomes *unmeasured*:
   * an **unmapped** changed path escalates to the full tier rather than running
     nothing, so a gap in the map fails safe;
   * it **never moves `refs/uaios/green/<slug>`**. That ref means the full tier
-    passed, and it is written by `post-run/06-artifact-autocommit.py` and
-    `tools/loop.py` — neither of which calls this flag — so the guarantee is
-    structural rather than a promise made here.
+    passed, and `--record-green` refuses before running whenever the tier is not
+    `all` or the run is scoped, so the two can never be combined.
+
+    python tools/run_checks.py --tier all --require-test --record-green
+
+`--record-green` is the ref's second writer, added 2026-08-16. The first is
+`post-run/06-artifact-autocommit.py`, which refuses past `max_files` by design --
+so the largest units, the ones that most need a verified checkpoint, were the
+ones that never recorded one, and `resume.py` could not leave `BUILD`. It writes
+only after a full tier passed AND a test actually ran; unlike the hook's
+best-effort version it reports a failure to record rather than swallowing it.
 
 `--scoped` also narrows **lint** the same way it narrows tests: a whole-tree
 ruff invocation is rewritten to check only the changed python files, never by
@@ -248,6 +256,42 @@ def run_scoped(pc, resolved: list, args) -> int:
     return 0
 
 
+GREEN_REF_PREFIX = "refs/uaios/green/"
+
+
+def record_green(root: Path) -> tuple[str, str]:
+    """Point `refs/uaios/green/<slug>` at HEAD. `(ref, error)`, one empty.
+
+    The second writer of this ref, and the reason there is one. Until 2026-08-16
+    the only writer was `post-run/06-artifact-autocommit.py`, which refuses past
+    `max_files` by design -- so a large unit, exactly the kind that most needs a
+    verified checkpoint, never recorded that it went green. `resume.derive_state`
+    reads the ref as `checks_green`, finds `None`, and returns `BUILD` before it
+    can reach `WAITING_DELIVERY`. Setting the ref by hand on a verified tree
+    cleared it immediately: the state machine was sound and the plumbing was not.
+
+    Unlike the hook's version this is NOT best-effort. The hook is a background
+    courtesy at the end of a turn; this is a thing someone typed, so a failure to
+    record must be visible rather than swallowed.
+    """
+    proc = subprocess.run(  # noqa: S603
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=str(root),
+        capture_output=True, text=True)
+    branch = (proc.stdout or "").strip()
+    if proc.returncode != 0 or not branch:
+        return "", "cannot read the current branch"
+    if branch == "HEAD":
+        return "", "detached HEAD has no unit to record a green tree for"
+    slug = branch[len("feat/"):] if branch.startswith("feat/") else branch
+    ref = f"{GREEN_REF_PREFIX}{slug}"
+    written = subprocess.run(  # noqa: S603
+        ["git", "update-ref", ref, "HEAD"], cwd=str(root),
+        capture_output=True, text=True)
+    if written.returncode != 0:
+        return "", (written.stderr or "git update-ref failed").strip()
+    return ref, ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--tier", choices=("fast", "slow", "all"), default="fast")
@@ -258,7 +302,20 @@ def main() -> int:
                          "prints PARTIAL PASS and names every skipped suite")
     ap.add_argument("--base", default=None,
                     help="base ref for --scoped; defaults to the working tree")
+    ap.add_argument("--record-green", action="store_true",
+                    help="on a full-tier pass, point refs/uaios/green/<slug> at "
+                         "HEAD; refused for any narrower run")
     args = ap.parse_args()
+
+    # Refused before anything runs, so the answer does not depend on the result.
+    # `--scoped` prints PARTIAL PASS precisely because it has not earned the
+    # word PASS, and the green ref means the FULL tier passed -- a scoped run
+    # recording it would launder the weaker claim into the stronger one.
+    if args.record_green and (args.scoped or args.tier != "all"):
+        print("FAIL: --record-green needs `--tier all`; the ref means the full "
+              f"tier passed and this run is {'scoped' if args.scoped else args.tier}",
+              file=sys.stderr)
+        return 2
 
     pc = load_projectchecks()
     kinds = {"fast": pc.FAST_KINDS, "slow": pc.SLOW_KINDS, "all": pc.ALL_KINDS}[args.tier]
@@ -283,6 +340,18 @@ def main() -> int:
         print("FAIL: no test check ran -- passing and having nothing to run are "
               "different facts", file=sys.stderr)
         return 1
+
+    if args.record_green:
+        if not ran_test:
+            print("FAIL: --record-green needs a test check to have run; a tier "
+                  "that tested nothing has not verified this tree",
+                  file=sys.stderr)
+            return 1
+        ref, err = record_green(ROOT)
+        if err:
+            print(f"FAIL: --record-green: {err}", file=sys.stderr)
+            return 1
+        print(f"recorded {ref} at HEAD -- this tree passed the full tier")
     return 0
 
 
