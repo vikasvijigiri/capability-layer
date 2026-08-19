@@ -45,6 +45,7 @@ TREES = (
     ".claude/hooks",
     ".claude/rules",
     ".claude/output-styles",
+    ".claude/workflows",
     ".claude/agent-memory",
     "tools",
     # Fixtures the suites read. `test_pilot_contract.py` and `test_recon.py` are
