@@ -58,6 +58,13 @@ Tests passing is the cheap half. Did we build what was asked?
 Report as a table: requirement | evidence | verdict. Anything without a command
 in the evidence column is unbacked, however obviously true it looks.
 
+One filled row, so "evidence" reads as a command's output, not a description:
+
+| Requirement | Evidence | Verdict |
+|---|---|---|
+| Login rejects a wrong password | `pytest tests/test_auth.py::test_bad_password` — 1 passed | Verified |
+| Rate limiting on the login endpoint | grepped for a limiter; none found | Gap — no implementation, no test |
+
 ### Ask what is already known about these files
 
 Before writing the verdict, query the durable knowledge for the paths the change

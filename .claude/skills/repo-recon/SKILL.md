@@ -87,6 +87,18 @@ One file, `docs/recon/YYYY-MM-DD-<repo>.md`:
 6. **Open questions** — what you could not determine from the repo at all. These
    are for a person; they are not research tasks.
 
+One real excerpt, so the heading text and the verified/inferred labels are
+unambiguous rather than assumed:
+
+```markdown
+## Stack and how to run it
+- Install: `npm install` (verified — ran clean, 0 errors)
+- Test: `npm test` (inferred — script exists in `package.json`, not run this pass)
+
+## What is unfinished
+- `src/auth/session.ts:42` — marker comment left mid-refactor, token refresh never wired
+```
+
 ## Phase 4 — Name the candidate work, then stop
 
 From the unfinished list, produce **at most five candidates**, each one line:

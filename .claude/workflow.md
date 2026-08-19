@@ -8,10 +8,13 @@ budget table in a different vocabulary, held run state in memory so a crash lost
 it, and could not be invoked as `/feature-delivery` because it never matched the
 dynamic-workflow contract. See `decisions/2026-08-07-one-workflow-engine.md`.
 
-The policy is host-neutral at the tool and artifact level: Claude Code, Codex,
-and generic agent hosts use the same states, artifacts, evidence, and approval
-boundaries. Lifecycle registration remains host-specific; non-Claude hosts must
-invoke the canonical checks through their own lifecycle API.
+The policy is host-neutral at the artifact and safety-semantics level. Runtime
+availability is not inferred: `.claude/portability/capabilities.json` defines
+the capabilities each stage requires, and `.claude/adapters/` records whether a
+host is native, bridge-required, or must refuse. Claude Code is the checked
+native configuration. Non-Claude hosts must invoke canonical checks through
+their lifecycle API and may not claim bridge-required safety controls until the
+named conformance command has passed.
 
 ## Product lifecycle
 
@@ -123,9 +126,10 @@ tree and so cannot be derived from it.
 
 ## Parallelism and integration
 
-The Claude-native `executing-plans` skill is the dispatch surface. There is no
-unsupported `.claude/workflows/*.js` runtime; scheduling remains in the tested
-repository tools below.
+The host's adapter is the dispatch surface. There is no unsupported
+`.claude/workflows/*.js` runtime; scheduling remains in the tested repository
+tools below. A host without verified delegation serializes the work or refuses a
+dependent required action; it never pretends an unverified fan-out is isolated.
 
 Parallel agents may work only on disjoint files or read-only review surfaces.
 Each implementation task gets its own worktree and branch. Shared interfaces,

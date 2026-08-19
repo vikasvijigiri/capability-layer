@@ -150,6 +150,15 @@ covered, then the verdict: clean, or the count. If nothing is wrong, say so in
 one line **and name what you read** — an empty review is indistinguishable from
 one that never ran.
 
+One filled instance, so the row shape is unambiguous rather than assumed:
+
+| file:line | smell | what breaks |
+|---|---|---|
+| `knowledge-manager/SKILL.md:5` | malformed frontmatter — a stray list item folded into `when_to_use` by YAML's scalar-continuation rule | the live trigger text every skill listing shows ends with junk appended, not a formatting artifact |
+
+And a clean verdict reads: *"Scope: `.claude/skills/no-slop/references/`. Both
+files read in full. Clean — no TODOs, no dangling links, no stale counts."*
+
 Split the findings, because only one group is safe to act on unasked:
 
 | Group | Examples | Disposition |

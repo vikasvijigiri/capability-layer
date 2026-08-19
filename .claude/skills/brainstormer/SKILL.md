@@ -5,7 +5,7 @@ when_to_use: Trigger when the user says any ideas, let us brainstorm, what are o
 effort: high
 model: opus
 disable-model-invocation: false
-allowed-tools: Read Grep Glob
+allowed-tools: Read Grep Glob Bash
 ---
 
 # Brainstormer
@@ -109,7 +109,9 @@ data flow, error handling, testing. Product or business: the problem, the user,
 the wedge, constraints, how success is measured.
 
 **7. Write the spec** to `docs/specs/YYYY-MM-DD-<topic>-design.md` (user
-preference overrides the path) and commit it.
+preference overrides the path) and commit it. `Write` is intentionally not
+pre-approved in this layer; request the write permission when creating or
+updating the spec, then use the approved command to commit it.
 
 **8. Self-review the spec** with fresh eyes — placeholders and TBDs;
 contradictions between sections; scope focused enough for one plan; any

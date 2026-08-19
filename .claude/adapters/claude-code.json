@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "host": "Claude Code",
+  "status": "native-configuration-checked",
+  "source_paths": ".claude",
+  "configuration": ".claude/settings.json",
+  "conformance": "python tools/test_hook_registration.py",
+  "source_term_resolution": {
+    "AskUserQuestion": "native",
+    "EnterPlanMode": "native",
+    "ExitPlanMode": "native",
+    "Task": "native",
+    "WebSearch": "host-configured",
+    "WebFetch": "host-configured",
+    "mcp__github__search_code": "host-configured",
+    "mcp__context7__query-docs": "host-configured",
+    "/deep-research": "host-configured",
+    "ultracode": "host-configured"
+  },
+  "capabilities": {
+    "repository_read": "native",
+    "repository_write": "native",
+    "command_execution": "native",
+    "skill_discovery": "native",
+    "lifecycle_hooks": "native",
+    "explicit_confirmation": "native",
+    "plan_approval": "native",
+    "delegation": "native",
+    "web_research": "host-configured"
+  }
+}

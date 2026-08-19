@@ -6,7 +6,7 @@ when_to_use: Trigger when the user says update the README, update the docs, log 
 effort: low
 model: sonnet
 disable-model-invocation: false
-allowed-tools: Read Grep Glob
+allowed-tools: Read Grep Glob Bash
 ---
 
 # Knowledge Manager
@@ -34,7 +34,9 @@ an ADR.
 2. Decide which documents the change actually touches. Most units of work touch
    one or two, not all six.
 3. Read the matching section of `formats.md` for each, and only that section.
-4. Write the entries, each anchored to something a reader can verify.
+4. Request the write permission, then write the entries, each anchored to
+  something a reader can verify. `Write` is intentionally not pre-approved in
+  this layer because these documents are durable repository state.
 5. State which files you wrote and what you deliberately left unchanged.
 
 ## Gather evidence before you write
@@ -61,6 +63,10 @@ output behind it — if a suite was not run this turn, the entry says so.
 - **Store temporary detail** that stops being true when the task ends.
 - **Write "updated the docs" as the entry.** That is the one entry guaranteed
   to be worthless to the next reader.
+- **Phrase an entry as a directive to a future reader.** `session-start/
+  02-bootstrap-docs.py` injects `HANDOFF.md`'s session-context block and
+  `LOG.md`'s tail verbatim into every later session. Describe what happened;
+  a line that reads as an instruction gets replayed as one, unreviewed.
 
 A long file here means something that belonged in git history, or nowhere,
 leaked in.

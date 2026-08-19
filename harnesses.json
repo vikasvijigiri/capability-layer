@@ -4,11 +4,8 @@
   "canonical_root": ".claude",
   "execution_model": "host-managed",
   "hook_bridge_doc": "docs/harness-hook-bridge.md",
-  "supported_hosts": [
-    "Claude Code",
-    "Codex",
-    "generic-agent"
-  ],
+  "native_hosts": ["Claude Code"],
+  "integration_targets": ["Codex", "generic-agent"],
   "policy": {
     "single_source_of_truth": ".claude",
     "no_parallel_sources": true,
@@ -30,6 +27,8 @@
     "output_styles": ".claude/output-styles",
     "agent_memory": ".claude/agent-memory",
     "project_checks": ".claude/project-checks.json",
+    "adapters": ".claude/adapters",
+    "portability_contract": ".claude/portability/capabilities.json",
     "baselines": "docs/baselines",
     "pilot_fixtures": "docs/pilots",
     "workflow_state": ".claude/workflow-state"
@@ -45,6 +44,7 @@
       "rules_path": ".claude/rules",
       "hooks_path": ".claude/hooks",
       "settings_path": ".claude/settings.json",
+      "adapter_manifest": ".claude/adapters/claude-code.json",
       "status": "native-canonical"
     },
     "codex": {
@@ -57,7 +57,8 @@
       "rules_path": ".claude/rules",
       "hooks_path": ".claude/hooks",
       "settings_path": ".claude/settings.json",
-      "status": "canonical-source-with-optional-projection",
+      "adapter_manifest": ".claude/adapters/codex.json",
+      "status": "bridge-required-unverified",
       "hooks_note": "Codex does not auto-discover Claude lifecycle registration; invoke the canonical hook checks explicitly per docs/harness-hook-bridge.md."
     },
     "generic-agent": {
@@ -70,7 +71,8 @@
       "rules_path": ".claude/rules",
       "hooks_path": ".claude/hooks",
       "settings_path": ".claude/settings.json",
-      "status": "canonical-source-with-optional-projection",
+      "adapter_manifest": ".claude/adapters/generic-agent.json",
+      "status": "bridge-required-unverified",
       "hooks_note": "Generic hosts must invoke canonical hook checks through their own lifecycle API per docs/harness-hook-bridge.md."
     }
   }

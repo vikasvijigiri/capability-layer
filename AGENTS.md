@@ -45,6 +45,12 @@ exact invocation contract for doing this — payload delivery, exit-code
 semantics, and ordering — so a bridging host does not have to reverse it from
 Claude Code's own behavior.
 
+`.claude/portability/capabilities.json` defines the host-neutral capabilities
+the workflow requires; `.claude/adapters/` binds each declared host to them.
+An adapter declaration is not runtime proof. A capability may be called native
+only after its named conformance check passes; bridge-required safety
+capabilities must refuse the dependent action until the bridge is verified.
+
 ## Runtime model
 
 Execution is host-managed: Claude Code, Codex, or a generic agent host **is**

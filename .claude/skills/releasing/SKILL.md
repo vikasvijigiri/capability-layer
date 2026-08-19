@@ -5,7 +5,7 @@ when_to_use: Trigger when the user says deploy this, deploy to staging, deploy t
 effort: low
 model: sonnet
 disable-model-invocation: false
-allowed-tools: Read Grep Glob Bash Task
+allowed-tools: Read Grep Glob Bash Task AskUserQuestion
 ---
 
 # Releasing

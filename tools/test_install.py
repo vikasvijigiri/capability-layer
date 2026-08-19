@@ -313,7 +313,7 @@ proc = subprocess.run(
 )
 check("the installed layer passes its own router check in the target",
       proc.returncode == 0,
-      (proc.stdout + proc.stderr).strip().splitlines()[-1][:200]
+      "\n".join((proc.stdout + proc.stderr).strip().splitlines()[-8:])[:1200]
       if (proc.stdout + proc.stderr).strip() else "no output")
 
 for d in (target, keeper, dry, big, planned_repo):
@@ -634,10 +634,11 @@ check("a second uninstall refuses instead of guessing", rc2 == 2, f"rc={rc2}")
 # mistake that must fail loudly rather than doing half of each.
 _both = _installed_repo()
 try:
-    inst.main(["--uninstall", "--upgrade", "--into", str(_both)])
-    _rejected = False
+      with contextlib.redirect_stderr(io.StringIO()):
+            inst.main(["--uninstall", "--upgrade", "--into", str(_both)])
+      _rejected = False
 except SystemExit as exc:
-    _rejected = exc.code != 0
+      _rejected = exc.code != 0
 check("--uninstall and --upgrade together are refused", _rejected,
       "argparse must reject the combination, not silently pick one")
 
