@@ -70,31 +70,6 @@
   router exists); deleting anything from `tools/` — measured at 24/24 live tools
   and a 1.5:1 test:code ratio, so there is no dead weight to remove.
 
-### Close the remaining GOAL_CHECKLIST gaps
-
-- **Status:** Approved at Gate 1, not started. Branch `feat/close-remaining-gaps`.
-- **Goal:** close every remaining checklist gap that has an honest
-  implementation here, and prove the deploy stages against a repo with a real
-  surface rather than simulating them in one that has none.
-- **Constraints:** two lifecycle gates; class-aware retry budgets; a skipped
-  check named never counted; nothing acquires `gh pr merge`; every rule needs a
-  test or a hook, not prose.
-- **Input:** `GOAL_CHECKLIST.md`; the audit at
-  `claude.ai/code/artifact/789942aa-667f-443e-8910-661568f3aa4d` (37 mechanism /
-  16 partial / 2 prose / 21 absent); the five follow-ups in `HANDOFF.md`.
-- **Output:** `tools/preconditions.py`; a checkable `**Preconditions:**` field;
-  one owner for the ticked-task pattern; a second writer for the green ref; a
-  re-measured budget ceiling; `.claude/README.md`; plan-level rollback and blast
-  radius; changelog/semver from the plan; deploy stages proven against
-  `../physrun`.
-- **Done Checks:** `python tools/run_checks.py --tier all --require-test` exits
-  0 with nothing skipped; `python tools/analyze.py --slug close-remaining-gaps`
-  reports consistent; `python tools/preconditions.py --plan <this plan>` runs
-  against its own plan; the re-audit publishes corrected counts.
-- **Out of Scope:** Gate 2 auto-approve (refused, asserted); `state/*.json`
-  (refused by ADR); adding an application to this repo (decided at Gate 1);
-  merging PR #11.
-
 ### Audit all ten objectives, then close what blocked "generic" and "world class"
 
 - **Status:** Done 2026-08-16. `4240e61`, `215c4dd`, `a68d283`.
@@ -131,6 +106,14 @@
 <!-- Append-only, newest entry at the top. Never delete or rewrite an
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
+
+### 2026-08-19 — Close the remaining GOAL_CHECKLIST gaps
+- **Goal**: close every remaining checklist gap that has an honest
+  implementation, proving deploy stages against a repo with a real surface.
+- **Output**: absorbed into `feat/security-gate` rather than run on its own
+  branch — `feat/close-remaining-gaps` no longer exists, and its plan doc
+  (`docs/plans/2026-08-11-close-remaining-gaps.md`) landed with PR #12.
+- **Status**: Done — merged to `main` as part of PR #12, 2026-08-19.
 
 ### 2026-08-12 — Retire `/skills-doctor`; three layer-audit doors become two
 

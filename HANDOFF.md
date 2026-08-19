@@ -14,32 +14,27 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**`feat/security-gate` is pushed and open as PR #12**, 60 commits against `main`
-— https://github.com/NG-VikasV/capability-layer/pull/12. **CI green on both
-tiers.** `delivery_check` reports one `unknown`: branch protection is 403 on
-this plan, so nothing enforces the gate at merge time. The chain reached
-**`WAITING_DELIVERY`**, which it had never done before.
+**Both PRs merged; `main` is fully current.** #11 (`feat/checklist-completion`)
+merged first, then #12 (`feat/security-gate`, 61 commits) — confirmed via
+`git merge-base --is-ancestor` that #11 is a genuine ancestor of #12's final
+state, so nothing duplicated. `main` also picked up a separate PR #13 this
+same session (harness-wiring fixes, see `LOG.md` 2026-08-19). Zero open PRs.
+`python tools/run_checks.py --tier all --require-test` on `main`:
+**`PASS: 52 check(s) green (audit, build, lint, smoke, test, typecheck)`**,
+verified fresh, nothing skipped.
 
-**The first push went red, and the cause is worth keeping.** `security_gate.py`
-took `--base main` as a local branch; a `pull_request` checkout leaves the base
-only as `origin/main`, so `merge-base` returned nothing, every fact came back
-`None`, and all five clauses degraded to `unknown` — exit 2. Correct
-fail-closed behaviour, useless diagnosis: the single line CI surfaced named a
-clause that was not the problem. `resolve_base()` now tries the ref, then
-`origin/<ref>`, preferring a local branch when one exists. **Then the fix's own
-test went red** for the same reason in miniature — it asserted `sg.ROOT` has a
-local `main`. Run a layer test in the CI shape (detached, local branches
-deleted) before pushing it; a clone takes thirty seconds.
+**`main`'s remote is `vikasvijigiri/capability-layer`** (renamed from
+`NG-VikasV/capability-layer` at some point — the old links above are dead).
 
-**PR #11 is superseded, not duplicated.** `feat/checklist-completion` is an
-ancestor of this branch (`git merge-base --is-ancestor` → yes), so its 17
-commits are inside #12. Decide which one merges; do not merge both.
-
-**A remote existed the whole time and this file said otherwise.** `/publish`
-stopped at its own step 2 — `origin` has been
-`NG-VikasV/capability-layer` since before this unit began, `main` at `9a65137`
-matching local. Anything here or in `workflow.md`'s `[state:no-remote]` block
-claiming nothing can be pushed was describing a repository this stopped being.
+**The #12 reconciliation is worth reading if a similar merge comes up again.**
+Real conflicts landed on the exact 4 files PR #13 also touched. Resolved by
+understanding what each side was doing, not by picking HEAD or origin/main
+wholesale — e.g. #12's own narrowing of `supported_hosts` to 3 entries
+(matching the real 3-adapter structure) was a genuine fix kept over this
+session's earlier 4-host version, while this session's removal of a false
+`runner_modes` claim was kept over #12's stale copy of it. `security_gate.py`
+caught a real gap on the merge itself (`pyproject.toml` unmapped in
+`test_map`) — closed, not waived.
 
     a68d283  Close the buildable checklist partials; bound a hung check
     215c4dd  Three controls whose claim outran their wiring
@@ -139,9 +134,14 @@ Each is its own unit and enters at `writing-plans`:
    and only the plumbing was missing.
 
 Unchanged and still true: branch protection is unavailable on this repo tier
-(`403 Upgrade to GitHub Pro`); seven branches merged into `main` are dead
-weight; `feat/adaptive-workflow` @ `076914e` carries a superseded plan nothing
-marks as superseded.
+(`403 Upgrade to GitHub Pro`).
+
+**Closed 2026-08-19**: the dead branches were deleted (7 of them — `docs/session-2026-08-09`,
+`feat/delivery-check`, `fix/harness-wiring-and-checks-defects`,
+`fix/unenforceable-claims`, `merge-framing-into-planning`, `feat/uninstall-verb`,
+`fix/delivering-approval-gate`), and `feat/adaptive-workflow` no longer exists
+— its plan was absorbed into `feat/security-gate` (PR #12) rather than left
+stale.
 
 ## Next Steps
 
@@ -184,9 +184,8 @@ the state file resets per session.
    sets `delivering` and `releasing` to `false` on purpose so the chain can
    hand off; Pending 10's entry-classifier is the part with no basis in the
    documentation.
-1. Decide whether `feat/checklist-completion` is pushed. It is reviewed and
-   green; `tools/delivery_check.py --base main --head feat/checklist-completion`
-   should be run and quoted first, and pushing needs an explicit yes.
+1. ~~Decide whether `feat/checklist-completion` is pushed.~~ **Done 2026-08-19
+   — merged as PR #11**, along with PR #12 (`feat/security-gate`); see `LOG.md`.
 2. Take the five Pending items through `writing-plans` as one unit — they are
    small, related, and all concern mechanisms whose claims currently exceed
    their wiring.
