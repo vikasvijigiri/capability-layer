@@ -23,6 +23,18 @@ So this asserts the shape, and the two design rules the ADR turned into policy:
     checkboxes and git are the record. A workflow that writes state is claiming
     otherwise.
 
+Corrected 2026-08-19: this file's own `meta.phases` / `phase()` requirement,
+and a `RUNTIME_GLOBALS` set naming `phase`, `log`, `budget`, `parallel`, and
+`workflow`, described a contract nothing in the real runtime provides --
+verified against two independent sources, code.claude.com/docs/en/
+workflows.md (fetched in full: "The two primitives, fully: agent(),
+pipeline()") and this repo's own templates/workflow.md, which agree on
+exactly `agent()`, `pipeline()`, and the `args` input. The requirement was
+never checked against either before today; the first real, correctly-written
+workflow against the actual API (.claude/workflows/no-slop-sweep.js) failed
+it. `RUNTIME_GLOBALS` was defined but never referenced by any check below --
+dead weight alongside the wrong claim, removed with it.
+
 Run: python tools/test_workflow_contract.py
 """
 
@@ -44,11 +56,6 @@ def check(name: str, ok: bool, detail: str = "") -> None:
         print(f"FAIL: {name}{(' -- ' + detail) if detail else ''}")
         failures.append(name)
 
-
-# Runtime globals a workflow may use. Anything outside this that looks like an
-# import or a Node API is a script that will fail at run time, not author time.
-RUNTIME_GLOBALS = {"agent", "parallel", "pipeline", "phase", "log", "args",
-                   "budget", "workflow"}
 
 # Forbidden because the runtime does not provide them. `Date.now` and
 # `Math.random` specifically BREAK RESUME -- a cached prefix would replay with
@@ -104,24 +111,12 @@ for path in scripts:
         meta = meta_match.group(1)
         check(f"{name} meta declares a name", "name:" in meta)
         check(f"{name} meta declares a description", "description:" in meta)
-        check(f"{name} meta declares phases", "phases:" in meta)
         # A pure literal. A computed meta cannot be read without executing the
         # script, so the runtime requires it to be static.
         check(f"{name} meta is a pure literal",
               not re.search(r"\$\{|\.\.\.|\w+\(", meta),
               "no template interpolation, spreads or calls -- the runtime reads "
               "this without running the script")
-
-        # Every phase() call should have a matching meta entry, or its progress
-        # lands in an unnamed group.
-        declared = set(re.findall(r"title:\s*'([^']+)'", meta)) | \
-            set(re.findall(r'title:\s*"([^"]+)"', meta))
-        used = set(re.findall(r"phase\(\s*'([^']+)'\s*\)", text)) | \
-            set(re.findall(r'phase\(\s*"([^"]+)"\s*\)', text))
-        # Dynamic phase labels are legitimate; only literal ones are checkable.
-        unknown = sorted(used - declared)
-        check(f"{name} every literal phase() has a meta entry", not unknown,
-              f"undeclared: {unknown}")
 
     # --- 2. it actually uses the runtime ------------------------------------
     check(f"{name} dispatches at least one agent",
