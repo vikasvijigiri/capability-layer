@@ -126,8 +126,9 @@ tree and so cannot be derived from it.
 
 ## Parallelism and integration
 
-The host's adapter is the dispatch surface. There is no unsupported
-`.claude/workflows/*.js` runtime; scheduling remains in the tested repository
+The host's adapter is the dispatch surface. `.claude/workflows/` holds tested,
+narrow-purpose scripts (e.g. `no-slop-sweep.js`) invoked as bounded fan-outs,
+not a general workflow engine; scheduling remains in the tested repository
 tools below. A host without verified delegation serializes the work or refuses a
 dependent required action; it never pretends an unverified fan-out is isolated.
 
