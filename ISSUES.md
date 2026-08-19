@@ -6,6 +6,25 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-19 11:21 — Windows git.exe invocation invisible to the branch/attribution guards
+- **Phase/Context**: reviewing PR #13's `_projectchecks.py` fix (below) for sibling instances of the same bug class.
+- **Symptom**: `_hooklib.is_git_commit()`/`git_dash_c()` matched a bare `git` token or a POSIX `/git`-ending path, never `git.exe` — Git for Windows' own default install path (`C:\Program Files\Git\...`) has a space in it, and a quoted, fully-qualified invocation matched neither shape. Both `02-branch-guard.py` and `03-attribution-guard.py` gate on this function.
+- **Diagnosis**: proven live: `is_git_commit('"C:\Program Files\Git\bin\git.exe" commit -m "x"')` returned `False` before the fix.
+- **Attempts**:
+  - 1. Replaced `command.split()` with a shared `_tokenize()` using `shlex.split(posix=False)` (posix mode's backslash-escaping corrupts a Windows path) → fixed tokenising.
+  - 2. Broadened `_is_git_token()` to match a case-insensitive basename of `git`/`git.exe` after stripping quotes, not just an exact `git` or `/git` suffix → fixed.
+- **Fix**: verified against 7 cases including lookalikes (`git commit-tree`) that must stay unmatched; full suite green after.
+- **Status**: `Resolved`
+
+## 2026-08-19 11:21 — tool detection broke on this repo's own path (a space in it)
+- **Phase/Context**: verifying capability-layer's own readiness after a user asked whether it was ready to install elsewhere.
+- **Symptom**: `_projectchecks.tool_missing()`/`run_checks()` used `command.split()` to find an executable for `shutil.which()` lookup; any quoted absolute path with a space in it (this repo's own `...\Vikas Vijigiri\...`) split into bogus tokens, producing false "not installed" results.
+- **Diagnosis**: reproduced directly — the old `.split()` on `"C:\Users\Vikas Vijigiri\...\python.exe" -m mypy` produced `"C:\Users\Vikas` as the first token.
+- **Attempts**:
+  - 1. Same `shlex.split(posix=False)` tokeniser as the sibling fix above, extracted to a shared `command_tokens()` helper → fixed, verified the full path resolves and the file exists on disk.
+- **Fix**: applied at both call sites (`tool_missing`, the skip-message path in `run_checks`); full suite green after (37/37 at the time).
+- **Status**: `Resolved`
+
 ## 2026-08-16 18:30 — green locally, red on CI: the gate's base ref was a local branch
 
 - **Symptom**: PR #12's slow tier failed with `not applicable to this diff:

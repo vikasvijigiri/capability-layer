@@ -1,5 +1,26 @@
 # Log
 
+## 2026-08-19 11:21
+
+**Session: MCP repair, a world-class comparison, two real defects (see
+`ISSUES.md`), and the last three branches landed.** Fixed `git`/`github` MCP
+(missing `uvx`, unset `GITHUB_TOKEN`). Compared against deepseek-harness and
+two other public repos — `docs/research/2026-08-19-*`: different category,
+more rigorously self-tested, still 17-day/one-contributor/unstarred. Linked
+`CLAUDE.md` to `AGENTS.md`/`harnesses.json`, added
+`docs/harness-hook-bridge.md`, corrected a false unbuilt-runner claim — PR
+#13, plus the two defects in `ISSUES.md`.
+
+Reconciled PR #12 (61 commits) against #13's changes by understanding both
+sides, not picking one — kept #12's genuine `supported_hosts` fix over this
+session's own version, and this session's runner-claim fix over #12's stale
+copy. `security_gate.py`'s own check caught a real gap on the merge
+(`pyproject.toml` unmapped); closed it. Confirmed #11 is a genuine ancestor
+of #12's final state — no duplicated work. All 10 branches accounted for: 7
+dead pointers deleted, #11 and #12 reviewed and merged. `main`: zero open
+PRs, 52/52 checks green.
+
+
 ## 2026-08-16 17:40
 
 **Audited against all ten Primary Objectives, then closed what blocked
