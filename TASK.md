@@ -92,6 +92,14 @@
   descriptions, not shorter); reconciling the two routers (a decision, not a
   merge); anything needing a running service.
 
+### Close the router-disagreement and progress-checkbox audit gaps
+- **Status:** Plan approved (Gate 1) 2026-08-20. See
+  `docs/plans/2026-08-20-router-progress-consistency.md`. Closes 2 of the 5
+  gaps found in the 2026-08-16 capability-layer-maintenance audit; the other
+  3 (per-turn description cost, Gate 2 never firing end-to-end, security-gate
+  clauses never firing organically) are Out of Scope in that plan, with
+  reasons. Next: `executing-plans`.
+
 ### Implement world-class SessionStart bootstrap scaffolding
 - **Status:** In Progress
 - **Goal:** Implement a SessionStart bootstrap loader that scaffolds project skeleton files and a minimal, maintainable `docs/` structure without creating unnecessary subfolders or a copied `AGENTS.md`.
