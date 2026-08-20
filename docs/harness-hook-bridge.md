@@ -6,6 +6,12 @@ host without that discovery mechanism (Codex, Gemini, a VS Code agent, or
 anything else `harnesses.json` names) must call the same scripts itself. This
 is the contract for doing that correctly.
 
+Before wiring a bridge, read `.claude/portability/capabilities.json` and the
+host's manifest under `.claude/adapters/`. A safety-critical capability marked
+`bridge-required` is not available until its named conformance check exists and
+passes. The host must refuse the dependent irreversible action rather than
+pretend its own permission prompt is equivalent.
+
 `.claude/hooks/hooks_registry.json` is the source of truth for *which* events
 exist and *which* scripts subscribe to each — this file is not a second copy
 of that list. It documents the invocation mechanics `hooks_registry.json`

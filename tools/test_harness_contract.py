@@ -55,13 +55,12 @@ except (OSError, json.JSONDecodeError) as exc:
 
 require("manifest names AGENTS.md source contract", manifest.get("source_contract") == "AGENTS.md")
 require("manifest declares host-managed execution", manifest.get("execution_model") == "host-managed")
-# Three hosts, matching the three structural `adapters` buckets below --
-# "Gemini" and "VS Code agent" were never their own adapter, only names
-# folded into `generic-agent`, so listing them separately in
-# `supported_hosts` was a naming split the structure never had. Fixed
-# 2026-08-1x on feat/security-gate; kept over the 4-name list this test
-# asserted first.
-require("manifest lists declared IDE agent hosts", set(manifest.get("supported_hosts", [])) == {"Claude Code", "Codex", "generic-agent"})
+require("manifest lists only runtime-verified native hosts",
+        set(manifest.get("native_hosts", [])) == {"Claude Code"})
+require("manifest lists bridge integration targets without calling them native",
+        set(manifest.get("integration_targets", [])) == {"Codex", "generic-agent"})
+require("manifest does not overstate integration targets as supported hosts",
+        "supported_hosts" not in manifest)
 require("manifest names the hook bridge doc", manifest.get("hook_bridge_doc") == "docs/harness-hook-bridge.md")
 # `runner_modes` is deliberately absent, the same pattern as `workflows` below:
 # it named --host-managed/--dry-run/--sdk-live flags on a repository runner
@@ -79,11 +78,18 @@ canonical = manifest.get("canonical_paths", {})
 # never matched the runtime contract and was deleted 2026-08-07 -- see
 # decisions/2026-08-07-one-workflow-engine.md. A manifest that promises a path
 # with nothing behind it is the same dead reference this suite exists to catch.
-for key in ("skills", "agents", "commands", "workflow_policy", "rules", "hooks", "settings", "output_styles", "project_checks"):
+for key in ("skills", "agents", "commands", "workflow_policy", "rules", "hooks", "settings", "output_styles", "project_checks", "adapters", "portability_contract"):
     require(f"canonical path exists in manifest: {key}", bool(canonical.get(key)))
+require("adapter manifests are canonical paths", canonical.get("adapters") == ".claude/adapters")
+require("portability contract is a canonical path",
+        canonical.get("portability_contract") == ".claude/portability/capabilities.json")
 require("Claude adapter is native-canonical", adapters.get("claude-code", {}).get("status") == "native-canonical")
 require("Codex adapter uses canonical source", adapters.get("codex", {}).get("skills_path") == ".claude/skills")
 require("generic adapter uses canonical source", adapters.get("generic-agent", {}).get("skills_path") == ".claude/skills")
+require("Codex bridge is not claimed verified",
+        adapters.get("codex", {}).get("status") == "bridge-required-unverified")
+require("generic bridge is not claimed verified",
+        adapters.get("generic-agent", {}).get("status") == "bridge-required-unverified")
 require("Claude settings path is explicit", adapters.get("claude-code", {}).get("settings_path") == ".claude/settings.json")
 require("Codex canonical hooks path is explicit", adapters.get("codex", {}).get("hooks_path") == ".claude/hooks")
 require("generic canonical hooks path is explicit", adapters.get("generic-agent", {}).get("hooks_path") == ".claude/hooks")

@@ -31,12 +31,33 @@ open, a gate that never fires, a skill whose description silently vanished — e
 
 - **Absence of output is data, not reassurance.** Prove the thing ran.
 - **The repo's recurring failure is that prose declares a capability the wiring
-  does not implement** — seven instances so far. When something is documented and
-  not working, suspect the wiring before the logic.
+   does not implement** — historically observed in prior audits. When something
+   is documented and not working, suspect the wiring before the logic.
 
 Useful levers: `tools/run_hook.py <event> '<json>'` fires one hook against a real
 payload; `PYTHONIOENCODING=utf-8` first, or `→`/`—` raise `UnicodeEncodeError` and
 a passing run reads as a failure; the suites in `tools/`.
+
+## Failure capture
+
+Before retrying an agent-run failure, capture the state that a later agent or
+human needs to reproduce it:
+
+```markdown
+## Failure Capture
+- Session / task:
+- Goal in progress:
+- Error:
+- Last successful step:
+- Last failed tool or command:
+- Repeated pattern or context pressure:
+- Environment assumptions:
+- Failure class: logic | state | environment | policy | agent-run
+```
+
+Agent-run failures include repeated tool calls, context drift, tool-loop limits,
+wrong working directory or branch, missing files after a write, and a policy
+boundary that the host did not enforce. Capture is evidence, not a diagnosis.
 
 ## Phase 1 — Root cause
 
@@ -76,9 +97,12 @@ Complete this before anything else.
 1. **Write the failing test first.** Simplest reproduction that fails for the
    right reason. Watch it fail before you fix.
 2. **One fix, addressing the cause.** No "while I'm here".
-3. **Verify:** the test passes, nothing else broke, the original symptom is gone.
+3. **Check whether the same root cause exists elsewhere** — same pattern,
+   different call site or file. Note it even if fixing it there is out of
+   scope for this pass; an unnoted twin is the next person's fresh incident.
+4. **Verify:** the test passes, nothing else broke, the original symptom is gone.
    Quote the real output.
-4. **Record it in `ISSUES.md`** — symptom, diagnosis, every attempt with its
+5. **Record it in `ISSUES.md`** — symptom, diagnosis, every attempt with its
    outcome, fix, status. Format is in `.claude/skills/knowledge-manager/formats.md`. The
    failed attempts are the valuable part; they stop the next person re-running
    them.
@@ -88,6 +112,19 @@ with what you learned. **Three or more, stop and question the architecture** —
 when each fix reveals a new problem somewhere else, that is not a failed
 hypothesis, it is the wrong design. Raise it with the user rather than trying
 a fourth.
+
+End with an `Agent Self-Debug Report` whenever the failure involved the agent,
+its tools, or its environment:
+
+```markdown
+## Agent Self-Debug Report
+- Failure:
+- Root cause:
+- Recovery action:
+- Result: success | partial | blocked
+- Evidence:
+- Follow-up:
+```
 
 ## Test the test before you trust it
 

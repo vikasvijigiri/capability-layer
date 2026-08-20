@@ -75,6 +75,15 @@ it was. Return `passed: false` when repair is required.
 
 **Never** edit, commit, push, merge, or ask a mid-run question.
 
+| Severity | Meaning | Action |
+|---|---|---|
+| P0 | Exploitable now, destroys data, or leaks a secret | Blocks unconditionally — `_hooklib.classify_failure` gives its class a budget of zero |
+| P1 | Wrong behavior on a common path, or a real security gap | Blocks; repair before re-review |
+| P2 | Wrong behavior on an edge case, or a maintainability risk | Blocks a `major` review; a `small` review may note and proceed |
+
+Same P0/P1/P2 vocabulary `no-slop` uses — one severity scheme across both
+skills, not two that drift.
+
 ## Reference files — load one only when the diff earns it
 
 | The diff touches | Read |

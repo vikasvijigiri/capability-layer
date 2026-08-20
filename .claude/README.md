@@ -42,6 +42,7 @@ write the document.
 | `hooks/` | the lifecycle scripts above, plus `.claude/hooks/_hooklib.py` and `.claude/hooks/_projectchecks.py`, which are libraries and not hooks |
 | `rules/` | standing constraints loaded every session — pay for them accordingly |
 | `output-styles/`, `agent-memory/` | response shape; the durable memory store `tools/memory.py` reads |
+| `adapters/`, `portability/` | host capability mappings and the fail-safe portability contract; see `adapters/README.md` |
 | `audit/` | a pointer, not a second trail — see `audit/README.md` |
 | `hooks/state/`, `workflow-state/`, `worktrees/` | runtime residue, gitignored, never installed into a target |
 
@@ -56,7 +57,7 @@ checks pass" means, so it is the highest-leverage file here.
     python .claude/install.py --into <dir>
 
 `settings.json` is merged rather than overwritten; `CLAUDE.md` and
-`project-checks.json` are never touched. The layer's own ~42 contract suites do
+`project-checks.json` are never touched. The layer's own ~43 contract suites do
 **not** travel — a host runs its own tests, and six shipped validators check the
 layer itself. `tools/conftest.py` stops pytest collecting what does ship.
 

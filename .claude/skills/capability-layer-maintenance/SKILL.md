@@ -21,7 +21,8 @@ This skill owns the capability contract and its wiring:
 
 - `CLAUDE.md`, `AGENTS.md`, and `harnesses.json`;
 - `.claude/workflow.md`, settings, rules, skills, agents, commands, workflows,
-  hooks, output styles, and capability validators.
+  hooks, output styles, portability contract, host adapters, and capability
+  validators.
 
 `knowledge-manager` owns project knowledge: `README.md`, `TASK.md`,
 `HANDOFF.md`, `MEMORY.md`, `LOG.md`, `ISSUES.md`, and `decisions/`. Hand off
@@ -46,11 +47,15 @@ boundary held by one side's prose is one that drifts.
 2. Keep `.claude/` as the only native source. Do not add a parallel
    `.agent-layer/`, generated source tree, routing keyword table, or duplicate
    registry that can drift.
-3. Hooks may detect drift, enforce safety, or record mechanical state. Hooks
+3. Keep host-neutral capability requirements in
+   `.claude/portability/capabilities.json` and host mappings in
+   `.claude/adapters/`. A host-specific token in a skill must map through that
+   contract for every declared adapter. An unverified bridge is not support.
+4. Hooks may detect drift, enforce safety, or record mechanical state. Hooks
    must not author strategic content in `README.md`, `CLAUDE.md`, `AGENTS.md`,
    `TASK.md`, `HANDOFF.md`, `MEMORY.md`, `LOG.md`, `ISSUES.md`, `harnesses.json`,
    `workflow.md`, or decisions.
-4. Preserve user changes, fail closed for secrets/destructive ambiguity, and
+5. Preserve user changes, fail closed for secrets/destructive ambiguity, and
    never claim a live host execution from a dry-run.
 
 ## Procedure
@@ -65,8 +70,23 @@ duplicate sources, stale counts, and ownership contradictions.
 
 Compare the structure and content against the relevant files in `templates/`
 and `guide/`. Check frontmatter, routing, handoffs, hook registration, tool
-allowlists, model/effort policy, and harness paths. Separate a real deviation
-from an intentional extension and record the reason for the latter.
+allowlists, model/effort policy, and harness paths. Score each unit **Keep**
+(matches the template), **Repair** (a real deviation), **Extend** (an
+intentional deviation — record the reason inline), or **Retire** (dead weight
+nothing references).
+
+One filled instance, so the taxonomy reads as a verdict rather than a label:
+`knowledge-manager/SKILL.md`'s `when_to_use` field once carried a stray
+`- formats.md` line folded into it by YAML's scalar-continuation rule —
+**Repair**, because the deviation was an accidental copy-paste artifact, not a
+documented extension.
+
+When the request asks for a world-class or public-repository comparison, use
+at least two primary repositories or official guides, read the relevant source
+files rather than relying on stars or search snippets, and record the result in
+`docs/research/YYYY-MM-DD-<topic>.md`. Compare invariants and mechanisms, not
+copied wording. Keep static parity, local execution evidence, and live host conformance
+as separate claims; external popularity is context, not proof.
 
 ### 3. Repair
 
@@ -80,8 +100,14 @@ repairs and let hooks report the next action.
 Run the scoped validator first, then the complete repository suite:
 
 ```text
+python tools/run_checks.py --scoped
 python tools/run_checks.py --tier all --require-test
 ```
+
+For adapter or portability changes, run `python tools/test_portability_contract.py`.
+It validates manifest completeness and honest status labels; it does **not**
+prove a non-native host ran. Add and run a host-specific conformance command
+before changing an adapter from bridge-required-unverified.
 
 For hook changes, also run the relevant hook with a real payload and verify its
 exit code, output, and filesystem diff. Prove that strategic files were not

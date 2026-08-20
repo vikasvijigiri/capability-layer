@@ -16,9 +16,10 @@ the task changes a user-facing surface. Do not turn design decisions into
 untracked chat context; write the contract or a dated design decision.
 
 The output is `DESIGN.md` at the repository root, forked from
-`templates/DESIGN.md` and referenced from `CLAUDE.md` so it loads before any
-surface work. A contract that lives in a conversation is not a contract: the next
-session cannot read it, and `no-slop` checks the implemented surface against it.
+`templates/DESIGN.md` and referenced from the project's governing instructions
+so it loads before any surface work. A contract that lives in a conversation is
+not a contract: the next session cannot read it, and `no-slop` checks the
+implemented surface against it.
 
 ## Inputs and output
 
@@ -97,6 +98,9 @@ Before handoff, compare the result against the contract at three levels:
 When visual inspection is possible, inspect the rendered surface at representative
 desktop, tablet, mobile, loading, empty, error, and keyboard-focus states. Record
 the evidence and any deliberate exception with `file:line` or a screenshot path.
+The handoff record must name the surface and state inspected, the check applied,
+the observed result, and any unresolved exception. Do not claim visual QA from
+source inspection alone when rendering was available.
 
 ## Anti-patterns
 
@@ -119,9 +123,20 @@ mobile overflow, fake empty states, and copy that hides the next action.
 **Write the contract to `DESIGN.md`, then hand it back to the stage that entered
 here** — `brainstormer` when the product decision is still open, `writing-plans`
 when the design is approved and needs tasks, `executing-plans` when it was already
-settled and only the rules were missing. If the contract was already complete and
-nothing changed, say so and return; a design pass that produces no artefact and no
-verdict has produced reading, not work.
+settled and only the rules were missing. `Write` is intentionally not
+pre-approved in this layer; request the write permission before creating or
+updating `DESIGN.md`. If the contract was already complete and nothing changed,
+say so and return; a design pass that produces no artefact and no verdict has
+produced reading, not work.
+
+Use this compact handoff evidence shape when QA was performed:
+
+```text
+Surface/state: [what was inspected]
+Check: [token, behavior, accessibility, or visual check]
+Result: [observed outcome]
+Exception: [none, or the deliberate exception and its evidence path]
+```
 
 ## Routing
 

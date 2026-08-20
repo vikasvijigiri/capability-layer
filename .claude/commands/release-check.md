@@ -5,7 +5,7 @@ description: Verify release readiness through artifact identity, smoke checks, h
 # without them. Left invocable, their descriptions cost 1,506 chars of the skill
 # listing on EVERY turn for a capability only the user triggers; per
 # code.claude.com/docs/en/skills this flag also keeps them out of context.
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Release Check

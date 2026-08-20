@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "purpose": "Host-neutral capabilities required to execute the canonical capability layer without silently weakening safety rules.",
+  "rule": "A host may execute a capability only when its adapter declares it native or the adapter bridge has passed its named conformance test. Otherwise the host must refuse the dependent action and report the missing capability.",
+  "capabilities": {
+    "repository_read": "Read and search repository state without mutation.",
+    "repository_write": "Create or modify repository files within the host's authorised scope.",
+    "command_execution": "Run a repository command and capture its exit code, stdout and stderr.",
+    "skill_discovery": "Discover and load the canonical skills before performing matching work.",
+    "lifecycle_hooks": "Invoke canonical lifecycle checks in declared order with a structured payload.",
+    "explicit_confirmation": "Collect a specific human approval before an irreversible external action.",
+    "plan_approval": "Collect approve, revise, or reject for an implementation plan before execution.",
+    "delegation": "Run an isolated delegated task and return inspectable results.",
+    "web_research": "Retrieve and cite external primary sources when a task requires them."
+  },
+  "safety_critical": [
+    "explicit_confirmation",
+    "lifecycle_hooks"
+  ],
+  "source_term_capabilities": {
+    "AskUserQuestion": "explicit_confirmation",
+    "EnterPlanMode": "plan_approval",
+    "ExitPlanMode": "plan_approval",
+    "Task": "delegation",
+    "WebSearch": "web_research",
+    "WebFetch": "web_research",
+    "mcp__github__search_code": "web_research",
+    "mcp__context7__query-docs": "web_research",
+    "/deep-research": "delegation",
+    "ultracode": "delegation"
+  },
+  "unsupported_behavior": {
+    "safety_critical": "refuse",
+    "non_safety_critical": "report-and-continue-only-when-the-dependent-step-is-optional"
+  }
+}

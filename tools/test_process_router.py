@@ -154,6 +154,80 @@ for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
           "without allowed-tools every invocation stops for permission on tools "
           "the skill obviously needs")
 
+    # Artifact-producing and approval-gated skills must make the permission
+    # boundary explicit. `allowed-tools` is a pre-approval list, not a hard
+    # restriction, and the layer intentionally does not pre-approve writes.
+    capability_markers = {
+        "brainstormer": ("docs/specs/", "request the write permission"),
+        "designer": ("DESIGN.md", "request the write permission"),
+        "research": ("docs/research/", "request the write permission"),
+        "knowledge-manager": ("seven things", "request the write permission"),
+        "releasing": ("AskUserQuestion", "allowed-tools"),
+    }
+    if d.name in capability_markers:
+        artifact, permission = capability_markers[d.name]
+        check(f"{d.name} documents its permission boundary",
+              artifact in text and permission in text.lower(),
+              f"must name {artifact!r} and explain {permission!r}")
+
+    if d.name == "systematic-debugging":
+        required_markers: tuple[str, ...] = (
+            "Failure capture",
+            "last successful step",
+            "last failed tool",
+            "context pressure",
+            "environment assumptions",
+            "Agent Self-Debug Report",
+            "recovery action",
+            "follow-up",
+        )
+        for marker in required_markers:
+            check(f"{d.name} includes {marker}", marker.lower() in text.lower(),
+                  f"missing structured agent-failure marker {marker!r}")
+        check("systematic-debugging qualifies historical counts",
+              "seven instances so far" not in text.lower()
+              and "historically" in text.lower(),
+              "historical measurements must not read as current facts")
+
+    if d.name == "research":
+        required_markers = (
+            "source opened",
+            "claim supported",
+            "confidence",
+            "sub-question",
+            "[UNVERIFIED]",
+            "all five sections in that order",
+            "Do not report a verdict",
+        )
+        for marker in required_markers:
+            check(f"{d.name} includes {marker}", marker.lower() in text.lower(),
+                  f"missing evidence-traceability marker {marker!r}")
+
+    if d.name == "designer":
+        required_markers = (
+            "surface/state",
+            "check:",
+            "result:",
+            "exception:",
+            "unresolved exception",
+            "Do not claim visual QA",
+        )
+        for marker in required_markers:
+            check(f"{d.name} includes {marker}", marker.lower() in text.lower(),
+                  f"missing design-QA evidence marker {marker!r}")
+
+    if d.name == "capability-layer-maintenance":
+        required_markers = (
+            "world-class or public-repository comparison",
+            "at least two primary repositories",
+            "stars or search snippets",
+            "live host conformance",
+            "docs/research/YYYY-MM-DD-<topic>.md",
+        )
+        for marker in required_markers:
+            check(f"{d.name} includes {marker}", marker.lower() in text.lower(),
+                  f"missing comparison-evidence marker {marker!r}")
+
     # Pre-approving a write in a layer that installs into unfamiliar repositories
     # means the first edit there lands unannounced. Reads and Bash are fine;
     # Write and Edit should cost one prompt.
@@ -893,6 +967,12 @@ for _g in sorted(GATE_SKILLS):
     _gbody = (SKILLS / _g / "SKILL.md").read_text(encoding="utf-8")
     check(f"gate skill `{_g}` declares its gate", _g in _prompting,
           "a gate was removed; the chain would then have no human checkpoint here")
+    if _g == "releasing":
+        _tools_line = re.search(r"^allowed-tools:\s*(.+)$", _gbody, re.M)
+        _tools = set((_tools_line.group(1) if _tools_line else "").split())
+        check("releasing declares AskUserQuestion in allowed-tools",
+              "AskUserQuestion" in _tools,
+              "Gate 2 cannot rely on an undeclared approval tool")
     # The marker is a claim; the call is the mechanism. A marker with no call
     # beside it is a gate that announces itself and never stops.
     _tool = GATE_TOOL[_g]
@@ -908,8 +988,10 @@ for _g in sorted(GATE_SKILLS):
 # skill. A gate conditional on the session having started in a particular mode is
 # not a gate, and presence is not reachability.
 _wp = (SKILLS / "writing-plans" / "SKILL.md").read_text(encoding="utf-8")
-_pm_path = SKILLS / "writing-plans" / "references" / "plan-mode.md"
-_pm = _pm_path.read_text(encoding="utf-8") if _pm_path.is_file() else ""
+# `plan-mode.md` was a separate reference file until writing-plans consolidated
+# its references/ into one SKILL.md -- every check below that used to read that
+# split-out file now reads `_wp` directly; the property being checked (the gate
+# is reachable, and its history is recorded) never depended on which file held it.
 
 check("`writing-plans` enters plan mode itself, so Gate 1 can always be asked",
       "EnterPlanMode" in _wp,
@@ -932,17 +1014,11 @@ check("...and the file says AskUserQuestion must not carry the approval",
 
 # Whitespace-flattened, because the phrase wraps across lines in the source and a
 # raw substring search reports a rule that is present as missing.
-#
-# Blockquoted lines are excluded: `plan-mode.md` QUOTES the false sentence in
-# order to record that it was false, and a checker that cannot tell a quotation
-# from a claim would force the correction to be deleted along with the error.
-_pm_claims = "\n".join(ln for ln in _pm.splitlines()
-                       if not ln.lstrip().startswith(">"))
 check("no file still CLAIMS plan mode cannot be entered",
-      "There is no tool for it" not in " ".join(_pm_claims.split()),
+      "There is no tool for it" not in _wp_flat,
       "that sentence was false and the gate was built on it")
 check("...and the correction is recorded rather than quietly deleted",
-      "EnterPlanMode" in _pm and "was false" in _pm,
+      "EnterPlanMode" in _wp and "was false" in _wp_flat,
       "an error removed without a note is one the next reader re-introduces")
 
 # --- anything that leaves the machine asks with the tool ---------------------

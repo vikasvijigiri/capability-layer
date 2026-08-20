@@ -5,7 +5,7 @@ when_to_use: Trigger when the user says how do people usually handle this, what 
 effort: high
 model: opus
 disable-model-invocation: false
-allowed-tools: Read Grep Glob WebFetch WebSearch Task
+allowed-tools: Read Grep Glob Bash WebFetch WebSearch Task
 ---
 
 # Research
@@ -87,9 +87,19 @@ block exists — unfocused evidence cannot be synthesised.
   and had to be redone against primaries.
 - **Hit count is not quality.** The single most useful find that day came from a
   search returning exactly one result; a 508-hit search needed heavy filtering.
-- Keep an evidence log as you go — source, claim, confidence, which
-  sub-question. Write it down before synthesising; a context reset loses
-  anything unsaved.
+- Keep an evidence log as you go, before synthesising. Each entry records:
+  `source opened`, `claim supported`, `confidence`, and the sub-question. Write it
+  down before synthesising; a context reset loses anything unsaved. The report
+  must preserve this traceability through `Findings` and `Sources`, and mark
+  unsupported conclusions `[UNVERIFIED]` rather than silently promoting them.
+
+One filled instance, so "evidence log" reads as a row, not a concept:
+
+> Question: should we add request-level rate limiting?
+> Sub-question: does our web framework ship one natively?
+> Evidence log: `source opened: framework docs §middleware` · `claim
+> supported: no built-in limiter, third-party package required` ·
+> `confidence: high (primary source)` · `sub-question: framework-native?`
 
 **3. Synthesise.** Group by sub-question. Two or more independent sources
 agreeing is **high** confidence; a single source is **medium**; sources that
@@ -110,7 +120,9 @@ opened? Does each map to a sub-question? Are single-source claims marked medium,
 not high? Did you state what would have changed your mind and whether anything
 did? Are conflicts shown rather than resolved by preference?
 
-**5. Report** to `docs/research/YYYY-MM-DD-<topic>.md`:
+**5. Report** to `docs/research/YYYY-MM-DD-<topic>.md`. `Write` is intentionally
+not pre-approved in this layer; request the write permission before creating or
+updating the report or a digest. Use this format:
 
 ```markdown
 # <question>
@@ -131,6 +143,11 @@ saves the next person rediscovering it>
 ## Sources
 <every source actually opened>
 ```
+
+The report is incomplete unless it contains all five sections in that order:
+`Findings`, `Disagreements`, `Not adopted`, and `Sources`, beneath the question,
+`Asked because`, and `Verdict` fields shown above. Do not report a verdict whose
+claims cannot be traced to an opened source or an evidence-log entry.
 
 Report the path in chat, not the contents. Then hand the verdict to whatever
 asked for it.

@@ -1,5 +1,53 @@
 # Log
 
+## 2026-08-19 15:00
+
+**Skill-content quality audit against real star-rated repos, plus fixes.**
+Compared all 14 skills against real comparables (`affaan-m/ECC`,
+`SethGammon/Citadel`, `mloning/dotfiles`), one digest per skill under
+`docs/research/digests/`. Pattern found repeatedly: this layer wins on
+mechanical enforcement (tool-enforced gates, scripts that check artifacts)
+and loses on worked examples (comparables show filled instances, this repo
+mostly showed bracketed templates).
+
+Consolidated `writing-plans/SKILL.md` + its 5 references (827 lines total)
+into one 414-line file — kept `references/artifact-review.md` separate since
+4 other files (`workflow.md`, `designer`, `architecture-reviewer`,
+`/plan-review`) point at it by that exact path. Added a pattern-grounding
+step and a worked task example. Updated `tools/test_process_router.py`'s
+Gate-1-reachability checks to read the merged file instead of the deleted
+`references/plan-mode.md`.
+
+Applied 9 cheap fixes across `capability-layer-maintenance`, `repo-recon`,
+`no-slop`, `code-review`, `knowledge-manager`, `systematic-debugging`,
+`verifying-work`, `research` — worked examples, a shared P0/P1/P2 severity
+table (`code-review` now reuses `no-slop`'s vocabulary instead of a new one),
+an injection-surface guard, a related-occurrences debugging step. One
+finding from the audit (`brainstormer` allegedly missing `Task`) turned out
+wrong on inspection — `writing-plans` is a skill, not a `.claude/agents/`
+subagent, so no tool grant was needed; reverted before commit.
+`python tools/run_checks.py --tier all --require-test`: `PASS: 54 check(s)
+green`. Deferred (explicit user choice): PLATFORMS.md AWS/GCP/Azure gap,
+`designer`'s missing machine-readable output, `executing-plans`'s TDD code
+samples, `delivering`'s PR-template step.
+
+## 2026-08-19 12:00
+
+**Compared the complete layer against three primary public references.** Read
+Superpowers' skill TDD and portability contracts, Anthropic's skill packaging
+and validator guidance, and GitHub Awesome Copilot's hook contracts. Added
+`docs/research/2026-08-19-agent-layer-comparison.md` with the evidence and
+explicitly kept static parity, local execution, and live-host conformance
+separate.
+
+The local contract now checks all 14 skills and 17 executable hooks, including
+the four intentionally manual-only post-run finalizers. Added the comparison
+check to `.claude/project-checks.json`. Fixed the validator tuple typing and
+the installer test's expected argparse stderr handling; the focused suites and
+installer portability pass. The full 54-check tier reached a transient
+`test_chain.py` timing miss at 3.61s, then the isolated suite passed at 1.11s.
+No live model trigger evaluation or non-Claude host conformance was run.
+
 ## 2026-08-19 11:21
 
 **Session: MCP repair, a world-class comparison, two real defects (see
