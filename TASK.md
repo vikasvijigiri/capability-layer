@@ -4,6 +4,18 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Unified per-run telemetry schema
+- **Status:** Plan approved (Gate 1) 2026-08-20. See
+  `docs/plans/2026-08-20-unified-telemetry-schema.md`. Consolidates
+  `bench.session_calls()`, `01-context-cost.py` and `02-skill-cost.py` into
+  one per-turn snapshot, closing Gap C from
+  `docs/research/2026-08-20-notion-objectives-audit.md`. Chosen as the
+  highest-priority of 4 audit candidates (the other 3: E0-E5 execution-level
+  router, agent-catalogue decision record, `01-context-cost.py` test
+  coverage — not started). Every target-spec field this harness cannot
+  populate is named with its reason (`UNAVAILABLE_FIELDS`), not faked. Next:
+  `executing-plans`.
+
 ### Make the layer portable: it broke every host's test runner
 
 - **Status:** Fixed and proven in Python and Node targets. Payload 1,586,874 ->

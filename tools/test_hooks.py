@@ -217,6 +217,72 @@ for _event, _payload, _label in DENY_CASES:
     else:
         print(f'OK: {_event} denies {_label}')
 
+# --- post-run/09-telemetry.py: unified per-run snapshot ---------------------
+#
+# Fired via the `post-run` event, which runs `00-dispatch.py`'s whole STEPS
+# sequence -- the new finalizer runs alongside the existing four. Asserts on
+# the real, gitignored `.claude/hooks/state/telemetry.jsonl` (`.gitignore:28`),
+# same convention as the DENY_CASES/BENIGN_EVENTS above firing real hooks in
+# this real repo, and the skill-cost tests' before/after delta style.
+_TELEMETRY_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'telemetry.jsonl'
+_EXPECTED_UNAVAILABLE_KEYS = {
+    'execution_level', 'model', 'agents_spawned', 'api_call_count',
+    'context_tokens', 'input_tokens', 'output_tokens', 'latency',
+    'parallelism', 'cache_hits', 'cache_misses', 'verification_level',
+    'retries', 'escalations', 'success', 'quality_signal',
+}
+
+
+def _telemetry_lines():
+    try:
+        return _TELEMETRY_STATE.read_text(encoding='utf-8').splitlines()
+    except OSError:
+        return []
+
+
+_before_lines = _telemetry_lines()
+_p = run_hook('post-run', {'workflow': 'test', 'status': 'success'})
+_after_lines = _telemetry_lines()
+if _p.returncode != 0:
+    print(f'FAIL: post-run (telemetry finalizer) exited {_p.returncode}\n{_p.stderr}')
+    fail = True
+elif len(_after_lines) != len(_before_lines) + 1:
+    print(f'FAIL: telemetry.jsonl grew by {len(_after_lines) - len(_before_lines)} '
+          f'line(s), want 1 (append-only, one row per post-run fire)')
+    fail = True
+else:
+    print('OK: post-run appends exactly one telemetry row')
+    _row = json.loads(_after_lines[-1])
+    _missing_top = {'ts', 'run_scope', 'chain', 'tools_called', 'skills_loaded',
+                     'task_type', 'unavailable'} - _row.keys()
+    if _missing_top:
+        print(f'FAIL: telemetry row missing top-level keys: {sorted(_missing_top)}')
+        fail = True
+    else:
+        print('OK: telemetry row has every top-level schema key')
+    _missing_unavail = _EXPECTED_UNAVAILABLE_KEYS - set(_row.get('unavailable', {}))
+    if _missing_unavail:
+        print(f'FAIL: telemetry row\'s "unavailable" map is missing reasoned '
+              f'fields: {sorted(_missing_unavail)}')
+        fail = True
+    else:
+        print('OK: every structurally-unavailable target field is named with a reason')
+    _bad_reasons = [k for k, v in _row.get('unavailable', {}).items()
+                    if not isinstance(v, str) or len(v) < 5]
+    if _bad_reasons:
+        print(f'FAIL: "unavailable" entries with no real reason string: {_bad_reasons}')
+        fail = True
+
+# A second fire appends a SECOND row -- proves append-only, not overwrite.
+_p2 = run_hook('post-run', {'workflow': 'test', 'status': 'success'})
+_after2_lines = _telemetry_lines()
+if _p2.returncode != 0 or len(_after2_lines) != len(_after_lines) + 1:
+    print(f'FAIL: a second post-run fire did not append a second telemetry row '
+          f'(exit {_p2.returncode}, {len(_after2_lines)} lines vs {len(_after_lines)} before)')
+    fail = True
+else:
+    print('OK: a second post-run fire appends a second telemetry row (append-only)')
+
 if fail:
     sys.exit(1)
 print('All hook tests passed')
