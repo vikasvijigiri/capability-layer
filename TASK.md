@@ -4,6 +4,7 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+
 ### Make the layer portable: it broke every host's test runner
 
 - **Status:** Fixed and proven in Python and Node targets. Payload 1,586,874 ->
@@ -106,6 +107,44 @@
 <!-- Append-only, newest entry at the top. Never delete or rewrite an
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
+
+### 2026-08-20 — Unified per-run telemetry schema
+- **Goal**: consolidate `bench.session_calls()` and `01-context-cost.py`
+  into one per-turn telemetry snapshot matching a useful subset of the
+  Notion target's schema, closing Gap C from a same-session audit. Chosen
+  as the highest-priority of 4 audit candidates (the other 3: E0-E5
+  execution-level router, agent-catalogue decision record,
+  `01-context-cost.py` test coverage — not started).
+- **Output**: `docs/plans/2026-08-20-unified-telemetry-schema.md`, 3/3
+  tasks. New `.claude/hooks/post-run/09-telemetry.py` (Stop finalizer,
+  registered in `00-dispatch.py`/`hooks_registry.json`); a small write in
+  `01-entry-classifier.py` persisting its classification as a `task_type`
+  proxy; `tools/bench.py`'s `telemetry_summary()` report.
+- **Done Checks**: met. `PASS: 54 check(s) green`. `spec-reviewer` found 3
+  real issues after first landing, all fixed: (1) `skills_loaded` always
+  read `skill-cost.json` unconditionally, reporting a fabricated-looking
+  zero even though that file's producer, `02-skill-cost.py`, was built
+  earlier the same session but on a *separate, unmerged branch*
+  (`fix/session-performance-fixes`) and does not exist here — fixed to
+  check the producer file's presence and report genuine unavailability
+  with a reason instead; (2) the plan's own Grounding section wrongly
+  claimed `02-skill-cost.py` and the audit doc it cites already existed on
+  this branch — corrected in place; (3) this file's own status line had
+  gone stale. Two more deviations found and fixed during execution itself:
+  a `ROOT` path off-by-one (`parents[2]` vs `[3]`, same class as an earlier
+  same-session fix elsewhere), and an AST skill-name-scanner false positive
+  on the word "research" inside a docstring.
+- **Not verified**: end-to-end delivery — branch
+  `fix/unified-telemetry-schema`, 4 commits, not yet reviewed by
+  `code-review` or delivered. `docs/research/2026-08-20-notion-objectives-
+  audit.md` and `02-skill-cost.py` are not present on this branch (both
+  ship via separate, unmerged units) — this unit does not depend on either
+  landing first, by design, after the `spec-reviewer` finding above.
+- **Out of Scope, and still out**: `agents_spawned` counting, per-turn
+  latency pairing, token counts, `success`/`quality_signal` — all named in
+  `UNAVAILABLE_FIELDS` with reasons, per the plan's own Out of Scope.
+- **Status**: Done — implementation, spec-review and its fixes complete;
+  delivery pending.
 
 ### 2026-08-20 — Close the router-disagreement and progress-checkbox audit gaps
 - **Goal**: close 2 of the 5 gaps found in the 2026-08-16

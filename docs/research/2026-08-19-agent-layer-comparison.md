@@ -21,9 +21,10 @@
 
 - 14 skills under `.claude/skills/<name>/SKILL.md` were compared for frontmatter,
 	routing, output/verification language, and success criteria.
-- 17 executable event hooks under `.claude/hooks/<event>/*.py` were compared for
+- 18 executable event hooks under `.claude/hooks/<event>/*.py` were compared for
 	module purpose, payload loading, event registration, deny behavior where
-	applicable, and strategic-file write boundaries.
+	applicable, and strategic-file write boundaries (17 at this report's original
+	writing on 2026-08-19; `post-run/09-telemetry.py` added 2026-08-20).
 - The inventory is structural evidence only; it does not prove that a model
 	triggers every skill or that another host executes every hook.
 

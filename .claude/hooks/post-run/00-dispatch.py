@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-STEPS = ("03-checkpoint.py", "06-artifact-autocommit.py", "07-layer-drift.py", "08-chain-continuity.py")
+STEPS = ("03-checkpoint.py", "06-artifact-autocommit.py", "07-layer-drift.py", "08-chain-continuity.py", "09-telemetry.py")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from _hooklib import load_payload  # noqa: E402
 
