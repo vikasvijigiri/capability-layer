@@ -115,7 +115,7 @@ writes only, nothing reaches a session's stdout).
 
 ## Progress
 - [x] Task 1 — telemetry snapshot writer (new Stop finalizer)
-- [ ] Task 2 — entry-classifier persists its classification (task_type proxy)
+- [x] Task 2 — entry-classifier persists its classification (task_type proxy)
 - [ ] Task 3 — `bench.py` telemetry report
 
 ## Tasks
@@ -256,6 +256,17 @@ existing guarantee about this file's output.
 **Done when:** the state file reflects the real classification on a real
 fire, and the hook's own emitted output is provably unchanged (byte-diff
 the stdout before/after this task).
+
+**Executed:** `_record_entry_shape()` added, called right after `key =
+classify(...)`, before the early `if not key: return 0`. Live-fired twice
+(a real prompt → `{"key": "entry-unframed", ...}`; a silent-case prompt →
+`{"key": null, ...}`, stdout empty as expected either way). Byte-diffed
+stdout for a real prompt against the pre-task version of the file (checked
+out in place via `git checkout HEAD --`, fired, restored) — `IDENTICAL`.
+`python tools/test_entry_classifier.py`: all cases green including the 2
+new ones. This branch already carries the router-progress-consistency
+control/sensitive-surface veto (merged via PR #18 before this branch was
+cut) — `classify()` itself untouched by this task either way.
 
 ### Task 3: `bench.py` telemetry report
 **Purpose:** surface the consolidated snapshot the way `bench.py` already

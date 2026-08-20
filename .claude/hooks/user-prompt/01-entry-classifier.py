@@ -74,6 +74,7 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
 # The repo's own leading gotcha: this prints `--` and em-dashes rendered from
@@ -448,11 +449,30 @@ def workflow_block(key: str) -> str:
     return m.group(1).strip() if m else ""
 
 
+# `.claude/hooks/post-run/09-telemetry.py`'s task_type proxy. Written even
+# when `key` is None -- the common case, per this module's own "silent when
+# there is nothing to say" design -- so a downstream reader can tell
+# "classified as nothing this turn" apart from "never ran this turn".
+ENTRY_SHAPE_STATE = (Path(__file__).resolve().parents[1] / "state"
+                     / "last-entry-shape.json")
+
+
+def _record_entry_shape(key: str | None) -> None:
+    try:
+        ENTRY_SHAPE_STATE.parent.mkdir(parents=True, exist_ok=True)
+        ENTRY_SHAPE_STATE.write_text(
+            json.dumps({"key": key, "ts": time.strftime("%Y-%m-%dT%H:%M:%S")}),
+            encoding="utf-8")
+    except OSError:
+        pass  # best-effort; must never affect what this hook emits
+
+
 def main() -> int:
     if os.environ.get(OPT_OUT):
         return 0
     payload = load_payload()
     key = classify(payload.get("prompt") or "")
+    _record_entry_shape(key)
     if not key:
         return 0
 

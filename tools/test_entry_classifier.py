@@ -298,6 +298,20 @@ def main() -> int:
           mod.classify("fix a typo in _hooklib.py") == "entry-small",
           f"got {mod.classify('fix a typo in _hooklib.py')!r}")
 
+    # --- classify() persists its result for post-run/09-telemetry.py --------
+    #
+    # Written even when key is None -- the common, silent case -- so a
+    # downstream reader can tell "classified as nothing" from "never ran".
+    _state = ROOT / ".claude" / "hooks" / "state" / "last-entry-shape.json"
+    mod._record_entry_shape("entry-open")
+    _recorded = json.loads(_state.read_text(encoding="utf-8"))
+    check("_record_entry_shape writes the given key",
+          _recorded.get("key") == "entry-open", f"got {_recorded!r}")
+    mod._record_entry_shape(None)
+    _recorded_none = json.loads(_state.read_text(encoding="utf-8"))
+    check("_record_entry_shape writes null, not silence, for the common case",
+          _recorded_none.get("key") is None, f"got {_recorded_none!r}")
+
     # --- the rendered blocks exist -------------------------------------------
     #
     # The hook keeps no fallback text, so a missing block degrades to a generic
