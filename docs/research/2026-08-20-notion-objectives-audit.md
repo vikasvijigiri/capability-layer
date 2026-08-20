@@ -153,6 +153,10 @@ be all of them.
   objective 4/5's counters gained a second instrument this session) but
   re-measuring all ten needs the same instruments `docs/objectives.md`
   already names, run fresh, not asserted from memory here.
-- Did not read `docs/specs/2026-08-03-research-run-substrate-design.md` —
-  flagged above as likely prior art for candidate 1, worth reading before
-  planning it rather than starting from a blank page.
+- **Correction, same pass:** `docs/specs/2026-08-03-research-run-substrate-design.md`
+  was flagged above as likely telemetry prior art, from a `run_id` grep hit.
+  Read in full: it is an unrelated spec for a computational-physics run
+  store (content-addressed simulation runs, for a physics research project —
+  probably `../physrun/`'s domain, not this layer's). Coincidental
+  terminology overlap only; not prior art for candidate 1. No prior art
+  found for the telemetry schema — it starts from a blank page.
