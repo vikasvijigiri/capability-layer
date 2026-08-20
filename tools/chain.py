@@ -96,9 +96,9 @@ def _load(rel: str, name: str):
 # had drifted into disagreement by defining it independently. Matches BOTH
 # ticked and unticked boxes, unlike the old ticked-only pattern this replaces
 # -- `plan_progress()` below does the ticked-only filtering explicitly now.
-_HOOKLIB_FOR_CHAIN = _load(".claude/hooks/_hooklib.py", "hooklib_for_chain")
+_hooklib_for_chain = _load(".claude/hooks/_hooklib.py", "hooklib_for_chain")
 PROGRESS_TICK = (
-    _HOOKLIB_FOR_CHAIN.PROGRESS_TASK_BOX if _HOOKLIB_FOR_CHAIN is not None
+    _hooklib_for_chain.PROGRESS_TASK_BOX if _hooklib_for_chain is not None
     else re.compile(r"(?m)^- \[( |x|X)\]\s+Task\s+(\d+)\b")
 )
 
