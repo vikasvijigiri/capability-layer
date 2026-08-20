@@ -137,10 +137,11 @@ Bash/PowerShell input cost visible — currently nothing measures it.
   "Skill"`, pointing at the new hook, placed after the existing `Bash|
   PowerShell` entry in the same array.
 - Modify: `tools/bench.py` — add `skill_body_cost()` mirroring
-  `session_calls()`'s shape (reads the new JSON state file, returns
-  `(calls, chars, unattributed)` or `None` if the file is absent); one new
-  printed line in `main()` alongside the existing shell-call report, same
-  "not yet recorded" fallback message style for a fresh session.
+  `session_calls()`'s shape exactly (reads the new JSON state file, returns
+  `(0, 0, 0)` if the file is absent — matching `session_calls()`'s own
+  actual return, not `None`); one new printed line in `main()` alongside the
+  existing shell-call report, same "not yet recorded" fallback message style
+  for a fresh session.
 - Modify: `tools/test_hooks.py` — synthetic payload cases: `{"tool_name":
   "Skill", "tool_input": {"skill": "no-slop"}}` resolves
   `.claude/skills/no-slop/SKILL.md`'s real size; `{"skill_name": "no-slop"}`
