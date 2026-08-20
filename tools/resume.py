@@ -33,6 +33,7 @@ a crash mid-repair, a week away, a different machine with the same clone.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 import subprocess
@@ -40,6 +41,21 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load(rel: str, name: str):
+    """`importlib`, not an import -- `tools/scope.py`'s pattern for reaching a
+    sibling module without turning this file into a package member."""
+    spec = importlib.util.spec_from_file_location(name, ROOT / rel)
+    if spec is None or spec.loader is None:
+        return None
+    mod = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(mod)
+    except Exception:
+        return None
+    return mod
+
 
 MAX_ATTEMPTS = 3
 BRANCH_PREFIX = "feat/"
@@ -271,7 +287,17 @@ def _layer_owned(root: Path) -> set[str]:
 # forbids, so this walks the same text `rejections()` and `plan_body_hash()`
 # already walk rather than caching a verdict anywhere.
 _PROGRESS_SECTION = re.compile(r"(?ms)^## Progress\s*\n(.*?)(?=^## |\Z)")
-_CHECKBOX = re.compile(r"^- \[([ xX])\]", re.M)
+# `_hooklib.PROGRESS_TASK_BOX`, imported rather than retyped -- this used to
+# be `^- \[([ xX])\]`, any checkbox at all, looser than the `Task <n>`
+# requirement `tools/analyze.py`/`tools/chain.py`/`tools/git_ops.py` already
+# enforced. Already scoped to the `## Progress` section by `_PROGRESS_SECTION`
+# above, so this only changes behavior for a malformed section, never a
+# well-formed plan.
+_hooklib_for_resume = _load(".claude/hooks/_hooklib.py", "hooklib_for_resume")
+_CHECKBOX = (
+    _hooklib_for_resume.PROGRESS_TASK_BOX if _hooklib_for_resume is not None
+    else re.compile(r"^- \[( |x|X)\]\s+Task\s+(\d+)\b", re.M)
+)
 
 # The two branch names this repository and its installs actually use. Not a
 # configurable base: `resume.py` already hardcodes its own conventions
@@ -287,7 +313,9 @@ def plan_tasks_done(plan_text: str) -> bool:
     section = _PROGRESS_SECTION.search(plan_text)
     if not section:
         return False
-    boxes = _CHECKBOX.findall(section.group(1))
+    # `_CHECKBOX` (now `_hooklib.PROGRESS_TASK_BOX`) has two capture groups,
+    # (mark, task_number) -- only the mark decides ticked-ness.
+    boxes = [m[0] for m in _CHECKBOX.findall(section.group(1))]
     return bool(boxes) and all(b.lower() == "x" for b in boxes)
 
 

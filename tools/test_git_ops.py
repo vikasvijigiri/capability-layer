@@ -185,6 +185,12 @@ def main() -> int:
         check("pr_body includes a ticked task", "do the first thing" in body, body)
         check("pr_body excludes an unticked task",
               "not done yet" not in body, body)
+        # `_PROGRESS_RE`'s box/task-number prefix is `_hooklib.PROGRESS_BOX_PATTERN`
+        # (imported as text, then extended with this module's own title
+        # suffix) rather than a fourth private retyping.
+        check("_PROGRESS_RE's prefix is the shared PROGRESS_BOX_PATTERN text",
+              git_ops._PROGRESS_RE.pattern.startswith(
+                  git_ops._hooklib_gitops.PROGRESS_BOX_PATTERN))
         check("pr_body includes the risk tier", "high" in body, body)
         check("pr_body includes the review finding",
               "stack-depth" in body and "2 PRs deep" in body, body)

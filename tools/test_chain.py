@@ -254,6 +254,18 @@ check("the progress pattern ignores constitution-gate boxes",
       len(chain.PROGRESS_TICK.findall(
           "- [x] I Evidence — something\n- [x] Task 1 — real\n")) == 1)
 
+# `PROGRESS_TICK` is now `_hooklib.PROGRESS_TASK_BOX`, which (unlike the old
+# ticked-only pattern it replaces) matches BOTH ticked and unticked boxes --
+# `plan_progress()`'s own counting filters on the captured mark explicitly.
+# Proven at both levels: the raw pattern sees both, the real counting
+# function reports only the ticked one.
+_mixed = "- [x] Task 1 — done\n- [ ] Task 2 — not yet\n"
+check("the shared pattern matches both ticked and unticked Task boxes",
+      len(chain.PROGRESS_TICK.findall(_mixed)) == 2)
+check("...but plan_progress's own counting filters to ticked only",
+      sum(1 for m in chain.PROGRESS_TICK.finditer(_mixed)
+          if m.group(1).lower() == "x") == 1)
+
 live_progress = chain.plan_progress(ROOT)
 if live_progress is None:
     # An installed layer ships no `docs/plans/`, so there is no active plan to

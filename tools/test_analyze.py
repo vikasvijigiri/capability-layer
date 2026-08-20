@@ -169,6 +169,12 @@ check("constitution gate boxes are not counted as progress boxes",
       f"counted {len(az.PROGRESS_RE.findall(GOOD))} progress boxes in a plan "
       f"with 7 gate boxes and 1 task")
 
+# `PROGRESS_RE` is `_hooklib.PROGRESS_TASK_BOX`, imported rather than
+# retyped -- proven by identity, not just by matching behavior, so a future
+# edit that reintroduces a private copy here fails immediately.
+check("PROGRESS_RE is the shared _hooklib.PROGRESS_TASK_BOX, not a local copy",
+      az.PROGRESS_RE is az._hooklib_for_analyze.PROGRESS_TASK_BOX)
+
 created = az.analyze(GOOD.replace("- Modify: `src/checkout.ts:submit`",
                                   "- Create: `src/checkout.ts`"),
                      exists=exists_good, slug="checkout-retry")

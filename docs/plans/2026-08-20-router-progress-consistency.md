@@ -93,7 +93,7 @@ block in Task 2 — only removes the theoretical divergence on a malformed one.
 
 ## Progress
 - [x] Task 1 — entry-classifier defers to scope.py's control/sensitive veto
-- [ ] Task 2 — one shared Progress-checkbox regex, four sites import it
+- [x] Task 2 — one shared Progress-checkbox regex, four sites import it
 
 ## Tasks
 
@@ -236,6 +236,21 @@ anything from `_hooklib.PROGRESS_TASK_BOX` elsewhere.
 **Done when:** all four sites read `_hooklib.PROGRESS_TASK_BOX` (or its raw
 pattern text) instead of their own copy, a malformed checkbox is treated
 identically by all four, and no existing suite's assertions changed meaning.
+
+**Executed:** `analyze.py`/`chain.py`/`git_ops.py`/`resume.py` all now source
+the box pattern from `_hooklib.py` (three via `_load()`, `resume.py` gained
+the helper). `resume.plan_tasks_done()` and `chain.plan_progress()` both had
+to change their consuming logic, since the shared pattern carries two capture
+groups where each site's private one carried fewer — reconciled inline, not a
+plan deviation (the plan's own Implementation notes anticipated exactly this
+for both). Ran `python tools/test_analyze.py`, `test_chain.py`,
+`test_git_ops.py`, `test_resume.py` individually — all four green, including
+the new malformed-checkbox case (red before the fix, green after) and the
+mixed ticked/unticked case. `python -m mypy` on all nine touched files: clean.
+Fired `_hooklib.PROGRESS_TASK_BOX` directly against realistic mixed content
+(ticked, unticked, and a constitution-gate box) — correctly distinguishes all
+three. `python tools/run_checks.py --tier all --require-test`:
+`PASS: 54 check(s) green`.
 
 ## Constitution gate
 - [x] I Evidence — every task names the exact command and the expected output

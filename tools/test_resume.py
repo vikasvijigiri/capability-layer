@@ -337,6 +337,17 @@ _partial_plan.write_text(
 check("an unticked task reads as not done straight from the plan file, not a cache",
       rs.gather_facts(_wd_repo, "delivery-check")["plan_tasks_done"] is False)
 
+# `_CHECKBOX` used to be `^- \[([ xX])\]` -- any checkbox at all under
+# `## Progress`, not just a `Task N` one. Four sites (analyze.py, chain.py,
+# git_ops.py, resume.py) each defined this shape independently and had begun
+# to disagree; resume's was the loosest. Tightened to share
+# `_hooklib.PROGRESS_TASK_BOX`, which only changes behavior for a malformed
+# section -- a well-formed plan (every existing fixture above) is unaffected.
+check("a malformed checkbox with no 'Task N' under ## Progress is NOT counted done",
+      rs.plan_tasks_done("# Plan\n\n## Progress\n\n- [x] done\n") is False)
+check("a well-formed fully-ticked plan is still counted done -- no behavior change",
+      rs.plan_tasks_done("# Plan\n\n## Progress\n\n- [x] Task 1 -- done\n") is True)
+
 
 # The ledger is the only stored state, and it holds counters, nothing else.
 state_dir = repo / ".claude" / "hooks" / "state"
