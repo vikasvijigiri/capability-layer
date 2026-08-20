@@ -256,6 +256,10 @@ SKILL_COST_CASES = [
      'a stale/renamed skill name resolves to 0 chars, not an error',
      lambda before, after: after['chars'] == before['chars']
      and after['calls'] - before['calls'] == 1),
+    ({'tool_name': 'Skill', 'tool_input': {'skill': '../../../../etc/passwd'}},
+     'a traversal-shaped skill name is rejected, not resolved outside skills/',
+     lambda before, after: after['chars'] == before['chars']
+     and after['calls'] - before['calls'] == 1),
     ({'tool_name': 'Bash', 'tool_input': {'command': 'echo hi'}},
      'a non-Skill tool_name is ignored entirely',
      lambda before, after: after == before),

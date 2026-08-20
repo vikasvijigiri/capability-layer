@@ -79,6 +79,12 @@ def _skill_name(tool_input: dict) -> str | None:
 
 
 def _skill_md_size(name: str) -> int:
+    # No path segments allowed -- a real skill name is a single directory
+    # component. Rejecting "/", "\\" and ".." here (rather than resolving and
+    # checking containment) keeps this a pure string check with nothing to
+    # get wrong about symlinks or platform separators.
+    if "/" in name or "\\" in name or ".." in name:
+        return 0
     path = SKILLS_DIR / name / "SKILL.md"
     try:
         return path.stat().st_size
