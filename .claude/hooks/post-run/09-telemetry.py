@@ -25,8 +25,9 @@ oversight; naming the gap is the deliverable Gap C's audit asked for.
 The same rule applies to a counter whose *producer* is simply not present
 on the current tree. `02-skill-cost.py` (the hook that writes
 `skill-cost.json`) may not exist yet on every branch that carries this
-file -- checked at read time (`_skill_cost_producer_exists()`), not assumed
-from this module's own history: reporting a zero-filled `skills_loaded`
+file -- checked at read time (`SKILL_COST_PRODUCER.is_file()` in
+`build_snapshot()`), not assumed from this module's own history: reporting
+a zero-filled `skills_loaded`
 when nothing ever wrote that file would look like real data. When the
 producer is missing, `skills_loaded` is `None` and `"skills_loaded"` is
 added to the reported `unavailable` map alongside the fixed set, with the
