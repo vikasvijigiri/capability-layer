@@ -68,6 +68,8 @@ Silent when there is nothing to say, and never blocks.
 
 from __future__ import annotations
 
+import fnmatch
+import importlib.util
 import json
 import os
 import re
@@ -325,12 +327,60 @@ def _hit(patterns: list[str], text: str) -> bool:
     return any(re.search(p, text) for p in patterns)
 
 
+def _load(rel: str, name: str):
+    spec = importlib.util.spec_from_file_location(name, REPO_ROOT / rel)
+    if spec is None or spec.loader is None:
+        return None
+    mod = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(mod)
+    except Exception:
+        return None
+    return mod
+
+
+_CONTROL_OR_SENSITIVE_PATTERNS: list[str] | None = None
+
+
+def _control_or_sensitive_patterns() -> list[str]:
+    """`tools/scope.py`'s own veto lists, loaded once. A copy would drift the
+    moment either list changed -- the same reason `scope.py` itself imports
+    `_hooklib.MIGRATION_PATH_PATTERNS` rather than retyping it."""
+    global _CONTROL_OR_SENSITIVE_PATTERNS
+    if _CONTROL_OR_SENSITIVE_PATTERNS is None:
+        mod = _load("tools/scope.py", "scope_for_classifier")
+        _CONTROL_OR_SENSITIVE_PATTERNS = list(getattr(mod, "CONTROL_PATTERNS", [])) + \
+            list(getattr(mod, "SENSITIVE_PATTERNS", []))
+    return _CONTROL_OR_SENSITIVE_PATTERNS
+
+
+def _names_control_or_sensitive_path(text: str) -> bool:
+    """True when a path token in `text` already fully matches one of
+    `scope.py`'s CONTROL_PATTERNS/SENSITIVE_PATTERNS -- the same veto list
+    `scope.py` itself uses to force a change `high` risk.
+
+    Deliberately NOT a filesystem lookup: a bare filename with no directory
+    (`_hooklib.py` rather than `.claude/hooks/_hooklib.py`) is not resolved
+    against the tree, because doing so would make this function depend on
+    repo state beyond its two fixed inputs (the prompt, and scope.py's own
+    pattern lists) -- see `tools/test_entry_classifier.py`'s pinned
+    limitation case.
+    """
+    patterns = _control_or_sensitive_patterns()
+    for m in re.finditer(_PATH, text):
+        if any(fnmatch.fnmatch(m.group(0), pat) for pat in patterns):
+            return True
+    return False
+
+
 def classify(prompt: str) -> str | None:
     """The state key for this prompt, or None when nothing should be said.
 
-    Pure and dependency-free on purpose: it is the one part of this hook with a
-    correctness claim, so its whole input is the string and its whole output is a
-    key. `tools/test_entry_classifier.py` runs it over the labelled corpus in
+    Pure over its own reasoning: it reads `tools/scope.py`'s fixed
+    CONTROL_PATTERNS/SENSITIVE_PATTERNS lists once as an input (the same
+    tradeoff `scope.py` itself makes importing `_hooklib`), and otherwise its
+    whole input is the string and its whole output is a key.
+    `tools/test_entry_classifier.py` runs it over the labelled corpus in
     `docs/evals/trigger-queries.json` -- the same queries that define what each
     stage's description is supposed to catch, so the classifier and the
     descriptions cannot drift apart without a suite going red.
@@ -342,7 +392,7 @@ def classify(prompt: str) -> str | None:
         return None
     if _hit(HARD_STAGE, text):
         return None
-    if _hit(TOO_SMALL, text):
+    if _hit(TOO_SMALL, text) and not _names_control_or_sensitive_path(text):
         # Named, not silent -- changed 2026-08-15. This pass detects exactly the
         # shape `workflow.md` wrote its narrow path for, and returning None meant
         # the path existed in prose that nothing ever surfaced: the nine stages
@@ -356,6 +406,11 @@ def classify(prompt: str) -> str | None:
         # `docs/evals/trigger-queries.json`, ZERO reach this pass, so naming a
         # key here cannot reclassify anything the corpus asserts. Measured before
         # the change, not after.
+        #
+        # The veto (2026-08-20): a path `scope.py` would itself call
+        # control-surface or sensitive-surface is never "too small to frame" --
+        # see `_names_control_or_sensitive_path`. Falls through to the next pass
+        # exactly like today's non-match case.
         return "entry-small"
     if _hit(OPEN, text):
         return "entry-open"

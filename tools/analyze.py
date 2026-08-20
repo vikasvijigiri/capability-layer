@@ -39,6 +39,7 @@ def _load(rel: str, name: str):
 
 
 _rs = _load("tools/resume.py", "resume_for_analyze")
+_hooklib_for_analyze = _load(".claude/hooks/_hooklib.py", "hooklib_for_analyze")
 
 REQUIRED_HEADINGS = ["**Goal:**", "**Risk:**", "## File map", "## Tasks"]
 
@@ -58,7 +59,9 @@ TASK_RE = re.compile(r"(?m)^###\s+Task\s+(\d+)\s*:?(.*)$")
 GATE_RE = re.compile(r"(?m)^- \[( |x|X)\]\s+([IVX]+)\s")
 # `- [ ] Task 3 — title`. Distinguished from GATE_RE by what follows the box:
 # a constitution gate is followed by a roman numeral, a progress box by `Task N`.
-PROGRESS_RE = re.compile(r"(?m)^- \[( |x|X)\]\s+Task\s+(\d+)\b")
+# `_hooklib.PROGRESS_TASK_BOX`, imported rather than retyped -- see its
+# docstring for the four sites that had drifted into disagreement.
+PROGRESS_RE = _hooklib_for_analyze.PROGRESS_TASK_BOX
 # `- Create: \`path\` — why` / `- Modify: \`path:symbol\` — why`
 FILE_RE = re.compile(r"(?m)^\s*-\s+(Create|Modify|Test|Delete|Move):\s*`([^`]+)`")
 

@@ -750,6 +750,19 @@ DECLARE_LINE = re.compile(
     r"(?im)^\s*[-*]\s*(?:create|modify|delete|move|rename|add)\s*:\s*(.+)$")
 FILES_INLINE = re.compile(r"(?im)^\s*\**files?\**\s*:\s*\**\s*(.+)$")
 
+# `- [ ] Task 3 -- title`. The one shape a `## Progress` checkbox is allowed
+# to take, shared so a task-number box means the same thing everywhere it is
+# read: `tools/analyze.py` (PROGRESS_RE, counts declared vs ticked at plan
+# lint time), `tools/chain.py` (PROGRESS_TICK, stall detection), `tools/git_ops.py`
+# (_PROGRESS_RE, PR-body generation -- appends its own title-capture suffix to
+# PROGRESS_BOX_PATTERN rather than retyping the prefix), and `tools/resume.py`
+# (_CHECKBOX, WAITING_DELIVERY derivation). All four defined this
+# independently and had begun to disagree -- resume's was loosest, matching
+# any checkbox rather than requiring `Task <n>`. A fifth site should import
+# this rather than add a fifth definition.
+PROGRESS_BOX_PATTERN = r"^- \[( |x|X)\]\s+Task\s+(\d+)\b"
+PROGRESS_TASK_BOX = re.compile(PROGRESS_BOX_PATTERN, re.M)
+
 # The File map TABLE, which `writing-plans` C2 calls the frozen file map:
 #
 #     | `tools/worktree.py` | Create | what it owns afterwards |

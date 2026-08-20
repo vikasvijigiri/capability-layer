@@ -253,6 +253,51 @@ def main() -> int:
                        "we need react hooks for the new state management"),
           "if this fails, layer vocabulary has gone bare again")
 
+    # --- TOO_SMALL defers to scope.py's control/sensitive-surface veto ------
+    #
+    # HANDOFF.md's own reproduced case ("add a --jobs flag to run_checks.py")
+    # was a paraphrase -- traced live, pass 1's `\.claude\b` pattern already
+    # catches any prompt containing a directory-qualified `.claude/...` path
+    # before TOO_SMALL ever runs. The real gap is a path scope.py's own
+    # CONTROL_PATTERNS/SENSITIVE_PATTERNS would veto that pass 1 has no
+    # vocabulary for. `.github/workflows/*.yml` was tried and rejected as a
+    # second case: SMALL_LOCATED's `[^.]{0,60}` gap can never cross the
+    # leading dot in `.github/`, so that phrasing never reaches TOO_SMALL in
+    # the first place regardless of this fix -- a different, pre-existing
+    # quirk, out of scope here. `pyproject.toml` (no directory) and
+    # `capability_layer/cli.py` (no leading dot) both genuinely reach
+    # TOO_SMALL today; live-verified before writing these cases.
+    _scope_spec = importlib.util.spec_from_file_location(
+        "scope_for_test", ROOT / "tools" / "scope.py")
+    if _scope_spec is None or _scope_spec.loader is None:
+        raise RuntimeError("cannot load tools/scope.py")
+    scope_mod = importlib.util.module_from_spec(_scope_spec)
+    _scope_spec.loader.exec_module(scope_mod)
+
+    for _q, _why in (
+        ("fix the version pin in pyproject.toml", "sensitive-surface (literal filename)"),
+        ("fix the version check in capability_layer/cli.py", "sensitive-surface (directory pattern)"),
+    ):
+        check(f"[not entry-small: {_why}] {_q[:44]}",
+              mod.classify(_q) != "entry-small", f"got {mod.classify(_q)!r}")
+
+    check("scope.py independently calls pyproject.toml sensitive/control",
+          scope_mod._match("pyproject.toml",
+                            scope_mod.CONTROL_PATTERNS + scope_mod.SENSITIVE_PATTERNS),
+          "the two mechanisms must agree on this fact")
+
+    # Known, deliberate limitation, pinned rather than left to erode silently:
+    # a bare filename with no directory component under a wildcard directory
+    # pattern (`.claude/hooks/*`) is NOT resolved -- doing so would require
+    # checking the token against the real filesystem tree, which would make
+    # classify() depend on repo state beyond its two fixed inputs. A
+    # regression here means the limitation note has gone stale, not that
+    # something broke.
+    check("known limitation still holds: a bare wildcard-directory filename "
+          "is not caught",
+          mod.classify("fix a typo in _hooklib.py") == "entry-small",
+          f"got {mod.classify('fix a typo in _hooklib.py')!r}")
+
     # --- the rendered blocks exist -------------------------------------------
     #
     # The hook keeps no fallback text, so a missing block degrades to a generic

@@ -71,14 +71,6 @@ _CONFLICT_LINE = re.compile(r"^\d+\s+[0-9a-f]+\s+[123]\t(.+)$", re.MULTILINE)
 # `docs/plans/*.md`'s own shape, per `tools/analyze.py`'s `REQUIRED_HEADINGS`.
 _GOAL_RE = re.compile(r"\*\*Goal:\*\*\s*(.+?)(?:\n\s*\n|\n\*\*)", re.S)
 
-# `- [x] Task 9 — git operations`. Same box `tools/analyze.py`'s `PROGRESS_RE`
-# reads, extended to capture the title so the body can say what was done, not
-# just how many boxes are ticked.
-_PROGRESS_RE = re.compile(
-    r"(?m)^- \[( |x|X)\]\s+Task\s+(\d+)\b\s*[—\-:]*\s*(.*)$"
-)
-
-
 def _load(rel: str, name: str):
     """`importlib`, not an import -- `tools/scope.py`'s pattern for reaching a
     sibling module without turning this file into a package member."""
@@ -91,6 +83,18 @@ def _load(rel: str, name: str):
     except Exception:
         return None
     return mod
+
+
+# `- [x] Task 9 — git operations`. Same box `tools/analyze.py`'s `PROGRESS_RE`
+# reads -- `_hooklib.PROGRESS_BOX_PATTERN`, imported as text and extended with
+# this module's own title-capture suffix, rather than retyping the box/task-
+# number prefix a fourth time.
+_hooklib_gitops = _load(".claude/hooks/_hooklib.py", "hooklib_gitops_progress")
+_PROGRESS_RE = re.compile(
+    getattr(_hooklib_gitops, "PROGRESS_BOX_PATTERN",
+            r"^- \[( |x|X)\]\s+Task\s+(\d+)\b") + r"\s*[—\-:]*\s*(.*)$",
+    re.MULTILINE,
+)
 
 
 def _migration_patterns() -> list[str]:

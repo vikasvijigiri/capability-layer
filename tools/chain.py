@@ -76,13 +76,6 @@ HUMAN_STATES = {"WAITING_PLAN_APPROVAL", "WAITING_SHIP_APPROVAL", "BLOCKED",
 # Terminal. A unit that reached DONE and stays there is finished, not stuck.
 TERMINAL_STATES = {"DONE"}
 
-# A ticked task box in a plan's `## Progress` block. Deliberately requires
-# `Task <n>` after the box: the constitution gate uses the same `- [x]` syntax
-# with roman numerals, and counting those as progress would report every plan as
-# advancing seven steps the moment it was written.
-PROGRESS_TICK = re.compile(r"(?m)^- \[[xX]\]\s+Task\s+\d+")
-
-
 def _load(rel: str, name: str):
     spec = importlib.util.spec_from_file_location(name, ROOT / rel)
     if spec is None or spec.loader is None:
@@ -93,6 +86,21 @@ def _load(rel: str, name: str):
     except Exception:
         return None
     return mod
+
+
+# A `## Progress` box, ticked or not, requiring `Task <n>` after it: the
+# constitution gate uses the same `- [x]` syntax with roman numerals, and
+# counting those as progress would report every plan as advancing seven steps
+# the moment it was written. `_hooklib.PROGRESS_TASK_BOX`, imported rather
+# than retyped -- four sites (this one, analyze.py, git_ops.py, resume.py)
+# had drifted into disagreement by defining it independently. Matches BOTH
+# ticked and unticked boxes, unlike the old ticked-only pattern this replaces
+# -- `plan_progress()` below does the ticked-only filtering explicitly now.
+_hooklib_for_chain = _load(".claude/hooks/_hooklib.py", "hooklib_for_chain")
+PROGRESS_TICK = (
+    _hooklib_for_chain.PROGRESS_TASK_BOX if _hooklib_for_chain is not None
+    else re.compile(r"(?m)^- \[( |x|X)\]\s+Task\s+(\d+)\b")
+)
 
 
 def _git(args: list[str], root: Path) -> str | None:
@@ -178,7 +186,8 @@ def plan_progress(root: Path) -> int | None:
             text = Path(plan).read_text(encoding="utf-8", errors="ignore")
         except OSError:
             continue
-        ticked += len(re.findall(PROGRESS_TICK, text))
+        ticked += sum(1 for m in PROGRESS_TICK.finditer(text)
+                      if m.group(1).lower() == "x")
     return ticked
 
 

@@ -107,6 +107,44 @@
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
 
+### 2026-08-20 — Close the router-disagreement and progress-checkbox audit gaps
+- **Goal**: close 2 of the 5 gaps found in the 2026-08-16
+  capability-layer-maintenance audit — the entry classifier calling a
+  control/sensitive-surface change "too small to frame", and four
+  independently-defined `## Progress`-checkbox regexes that had begun to
+  disagree.
+- **Output**: `docs/plans/2026-08-20-router-progress-consistency.md`, 2/2
+  tasks. Task 1: `.claude/hooks/user-prompt/01-entry-classifier.py` now
+  defers to `tools/scope.py`'s `CONTROL_PATTERNS`/`SENSITIVE_PATTERNS` before
+  returning `entry-small`, with a named, tested limitation (a bare filename
+  under a wildcard directory pattern is not resolved — would require a
+  filesystem read `classify()` deliberately avoids). Task 2: one shared
+  `_hooklib.PROGRESS_TASK_BOX`, replacing four private copies across
+  `tools/analyze.py`, `tools/chain.py`, `tools/git_ops.py`, `tools/resume.py`.
+- **Done Checks**: met. `PASS: 54 check(s) green` fresh, both locally and by
+  an independent `test-verifier` dispatch that additionally red-green-proved
+  one regression case per task by reverting each source file to `main`'s
+  version. `spec-reviewer` returned no findings against the plan. A `no-slop`
+  sweep of the 13 changed files found 2 local findings (a naming-consistency
+  slip in `chain.py`, this file's own status line going stale the moment the
+  work finished) — both repaired and re-verified.
+- **Not verified**: end-to-end delivery (PR, merge) — branch
+  `fix/router-progress-consistency`, 2 commits, not yet reviewed by
+  `code-review` or delivered.
+- **Out of Scope, and still out**: the other 3 of the 5 audit gaps, each with
+  its own reason recorded in the plan — the per-turn description cost (needs
+  a paid ~$81 measurement decision, not a code change), Gate 2 never firing
+  end-to-end (emergent from a real delivery, not separately buildable), and
+  the two security-gate clauses never firing organically (not fixable by
+  writing code).
+- **Found during verification, not fixed here**: `tools/resume.py`'s
+  `BRANCH_PREFIX = "feat/"` strips only one branch prefix, while
+  `.claude/hooks/_hooklib.py`'s `active_plans()` strips five
+  (`feat/`/`fix/`/`docs/`/`chore/`/`refactor/`) — confirmed unrelated to this
+  diff, but it means `resume.py` cannot resolve this very plan by slug on its
+  own `fix/` branch. Worth its own unit.
+- **Status**: Done — implementation and sweep complete; delivery pending.
+
 ### 2026-08-19 — Close the remaining GOAL_CHECKLIST gaps
 - **Goal**: close every remaining checklist gap that has an honest
   implementation, proving deploy stages against a repo with a real surface.
