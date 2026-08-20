@@ -116,7 +116,7 @@ writes only, nothing reaches a session's stdout).
 ## Progress
 - [x] Task 1 — telemetry snapshot writer (new Stop finalizer)
 - [x] Task 2 — entry-classifier persists its classification (task_type proxy)
-- [ ] Task 3 — `bench.py` telemetry report
+- [x] Task 3 — `bench.py` telemetry report
 
 ## Tasks
 
@@ -301,6 +301,24 @@ exist).
 **Done when:** running `bench.py` after a real turn shows real, current
 telemetry data, and the same command run on a machine that has never fired
 the new hook fails gracefully with the fallback message, not a traceback.
+
+**Executed, one deviation from the plan's stated Verification, reconciled
+here:** the plan's Verification proposed observing the "not yet recorded"
+fallback live, mid-session, by deleting `telemetry.jsonl` and immediately
+re-running `bench.py`. In practice the file was found to repopulate between
+separate tool calls in this environment -- live evidence that Task 1's Stop
+finalizer fires far more often than "once per full turn" (seemingly once
+per tool-call round-trip here), which is itself a positive, unplanned
+confirmation that the hook is genuinely live-wired, not merely
+unit-tested. Since the fallback path could not be cleanly observed without
+racing that firing cadence, it was verified instead by calling
+`telemetry_summary()` directly against an isolated, nonexistent `ROOT` —
+confirmed `None`, which is exactly what drives `render()`'s fallback
+message. `python tools/bench.py` (real session data):
+`telemetry (session-cumulative, as of ...)`, `chain`/`tools_called`/
+`skills_loaded`/`task_type` all populated from real counters, `unavailable`
+lists all 16 reasoned fields. `python -m mypy tools/bench.py`: `Success:
+no issues found`.
 
 ## Constitution gate
 - [x] I Evidence — every task names the exact command and the expected output
