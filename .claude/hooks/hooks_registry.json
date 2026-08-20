@@ -30,7 +30,8 @@
         ".claude/hooks/post-run/03-checkpoint.py",
         ".claude/hooks/post-run/06-artifact-autocommit.py",
         ".claude/hooks/post-run/07-layer-drift.py",
-        ".claude/hooks/post-run/08-chain-continuity.py"
+        ".claude/hooks/post-run/08-chain-continuity.py",
+        ".claude/hooks/post-run/09-telemetry.py"
       ]
     },
     "pre-commit": {

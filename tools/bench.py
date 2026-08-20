@@ -26,6 +26,7 @@ a dependency this repo does not otherwise need, and the ratio between two runs
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
