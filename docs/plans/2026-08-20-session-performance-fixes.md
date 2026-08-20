@@ -113,7 +113,7 @@ hook's *emitted* output, not its state-file writes.
 
 ## Progress
 - [x] Task 1 — skill-body-load counter in a new hook, reported by `bench.py`
-- [ ] Task 2 — scope `spec-reviewer`/`test-verifier` dispatch prompts
+- [x] Task 2 — scope `spec-reviewer`/`test-verifier` dispatch prompts
 
 ## Tasks
 
@@ -253,6 +253,41 @@ no behavior change beyond prose.
 **Done when:** both files name the split explicitly, `git diff` shows only
 the one added clause per file (no restructuring), and the full suite is
 still green.
+
+**Executed:** one clause added to each file, at the exact sentence named
+above; `git diff` confirms no other changes. `python
+tools/test_process_router.py`: `All skill-layer tests passed (14 skills, 11
+agents)`. `python tools/new_skill_check.py --all`: `All 12 required check(s)
+pass; 2 advisory note(s)`, `14 skill(s) checked`.
+
+## Deviation, reconciled: the full-tier run after both tasks found 2 more
+failures neither task's own Verification named, both counted-provenance
+drift Task 1's new hook caused:
+- `test_layer_comparison_contract.py` hard-codes the live hook count (`17`)
+  against both the tree and a literal marker string in
+  `docs/research/2026-08-19-agent-layer-comparison.md` — stale now
+  that an 18th hook exists. Fixed both: the test's `17` → `18` (two sites:
+  the assertion and its printed OK line), and the doc's own "17 executable
+  event hooks" line → "18 ... (17 at this report's original writing on
+  2026-08-19; `post-tool/02-skill-cost.py` added 2026-08-20)" — corrected in
+  place with the reason, not silently rewritten as if the count were always
+  18.
+- `test_hook_registration.py` failed twice, sequentially: first "names no
+  skill in what it emits — names ['no-slop']", from the new hook's own
+  docstring example command (`{"skill":"no-slop"}`) — the docstring
+  exemption for this exact scanner was already known unreliable this
+  session (`01-entry-classifier.py`'s own docstring says so explicitly), so
+  fixed at the source rather than trusted: the literal skill name in the
+  example is now the placeholder `"some-skill-name"`. Second, separately:
+  "every hook on disk is declared in `hooks_registry.json`" — a second
+  registry this repo maintains alongside `settings.json`
+  (`decisions/2026-07-30-direct-hook-registration.md` doesn't cover it; it's
+  a documentation contract, not the live wiring). Added
+  `.claude/hooks/post-tool/02-skill-cost.py` to the `post-tool` event's
+  `subscribers` and widened its `claude_code_event`/`description` to cover
+  both matchers.
+
+Full tier re-run clean after both fixes: `PASS: 54 check(s) green`.
 
 ## Constitution gate
 - [x] I Evidence — every task names the exact command and the expected output

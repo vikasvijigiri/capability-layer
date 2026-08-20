@@ -198,7 +198,10 @@ own output. Do not announce completion before verification has run.
 
 Before that handoff, dispatch `spec-reviewer` when the implementation has an
 approved spec or material acceptance criteria — it checks compliance but does not
-fix or approve the work.
+fix or approve the work. Scope its prompt to plan-vs-diff compliance only: does
+every task's Files/Implementation notes/Done-when match what actually landed.
+Re-running the test suites is `verifying-work`'s `test-verifier`, dispatched
+next — asking both agents to do that is the same suite run twice.
 
 ## Routing
 

@@ -26,7 +26,7 @@ state file only, never to stdout in the normal case.
 
 Fire it directly:
 
-    python tools/run_hook.py post-tool '{"tool_name":"Skill","tool_input":{"skill":"no-slop"}}'
+    python tools/run_hook.py post-tool '{"tool_name":"Skill","tool_input":{"skill":"some-skill-name"}}'
 """
 
 from __future__ import annotations
