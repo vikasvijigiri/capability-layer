@@ -1,5 +1,23 @@
 # Log
 
+## 2026-08-20 05:58
+
+**Closed 2 of the 5 gaps from the 2026-08-16 audit; PR #18 merged to `main`
+(`247103e`).** `docs/plans/2026-08-20-router-progress-consistency.md`, 2/2
+tasks: the entry classifier now defers to `scope.py`'s control/sensitive-
+surface veto instead of calling those prompts "too small to frame"; four
+independently-drifted `## Progress`-checkbox regexes now share one
+`_hooklib.PROGRESS_TASK_BOX`. Full chain ran end to end for the first time
+this session — `spec-reviewer`, an independent red-green `test-verifier`,
+`no-slop` (2 local repairs), `code-review`, all clean. Bundled with 2
+unrelated inherited commits per user choice; user merged the PR directly via
+GitHub (no deploy target, so `releasing` was skipped per its own contract) —
+Gate 2 recorded retroactively against that real merge event, closing the
+"Gate 2 has never fired" gap this file tracked for weeks.
+
+Found, not fixed: `tools/resume.py`'s `BRANCH_PREFIX` strips only `feat/`
+where `_hooklib.py` strips five prefixes — see `HANDOFF.md`/`TASK.md`.
+
 ## 2026-08-19 15:00
 
 **Skill-content quality audit against real star-rated repos, plus fixes.**

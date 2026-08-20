@@ -14,86 +14,49 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**Both PRs merged; `main` is fully current.** #11 (`feat/checklist-completion`)
-merged first, then #12 (`feat/security-gate`, 61 commits) — confirmed via
-`git merge-base --is-ancestor` that #11 is a genuine ancestor of #12's final
-state, so nothing duplicated. `main` also picked up a separate PR #13 this
-same session (harness-wiring fixes, see `LOG.md` 2026-08-19). Zero open PRs.
-`python tools/run_checks.py --tier all --require-test` on `main`:
-**`PASS: 52 check(s) green (audit, build, lint, smoke, test, typecheck)`**,
-verified fresh, nothing skipped.
+**PR #18 merged; `main` is at `247103e`.** Closed 2 of the 5 gaps from the
+2026-08-16 audit (`docs/plans/2026-08-20-router-progress-consistency.md`),
+bundled with 2 unrelated inherited commits from the prior
+`skills/quality-audit-fixes` session (skill-content audit, portability work —
+see `LOG.md` 2026-08-19). `python tools/run_checks.py --tier all
+--require-test` on `main`: **`PASS: 54 check(s) green`**, verified fresh.
 
-**`main`'s remote is `vikasvijigiri/capability-layer`** (renamed from
-`NG-VikasV/capability-layer` at some point — the old links above are dead).
+**The chain ran end to end for the first time this session.** `spec-reviewer`
+and an independent `test-verifier` (red-green-proved, not just re-run) both
+returned no findings; `no-slop` found and repaired 2 local issues; `code-review`
+passed. The user merged PR #18 directly via GitHub rather than through
+`releasing`'s `AskUserQuestion` — no deploy target exists, so that stage was
+skipped per its own contract (confirmed with the user first). The shipment
+decision is still recorded in the ledger: `python tools/chain.py --gate 2
+--decision ship --reason "..."` was run retroactively against the actual
+GitHub merge event, so the ledger's zero-gate-2-rows gap (noted below as an
+Open Question for months) is now closed.
 
-**The #12 reconciliation is worth reading if a similar merge comes up again.**
-Real conflicts landed on the exact 4 files PR #13 also touched. Resolved by
-understanding what each side was doing, not by picking HEAD or origin/main
-wholesale — e.g. #12's own narrowing of `supported_hosts` to 3 entries
-(matching the real 3-adapter structure) was a genuine fix kept over this
-session's earlier 4-host version, while this session's removal of a false
-`runner_modes` claim was kept over #12's stale copy of it. `security_gate.py`
-caught a real gap on the merge itself (`pyproject.toml` unmapped in
-`test_map`) — closed, not waived.
+**Two Pending/Open-Questions items below are now closed by this unit** —
+Pending #2 (the checkbox regex defined four ways) and Open Questions #10/#14
+(the two routers disagreeing) — struck through in place rather than deleted,
+per this file's own convention.
 
-    a68d283  Close the buildable checklist partials; bound a hung check
-    215c4dd  Three controls whose claim outran their wiring
-    4240e61  Stop the installer shipping an identity and a language into every host
-    4b87fd6  Merge the four Stop hooks into one dispatcher
-    cd43a20  Stop the layer breaking every host's test runner
-    ...and eighteen earlier, see LOG.md
+**Found during verification, not fixed:** `tools/resume.py`'s
+`BRANCH_PREFIX = "feat/"` strips only one branch prefix, while
+`.claude/hooks/_hooklib.py`'s `active_plans()` strips five
+(`feat/`/`fix/`/`docs/`/`chore/`/`refactor/`) — confirmed unrelated to this
+diff, but it meant `resume.py` could not resolve its own active plan by slug
+for this entire session, since the branch was `fix/router-progress-consistency`.
+See `TASK.md`'s Completed entry for the full trace. Worth its own small unit.
 
-**The 2026-08-16 audit is the current verdict**, all ten objectives measured
-rather than quoted: **4 green (1, 6, 7, 9), 5 amber (3, 4, 5, 8, 10), 1 red
-(2)**. `claude.ai/code/artifact/1fd5a064-b0f5-48ff-8fd3-6339d027a9ee`. The ten
-now live in `docs/objectives.md` — they were Notion-only, which is why two
-earlier audits inherited grades they could not check.
+**Objective 2 (17,900 ch/turn) and objective 8's remaining router surface are
+still open** — this unit closed the *specific reproduced case* HANDOFF named,
+not the whole class. See Pending/Open Questions below, unchanged.
 
-**Generic is closed; world-class is not.** What remains is objective 2 (the
-17,900 ch/turn listing), objective 8 (two routers disagree), and the fact that
-no run has ever gone end to end — Gate 2 has still never fired, and the ledger
-holds three gate-1 rows and zero gate-2.
-
-`TASK.md`'s S1 is **closed**: `CLAUDE.md`+rules 25,599 → 9,056 ch, SessionStart
-6,258 → 3,349, check tier 3.4x (68.2s → 20.2s interleaved). All four
-optimisation questions are answered in Next Steps 0 — three settled, one open
-on evidence. `tools/bench.py --save` holds the baseline; compare against it,
-never against a remembered number. **The largest remaining cost is the
-17,900-char per-turn listing**, deliberately unpaid down — see 0(a).
-
-**A delivery decision is owed on four units at once** — the branch stacks on
-`feat/close-remaining-gaps`, whose own ten-task plan is approved and unstarted,
-which in turn stacks on `feat/checklist-completion` (17 commits, reviewed,
-green, undelivered). Three undelivered branches deep is still the real state.
-
-**The gate is the thing to read first.** `python tools/security_gate.py --base
-main` — five clauses, each a fact about the artefact, in the `audit` kind.
-Read its docstring before changing it: the reason it is **not** a receipt is the
-whole design, and `decisions/2026-08-12-escape-hatches-inherit-trust.md` records
-the one time that design was nearly lost.
-
-**Three findings bind later work:**
-
-- **`WAIVABLE_CLAUSES` holds two of five.** `secret-in-branch`,
-  `agent-unscoped` and `dependency-risk` cannot be waived by an inline allow;
-  adding one to that tuple fails an existing test on purpose.
-- **Skills that read the same surface state their boundary on both sides**, and
-  `test_process_router.py` fails if either stops naming the other. Three pairs
-  now: `no-slop`/`code-review`, `no-slop`/`capability-layer-maintenance`, and
-  `code-review`/the security gate.
-- **Do not trust an instrument you have not seen go red.** `chain.py`'s stall
-  detector was two-limbed for its whole life while its documentation described
-  three. See `ISSUES.md` 2026-08-12 01:10.
+**`main`'s remote is `vikasvijigiri/capability-layer`.**
 
 ## Previous Work
 
-Branch `feat/close-remaining-gaps` — the parent — carries an approved, unstarted
-ten-task plan (`docs/plans/2026-08-11-close-remaining-gaps.md`, risk `high`) and
-26 commits inherited from `feat/checklist-completion`. Nothing there was touched
-by this unit.
-
-`feat/checklist-completion` remains 17 commits ahead of `main`, reviewed, green,
-local, and undelivered.
+The stack described in earlier revisions of this file
+(`feat/close-remaining-gaps`, `feat/checklist-completion`) landed before this
+session — see `TASK.md`'s Completed section for the full trail. Nothing from
+that stack was touched by this unit.
 
 ## Pending
 
@@ -108,11 +71,11 @@ Each is its own unit and enters at `writing-plans`:
    `test_agent_standards.py` fails if either stops being true, and also if
    anything starts **setting** the variable — at which point the note is stale
    and the claim can widen again, deliberately.
-2. **The ticked-task checkbox is defined four times** — `analyze.PROGRESS_RE`,
-   `chain.PROGRESS_TICK`, `git_ops`' own, `resume._CHECKBOX`. They already
-   disagree: three require `Task <n>`, `resume`'s matches any box under
-   `## Progress`. Needs an owner chosen; `resume`'s looser match may be
-   deliberate, so this is not a mechanical merge.
+2. ~~**The ticked-task checkbox is defined four times.**~~ **Closed
+   2026-08-20.** All four now share `_hooklib.PROGRESS_TASK_BOX`; `resume`'s
+   looser match was not deliberate — tightened to `Task <n>`, which only
+   changes behavior for a malformed section, never a well-formed plan.
+   `docs/plans/2026-08-20-router-progress-consistency.md` Task 2.
 3. ~~**`budget.ELAPSED_CEILING_HOURS = 3.0` is wrong.**~~ **Closed 2026-08-16 by
    dropping the limb, not refitting it.** Re-measured from 147 ledger rows: the
    only unit that ran start to finish (`checklist-completion`) is 19 turns over
@@ -236,14 +199,16 @@ the state file resets per session.
 
 ### Added by the concurrent-check-tier unit
 
-10. **The entry classifier and `workflow.md`'s small-work path disagree, and the
-    disagreement favours the less careful route.** For `add a --jobs flag to
-    run_checks.py` the classifier is silent ("a named file plus a concrete
-    value"), while `scope.py` calls that same file a `control-surface`, risk
-    `high` — which is what the small path's own condition vetoes on. This
-    session's `_projectchecks.py` change was exactly that shape. Reconciling two
-    routers is a decision, not a merge; it is the whole of S2 and is smaller
-    than "build a router", because the classifier already discriminates.
+10. ~~**The entry classifier and `workflow.md`'s small-work path disagree,
+    and the disagreement favours the less careful route.**~~ **Closed
+    2026-08-20, the specific reproduced case.** The classifier's `TOO_SMALL`
+    pass now defers to `scope.py`'s own `CONTROL_PATTERNS`/`SENSITIVE_PATTERNS`
+    before returning `entry-small`. Traced live during the fix: a fully
+    `.claude/...`-qualified path was already caught by an earlier pass; the
+    real gap was a bare filename or a non-`.claude` sensitive path
+    (`pyproject.toml`, `capability_layer/**`). Widening to the
+    `volume`/`spread`/`shared-surface` clauses (which need a real diff, not
+    prompt text) is explicitly NOT done — see the plan's Out of Scope.
 11. **`resume.py` reported `BUILD` for 57 turns against a stale slug.** It keys
     state to `security-gate` from the branch name; that plan is complete and
     this unit never had one, so there was nothing to advance. Compounds Pending
@@ -266,16 +231,25 @@ the state file resets per session.
     evidence points the other way — `code-review` scores `trigger_rate 0.0` and
     the docs say the fix for that is a *more* specific description. Needs the
     ~$81 measurement, and its own unit; do not bundle it.
-14. **The two routers disagree, reproduced.** `add a --jobs flag to
-    run_checks.py` routes to the small path via the entry classifier while
-    `scope.py` calls that same file `control-surface`, risk `high`. The
-    classifier's own text lists the control-surface veto, so it self-mitigates
-    in prose — which is the weakest possible form of the fix. Deterministic
-    routing reaches 33 of 217 labelled queries (15%), independently re-measured.
+14. ~~**The two routers disagree, reproduced.**~~ **Closed 2026-08-20** —
+    same fix as Pending 10 above; both entries describe the same gap found by
+    two different sessions. Deterministic routing coverage (33/217, 15%) was
+    not re-measured by this fix and may be worth re-checking.
 15. **No replacement eval result was written and that is deliberate.**
     `docs/evals/results-2026-08-07.json` is voided in place; the superseding
     numbers live in `ISSUES.md` and `TASK.md` only. Writing them into a results
     file this session did not produce is the same defect with a newer date.
     `python tools/eval_triggers.py` writes a real one, ~$0.45 a query.
+
+### Added by the router-progress-consistency unit (2026-08-20)
+
+16. **`resume.py`'s `BRANCH_PREFIX` only strips one of the five real branch
+    prefixes.** `_hooklib.active_plans()` strips `feat/`/`fix/`/`docs/`/
+    `chore/`/`refactor/`; `resume.py`'s own `slug_from_branch()` strips only
+    `feat/`. Confirmed unrelated to this unit's diff (the function wasn't
+    touched), but it meant `resume.py` reported `slug=fix/router-progress-
+    consistency` and could not resolve its own active plan all session —
+    fed the `chain-continuity` RECON notice for 8+ turns. Full trace in
+    `TASK.md`'s Completed entry for this unit.
 
 <!-- session-context:end -->
