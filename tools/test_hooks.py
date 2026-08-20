@@ -217,6 +217,69 @@ for _event, _payload, _label in DENY_CASES:
     else:
         print(f'OK: {_event} denies {_label}')
 
+# --- post-tool/02-skill-cost.py: skill-body-load counter --------------------
+#
+# `.claude/hooks/state/skill-cost.json` is a real, gitignored, running total
+# (see `.gitignore:28`) -- these assert on the DELTA a fire produces, not an
+# absolute value, matching how this repo already tests against real state
+# (`test_resume.py`'s temp-repo fixtures, the DENY_CASES above firing real
+# hooks in this real repo).
+_SKILL_COST_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'skill-cost.json'
+_NO_SLOP_SKILL_MD = ROOT / '.claude' / 'skills' / 'no-slop' / 'SKILL.md'
+
+
+def _skill_cost_totals():
+    try:
+        return json.loads(_SKILL_COST_STATE.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return {'calls': 0, 'chars': 0, 'unattributed': 0}
+
+
+SKILL_COST_CASES = [
+    ({'tool_name': 'Skill', 'tool_input': {'skill': 'no-slop'}},
+     'known skill via "skill" key',
+     lambda before, after: after['chars'] - before['chars']
+     == _NO_SLOP_SKILL_MD.stat().st_size),
+    ({'tool_name': 'Skill', 'tool_input': {'skill_name': 'no-slop'}},
+     'known skill via "skill_name" fallback',
+     lambda before, after: after['chars'] - before['chars']
+     == _NO_SLOP_SKILL_MD.stat().st_size),
+    ({'tool_name': 'Skill', 'tool_input': {'name': 'no-slop'}},
+     'known skill via "name" fallback',
+     lambda before, after: after['chars'] - before['chars']
+     == _NO_SLOP_SKILL_MD.stat().st_size),
+    ({'tool_name': 'Skill', 'tool_input': {}},
+     'no candidate key -- counted as unattributed, not silently dropped',
+     lambda before, after: after['unattributed'] - before['unattributed'] == 1
+     and after['chars'] == before['chars']),
+    ({'tool_name': 'Skill', 'tool_input': {'skill': 'does-not-exist'}},
+     'a stale/renamed skill name resolves to 0 chars, not an error',
+     lambda before, after: after['chars'] == before['chars']
+     and after['calls'] - before['calls'] == 1),
+    ({'tool_name': 'Bash', 'tool_input': {'command': 'echo hi'}},
+     'a non-Skill tool_name is ignored entirely',
+     lambda before, after: after == before),
+]
+for _payload, _label, _assertion in SKILL_COST_CASES:
+    _before = _skill_cost_totals()
+    _p = run_hook('post-tool', _payload)
+    _after = _skill_cost_totals()
+    if _p.returncode != 0:
+        print(f'FAIL: post-tool ({_label}) exited {_p.returncode}\n{_p.stderr}')
+        fail = True
+    elif not _assertion(_before, _after):
+        print(f'FAIL: post-tool skill-cost ({_label}) -- before={_before} '
+              f'after={_after}')
+        fail = True
+    else:
+        print(f'OK: post-tool skill-cost -- {_label}')
+    # Every case increments `calls` by 1 except the ignored non-Skill tool.
+    _want_calls_delta = 0 if _payload.get('tool_name') != 'Skill' else 1
+    if _after['calls'] - _before['calls'] != _want_calls_delta:
+        print(f'FAIL: post-tool skill-cost ({_label}) -- calls delta '
+              f'{_after["calls"] - _before["calls"]}, want {_want_calls_delta}')
+        fail = True
+
 if fail:
     sys.exit(1)
 print('All hook tests passed')

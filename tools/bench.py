@@ -138,6 +138,24 @@ def session_calls() -> tuple[int, int, int]:
             int(totals.get("repeats", 0)))
 
 
+def skill_body_cost() -> tuple[int, int, int]:
+    """(skill invocations, SKILL.md chars loaded, unattributed) this session,
+    from `post-tool/02-skill-cost.py`'s counter.
+
+    A full chain run loads a full `SKILL.md` body per stage, on top of the
+    per-turn listing `session_calls()`'s neighbour rows already measure --
+    nothing counted this before. Zeros mean the hook has not fired yet, same
+    convention as `session_calls()`.
+    """
+    state = (ROOT / ".claude" / "hooks" / "state" / "skill-cost.json")
+    try:
+        totals = json.loads(state.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return 0, 0, 0
+    return (int(totals.get("calls", 0)), int(totals.get("chars", 0)),
+            int(totals.get("unattributed", 0)))
+
+
 def tier(name: str) -> float:
     """Wall seconds for one check tier. Returns -1.0 when it could not run."""
     args = ["python", "tools/run_checks.py", "--tier", name]
@@ -209,6 +227,16 @@ def render(now: dict, was: dict | None) -> None:
     else:
         print("\nthis session's shell calls: not yet recorded -- the post-tool "
               "counter\n  writes on the first shell call of a session.")
+
+    skill_calls, skill_chars, unattributed = skill_body_cost()
+    if skill_calls:
+        note = f"  ({unattributed:,} unattributed)" if unattributed else ""
+        print(f"\nthis session's skill-body loads: {skill_calls:,}  "
+              f"({skill_chars:,} chars, ~{skill_chars // 4:,} tok){note}")
+    else:
+        print("\nthis session's skill-body loads: not yet recorded -- the "
+              "post-tool counter\n  writes on the first Skill-tool "
+              "invocation of a session.")
 
     print("\n" + TIMING_CAVEAT)
     if was is None:

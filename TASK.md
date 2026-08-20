@@ -4,6 +4,16 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Fix 2 of 4 session-performance bottlenecks
+- **Status:** Plan approved (Gate 1) 2026-08-20. See
+  `docs/plans/2026-08-20-session-performance-fixes.md`. A skill-body-load
+  counter for `tools/bench.py` and scoped `spec-reviewer`/`test-verifier`
+  dispatch prompts. The other 2 bottlenecks (redundant full-tier reruns,
+  response verbosity) are Out of Scope in that plan — verified the "fix"
+  for the first would have duplicated guidance that already exists in
+  `executing-plans/SKILL.md` and `verifying-work/SKILL.md`. Next:
+  `executing-plans`.
+
 ### Make the layer portable: it broke every host's test runner
 
 - **Status:** Fixed and proven in Python and Node targets. Payload 1,586,874 ->
