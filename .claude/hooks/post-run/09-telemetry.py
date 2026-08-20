@@ -22,6 +22,16 @@ boundaries, ...) and why, checked against every `load_payload()`/
 `tool_input` shape this repo has ever handled. Silence would look like an
 oversight; naming the gap is the deliverable Gap C's audit asked for.
 
+The same rule applies to a counter whose *producer* is simply not present
+on the current tree. `02-skill-cost.py` (the hook that writes
+`skill-cost.json`) may not exist yet on every branch that carries this
+file -- checked at read time (`_skill_cost_producer_exists()`), not assumed
+from this module's own history: reporting a zero-filled `skills_loaded`
+when nothing ever wrote that file would look like real data. When the
+producer is missing, `skills_loaded` is `None` and `"skills_loaded"` is
+added to the reported `unavailable` map alongside the fixed set, with the
+reason stated plainly rather than silently zeroed.
+
 Compatible with `decisions/2026-08-07-derived-state-over-stored-state.md`:
 that decision bans storing what git can already answer (workflow *state*).
 Telemetry counts are not a fact about the tree -- the decision's own text
@@ -54,6 +64,8 @@ STATE_DIR = Path(__file__).resolve().parents[1] / "state"
 TELEMETRY = STATE_DIR / "telemetry.jsonl"
 CALL_FINGERPRINTS = STATE_DIR / "call-fingerprints.json"
 SKILL_COST = STATE_DIR / "skill-cost.json"
+SKILL_COST_PRODUCER = (Path(__file__).resolve().parents[1]
+                       / "post-tool" / "02-skill-cost.py")
 ENTRY_SHAPE = STATE_DIR / "last-entry-shape.json"
 
 # Every target-spec field this repo's hooks cannot populate, and why --
@@ -117,8 +129,24 @@ def _chain_facts() -> dict:
 
 def build_snapshot() -> dict:
     call_totals = _load_json(CALL_FINGERPRINTS).get("_totals") or {}
-    skill_totals = _load_json(SKILL_COST)
     entry_shape = _load_json(ENTRY_SHAPE)
+    unavailable = dict(UNAVAILABLE_FIELDS)
+
+    skills_loaded: dict | None
+    if SKILL_COST_PRODUCER.is_file():
+        skill_totals = _load_json(SKILL_COST)
+        skills_loaded = {
+            "calls": skill_totals.get("calls", 0),
+            "chars": skill_totals.get("chars", 0),
+            "unattributed": skill_totals.get("unattributed", 0),
+        }
+    else:
+        skills_loaded = None
+        unavailable["skills_loaded"] = (
+            "02-skill-cost.py, the counter's producer, is not present on "
+            "this tree -- it ships on a separate unit, not yet merged here"
+        )
+
     return {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "run_scope": "session-cumulative",
@@ -128,13 +156,9 @@ def build_snapshot() -> dict:
             "chars": call_totals.get("chars", 0),
             "repeats": call_totals.get("repeats", 0),
         },
-        "skills_loaded": {
-            "calls": skill_totals.get("calls", 0),
-            "chars": skill_totals.get("chars", 0),
-            "unattributed": skill_totals.get("unattributed", 0),
-        },
+        "skills_loaded": skills_loaded,
         "task_type": entry_shape.get("key"),
-        "unavailable": UNAVAILABLE_FIELDS,
+        "unavailable": unavailable,
     }
 
 

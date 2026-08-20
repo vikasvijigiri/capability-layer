@@ -6,10 +6,19 @@
 (`bench.session_calls()`, `01-context-cost.py`, `02-skill-cost.py`) into one
 per-turn telemetry snapshot matching a useful subset of the Notion target's
 schema, with every field the harness genuinely cannot populate named and
-reasoned rather than faked — closing Gap C from
-`docs/research/2026-08-20-notion-objectives-audit.md`.
+reasoned rather than faked — closing Gap C from the 2026-08-20
+Notion-objectives audit doc.
 **Source brief:** this conversation; Notion page *Agentic Workflows (IDE)*
-§21 (fetched via MCP), `docs/research/2026-08-20-notion-objectives-audit.md`
+§21 (fetched via MCP). **Correction, found by `spec-reviewer`:** the audit
+doc itself (`docs/research/2026-08-20-notion-objectives-audit.md`) and
+`02-skill-cost.py` were both built earlier the same session but on
+*separate, unmerged branches* (`docs/notion-objectives-audit` and
+`fix/session-performance-fixes` respectively) — neither is present on
+`fix/unified-telemetry-schema`. This plan's own text wrongly implied both
+already existed here. Neither is a hard dependency of this plan's own
+tasks (see Task 1's fix for `skills_loaded`, and this citation note is now
+the audit doc's only trace on this branch) — but the claim needed
+correcting rather than left to mislead a future reader.
 **Slug:** unified-telemetry-schema
 **Risk:** high (inferred — confirm with `python tools/scope.py --plan
 docs/plans/2026-08-20-unified-telemetry-schema.md` once saved). Every touched
@@ -64,10 +73,16 @@ writes only, nothing reaches a session's stdout).
   tuple of finalizer filenames, run in sequence via `subprocess.run`, first
   non-zero exit stops the chain. Confirmed exact registration point for a
   5th finalizer.
-- `01-context-cost.py`/`02-skill-cost.py` read in full (the latter built
-  this session): both use the identical `_load()`/`_save()`
+- `01-context-cost.py` read in full: `_load()`/`_save()`, a
   `json.loads`/`OSError`-guard pair against a `.claude/hooks/state/*.json`
-  file. Task 1's reader mirrors this shape rather than inventing a new one.
+  file. Task 1's reader mirrors this shape. **Correction, found by
+  `spec-reviewer`:** `02-skill-cost.py` (built earlier the same session, but
+  on a separate, unmerged branch) was wrongly assumed present here too — it
+  is not on this tree. Task 1 was fixed to check
+  `SKILL_COST_PRODUCER.is_file()` at read time and report `skills_loaded`
+  as genuinely unavailable (with a reason) rather than a fabricated
+  zero-filled dict, so this plan does not depend on that branch merging
+  first.
 - `python tools/memory.py --paths tools/chain.py tools/bench.py
   .claude/hooks/post-run/00-dispatch.py .claude/hooks/post-run/
   08-chain-continuity.py .claude/hooks/post-tool/01-context-cost.py
@@ -213,7 +228,21 @@ nudge or direct evidence-checking rather than trusting a green exit code:**
 Full tier deferred to the plan's last task boundary, per this repo's own
 "cheapest tier that answers the question" policy — not run after every task.
 
-### Task 2: Entry-classifier persists its classification (task_type proxy)
+**Third deviation, found by an independently-dispatched `spec-reviewer`
+after all three tasks first landed, not by this session's own
+execution:** `skills_loaded` always read `.claude/hooks/state/
+skill-cost.json` unconditionally, reporting `{"calls": 0, "chars": 0,
+"unattributed": 0}` — a real-looking zero — even though that file's
+producer, `02-skill-cost.py`, does not exist on this branch (see the
+Grounding correction above). Fixed: `build_snapshot()` now checks
+`SKILL_COST_PRODUCER.is_file()` first; when absent, `skills_loaded` is
+`None` and `"skills_loaded"` is added to the row's own `unavailable` map
+with a stated reason, exactly the honesty standard `UNAVAILABLE_FIELDS`
+already held every other field to. New `test_hooks.py` case proves it
+directly against this tree's real, current absence of that producer
+(`OK: skills_loaded honestly reports "unavailable"...`), not a
+mocked-absent fixture. `python tools/test_hooks.py`: all green, re-run
+after the fix.
 **Purpose:** give the telemetry schema's `task_type` field a real,
 best-effort signal instead of a permanent null — the entry classifier
 already computes exactly this shape of fact every turn and currently

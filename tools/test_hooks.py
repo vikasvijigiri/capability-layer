@@ -272,6 +272,23 @@ else:
     if _bad_reasons:
         print(f'FAIL: "unavailable" entries with no real reason string: {_bad_reasons}')
         fail = True
+    # `02-skill-cost.py` (skills_loaded's producer) does not exist on this
+    # tree -- confirmed: `(ROOT / '.claude/hooks/post-tool/02-skill-cost.py')
+    # .is_file()` is False here. The honest report is `None` plus a reasoned
+    # `unavailable` entry, never a fabricated-looking zero-filled dict.
+    _skill_cost_producer = ROOT / '.claude' / 'hooks' / 'post-tool' / '02-skill-cost.py'
+    if not _skill_cost_producer.is_file():
+        if _row.get('skills_loaded') is not None:
+            print(f'FAIL: skills_loaded should be None when its producer '
+                  f'({_skill_cost_producer}) is absent, got {_row.get("skills_loaded")!r}')
+            fail = True
+        elif 'skills_loaded' not in _row.get('unavailable', {}):
+            print('FAIL: skills_loaded is None but missing from "unavailable" '
+                  '-- an absent counter must be named, not silently null')
+            fail = True
+        else:
+            print('OK: skills_loaded honestly reports "unavailable" -- its '
+                  'producer is absent on this tree, not a fabricated zero')
 
 # A second fire appends a SECOND row -- proves append-only, not overwrite.
 _p2 = run_hook('post-run', {'workflow': 'test', 'status': 'success'})
