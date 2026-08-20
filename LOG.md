@@ -1,5 +1,24 @@
 # Log
 
+## 2026-08-20 09:21
+
+**Closed 2 of 4 session-performance bottlenecks found by auditing this
+session's own resource use; PR #20 open against `main`, not yet merged.**
+`docs/plans/2026-08-20-session-performance-fixes.md`: a skill-body-load
+counter (`post-tool/02-skill-cost.py` + `bench.py`) — nothing measured the
+~104,000 chars a full 9-stage chain loads in `SKILL.md` bodies before this —
+and scoped `spec-reviewer`/`test-verifier` dispatch instructions so the two
+stop redoing ~70% of the same work, measured working on itself: a scoped
+`spec-reviewer` dispatch ran 91.7s/39,096 tok here vs 183.9s+219.7s/112,743
+tok combined for the prior unit's two overlapping dispatches. The other 2
+bottlenecks got no fix — their proposed fix would have duplicated guidance
+already in `executing-plans`/`verifying-work`'s `SKILL.md`.
+
+The hook self-test nudge caught a real bug before it shipped: `SKILLS_DIR`
+doubled to a nonexistent path, found by firing it against a real payload, not
+by reading the diff. 11 unrelated pre-existing uncommitted files sit in the
+working tree — see `HANDOFF.md`.
+
 ## 2026-08-20 05:58
 
 **Closed 2 of the 5 gaps from the 2026-08-16 audit; PR #18 merged to `main`

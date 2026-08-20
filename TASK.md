@@ -4,16 +4,6 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
-### Fix 2 of 4 session-performance bottlenecks
-- **Status:** Plan approved (Gate 1) 2026-08-20. See
-  `docs/plans/2026-08-20-session-performance-fixes.md`. A skill-body-load
-  counter for `tools/bench.py` and scoped `spec-reviewer`/`test-verifier`
-  dispatch prompts. The other 2 bottlenecks (redundant full-tier reruns,
-  response verbosity) are Out of Scope in that plan — verified the "fix"
-  for the first would have duplicated guidance that already exists in
-  `executing-plans/SKILL.md` and `verifying-work/SKILL.md`. Next:
-  `executing-plans`.
-
 ### Make the layer portable: it broke every host's test runner
 
 - **Status:** Fixed and proven in Python and Node targets. Payload 1,586,874 ->
@@ -116,6 +106,38 @@
 <!-- Append-only, newest entry at the top. Never delete or rewrite an
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
+
+### 2026-08-20 — Fix 2 of 4 session-performance bottlenecks
+- **Goal**: close 2 of the 4 bottlenecks found by auditing this session's
+  own resource use — a full 9-stage chain loads ~104,000 chars of `SKILL.md`
+  bodies per run and nothing measured it; `spec-reviewer`/`test-verifier`
+  independently redid ~70% of the same work on the prior unit.
+- **Output**: `docs/plans/2026-08-20-session-performance-fixes.md`, 2/2
+  tasks. `.claude/hooks/post-tool/02-skill-cost.py` (new hook, mirrors
+  `01-context-cost.py`) + `tools/bench.py`'s `skill_body_cost()`; one scoping
+  clause each in `executing-plans/SKILL.md` and `verifying-work/SKILL.md`.
+- **Done Checks**: met. `PASS: 54 check(s) green` fresh at every stage,
+  independently by `test-verifier` too (red-green-proved 6 new hook cases by
+  deleting/restoring the hook file). `spec-reviewer` (scoped per this unit's
+  own Task 2) found 1 wording-only nit, fixed. `no-slop` found and fixed a
+  path-traversal gap in the new hook's skill-name lookup. `code-review`
+  passed.
+- **Measured self-effect**: `spec-reviewer` scoped per Task 2 ran
+  91.7s/39,096 tok on this unit vs 183.9s+219.7s/112,743 tok combined for
+  the prior unit's two unscoped, overlapping dispatches — direct evidence
+  Task 2 works, not just an argument for it.
+- **Not verified**: whether Claude Code's `Skill` tool actually fires
+  `PostToolUse` with a `tool_input["skill"]` field — `.claude/settings.json`
+  changes only take effect in a fresh session, confirmed empirically
+  mid-session, so this can't be proven live until one starts. Check
+  `python tools/bench.py`'s new line in the next fresh session.
+- **Out of Scope, and still out**: the other 2 bottlenecks (redundant
+  full-tier reruns, response verbosity) — verified the "fix" for the first
+  would have duplicated guidance already in `executing-plans/SKILL.md` and
+  `verifying-work/SKILL.md`; real causes were branch hygiene and adherence,
+  recorded not coded around.
+- **Status**: Done — implementation, verification, sweep and review
+  complete; PR #20 open against `main`, delivery pending.
 
 ### 2026-08-20 — Close the router-disagreement and progress-checkbox audit gaps
 - **Goal**: close 2 of the 5 gaps found in the 2026-08-16
