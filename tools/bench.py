@@ -26,6 +26,7 @@ a dependency this repo does not otherwise need, and the ratio between two runs
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -35,6 +36,34 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = ROOT / ".claude" / "hooks" / "state" / "bench-baseline.json"
+TELEMETRY = ROOT / ".claude" / "hooks" / "state" / "telemetry.jsonl"
+
+
+def _load_module(rel: str, name: str):
+    """Same seam `.claude/hooks/post-run/09-telemetry.py` and `tools/loop.py`
+    already use -- one file owns a constant, everyone else imports it rather
+    than re-declaring the number."""
+    spec = importlib.util.spec_from_file_location(name, ROOT / rel)
+    assert spec is not None and spec.loader is not None, f"cannot load {rel}"
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_TELEMETRY_MOD = None
+
+
+def _telemetry_module():
+    """Cached load of 09-telemetry.py -- its own top-level `sys.path.insert`
+    is a real side effect of `_load_module()`, not just a constant read, so
+    a caller reloading it on every call grows `sys.path` by one duplicate
+    entry each time (measured: 2 loads -> 2 identical entries). Loaded once
+    per process instead."""
+    global _TELEMETRY_MOD
+    if _TELEMETRY_MOD is None:
+        _TELEMETRY_MOD = _load_module(
+            ".claude/hooks/post-run/09-telemetry.py", "telemetry_for_bench")
+    return _TELEMETRY_MOD
 
 # Loaded once when a session opens.
 SESSION_FILES = ("CLAUDE.md", "CLAUDE.local.md")
@@ -156,6 +185,81 @@ def total_tool_calls() -> tuple[int, int]:
     return int(totals.get("calls", 0)), len(totals.get("by_tool") or {})
 
 
+def schema_coverage() -> tuple[float | None, list[str], bool]:
+    """(coverage ratio, missing field names, trace-completeness) -- objective
+    22 (observable and auditable), from the latest `telemetry.jsonl` row.
+
+    `coverage_ratio = (SPEC_FIELD_COUNT - len(unavailable)) / SPEC_FIELD_COUNT`
+    against the Notion spec SS21's own 21 named fields, `SPEC_FIELD_COUNT`
+    imported from `09-telemetry.py` rather than re-declared here (one place
+    owns the count, so a name added to `UNAVAILABLE_FIELDS` there is
+    reflected here without a second edit). `trace_complete` checks
+    `chain.fingerprint`, never `chain.slug` -- slug is legitimately `None`
+    for a turn with no active plan, fingerprint is always computable. `None`
+    coverage means no telemetry row exists yet, not zero coverage.
+    """
+    try:
+        lines = TELEMETRY.read_text(encoding="utf-8").splitlines()
+        row = json.loads(lines[-1])
+    except (OSError, ValueError, IndexError):
+        return None, [], False
+    spec_field_count = _telemetry_module().SPEC_FIELD_COUNT
+    unavailable = row.get("unavailable") or {}
+    ratio = (spec_field_count - len(unavailable)) / spec_field_count
+    trace_complete = bool((row.get("chain") or {}).get("fingerprint"))
+    return ratio, list(unavailable.keys()), trace_complete
+
+
+def local_repair_ratio() -> tuple[float | None, dict[str, int]]:
+    """(ratio, counts_by_rung) -- objective 24 (self-adapting and
+    self-healing), aggregated over the whole `telemetry.jsonl` history.
+
+    "Detect, diagnose locally, repair when safe... escalate only when
+    current capability is insufficient" is `tools/loop.py:rung()`'s own
+    repair/restore/rebase/retreat/block ladder, already surfaced into every
+    telemetry row's `retries.rung` field. `ratio = (repair + restore) /
+    total`, `None` when nothing has ever entered the ladder.
+
+    **Deduplicated by incident, not by turn.** `telemetry.jsonl` appends one
+    row per `Stop` -- every turn -- so counting rows directly turn-weights
+    the ratio: one incident that takes 20 turns to resolve would outweigh 19
+    incidents resolved in one turn each. The identity of "one thing the
+    ladder was asked to fix" is `(chain.slug, retries.attempts)` -- slug
+    alone is not unique across a session that worked on more than one unit,
+    and attempts alone is not unique across units that both reached the same
+    attempt count. Last-seen rung wins for a given key, since it is that
+    attempt's current verdict.
+
+    A low ratio is not automatically bad -- objective 1 (minimal human
+    interference) and objective 24 pull against each other at the margin.
+    This function reports the ratio; it does not judge it.
+    """
+    try:
+        lines = TELEMETRY.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None, {}
+    incidents: dict[tuple[str | None, int | None], str] = {}
+    for line in lines:
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        retries = row.get("retries") or {}
+        rung = retries.get("rung")
+        if rung is None:
+            continue
+        key = ((row.get("chain") or {}).get("slug"), retries.get("attempts"))
+        incidents[key] = rung  # last-seen wins for this (slug, attempts) pair
+    if not incidents:
+        return None, {}
+    counts: dict[str, int] = {}
+    for rung in incidents.values():
+        counts[rung] = counts.get(rung, 0) + 1
+    total = sum(counts.values())
+    ratio = (counts.get("repair", 0) + counts.get("restore", 0)) / total
+    return ratio, counts
+
+
 def skill_body_cost() -> tuple[int, int, int]:
     """(skill invocations, SKILL.md chars loaded, unattributed) this session,
     from `post-tool/02-skill-cost.py`'s counter.
@@ -269,6 +373,22 @@ def render(now: dict, was: dict | None) -> None:
         print("\nthis session's skill-body loads: not yet recorded -- the "
               "post-tool counter\n  writes on the first Skill-tool "
               "invocation of a session.")
+
+    coverage, missing, trace_complete = schema_coverage()
+    if coverage is None:
+        print("\nobjective 22 (schema coverage): not yet recorded -- no "
+              "telemetry row exists yet this session.")
+    else:
+        print(f"\nobjective 22 (schema coverage): {coverage:.0%}  "
+              f"missing: {missing or 'none'}  trace_complete: {trace_complete}")
+
+    repair_ratio, rung_counts = local_repair_ratio()
+    if repair_ratio is None:
+        print("\nobjective 24 (local-repair ratio): not yet recorded -- no "
+              "turn has entered the repair ladder this session.")
+    else:
+        print(f"\nobjective 24 (local-repair ratio): {repair_ratio:.0%}  "
+              f"by rung: {rung_counts}")
 
     print("\n" + TIMING_CAVEAT)
     if was is None:

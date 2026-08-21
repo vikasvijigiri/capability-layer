@@ -74,6 +74,16 @@ TOOL_COST = STATE_DIR / "tool-cost.json"
 HUMAN_COST = STATE_DIR / "human-cost.json"
 TURN_TIMER = STATE_DIR / "turn-timer.json"
 
+# The Notion spec SS21's own named field count -- run_id, task_type,
+# execution_level, model, skills_loaded, agents_spawned, tools_called,
+# api_call_count, context_tokens, input_tokens, output_tokens, latency,
+# parallelism, cache_hits, cache_misses, repeated_operations_avoided,
+# verification_level, retries, escalations, success, quality_signal.
+# `tools/bench.py:schema_coverage()` (objective 22) computes its ratio
+# against this count, imported rather than re-declared, so a field added
+# here is reflected there without a second edit.
+SPEC_FIELD_COUNT = 21
+
 # Every target-spec field this repo's hooks cannot populate, and why --
 # named rather than silently absent. Reused by `tools/bench.py`'s report so
 # the reasons are stated once, not restated.
@@ -83,6 +93,12 @@ UNAVAILABLE_FIELDS: dict[str, str] = {
     "context_tokens": "not observable to a hook in this harness",
     "input_tokens": "not observable to a hook in this harness",
     "output_tokens": "not observable to a hook in this harness",
+    "run_id": "this repo's telemetry has no per-user-task run boundary -- "
+              "every row is session-cumulative, appended every Stop, a "
+              "different unit than the target's 'one run'",
+    "escalations": "folded into retries.rung's block/retreat outcomes -- "
+                   "no separate counter; see objective 24's "
+                   "local_repair_ratio() in tools/bench.py",
     "parallelism": "only known for planned work via parallel_groups.py, "
                    "not live-observed",
     "cache_hits": "the repeat-detector in 01-context-cost.py is a "
