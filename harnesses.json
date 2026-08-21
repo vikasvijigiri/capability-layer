@@ -20,6 +20,8 @@
     "agents": ".claude/agents",
     "commands": ".claude/commands",
     "workflow_policy": ".claude/workflow.md",
+    "workflows": ".claude/workflows",
+    "policies": ".claude/policies",
     "rules": ".claude/rules",
     "hooks": ".claude/hooks",
     "settings": ".claude/settings.json",

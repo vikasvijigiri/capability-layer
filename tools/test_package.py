@@ -176,7 +176,7 @@ zf = zipfile.ZipFile(wheel)
 names = zf.namelist()
 
 check("the payload carries the skills",
-      any("payload/.claude/skills/repo-recon/SKILL.md" in n for n in names))
+      any("payload/.claude/skills/repository-navigation/SKILL.md" in n for n in names))
 # The VALIDATORS ship -- the suites that check an installed layer is intact and
 # wired. The layer's internal suites do not, and the count is the assertion:
 # ~42 used to ship and it broke every Python host, because they are standalone
@@ -294,7 +294,7 @@ try:
             check("`capability-layer install` succeeds in a fresh repo",
                   done.returncode == 0, done.stderr.strip()[-160:])
             check("...and the skills land in a shape the harness can see",
-                  (product / ".claude" / "skills" / "repo-recon" / "SKILL.md").is_file())
+                  (product / ".claude" / "skills" / "repository-navigation" / "SKILL.md").is_file())
             check("...and settings.json registers the hooks",
                   (product / ".claude" / "settings.json").is_file()
                   and len(json.loads(
