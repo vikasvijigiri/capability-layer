@@ -203,7 +203,12 @@ cannot be loaded.
   ones; `python tools/bench.py` prints a real `38%` against 8/21 populated
   fields; full tier `PASS: 55 check(s) green` (found and fixed a real
   README.md suite-count drift, 44 -> 45, caught by the same run).
-- [ ] Task 2 — Objective 24: local-repair ratio
+- [x] Task 2 — Objective 24: local-repair ratio. `python tools/test_bench.py`
+  exits 0, all 9 cases including the multi-row-single-incident regression and
+  the all-block seeded-violation case; `python tools/bench.py` honestly
+  reports "not yet recorded" (no turn entered the ladder this session); full
+  tier `PASS: 55 check(s) green` (found and fixed a real mypy finding on a
+  heterogeneous test fixture, unrelated to the metric logic itself).
 - [ ] Task 3 — Objective 18: route-presence + fallback-safety check, docs update
 
 ## Tasks

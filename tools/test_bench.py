@@ -100,6 +100,66 @@ check("schema_coverage() falls back to (None, [], False) when telemetry.jsonl "
       (ratio_missing, missing_missing, trace_missing) == (None, [], False),
       str((ratio_missing, missing_missing, trace_missing)))
 
+# --- local_repair_ratio() (objective 24) -------------------------------------
+
+# One incident spanning multiple rows (same slug/attempts, rung changing as
+# the incident progresses) must count as ONE outcome -- the last rung seen --
+# not one per row. This is the specific regression case for the turn-vs-
+# incident bug independent review found in the plan's original design.
+_incident_rows = [
+    {"chain": {"slug": "unit-a"}, "retries": {"attempts": 1, "rung": "repair"}},
+    {"chain": {"slug": "unit-a"}, "retries": {"attempts": 1, "rung": "repair"}},
+    {"chain": {"slug": "unit-a"}, "retries": {"attempts": 1, "rung": "restore"}},
+]
+tmp, orig = with_telemetry(_incident_rows)
+ratio, counts = bench.local_repair_ratio()
+restore(tmp, orig)
+check("local_repair_ratio() counts one incident spanning multiple rows as "
+      "ONE outcome (the last rung seen), not one per row",
+      counts == {"restore": 1} and ratio == 1.0,
+      f"got ratio={ratio!r} counts={counts!r}")
+
+# Several distinct (slug, attempts) incidents, plus None-rung rows (skipped)
+# and rows with no retries key at all (must not raise).
+_mixed_rows: list[dict] = [
+    {"chain": {"slug": "unit-a"}, "retries": {"attempts": 1, "rung": "repair"}},
+    {"chain": {"slug": "unit-a"}, "retries": {"attempts": 2, "rung": "restore"}},
+    {"chain": {"slug": "unit-b"}, "retries": {"attempts": 1, "rung": "block"}},
+    {"chain": {"slug": "unit-c"}, "retries": {"attempts": 1, "rung": None}},
+    {"chain": {"slug": "unit-d"}},
+]
+tmp, orig = with_telemetry(_mixed_rows)
+ratio_mixed, counts_mixed = bench.local_repair_ratio()
+restore(tmp, orig)
+check("local_repair_ratio() computes the exact expected ratio and counts "
+      "across distinct incidents, skipping None-rung and retries-less rows",
+      counts_mixed == {"repair": 1, "restore": 1, "block": 1}
+      and abs(ratio_mixed - (2 / 3)) < 1e-9,
+      f"got ratio={ratio_mixed!r} counts={counts_mixed!r}")
+
+# Every incident's rung is `block` -- the seeded violation this metric must
+# be capable of reporting, not silently treating as healthy.
+_all_block_rows = [
+    {"chain": {"slug": "unit-a"}, "retries": {"attempts": 1, "rung": "block"}},
+    {"chain": {"slug": "unit-b"}, "retries": {"attempts": 1, "rung": "block"}},
+]
+tmp, orig = with_telemetry(_all_block_rows)
+ratio_block, counts_block = bench.local_repair_ratio()
+restore(tmp, orig)
+check("local_repair_ratio() reports ratio == 0.0 when every incident is "
+      "block, not silently treated as healthy",
+      ratio_block == 0.0 and counts_block == {"block": 2},
+      f"got ratio={ratio_block!r} counts={counts_block!r}")
+
+# No telemetry at all -> the honest (None, {}) fallback.
+tmp, orig = with_telemetry([])
+tmp.unlink()
+ratio_none, counts_none = bench.local_repair_ratio()
+bench.TELEMETRY = orig
+check("local_repair_ratio() falls back to (None, {}) when telemetry.jsonl "
+      "does not exist",
+      (ratio_none, counts_none) == (None, {}), str((ratio_none, counts_none)))
+
 if failures:
     print(f"\n{len(failures)} failed: " + "; ".join(failures))
     raise SystemExit(1)
