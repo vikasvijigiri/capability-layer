@@ -300,6 +300,89 @@ if _p2.returncode != 0 or len(_after2_lines) != len(_after_lines) + 1:
 else:
     print('OK: a second post-run fire appends a second telemetry row (append-only)')
 
+# --- post-tool/01-context-cost.py: had zero test coverage anywhere in the ---
+# repo (Notion-objectives audit finding, objective 12) until now. Asserts on
+# the real, gitignored call-fingerprints.json (.gitignore:28), same
+# before/after-delta style as the skill-cost/telemetry blocks above.
+_CALL_FP_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'call-fingerprints.json'
+
+
+def _call_fp_totals():
+    try:
+        return json.loads(_CALL_FP_STATE.read_text(encoding='utf-8')).get('_totals') or {}
+    except (OSError, ValueError):
+        return {'calls': 0, 'chars': 0, 'repeats': 0}
+
+
+# A command >= WARN_CHARS (700) triggers the "[context cost]" notice on stderr.
+_LONG_CMD = 'echo ' + ('x' * 700)
+_p = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': _LONG_CMD}})
+if _p.returncode != 0 or '[context cost]' not in _p.stderr:
+    print(f'FAIL: a >=700-char Bash command did not trigger the context-cost '
+          f'notice -- exit {_p.returncode}, stderr: {_p.stderr[:200]!r}')
+    fail = True
+else:
+    print('OK: post-tool warns on an oversized Bash command')
+
+# A short command must NOT trigger the notice (WARN_CHARS is a floor, not a
+# hair-trigger) -- proven, not assumed.
+_p = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': 'echo hi'}})
+if '[context cost]' in _p.stderr:
+    print('FAIL: a short Bash command wrongly triggered the context-cost notice')
+    fail = True
+else:
+    print('OK: a short Bash command stays silent')
+
+# A repeated command (long enough to fingerprint, not VOLATILE-prefixed)
+# triggers "[repeat]" on its second occurrence, not its first.
+_repeat_cmd = 'python -c "print(12345)"' + (' ' * 20) + '# padding to clear MIN_REPEAT_CHARS'
+_before = _call_fp_totals()
+_p1 = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': _repeat_cmd}})
+_p2 = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': _repeat_cmd}})
+_after = _call_fp_totals()
+if '[repeat]' in _p1.stderr:
+    print('FAIL: the FIRST occurrence of a command wrongly fired [repeat]')
+    fail = True
+elif '[repeat]' not in _p2.stderr:
+    print(f'FAIL: the SECOND occurrence of the same command did not fire '
+          f'[repeat] -- stderr: {_p2.stderr[:200]!r}')
+    fail = True
+elif _after['calls'] - _before['calls'] != 2 or _after['repeats'] - _before['repeats'] != 1:
+    print(f'FAIL: totals delta wrong -- before={_before} after={_after}, '
+          f'want +2 calls / +1 repeat')
+    fail = True
+else:
+    print('OK: a repeated command fires [repeat] on its 2nd occurrence only, '
+          'and totals count both calls with exactly 1 repeat')
+
+# A VOLATILE-prefixed command (e.g. "git status") is never fingerprinted as a
+# repeat, even run twice -- it is expected to be re-run because its answer
+# changes. Still counted in totals, per the module's own stated design.
+_before = _call_fp_totals()
+run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': 'git status --porcelain -uall --extra-padding-to-clear-min-chars'}})
+_p2 = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': 'git status --porcelain -uall --extra-padding-to-clear-min-chars'}})
+_after = _call_fp_totals()
+if '[repeat]' in _p2.stderr:
+    print('FAIL: a VOLATILE-prefixed command wrongly fired [repeat] on its 2nd run')
+    fail = True
+elif _after['calls'] - _before['calls'] != 2:
+    print(f'FAIL: VOLATILE commands should still be counted in totals -- '
+          f'before={_before} after={_after}')
+    fail = True
+else:
+    print('OK: a VOLATILE-prefixed command is never flagged [repeat], but is still counted')
+
+# A non-watched tool (e.g. Read) is ignored entirely -- no notice, no totals bump.
+_before = _call_fp_totals()
+_p = run_hook('post-tool', {'tool_name': 'Read', 'tool_input': {'file_path': 'README.md'}})
+_after = _call_fp_totals()
+if _p.stderr.strip() or _after != _before:
+    print(f'FAIL: a non-watched tool_name affected context-cost state -- '
+          f'before={_before} after={_after}, stderr={_p.stderr[:120]!r}')
+    fail = True
+else:
+    print('OK: a non-watched tool_name (Read) is ignored entirely')
+
 if fail:
     sys.exit(1)
 print('All hook tests passed')
