@@ -209,7 +209,14 @@ cannot be loaded.
   reports "not yet recorded" (no turn entered the ladder this session); full
   tier `PASS: 55 check(s) green` (found and fixed a real mypy finding on a
   heterogeneous test fixture, unrelated to the metric logic itself).
-- [ ] Task 3 — Objective 18: route-presence + fallback-safety check, docs update
+- [x] Task 3 — Objective 18: route-presence + fallback-safety check, docs
+  update. `python tools/test_entry_classifier.py` exits 0, all 4 new checks
+  green; both proven to fail (route-presence: required a nonexistent key,
+  confirmed red, reverted; fallback-safety: skipped the stub, confirmed red
+  with the real 18-pattern list quoted, reverted). Measured route
+  distribution matches the earlier direct replay exactly:
+  `{None: 184, entry-small: 4, entry-open: 12, entry-unframed: 13,
+  entry-direct: 4}`. Full tier `PASS: 55 check(s) green`.
 
 ## Tasks
 

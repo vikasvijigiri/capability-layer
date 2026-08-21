@@ -109,10 +109,16 @@ instruments; run them rather than quoting a remembered number.
 | 23 | `verifying-work`'s HARD-GATE (no completion claim without fresh, quoted evidence) |
 | 28 | `[NEEDS CLARIFICATION]` markers in `writing-plans`; `EnterPlanMode`/`ExitPlanMode` gate |
 | 30 | `tools/bench.py --save` baselines; `decisions/` records (e.g. `budget.ELAPSED_CEILING_HOURS` deliberately not refit from one noisy measurement) |
+| 18 | `tools/test_entry_classifier.py`'s full-corpus route-presence check (`entry-small`/`entry-direct` both confirmed reachable) plus a fallback-safety check on `01-entry-classifier.py`'s `_control_or_sensitive_patterns()` |
+| 22 | `python tools/bench.py`'s `schema_coverage()` — `09-telemetry.py`'s own `unavailable` map against its `SPEC_FIELD_COUNT`, plus `chain.fingerprint` trace-completeness |
+| 24 | `python tools/bench.py`'s `local_repair_ratio()` — incident-deduplicated aggregate over `telemetry.jsonl`'s `retries.rung` history |
 
-Objectives 11-13, 15-20, 22, 24-27, 29 have no dedicated instrument yet — see
-`docs/research/2026-08-20-notion-objectives-audit.md` for a qualitative first
-pass and what would make each one measurable.
+Objectives 11-13, 15-17, 19-20, 22, 24-27, 29 have no dedicated instrument
+yet — see `docs/research/2026-08-20-notion-objectives-audit.md` for a
+qualitative first pass and what would make each one measurable, and
+`docs/specs/2026-08-21-qualitative-objective-metrics.md` for the design that
+closed 18, 22 and 24 (Cluster C of 4) and the plan for the remaining
+clusters.
 
 **Last full quantitative audit: 2026-08-16 — 4 green (1, 6, 7, 9), 5 amber
 (3, 4, 5, 8, 10), 1 red (2)**, against objectives 1-10 only. Not re-run here —

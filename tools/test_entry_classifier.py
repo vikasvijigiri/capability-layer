@@ -298,6 +298,58 @@ def main() -> int:
           mod.classify("fix a typo in _hooklib.py") == "entry-small",
           f"got {mod.classify('fix a typo in _hooklib.py')!r}")
 
+    # --- objective 18: full-corpus route-presence (adaptive, not prescriptive)
+    #
+    # A prescriptive system is one that returns the same answer regardless of
+    # input. `classify()` has five possible outputs; the checks above already
+    # pin `entry-open`, `entry-unframed` and `None` corpus-wide via CLASS_OF
+    # and the OTHER_STAGE pass, so asserting a bare ">1 distinct key" here
+    # could never fail -- it would already be satisfied by those. What
+    # nothing currently checks is that `entry-small` and `entry-direct` are
+    # BOTH actually reachable from the real corpus, not just theoretically
+    # possible. Measured this session by direct replay: 217 queries ->
+    # {None: 184, 'entry-unframed': 13, 'entry-open': 12, 'entry-small': 4,
+    # 'entry-direct': 4}.
+    _route_counts: dict[str | None, int] = {}
+    for _stage, _entries in corpus.items():
+        if _stage.startswith("_"):
+            continue
+        for _e in _entries:
+            _key = mod.classify(_e["query"])
+            _route_counts[_key] = _route_counts.get(_key, 0) + 1
+    print(f"route distribution across the whole corpus: {_route_counts}")
+    check("objective 18: entry-small is reachable from the real corpus",
+          _route_counts.get("entry-small", 0) > 0, str(_route_counts))
+    check("objective 18: entry-direct is reachable from the real corpus",
+          _route_counts.get("entry-direct", 0) > 0, str(_route_counts))
+
+    # --- objective 18: fallback safety for the control/sensitive veto -------
+    #
+    # `_control_or_sensitive_patterns()` caches `scope.py`'s CONTROL_PATTERNS/
+    # SENSITIVE_PATTERNS at first call. Comparing that cache against a
+    # freshly-read `scope.py` (a naive "drift check") can never fail -- both
+    # sides load the same file at test time and are definitionally equal.
+    # What is actually checkable is the fallback path this repo relies on
+    # when `scope.py` cannot be loaded: `_load()` returning `None` must
+    # degrade the veto to an empty list, never an unhandled exception or a
+    # silently-stale cache.
+    mod._CONTROL_OR_SENSITIVE_PATTERNS = None
+    _real_load = mod._load
+    mod._load = lambda rel, name: None
+    try:
+        _stubbed_patterns = mod._control_or_sensitive_patterns()
+    finally:
+        mod._load = _real_load
+        mod._CONTROL_OR_SENSITIVE_PATTERNS = None  # so later real calls re-load
+    check("objective 18: the control/sensitive veto degrades to an empty "
+          "list when scope.py cannot be loaded, not an exception",
+          _stubbed_patterns == [], f"got {_stubbed_patterns!r}")
+
+    _real_patterns = mod._control_or_sensitive_patterns()
+    check("objective 18: the unstubbed veto reflects scope.py's real, "
+          "current patterns (non-empty), not a hardcoded stub",
+          bool(_real_patterns), f"got {_real_patterns!r}")
+
     # --- classify() persists its result for post-run/09-telemetry.py --------
     #
     # Written even when key is None -- the common, silent case -- so a
