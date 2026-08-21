@@ -157,20 +157,22 @@ for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
     # Artifact-producing and approval-gated skills must make the permission
     # boundary explicit. `allowed-tools` is a pre-approval list, not a hard
     # restriction, and the layer intentionally does not pre-approve writes.
+    # `architecture` merged `brainstormer` (docs/specs/) and `designer`
+    # (DESIGN.md) on 2026-08-21 -- one skill, two artifacts, so it needs both
+    # markers present rather than one dict entry per former skill.
     capability_markers = {
-        "brainstormer": ("docs/specs/", "request the write permission"),
-        "designer": ("DESIGN.md", "request the write permission"),
-        "research": ("docs/research/", "request the write permission"),
-        "knowledge-manager": ("seven things", "request the write permission"),
-        "releasing": ("AskUserQuestion", "allowed-tools"),
+        "architecture": (("docs/specs/", "DESIGN.md"), "request the write permission"),
+        "research": (("docs/research/",), "request the write permission"),
+        "documentation": (("seven things",), "request the write permission"),
+        "release-git": (("AskUserQuestion",), "allowed-tools"),
     }
     if d.name in capability_markers:
-        artifact, permission = capability_markers[d.name]
+        artifacts, permission = capability_markers[d.name]
         check(f"{d.name} documents its permission boundary",
-              artifact in text and permission in text.lower(),
-              f"must name {artifact!r} and explain {permission!r}")
+              all(a in text for a in artifacts) and permission in text.lower(),
+              f"must name {artifacts!r} and explain {permission!r}")
 
-    if d.name == "systematic-debugging":
+    if d.name == "debugging":
         required_markers: tuple[str, ...] = (
             "Failure capture",
             "last successful step",
@@ -184,7 +186,7 @@ for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
         for marker in required_markers:
             check(f"{d.name} includes {marker}", marker.lower() in text.lower(),
                   f"missing structured agent-failure marker {marker!r}")
-        check("systematic-debugging qualifies historical counts",
+        check("debugging qualifies historical counts",
               "seven instances so far" not in text.lower()
               and "historically" in text.lower(),
               "historical measurements must not read as current facts")
@@ -203,7 +205,11 @@ for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
             check(f"{d.name} includes {marker}", marker.lower() in text.lower(),
                   f"missing evidence-traceability marker {marker!r}")
 
-    if d.name == "designer":
+    if d.name == "architecture":
+        # design-QA markers live in references/design-contract.md now (the
+        # merged former `designer` skill), not the SKILL.md body itself --
+        # check both, since progressive disclosure means the body alone no
+        # longer carries them.
         required_markers = (
             "surface/state",
             "check:",
@@ -212,8 +218,11 @@ for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
             "unresolved exception",
             "Do not claim visual QA",
         )
+        design_contract_text = (d / "references" / "design-contract.md").read_text(
+            encoding="utf-8") if (d / "references" / "design-contract.md").is_file() else ""
+        combined_text = (text + design_contract_text).lower()
         for marker in required_markers:
-            check(f"{d.name} includes {marker}", marker.lower() in text.lower(),
+            check(f"{d.name} includes {marker}", marker.lower() in combined_text,
                   f"missing design-QA evidence marker {marker!r}")
 
     if d.name == "capability-layer-maintenance":
@@ -241,8 +250,8 @@ for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
     # Descriptions are the ONLY trigger surface. Measured on 2026-08-07 across a
     # multi-hour session that touched every stage in the chain: zero skills
     # auto-fired. Not `capability-layer-maintenance` while the layer was being
-    # audited and rebuilt, not `systematic-debugging` across eight root-caused
-    # bugs, not `verifying-work` on repeated completion claims. Under-triggering
+    # audited and rebuilt, not `debugging` across eight root-caused
+    # bugs, not `testing` on repeated completion claims. Under-triggering
     # is invisible from reading -- the skill simply never runs and the work
     # happens without it -- so the properties correlated with firing are asserted
     # rather than trusted.
@@ -299,7 +308,7 @@ for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
     # defect a heading check would have missed while both passed.
     _body = text.split("---", 2)[2]
     # `### A1.` / `### C3.` -- a stage letter plus a step number. Added when
-    # `writing-plans` absorbed framing and grew three lettered stages; its steps
+    # `task-analysis` absorbed framing and grew three lettered stages; its steps
     # are ordered and numbered, and the pattern set simply did not see them.
     # This widens what counts as ordering, not how much is required: the
     # threshold below is unchanged at three, and a skill with no sequence at all
@@ -366,8 +375,9 @@ resolvable = skill_names | agent_files
 # no .claude/skills/ directory -- naming one is correct, not a dead reference.
 NOT_SKILLS = {
     # hook event directories
-    "permission-security", "stop-finalization", "pre-edit", "permission-security", "session-init",
+    "permission-security", "stop-finalization", "pre-edit", "session-init",
     "pre-compact", "post-edit-validation", "global-session-start",
+    "pre-tool", "prompt-intake", "context-budget",
     # Claude Code agent types
     "general-purpose", "statusline-setup",
     # document sections and prose
@@ -385,13 +395,25 @@ NOT_SKILLS = {
     "stalled", "advancing", "waiting", "halt",
     # git nouns
     "base", "main",
+    # prompt-intake's entry-shape state keys -- values, not skill names
+    "entry-direct", "entry-open", "entry-small", "entry-unframed",
+    # security_gate.py's own 5 CLAUSES -- values, not skill names
+    "agent-unscoped", "control-weakened", "dependency-risk",
+    "secret-in-branch", "sensitive-unmapped",
+    # a slash command, not a skill (`.claude/commands/security-review.md`)
+    "security-review",
+    # deleted 2026-08-21 (Notion architecture merge); mentioned only in
+    # "the former `X` skill" historical prose, never as a live handoff
+    "writing-plans", "executing-plans", "systematic-debugging",
+    "verifying-work", "no-slop", "repo-recon", "knowledge-manager",
+    "brainstormer", "designer", "delivering", "releasing",
 }
 
 # --- workflow.md's own names resolve --------------------------------------
 #
 # The resolution check below reads SKILL.md files. `workflow.md` was never in
 # scope, so when four audit skills became `code-review` lenses and
-# `artifact-review` moved under `writing-plans/references/`, the policy file kept
+# `artifact-review` moved under `task-analysis/references/`, the policy file kept
 # naming them and every suite stayed green. Found by hand on 2026-08-07 -- which
 # is exactly the failure mode this file exists to make impossible.
 #
@@ -420,25 +442,26 @@ CHAIN_SUCCESSOR = {
     # when the repository is unknown, and never again once its map exists. Listed
     # here so its handoff is pinned like every other -- an off-chain skill whose
     # successor nothing asserts is exactly how the chain silently stops.
-    "repo-recon": "writing-plans",
-    # `brainstormer` is DISPATCHED by writing-plans and returns to it, as of
-    # 2026-08-09. Its successor is still writing-plans, so this entry is
+    "repository-navigation": "task-analysis",
+    # `architecture` is DISPATCHED by task-analysis and returns to it, as of
+    # 2026-08-09. Its successor is still task-analysis, so this entry is
     # unchanged in value while its meaning changed entirely: it used to be a
     # handoff along the chain, and it is now a return to the caller. The pinned
     # edge is the same either way, which is why nothing here had to move.
-    "brainstormer": "writing-plans",
-    "writing-plans": "executing-plans",
-    "executing-plans": "verifying-work",
-    # no-slop sweeps the repo BEFORE review, so its repairs land inside the
+    "architecture": "task-analysis",
+    "task-analysis": "implementation",
+    "implementation": "testing",
+    # refactoring sweeps the repo BEFORE review, so its repairs land inside the
     # diff code-review reads. After review they would ship unreviewed.
-    "verifying-work": "no-slop",
-    "no-slop": "code-review",
-    "code-review": "delivering",
-    # delivering branches: `releasing` when the repo has a deploy target,
-    # `knowledge-manager` directly when it has none. The chain successor is the
-    # one that continues the line; the other is the skip.
-    "delivering": "releasing",
-    "releasing": "knowledge-manager",
+    "testing": "refactoring",
+    "refactoring": "code-review",
+    # `delivering` and `releasing` merged into one skill, `release-git`, on
+    # 2026-08-21 -- its own two procedures now carry what used to be the
+    # `delivering` -> `releasing` inter-skill edge, internally. The one
+    # pinned edge that remains is the true terminus: `documentation`,
+    # whether or not a deploy target existed.
+    "code-review": "release-git",
+    "release-git": "documentation",
 }
 
 for d in sorted(SKILLS.iterdir()):
@@ -468,7 +491,7 @@ for d in sorted(SKILLS.iterdir()):
 
 # --- stage 1 dispatches, and a dispatch is not a handoff ---------------------
 #
-# `writing-plans` absorbed `task-brief` on 2026-08-09, and with it the escape
+# `task-analysis` absorbed `task-brief` on 2026-08-09, and with it the escape
 # hatch that made the old two-skill split survivable: when a field cannot be
 # filled, stage 1 fetches the answer instead of guessing or handing back.
 #
@@ -476,18 +499,18 @@ for d in sorted(SKILLS.iterdir()):
 # rather than trusted to prose. Without it the merged skill has one failure mode
 # and it is the bad one -- framing an open approach into six fields, which bakes
 # the first idea in under a heading that looks agreed.
-_wp = (SKILLS / "writing-plans" / "SKILL.md").read_text(encoding="utf-8")
+_wp = (SKILLS / "task-analysis" / "SKILL.md").read_text(encoding="utf-8")
 
-for _dispatched in ("brainstormer", "research", "designer", "repo-recon",
-                    "systematic-debugging"):
-    check(f"writing-plans can dispatch `{_dispatched}`",
+for _dispatched in ("architecture", "research", "repository-navigation",
+                    "debugging"):
+    check(f"task-analysis can dispatch `{_dispatched}`",
           f"`{_dispatched}`" in _wp,
           "stage 1 must be able to fetch what framing could not fill")
 
 # Ordering is the one dispatch rule with a correctness argument rather than a
-# cost argument: brainstormer AFTER the brief is written is brainstorming
+# cost argument: architecture AFTER the brief is written is brainstorming
 # variations on an answer already committed to. The skill must say so.
-check("writing-plans dispatches `brainstormer` before writing the brief",
+check("task-analysis dispatches `architecture` before writing the brief",
       re.search(r"before\D{0,40}(writing |the brief|`TASK\.md`)", _wp, re.I)
       is not None,
       "an open approach framed first is the anchor stage 2 exists to prevent")
@@ -503,11 +526,11 @@ check("writing-plans dispatches `brainstormer` before writing the brief",
 for _field in (("Goal",), ("Constraints",), ("Inputs", "Input"),
                ("Outputs", "Output"), ("Done-check", "Done Checks"),
                ("Out-of-scope", "Out of Scope")):
-    check(f"writing-plans still frames `{_field[0]}`",
+    check(f"task-analysis still frames `{_field[0]}`",
           any(f in _wp for f in _field),
           "the six fields came from task-brief and are the framing contract")
 
-check("writing-plans keeps the (inferred) marking that replaced the brief gate",
+check("task-analysis keeps the (inferred) marking that replaced the brief gate",
       "(inferred)" in _wp,
       "the markers are what let framing skip an approval without hiding a guess")
 
@@ -520,7 +543,7 @@ for skill, successor in CHAIN_SUCCESSOR.items():
     routing = body.split("## Routing", 1)[-1] if "## Routing" in body else ""
     # Read the WHOLE bullet, not its first line: these bullets wrap, and the
     # successor often lands on the continuation line. A first-line-only check
-    # reported writing-plans as disagreeing with itself.
+    # reported task-analysis as disagreeing with itself.
     handoff = ""
     lines = routing.splitlines()
     for i, line in enumerate(lines):
@@ -543,7 +566,7 @@ for skill, successor in CHAIN_SUCCESSOR.items():
 #
 # The defect this catches was found by reading, not by any check: the chain
 # table listed Document (10) before Self-review (11) and Deliver (12), while
-# the handoff graph five sections below put knowledge-manager last. Two
+# the handoff graph five sections below put documentation last. Two
 # statements of one ordering in one file, disagreeing, both plausible.
 #
 # Three assertions: the table's skills are real, the linear stages appear in the
@@ -553,11 +576,17 @@ for skill, successor in CHAIN_SUCCESSOR.items():
 WORKFLOW = ROOT / ".claude" / "workflow.md"
 wf = WORKFLOW.read_text(encoding="utf-8")
 
-# Rows look like: | 4 | Execute | `executing-plans` | ... | ... |
+# Rows look like: | 4 | Execute | `implementation` | ... | ... |
 table = re.findall(r"^\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*`([a-z-]+)`", wf, re.M)
 check("workflow.md chain table parses", len(table) >= 8, f"got {len(table)} rows")
 
-stage_of = {skill: int(num) for num, _name, skill in table}
+# A skill may own more than one table row -- `release-git` merged the former
+# `delivering`/`releasing` skills on 2026-08-21 and now owns stages 7 AND 8,
+# one skill with two internal procedures. So this maps to a SET of numbers,
+# not a single scalar; a skill spanning two rows is legitimate, not a drift.
+stage_of: dict[str, set[int]] = {}
+for num, _name, skill in table:
+    stage_of.setdefault(skill, set()).add(int(num))
 for skill in stage_of:
     check(f"workflow.md stage owner `{skill}` is a real skill",
           skill in skill_names)
@@ -573,27 +602,32 @@ check("workflow.md stage numbers are 1..N with no gaps or repeats",
 # them. Before 2026-08-09 this was a special case for `task-brief` branching;
 # it is now a general property, and naming it is what keeps the walk honest --
 # a dispatched stage silently dropped from the table would otherwise still pass.
-DISPATCHED_STAGES = {"brainstormer"}
+DISPATCHED_STAGES = {"architecture"}
 
 linear = [skill for _n, _name, skill in table]
 walk, cur = [], linear[0]
 while cur:
     walk.append(cur)
     cur = CHAIN_SUCCESSOR.get(cur)
-expected = [s for s in linear if s not in DISPATCHED_STAGES]
+# Adjacent duplicates collapse to one visit: `release-git` legitimately owns
+# two consecutive table rows (stages 7 and 8, one skill, two internal
+# procedures) since the 2026-08-21 `delivering`+`releasing` merge -- the walk
+# visits it once, which is correct, not a gap.
+_deduped = [s for s in linear if s not in DISPATCHED_STAGES]
+expected = [s for i, s in enumerate(_deduped) if i == 0 or s != _deduped[i - 1]]
 check("handoff chain visits the table's linear stages in table order",
       walk == expected, f"table={linear}  walk={walk}  expected={expected}")
 
 for _d in sorted(DISPATCHED_STAGES):
     check(f"dispatched stage `{_d}` returns to its caller",
-          CHAIN_SUCCESSOR.get(_d) == "writing-plans",
+          CHAIN_SUCCESSOR.get(_d) == "task-analysis",
           "a dispatch that does not come back is a handoff wearing another name")
 
 # --- successors a skill must NOT hand to ------------------------------------
 #
 # `CHAIN_SUCCESSOR` asserts the POSITIVE successor, so nothing checks the edges a
 # skill must never take. The original entry guarded `task-brief` ->
-# `writing-plans` on the argument that six lines is not a spec; that edge stopped
+# `task-analysis` on the argument that six lines is not a spec; that edge stopped
 # existing on 2026-08-09 when one skill took both jobs, and guarding it now would
 # forbid a skill from reaching itself.
 #
@@ -601,26 +635,26 @@ for _d in sorted(DISPATCHED_STAGES):
 # rather than confusions -- a stage jumping over the one that would have caught
 # its mistake:
 #
-#   * `brainstormer` -> `executing-plans` builds a design nobody decomposed, so
+#   * `architecture` -> `implementation` builds a design nobody decomposed, so
 #     no file map, no task ordering and no Gate 1.
-#   * `repo-recon` -> `brainstormer` decides the approach is open from a map
+#   * `repository-navigation` -> `architecture` decides the approach is open from a map
 #     alone. Recon reads; it does not get to conclude. Stage 1 dispatches
-#     `brainstormer` when the six fields say so, which is evidence recon does
+#     `architecture` when the six fields say so, which is evidence recon does
 #     not have.
 #
 # A mention is allowed only where it is NEGATED -- the skills here explain what
 # they refuse, so a bare ban on the name would be unmaintainable.
 
 FORBIDDEN_SUCCESSOR = {
-    "brainstormer": ("executing-plans",
+    "architecture": ("implementation",
                      "a design is not a plan; stage 1 decomposes it and holds Gate 1"),
-    "repo-recon": ("brainstormer",
+    "repository-navigation": ("architecture",
                    "recon reads and does not conclude; stage 1 owns that call"),
 }
 _NEGATED = re.compile(r"\b(never|not|no|nor)\b", re.I)
 
 # The marker must sit IMMEDIATELY before the name. Sentence-level matching was
-# tried first and flagged "which produces the spec `writing-plans` requires" --
+# tried first and flagged "which produces the spec `task-analysis` requires" --
 # a description of what the skill consumes, not a handoff to it. A rule that
 # fires on correct prose gets the check deleted rather than the prose fixed.
 _HANDOFF_NEAR = (r"(?:invoke|go to|hand (?:it |this |off )?to|proceed to|"
@@ -661,42 +695,43 @@ _paras = [_wf_text.split("## Entry", 1)[1].split("\n## ", 1)[0]] \
 check("workflow.md has the Entry section that owns the entry rule", bool(_paras),
       "the rule has one owner; without the section it has none")
 if _paras:
-    check("...and the Entry section routes named work to `writing-plans`",
-          "`writing-plans`" in _paras[0],
+    check("...and the Entry section routes named work to `task-analysis`",
+          "`task-analysis`" in _paras[0],
           "an entry rule that names no owner routes nothing")
 
     # The off-chain entries are boundaries, not alternatives: an unread
     # repository and a live failure are conditions on the door rather than
     # different doors. Named so a reader is not left inferring them.
-    for _boundary in ("repo-recon", "systematic-debugging"):
+    for _boundary in ("repository-navigation", "debugging"):
         check(f"...and it still names the `{_boundary}` boundary",
               f"`{_boundary}`" in _paras[0],
               "a boundary nobody states is one every session re-derives")
 
-    # `brainstormer` must appear as a DISPATCH from stage 1, never as a second
+    # `architecture` must appear as a DISPATCH from stage 1, never as a second
     # entry. The old rule made it a peer of the brief; the merge made it a
     # subroutine, and the difference is whether work can enter the chain without
     # ever being framed.
-    check("...and `brainstormer` appears there as a dispatch, not a second door",
-          "`brainstormer`" in _paras[0] and "dispatch" in _paras[0].lower(),
+    check("...and `architecture` appears there as a dispatch, not a second door",
+          "`architecture`" in _paras[0] and "dispatch" in _paras[0].lower(),
           "a second entry is how work reaches a plan without a brief")
 
-# Each skill states its own stage number, and it must be the table's number.
-for skill, num in stage_of.items():
+# Each skill states its own stage number, and it must be one of the table's
+# numbers for that skill (usually one; `release-git` legitimately owns two).
+for skill, nums in stage_of.items():
     body = (SKILLS / skill / "SKILL.md").read_text(encoding="utf-8")
     m = re.search(r"Workflow stage (\d+)", body)
     if not m:
         continue  # only the stages that claim a number are asserted
-    check(f"{skill} claims the stage number workflow.md gives it ({num})",
-          int(m.group(1)) == num, f"skill says {m.group(1)}, table says {num}")
+    check(f"{skill} claims a stage number workflow.md gives it ({sorted(nums)})",
+          int(m.group(1)) in nums, f"skill says {m.group(1)}, table says {sorted(nums)}")
 
 # Every stage number written in workflow.md's PROSE agrees with the table.
 #
 # The chain table was right the whole time; four references *around* it drifted
-# by one when `no-slop` was inserted at stage 6 on 2026-08-02. The Parallelism
+# by one when `refactoring` was inserted at stage 6 on 2026-08-02. The Parallelism
 # table said "6 Review" (Review is 7), "the sign-off in stage 6, the approval in
 # stage 7" was off by one twice, and "Where state lives" filed `decisions/` under
-# 9 (`knowledge-manager` is 10). Nothing caught any of it: the assertions above
+# 9 (`documentation` is 10). Nothing caught any of it: the assertions above
 # only parse the table and confirm its owners exist, so the table cannot disagree
 # with itself -- but it never had to agree with the paragraphs.
 #
@@ -705,7 +740,7 @@ for skill, num in stage_of.items():
 # `N StageName`, and that convention is what this asserts.
 stage_name_of = {name.strip().lower(): int(num) for num, name, _s in table}
 
-prose_refs = []  # (written_number, what, expected_number)
+prose_refs = []  # (written_number, what, expected_numbers)
 for m in re.finditer(r"(?<!\d)(\d{1,2})\s+`([a-z-]+)`", wf):
     written, name = int(m.group(1)), m.group(2)
     if name in stage_of:
@@ -713,10 +748,10 @@ for m in re.finditer(r"(?<!\d)(\d{1,2})\s+`([a-z-]+)`", wf):
 for m in re.finditer(r"(?<!\d)(\d{1,2})\s+([A-Z][a-z]+)\b", wf):
     written, name = int(m.group(1)), m.group(2).lower()
     if name in stage_name_of:
-        prose_refs.append((written, name.title(), stage_name_of[name]))
+        prose_refs.append((written, name.title(), {stage_name_of[name]}))
 
-wrong = [f"{what} written as {written}, table says {expected}"
-         for written, what, expected in prose_refs if written != expected]
+wrong = [f"{what} written as {written}, table says {sorted(expected)}"
+         for written, what, expected in prose_refs if written not in expected]
 check(f"every stage number in workflow.md prose matches the table "
       f"({len(prose_refs)} reference(s))", not wrong, "; ".join(wrong[:6]))
 
@@ -894,20 +929,20 @@ if AGENTS.exists():
 # and waits. Prose saying "ask the user" is not counted -- it cannot block.
 #
 # The allowed set is small and each entry is a different KIND of thing:
-#   writing-plans   gate 1 -- the finished plan
+#   task-analysis   gate 1 -- the finished plan
 #   code-review     gate 2 -- sign-off on the change
 #
-# `brainstormer` was the one exception, on the argument that clarify/converge are
+# `architecture` was the one exception, on the argument that clarify/converge are
 # not gates because they ask "which direction" rather than "may I proceed". True,
 # and it did not survive contact: ten blocking questions before any artefact
 # exists is the opposite of a two-gate chain whatever they are called. They are
-# `[NEEDS CLARIFICATION]` markers now, and `writing-plans` answers all of them in
+# `[NEEDS CLARIFICATION]` markers now, and `task-analysis` answers all of them in
 # ONE call at Gate 1 -- so the exception is gone and the set is exactly two.
 #
 # `delivering` and `releasing` are absent on purpose: they ask in prose, and their
 # approvals are a standing safety limit rather than a workflow gate.
 
-GATE_SKILLS = {"writing-plans", "releasing"}
+GATE_SKILLS = {"task-analysis", "release-git"}
 # Deliberately empty. Any entry here is a third place that stops and waits.
 QUESTION_SKILLS: set[str] = set()
 
@@ -915,7 +950,7 @@ QUESTION_SKILLS: set[str] = set()
 #
 # The check was a substring test for "AskUserQuestion", which worked only while
 # the gate skills were the only files naming the tool. It broke the moment a
-# skill named it in order to FORBID it -- `brainstormer` now does so four times,
+# skill named it in order to FORBID it -- `architecture` now does so four times,
 # and the substring test read those prohibitions as a new gate, failing the build
 # for removing exactly the dialogue the build exists to keep out.
 #
@@ -928,7 +963,7 @@ QUESTION_SKILLS: set[str] = set()
 #
 #     Never call `AskUserQuestion` from this skill
 #     It carried ten `AskUserQuestion` calls until 2026-08-08
-#     in **one** `AskUserQuestion` at Gate 1        <- describes writing-plans
+#     in **one** `AskUserQuestion` at Gate 1        <- describes task-analysis
 #     Not with `AskUserQuestion`, and not in prose
 #
 # The difference is negation and referent, not grammar, and a regex that tried to
@@ -958,7 +993,7 @@ check("no skill prompts the user outside the two gates",
 # blanket "AskUserQuestion is somewhere in this file" assertion would pass on
 # any incidental mention -- a marker that reads as a gate and stops nothing.
 # Both limbs are asserted, so the wrong tool is as red as no tool.
-GATE_TOOL = {"writing-plans": "ExitPlanMode", "releasing": "AskUserQuestion"}
+GATE_TOOL = {"task-analysis": "ExitPlanMode", "release-git": "AskUserQuestion"}
 check("every gate skill has a declared tool",
       set(GATE_TOOL) == GATE_SKILLS,
       f"{sorted(set(GATE_TOOL) ^ GATE_SKILLS)} is in one set and not the other")
@@ -967,10 +1002,10 @@ for _g in sorted(GATE_SKILLS):
     _gbody = (SKILLS / _g / "SKILL.md").read_text(encoding="utf-8")
     check(f"gate skill `{_g}` declares its gate", _g in _prompting,
           "a gate was removed; the chain would then have no human checkpoint here")
-    if _g == "releasing":
+    if _g == "release-git":
         _tools_line = re.search(r"^allowed-tools:\s*(.+)$", _gbody, re.M)
         _tools = set((_tools_line.group(1) if _tools_line else "").split())
-        check("releasing declares AskUserQuestion in allowed-tools",
+        check("release-git declares AskUserQuestion in allowed-tools",
               "AskUserQuestion" in _tools,
               "Gate 2 cannot rely on an undeclared approval tool")
     # The marker is a claim; the call is the mechanism. A marker with no call
@@ -987,13 +1022,13 @@ for _g in sorted(GATE_SKILLS):
 # outside plan mode, and the same change had removed `AskUserQuestion` from the
 # skill. A gate conditional on the session having started in a particular mode is
 # not a gate, and presence is not reachability.
-_wp = (SKILLS / "writing-plans" / "SKILL.md").read_text(encoding="utf-8")
-# `plan-mode.md` was a separate reference file until writing-plans consolidated
+_wp = (SKILLS / "task-analysis" / "SKILL.md").read_text(encoding="utf-8")
+# `plan-mode.md` was a separate reference file until task-analysis consolidated
 # its references/ into one SKILL.md -- every check below that used to read that
 # split-out file now reads `_wp` directly; the property being checked (the gate
 # is reachable, and its history is recorded) never depended on which file held it.
 
-check("`writing-plans` enters plan mode itself, so Gate 1 can always be asked",
+check("`task-analysis` enters plan mode itself, so Gate 1 can always be asked",
       "EnterPlanMode" in _wp,
       "ExitPlanMode refuses outside plan mode; without this the gate is "
       "reachable only by luck")
@@ -1034,9 +1069,10 @@ check("...and the correction is recorded rather than quietly deleted",
 #
 # An outward-facing operation is an operational safety check, not a gate: no
 # `<!-- GATE n -->` marker, so the gate set below is still exactly two.
+# `delivering` and `releasing` merged into `release-git` on 2026-08-21; both
+# outward actions now live in the one file, so one entry checks both.
 OUTWARD_SKILLS = {
-    "delivering": "push, PR and merge",
-    "releasing": "deploy",
+    "release-git": "push, PR, merge and deploy",
 }
 # --- the stage that hands off to a merge says who actually merges ------------
 #
@@ -1051,15 +1087,17 @@ OUTWARD_SKILLS = {
 # and is exactly what breaks a stack -- squashing the base gives `main` a new SHA
 # and every child then re-proposes its parent's files as conflicts. Discovered
 # with five stacked PRs already open.
-_del = (SKILLS / "delivering" / "SKILL.md").read_text(encoding="utf-8")
-check("`delivering` says no skill merges",
+_del = (SKILLS / "release-git" / "SKILL.md").read_text(encoding="utf-8")
+_del_mechanics = (SKILLS / "release-git" / "references" / "delivery-mechanics.md")
+_del_full = _del + (_del_mechanics.read_text(encoding="utf-8") if _del_mechanics.is_file() else "")
+check("`release-git` says no skill merges",
       re.search(r"no skill.{0,40}merge|human presses the button", _del, re.I | re.S)
       is not None,
       "deferring to a merge queue that may not exist leaves the merge unowned")
 # A validator nothing invokes is the gate-nobody-runs failure this layer keeps
 # deleting. `delivery_check.py` is advisory by construction -- the 403 means it
 # can never prevent a merge -- so its entire value is that this stage runs it.
-check("`delivering` runs the delivery preflight",
+check("`release-git` runs the delivery preflight",
       "tools/delivery_check.py" in _del,
       "the check exists and nothing calls it, which is worth less than no check "
       "because it reads as coverage")
@@ -1067,8 +1105,8 @@ check("...and treats a failing preflight as a stop",
       re.search(r"exit `?1`?[^.]{0,40}stop", _del, re.I) is not None,
       "an advisory that never stops anything is a log line")
 
-check("`delivering` warns that squash breaks a stacked PR",
-      "squash" in _del.lower() and "stack" in _del.lower(),
+check("`release-git` warns that squash breaks a stacked PR",
+      "squash" in _del_full.lower() and "stack" in _del_full.lower(),
       "the layer assumes squash-merge and says nothing about what that does to a "
       "stack, which is the one place the two interact badly")
 
@@ -1122,7 +1160,7 @@ for _skill, _what in sorted(OUTWARD_SKILLS.items()):
 # it. Written after the exceptions themselves, per this plan's own
 # "VI Mechanism" article: a rule this plan adds is enforced by a test.
 _PARALLEL_EXCEPTION_HEADINGS = re.compile(
-    r"^###\s+Exception:.*parallel.*$", re.M | re.I)
+    r"^#{3,4}\s+Exception:.*parallel.*$", re.M | re.I)
 _push_headings = _PARALLEL_EXCEPTION_HEADINGS.findall(_del)
 check("`delivering` scopes its push exception to a parallel round by name",
       any("task branches" in h for h in _push_headings),
@@ -1136,8 +1174,8 @@ check("the batched-merge exception names the real merge mechanism",
 
 # --- a skill's claim about another skill's output must be true ---------------
 #
-# `executing-plans` says: "Tick `- [ ]` -> `- [x]` as each step lands.
-# `writing-plans` mandates that syntax expressly for tracking." It did not. The
+# `implementation` says: "Tick `- [ ]` -> `- [x]` as each step lands.
+# `task-analysis` mandates that syntax expressly for tracking." It did not. The
 # task template emitted `**Done when:**` and no checkbox, so every plan in
 # docs/plans/ had zero of them and the executor's whole progress mechanism had
 # never once had anything to tick. Every suite stayed green, because nothing
@@ -1147,26 +1185,26 @@ check("the batched-merge exception names the real merge mechanism",
 # The general property is untestable (arbitrary prose about arbitrary prose).
 # This pins the instance in the direction that matters: a consumer naming a
 # syntax must have a producer that actually emits it.
-_ep = (SKILLS / "executing-plans" / "SKILL.md").read_text(encoding="utf-8")
+_ep = (SKILLS / "implementation" / "SKILL.md").read_text(encoding="utf-8")
 _wp_all = "\n".join(
     p.read_text(encoding="utf-8")
-    for p in [SKILLS / "writing-plans" / "SKILL.md",
-              *sorted((SKILLS / "writing-plans" / "references").glob("*.md"))])
+    for p in [SKILLS / "task-analysis" / "SKILL.md",
+              *sorted((SKILLS / "task-analysis" / "references").glob("*.md"))])
 
 if "- [ ]" in _ep:
-    check("the checkbox `executing-plans` ticks is one `writing-plans` emits",
+    check("the checkbox `implementation` ticks is one `task-analysis` emits",
           "- [ ]" in _wp_all,
           "the consumer names a progress syntax the producer never writes")
-    check("...and `writing-plans` emits it as a per-task progress block",
+    check("...and `task-analysis` emits it as a per-task progress block",
           re.search(r"- \[ \]\s+Task\s+\d", _wp_all) is not None,
           "a checkbox somewhere is not a checkbox per task; tools/analyze.py "
           "counts them against the task headings")
 
 
-for _skill in ("no-slop", "brainstormer"):
+for _skill in ("refactoring", "architecture"):
     _body = (SKILLS / _skill / "SKILL.md").read_text(encoding="utf-8")
     # Mentions are allowed -- these files explain what they must NOT do, and
-    # brainstormer names the tool three times to forbid it. A CALL is the thing
+    # architecture names the tool three times to forbid it. A CALL is the thing
     # being banned, so the check is for the invocation shape, not the word.
     _calls = re.findall(r"(?<![`\w])AskUserQuestion\s*\(", _body)
     check(f"`{_skill}` opens no dialogue", not _calls,
@@ -1181,21 +1219,21 @@ for _skill in ("no-slop", "brainstormer"):
 # else states it."
 #
 # This check was written on 2026-08-08 for a two-branch rule, where the failure
-# was a skill naming ONE branch as though it were the whole thing -- `no-slop`
+# was a skill naming ONE branch as though it were the whole thing -- `refactoring`
 # sent every structural finding to a brief, so a finding whose approach was open
 # got the anchor instead of the design.
 #
 # The merge on 2026-08-09 removed the second branch, which removes that exact
 # failure and leaves the inverse one. With one door, the way to restate the rule
-# wrongly is to name `brainstormer` as an entry -- work that reaches a design
+# wrongly is to name `architecture` as an entry -- work that reaches a design
 # without ever being framed, and so reaches a plan with no `TASK.md` behind it.
 # Same property, opposite polarity: a skill routing INTO the chain must not name
 # a stage that is dispatched rather than entered.
 #
 # Naming stage 1 is correct. Deferring to the section that owns the rule is
-# correct. Naming `brainstormer` alone is the defect.
+# correct. Naming `architecture` alone is the defect.
 
-ENTRY_PAIR = ("writing-plans", "brainstormer")
+ENTRY_PAIR = ("task-analysis", "architecture")
 # A paragraph, or a single list item. A bullet is a standalone claim -- a reader
 # scanning `## Routing` reads one line and acts on it -- so it is checked alone
 # even when the bullets around it say more.
@@ -1210,16 +1248,16 @@ for _path in sorted(SKILLS.glob("*/SKILL.md")):
     # Scope: the sections that DECLARE handoffs, at paragraph granularity.
     #
     # Two wrong granularities were tried first, and each failed in the opposite
-    # direction. Per FILE asked whether `brainstormer` appeared anywhere, so one
-    # correct paragraph absolved every other -- `no-slop` deferred to §Entry in
+    # direction. Per FILE asked whether `architecture` appeared anywhere, so one
+    # correct paragraph absolved every other -- `refactoring` deferred to §Entry in
     # its body and went on routing unconditionally in `## Routing` and
-    # `## Success`, and the check passed. Per SENTENCE then flagged `repo-recon`,
+    # `## Success`, and the check passed. Per SENTENCE then flagged `repository-navigation`,
     # whose `## Next step` names `task-brief` in one sentence and explains the
-    # branch to `brainstormer` two sentences later, which is a complete and
+    # branch to `architecture` two sentences later, which is a complete and
     # correct statement of the rule.
     #
     # Sections, because a handoff declared outside them is narrative -- line 17 of
-    # `repo-recon` says the chain "used to start at `task-brief`", which is
+    # `repository-navigation` says the chain "used to start at `task-brief`", which is
     # history, not routing. `FORBIDDEN_SUCCESSOR` above scopes itself the same
     # way for the same reason.
     for _section in ("## Routing", "## Next step", "## Success"):
@@ -1229,9 +1267,9 @@ for _path in sorted(SKILLS.glob("*/SKILL.md")):
         _end = _body.find("\n## ", _start + len(_section))
         _text = _body[_start:_end if _end > 0 else len(_body)]
         for _para in _PARAGRAPH_SPLIT.split(_text):
-            if "`brainstormer`" not in _para:
+            if "`architecture`" not in _para:
                 continue
-            if "`writing-plans`" in _para or "Entry" in _para:
+            if "`task-analysis`" in _para or "Entry" in _para:
                 continue      # names the door, or defers to the section owning it
             if _NEGATED.search(_para):
                 continue      # "not a stage entered beside stage 1"
@@ -1242,7 +1280,7 @@ for _path in sorted(SKILLS.glob("*/SKILL.md")):
 
 check("no skill states half the entry rule",
       not _entry_failures,
-      f"{_entry_failures} route to `brainstormer` without naming `writing-plans`, "
+      f"{_entry_failures} route to `architecture` without naming `task-analysis`, "
       f"calling it a dispatch, or deferring to workflow.md §Entry -- there is one "
       f"door as of 2026-08-09, and a second one lets work reach a plan unframed")
 
@@ -1266,8 +1304,12 @@ check("...and a narrowed review declares its scope in the verdict",
 # low-risk plans. It is refused, and the refusal needs an assertion rather than
 # a paragraph: a tier computed by the system that wants to ship must never be
 # able to waive the one rule that has no exceptions.
-_rel = (SKILLS / "releasing" / "SKILL.md").read_text(encoding="utf-8")
-check("`releasing` shows the risk tier at the shipment gate",
+# The releasing procedure's depth lives in `references/releasing.md` now
+# (moved there 2026-08-21 during the `delivering`+`releasing` merge into
+# `release-git`), not the top-level SKILL.md -- read that file, not the one
+# `_del`/`_rel` elsewhere in this suite load.
+_rel = (SKILLS / "release-git" / "references" / "releasing.md").read_text(encoding="utf-8")
+check("`release-git`'s releasing procedure shows the risk tier at the shipment gate",
       "tools/scope.py --plan" in _rel,
       "a reader approving a shipment needs to know it touches a migration")
 check("...and states that the tier never waives the gate",
@@ -1340,10 +1382,10 @@ if _tm:
 
 # --- the two skills that read the same files must each name the other -------
 #
-# `no-slop` (stage 5) and `code-review` (stage 6) run back to back and can read
-# the same changed files. The division is real -- no-slop reads standing
+# `refactoring` (stage 5) and `code-review` (stage 6) run back to back and can read
+# the same changed files. The division is real -- refactoring reads standing
 # artefacts INCLUDING files the change never touched, code-review reads the diff
-# -- and until 2026-08-11 it was held by one sentence in `no-slop` saying "this
+# -- and until 2026-08-11 it was held by one sentence in `refactoring` saying "this
 # is not a diff review", with nothing checking that either skill still agreed.
 #
 # This is the weakest mechanism that is still a mechanism, and it is deliberately
@@ -1351,13 +1393,13 @@ if _tm:
 # that the division is OBSERVED, only that neither side has quietly forgotten the
 # other exists. A stronger check would have to judge prose, which is how the gate
 # markers ended up needing a declared comment rather than a substring search.
-_ns = (SKILLS / "no-slop" / "SKILL.md").read_text(encoding="utf-8")
+_ns = (SKILLS / "refactoring" / "SKILL.md").read_text(encoding="utf-8")
 _cr = (SKILLS / "code-review" / "SKILL.md").read_text(encoding="utf-8")
-check("no-slop names code-review as the skill that owns the diff",
+check("refactoring names code-review as the skill that owns the diff",
       "code-review" in _ns,
       "the boundary is stated on one side only, which is how it drifts")
-check("code-review names no-slop as the skill that owns standing artefacts",
-      "no-slop" in _cr,
+check("code-review names refactoring as the skill that owns standing artefacts",
+      "refactoring" in _cr,
       "the boundary is stated on one side only, which is how it drifts")
 
 # The security lens stopped being judged on 2026-08-11. If `code-review` no
@@ -1367,17 +1409,17 @@ check("code-review names the gate that decides its security lens",
       "tools/security_gate.py" in _cr,
       "the security lens is computed only while the skill names the command")
 
-# The other pair that reads the same directory. `.claude/` is swept by `no-slop`
+# The other pair that reads the same directory. `.claude/` is swept by `refactoring`
 # and owned by `capability-layer-maintenance`, and until 2026-08-12 there were
 # THREE surfaces over it -- `/skills-doctor` was the third, and it turned out to
 # run five suites that `/verify` already resolves, with its one unique claim
 # (inspecting the session's rendered listing) already disowned in its own text.
 # It was retired; these two remain and divide by question, not by directory.
 _clm = (SKILLS / "capability-layer-maintenance" / "SKILL.md").read_text(encoding="utf-8")
-check("capability-layer-maintenance names no-slop as the skill that sweeps",
-      "no-slop" in _clm,
+check("capability-layer-maintenance names refactoring as the skill that sweeps",
+      "refactoring" in _clm,
       "one side naming the other is how the audit surfaces stayed distinct")
-check("no-slop names capability-layer-maintenance as the skill that repairs",
+check("refactoring names capability-layer-maintenance as the skill that repairs",
       "capability-layer-maintenance" in _ns,
       "a sweep that repairs the layer's wiring is the structural edit this forbids")
 
@@ -1395,10 +1437,10 @@ check("no-slop names capability-layer-maintenance as the skill that repairs",
 _readers = sorted(
     p.parent.name for p in SKILLS.glob("*/SKILL.md")
     if "tools/memory.py" in p.read_text(encoding="utf-8", errors="replace"))
-check("stage 1 writing-plans queries durable memory",
-      "writing-plans" in _readers, str(_readers))
-check("stage 4 verifying-work queries it too, over what was ACTUALLY touched",
-      "verifying-work" in _readers, str(_readers))
+check("stage 1 task-analysis queries durable memory",
+      "task-analysis" in _readers, str(_readers))
+check("stage 4 testing queries it too, over what was ACTUALLY touched",
+      "testing" in _readers, str(_readers))
 
 print()
 if failures:

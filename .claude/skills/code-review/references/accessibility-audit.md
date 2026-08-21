@@ -41,14 +41,14 @@ manual test case for each fix.
 
 ## Next step
 
-Hand UI fixes to `designer`, built test-first per
-`.claude/skills/executing-plans/references/test-driven-development.md`; hand final evidence
-to `verifying-work` and `code-review`.
+Hand UI fixes to `architecture`, built test-first per
+`.claude/skills/implementation/references/test-driven-development.md`; hand final evidence
+to `testing` and `code-review`.
 
 ## Routing
 
 - Enter for any user-facing UI change or accessibility release gate.
-- Pair with `designer` when tokens, states, or interaction rules are missing.
+- Pair with `architecture` when tokens, states, or interaction rules are missing.
 - Do not use as a substitute for product research with users with disabilities.
 
 ## Success

@@ -204,16 +204,16 @@ the shape matches, rather than approximating it by hand.
 
 - Mandatory validator: none. The Phase 4 check is the gate.
 - Terminal handoff: whatever needed the evidence. Usually the caller —
-  `writing-plans` dispatches this skill for a constraint that turns on outside
-  evidence and expects it back — or `brainstormer` when the design is still open,
-  or `systematic-debugging` when the question was a bug.
+  `task-analysis` dispatches this skill for a constraint that turns on outside
+  evidence and expects it back — or `architecture` when the design is still open,
+  or `debugging` when the question was a bug.
 - Precedes design, never replaces it. A survey is not a decision.
 - When the question is genuinely too broad for one pass, decompose into
   independent workstreams and research each separately rather than going shallow
   on all of them. Do not spawn subagents unless the user asks.
 - A finding that changes how this repo works earns a `decisions/` record; a
   recurring source or a dead end earns a `MEMORY.md` line via
-  `knowledge-manager`.
+  `documentation`.
 
 ## Success
 

@@ -35,7 +35,7 @@ that are specific enough to fix and evidence that is specific enough to verify.
 - Do not call a change secure because no issue was found; state what was and was
   not assessed.
 - Do not substitute secret scanning for threat modeling or dependency scanning.
-- Route actionable findings to `writing-plans`; keep this review independent.
+- Route actionable findings to `task-analysis`; keep this review independent.
 
 ## Routing
 
@@ -44,8 +44,8 @@ independent read-only pass. This skill owns triage and routing; the agent does
 not fix findings or provide sign-off.
 
 - Entered from any stage when a trust boundary or security-sensitive asset is
-  involved; recommended before `writing-plans` approval and before `code-review`.
-- Terminal handoff: the requesting stage, or `writing-plans` when remediation is
+  involved; recommended before `task-analysis` approval and before `code-review`.
+- Terminal handoff: the requesting stage, or `task-analysis` when remediation is
   required.
 
 ## Success

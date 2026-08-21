@@ -43,9 +43,9 @@ scanner passed.
 
 ## Next step
 
-Route code changes to `verifying-work`, built test-first per
-`.claude/skills/executing-plans/references/test-driven-development.md`; route
-release blockers to `systematic-debugging` and `releasing` after remediation.
+Route code changes to `testing`, built test-first per
+`.claude/skills/implementation/references/test-driven-development.md`; route
+release blockers to `debugging` and `release-git` after remediation.
 
 ## Routing
 

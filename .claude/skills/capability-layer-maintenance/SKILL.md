@@ -24,12 +24,12 @@ This skill owns the capability contract and its wiring:
   hooks, output styles, portability contract, host adapters, and capability
   validators.
 
-`knowledge-manager` owns project knowledge: `README.md`, `TASK.md`,
+`documentation` owns project knowledge: `README.md`, `TASK.md`,
 `HANDOFF.md`, `MEMORY.md`, `LOG.md`, `ISSUES.md`, and `decisions/`. Hand off
 those files when the requested change is project history or state rather than
 the capability contract.
 
-`no-slop` also reads `.claude/`, and the division is by **question, not by
+`refactoring` also reads `.claude/`, and the division is by **question, not by
 directory**: it asks whether slop has accumulated and reports findings; this
 skill asks whether the contract and its wiring are correct, and changes them. A
 dead reference found by a sweep is reported there and repaired here. Running a
@@ -76,7 +76,7 @@ intentional deviation — record the reason inline), or **Retire** (dead weight
 nothing references).
 
 One filled instance, so the taxonomy reads as a verdict rather than a label:
-`knowledge-manager/SKILL.md`'s `when_to_use` field once carried a stray
+`documentation/SKILL.md`'s `when_to_use` field once carried a stray
 `- formats.md` line folded into it by YAML's scalar-continuation rule —
 **Repair**, because the deviation was an accidental copy-paste artifact, not a
 documented extension.
@@ -115,7 +115,7 @@ authored by the hook.
 
 ### 5. Record
 
-Hand the maintenance result to `knowledge-manager` for `LOG.md`, `HANDOFF.md`,
+Hand the maintenance result to `documentation` for `LOG.md`, `HANDOFF.md`,
 `ISSUES.md`, `MEMORY.md`, or `decisions/` updates. Include before/after counts,
 files changed, validator output, and remaining live-host limitations.
 
@@ -130,7 +130,7 @@ Each hook must declare one of these behaviors in its module docstring and test:
   documents listed above.
 
 When a hook needs a document update, it emits the evidence and hands the work
-to this skill or `knowledge-manager`; it does not perform the update itself.
+to this skill or `documentation`; it does not perform the update itself.
 
 ## Success
 
@@ -141,5 +141,5 @@ by a hook, and the complete validation suite is green.
 ## Routing
 
 Use this skill for capability-layer maintenance, then hand durable project-state
-updates to `knowledge-manager`. Do NOT use it as a substitute for product
+updates to `documentation`. Do NOT use it as a substitute for product
 planning, implementation, code review, or ordinary project documentation.
