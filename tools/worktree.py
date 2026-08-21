@@ -68,10 +68,17 @@ def _contained(root: Path, name: str) -> Path:
     return target
 
 
-def create(root: Path, name: str, base: str) -> tuple[str, str]:
+def create(root: Path, name: str, base: str, branch: str | None = None) -> tuple[str, str]:
     """Create a worktree for `name` at `base`. Returns (path, resolved base SHA).
 
     `base` is positional and has no default. See the module docstring.
+
+    `branch`, when given, checks the worktree out onto a NEW named branch at
+    `base` instead of detaching -- for the one case a scratch surface is not
+    enough: a task whose result must be independently pushable and turned
+    into its own PR (a proven-independent round of `tools/parallel_groups.py`).
+    Every other caller passes nothing and gets the original, unchanged
+    detached behaviour -- this is additive, not a replacement.
     """
     root = Path(root)
     target = _contained(root, name)
@@ -88,13 +95,17 @@ def create(root: Path, name: str, base: str) -> tuple[str, str]:
             f"refusing to create worktree {name!r}: {target} already exists")
 
     target.parent.mkdir(parents=True, exist_ok=True)
-    # `--detach` because the worktree is a scratch surface for one task, and a
-    # named branch per worktree leaves branches behind after teardown. The base
-    # is passed explicitly and is the whole point of this function.
-    out = _git(root, "worktree", "add", "--detach", str(target), sha)
+    if branch:
+        out = _git(root, "worktree", "add", "-b", branch, str(target), sha)
+    else:
+        # `--detach` because the worktree is a scratch surface for one task, and
+        # a named branch per worktree leaves branches behind after teardown. The
+        # base is passed explicitly and is the whole point of this function.
+        out = _git(root, "worktree", "add", "--detach", str(target), sha)
     if out.returncode != 0:
         raise WorktreeError(
-            f"git worktree add failed for {name!r}: {out.stderr.strip()}")
+            f"git worktree add failed for {name!r}"
+            f"{f' on branch {branch!r}' if branch else ''}: {out.stderr.strip()}")
     return str(target), sha
 
 
@@ -134,6 +145,10 @@ def main(argv: list[str] | None = None) -> int:
     # argparse so the error names the reason instead of printing usage.
     ap.add_argument("base", nargs="?")
     ap.add_argument("--root", default=".")
+    ap.add_argument("--branch",
+                    help="check the worktree out onto this new branch instead "
+                         "of detaching -- for a task whose result must be "
+                         "independently pushable")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve()
@@ -150,7 +165,7 @@ def main(argv: list[str] | None = None) -> int:
                     "create needs an explicit base -- there is no default, "
                     "because the default is what made every worktree in the "
                     "one previous fan-out base on the wrong branch")
-            path, sha = create(root, args.name, args.base)
+            path, sha = create(root, args.name, args.base, branch=args.branch)
             print(f"{path}\t{sha}")
             return 0
         removed = remove(root, args.name)

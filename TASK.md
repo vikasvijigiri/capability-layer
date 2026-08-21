@@ -92,6 +92,22 @@
   descriptions, not shorter); reconciling the two routers (a decision, not a
   merge); anything needing a running service.
 
+### Permanent branch-per-parallel-task policy
+- **Status:** Implemented, 6/6 tasks, independently verified by `test-verifier`
+  (`PASS: 54 check(s) green`; additive worktree default confirmed unchanged;
+  `_MERGE_VERBS` confirmed clean). One deviation found and closed:
+  `references/parallel-dispatch.md`'s example was stale, now updated. Not
+  yet delivered. See `docs/plans/2026-08-21-parallel-branch-policy.md`.
+- **Goal:** make branch-per-independent-task the permanent default in
+  `executing-plans` (removing the "only when explicitly chosen" opt-in),
+  with automatic push + PR per task, and merge into `main` gated behind one
+  batched human approval per round instead of one per PR — without
+  weakening `test_process_router.py`'s no-auto-merge invariant.
+- **Out of Scope:** actually dispatching a real parallel round under the
+  new policy (deferred to the next unit, using
+  `docs/plans/2026-08-21-four-more-spec-metrics.md` as the live case);
+  `task-implementer.md`'s `isolation: worktree` frontmatter.
+
 ### Implement world-class SessionStart bootstrap scaffolding
 - **Status:** In Progress
 - **Goal:** Implement a SessionStart bootstrap loader that scaffolds project skeleton files and a minimal, maintainable `docs/` structure without creating unnecessary subfolders or a copied `AGENTS.md`.

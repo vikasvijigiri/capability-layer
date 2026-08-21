@@ -142,6 +142,38 @@ def main() -> int:
             except wt.WorktreeError:
                 check(f"a name escaping the root is refused: {evil}", True)
 
+        # --- the additive branch mode ------------------------------------------
+        #
+        # A parallel task's result must be independently pushable, which a
+        # detached HEAD is not. `branch=` checks the worktree out onto a real,
+        # named branch at the given base instead -- the default (no `branch`)
+        # must stay exactly what it was, proved above already; this proves the
+        # new path is additive rather than a silent behaviour change.
+        branch_path, branch_sha = wt.create(root, "unit-branch", "working",
+                                             branch="test/unit-branch")
+        check("branch mode returns a path that exists",
+              Path(branch_path).is_dir(), branch_path)
+        check("branch mode returns the resolved base SHA",
+              branch_sha == working_sha, f"{branch_sha} != {working_sha}")
+        head_ref = git(Path(branch_path), "rev-parse", "--abbrev-ref", "HEAD")
+        check("branch mode checks out the NAMED branch, not detached",
+              head_ref == "test/unit-branch", head_ref)
+        rc_branch = subprocess.run(
+            ["git", "-C", branch_path, "merge-base", "--is-ancestor",
+             working_sha, "HEAD"], capture_output=True).returncode
+        check("the branch-mode worktree is still based on what was named",
+              rc_branch == 0, f"merge-base --is-ancestor exited {rc_branch}")
+        wt.remove(root, "unit-branch")
+
+        try:
+            wt.create(root, "unit-branch-2", "working", branch="working")
+            check("a branch name already in use is refused", False,
+                  "it was accepted")
+        except wt.WorktreeError as exc:
+            check("a branch name already in use is refused", True)
+            check("...and the reason names the branch", "working" in str(exc),
+                  str(exc))
+
         # --- remove is idempotent --------------------------------------------
         wt.remove(root, "unit-a")
         check("remove() takes the worktree away", not Path(path).exists(), path)

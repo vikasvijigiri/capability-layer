@@ -108,12 +108,30 @@ shortcut command, a script, a habit), every one of them needs the same
 confirmation, not a weaker or absent one — one irreversible action should never
 carry zero authorizations from one entry point and two from another.
 
+### Exception: a parallel round's task branches
+
+**Scope, exactly:** branches `executing-plans` created for one round of
+tasks `tools/parallel_groups.py` proved independent (see its "Dispatching
+subagents for parallel tasks" section) — nothing else. For those branches
+only, `git push` and PR-creation happen automatically, per branch, with no
+`AskUserQuestion`. Nothing is merged by this step, each branch is small and
+independently reviewable, and the round's own `no-slop`/`code-review` pass
+still gates the merge (below) — so the irreversible action this section
+exists to gate has not happened yet.
+
+Every other push in this repository — a single-task plan, a manual push, a
+shortcut command — keeps requiring the full per-instance confirmation above,
+unchanged. This exception does not widen to "any push from `executing-plans`"
+or "any small branch"; it is scoped to a round the scheduler itself proved
+independent, and it stays that narrow.
+
 ## Nothing here merges, and that is deliberate
 
-**No skill in this layer runs the merge command.** Grep for it and the only
-hits should be prohibitions. This stage prepares the candidate and stops; a
-human presses the button. Say so plainly in the report: open the PR, report
-it, stop.
+**No skill in this layer runs the merge command — except the one narrow,
+explicitly-gated case below.** Grep for it and every hit outside that one
+exception should be a prohibition. In every other case this stage prepares
+the candidate and stops; a human presses the button. Say so plainly in the
+report: open the PR, report it, stop.
 
 Deferring to "the merge queue" is worse than saying "a human merges this,"
 because a merge queue is often a paid or plan-gated feature, and the hosting
@@ -121,6 +139,27 @@ API can simply refuse to confirm one exists on a given repository's tier.
 **Confirm the mechanism you're deferring to is actually enabled before you
 defer to it** — handing off to something that may not exist is how a step
 becomes nobody's.
+
+### Exception: a parallel round's batched merge
+
+Once every PR from a round (the "Exception: a parallel round's task
+branches" case above) is open, run one scoped `no-slop` + `code-review` pass
+over the round's *combined* diff — one review for the round, not one per
+branch; this is what still gates the merge, since the push/PR-open above
+skipped it for speed. Then present **exactly one** `AskUserQuestion` naming
+every PR in the round (number, branch, one-line summary) and asking which,
+if any, to merge now. This is still a live, per-invocation approval — never
+a standing pre-authorization — it is simply one question covering N PRs
+instead of N questions covering one each.
+
+On approval, merge each named PR with the GitHub MCP tool
+`mcp__github__merge_pull_request` — never the CLI phrase this section
+otherwise prohibits — respecting the squash-vs-stack rule below. On decline
+or partial approval, state plainly which PRs remain open and unmerged;
+nothing here retries automatically. This is the one place in this file a
+merge actually executes, and it happens only after this exact, named,
+per-invocation approval — every other case in this file still ends at "open
+the PR, report it, stop."
 
 ## Stacked PRs — state the merge strategy before you open the second one
 
