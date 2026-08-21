@@ -145,7 +145,7 @@ sequencing.
 - [x] Task 5 — Agent renames/merges
 - [x] Task 6 — Commands, workflows/, policies/
 - [x] Task 7 — Portability + payload regeneration
-- [ ] Task 8 — Duplicate-call guard
+- [x] Task 8 — Duplicate-call guard
 - [ ] Task 9 — Full verification + regression pass
 - [ ] Task 10 — Record (knowledge-manager)
 

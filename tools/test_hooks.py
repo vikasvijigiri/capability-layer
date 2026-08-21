@@ -639,6 +639,80 @@ if (_after['calls'] - _before['calls'] != 1
 else:
     print('OK: a different tool name produces its own by_tool key, not a merged count')
 
+# --- post-tool/06-tool-cost.py: duplicate-rate threshold notice (Notion §10) -
+# Deterministic, unlike the blocks above: a threshold crossing needs absolute
+# totals, not a delta, so this snapshots and restores BOTH state files it
+# touches (call-fingerprints.json is shared with context-budget's own tests
+# above, tool-cost.json's latch is this hook's own) rather than reading the
+# real, session-cumulative numbers.
+_dup_fp_before = _CALL_FP_STATE.read_text(encoding='utf-8') if _CALL_FP_STATE.exists() else None
+_dup_tc_before = _TOOL_COST_STATE.read_text(encoding='utf-8') if _TOOL_COST_STATE.exists() else None
+
+
+def _write_fp_totals(calls, repeats):
+    _CALL_FP_STATE.write_text(json.dumps({'_totals': {'calls': calls, 'chars': 0, 'repeats': repeats}}), encoding='utf-8')
+
+
+def _write_tc_latch(active):
+    _TOOL_COST_STATE.write_text(json.dumps({'calls': 0, 'by_tool': {}, 'dup_notice_active': active}), encoding='utf-8')
+
+
+try:
+    # Below MIN_CALLS_FOR_RATE (20): silent even at a high rate.
+    _write_fp_totals(10, 8)
+    _write_tc_latch(False)
+    _p = run_hook('post-tool', {'tool_name': 'Grep', 'tool_input': {}})
+    if '[duplicate rate]' in _p.stderr:
+        print('FAIL: the duplicate-rate notice fired below the 20-call floor')
+        fail = True
+    else:
+        print('OK: the duplicate-rate notice stays silent below the call floor')
+
+    # At/above threshold (>15%), latch not yet active: fires once.
+    _write_fp_totals(20, 4)  # 20% > 15%
+    _write_tc_latch(False)
+    _p = run_hook('post-tool', {'tool_name': 'Grep', 'tool_input': {}})
+    if '[duplicate rate]' not in _p.stderr:
+        print(f'FAIL: the duplicate-rate notice did not fire at 20% with the latch clear -- stderr: {_p.stderr[:200]!r}')
+        fail = True
+    else:
+        print('OK: the duplicate-rate notice fires once the rate exceeds threshold')
+
+    # Same rate, latch now active (set by the call above): stays silent.
+    _p = run_hook('post-tool', {'tool_name': 'Grep', 'tool_input': {}})
+    if '[duplicate rate]' in _p.stderr:
+        print('FAIL: the duplicate-rate notice fired again while still above threshold (latch not respected)')
+        fail = True
+    else:
+        print('OK: the duplicate-rate notice does not repeat every call while still above threshold')
+
+    # Rate drops back to/under threshold: latch resets, silent.
+    _write_fp_totals(20, 3)  # 15% == threshold, not above it
+    _p = run_hook('post-tool', {'tool_name': 'Grep', 'tool_input': {}})
+    if '[duplicate rate]' in _p.stderr:
+        print('FAIL: the duplicate-rate notice fired at exactly the threshold (should require > threshold)')
+        fail = True
+    else:
+        print('OK: the duplicate-rate notice requires strictly above threshold, and resets the latch there')
+
+    # Climbs back above threshold after the reset: fires again.
+    _write_fp_totals(20, 4)
+    _p = run_hook('post-tool', {'tool_name': 'Grep', 'tool_input': {}})
+    if '[duplicate rate]' not in _p.stderr:
+        print('FAIL: the duplicate-rate notice did not re-fire after a reset and a fresh climb')
+        fail = True
+    else:
+        print('OK: the duplicate-rate notice re-fires after the rate drops and climbs again')
+finally:
+    if _dup_fp_before is None:
+        _CALL_FP_STATE.unlink(missing_ok=True)
+    else:
+        _CALL_FP_STATE.write_text(_dup_fp_before, encoding='utf-8')
+    if _dup_tc_before is None:
+        _TOOL_COST_STATE.unlink(missing_ok=True)
+    else:
+        _TOOL_COST_STATE.write_text(_dup_tc_before, encoding='utf-8')
+
 # --- prompt-intake/02-turn-timer.py: per-turn start timestamp (objective 6) ---
 _TURN_TIMER_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'turn-timer.json'
 
