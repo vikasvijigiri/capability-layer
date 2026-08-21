@@ -1,5 +1,14 @@
 # Log
 
+## 2026-08-21 06:10
+
+**Fixed `writing-plans/SKILL.md`'s C4 plan template (permanent).** Every
+plan header this session rendered as one run-together paragraph — no blank
+line separated `**Goal:**`/`**Source brief:**`/etc., so Markdown collapsed
+them. Added one blank line per field, plus a size cap (~300 lines typical,
+~500 a signal the work spans more than one deliverable). Verified
+`analyze.py`'s preamble check is a plain substring search, unaffected.
+
 ## 2026-08-20 05:58
 
 **Closed 2 of the 5 gaps from the 2026-08-16 audit; PR #18 merged to `main`

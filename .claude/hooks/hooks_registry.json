@@ -73,10 +73,12 @@
       ]
     },
     "post-tool": {
-      "description": "After a shell tool returns: reports what its input added to permanent session context, and names a call this session already made with the same inputs. One process for both, because each PostToolUse script costs a spawn on every shell call. Reports only -- never blocks",
-      "claude_code_event": "PostToolUse (Bash|PowerShell)",
+      "description": "After a shell tool returns: reports what its input added to permanent session context, names a call this session already made with the same inputs, counts Read-file bytes added to context, and counts Task (agent-spawn) dispatches. Separate matchers per script, because each PostToolUse script costs a spawn on every matching call. Reports only -- never blocks",
+      "claude_code_event": "PostToolUse (Bash|PowerShell|Read|Task)",
       "subscribers": [
-        ".claude/hooks/post-tool/01-context-cost.py"
+        ".claude/hooks/post-tool/01-context-cost.py",
+        ".claude/hooks/post-tool/04-read-cost.py",
+        ".claude/hooks/post-tool/05-agent-cost.py"
       ]
     }
   }

@@ -232,18 +232,25 @@ beginning:
 # [Feature Name] Implementation Plan
 
 **Goal:** [one sentence]
+
 **Source brief:** `TASK.md`, plus any spec under `docs/specs/`
+
 **Slug:** [the unit of work, matching the branch]
+
 **Risk:** [computed, never judged -- run `python tools/scope.py --plan <this
 file>` and paste its one-line reason. A shared or control surface forces
 high; volume or spread forces medium; a sensitive surface (auth, credentials,
 installer, packaging, CI) forces high on its own; an unclassifiable plan is
 high, never low. Not permission to skip Gate 2.]
+
 **Blast radius:** [surfaces, consumers, data this change can reach]
+
 **Rollback:** [how to undo THIS PLAN at its worst landing state -- half the
 tasks merged, already delivered -- and what's left behind if the undo isn't
 clean]
+
 **Architecture:** [the chosen approach and why it fits the existing system]
+
 **Tech stack and constraints:** [versions, boundaries, conventions, non-goals]
 
 ## File map
@@ -253,6 +260,21 @@ clean]
 ## Tasks
 ...
 ```
+
+**A blank line separates every field above.** Markdown collapses
+consecutive lines with no blank line between them into one run-together
+paragraph — eight fields written that way render as a single dense block
+nobody can scan. One blank line per field is the whole fix, and it is not
+optional: a produced plan missing the separation is a formatting defect,
+the same class as a missing section.
+
+**Cap the plan's own size.** Grounding, File map and Tasks together should
+stay under roughly 300 lines for a plan with 2-4 tasks; a plan pushing
+past ~500 lines is a sign the work spans more than "one coherent
+deliverable" (see C1) rather than a reason to write more prose per task.
+Prefer citing a pattern once with a `file:line` over re-explaining it in
+every task that uses it; prefer a short, named finding over a paragraph
+restating evidence already shown earlier in the same plan.
 
 `**Slug:**` is machine-read: `tools/resume.py` keys every derived fact off it
 — the plan, `refs/uaios/green/<slug>`, the attempt ledger. A plan named after
