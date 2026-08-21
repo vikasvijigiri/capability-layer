@@ -111,6 +111,24 @@
         ]
       },
       {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-tool/04-read-cost.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-tool/05-agent-cost.py\""
+          }
+        ]
+      },
+      {
         "matcher": "Skill",
         "hooks": [
           {

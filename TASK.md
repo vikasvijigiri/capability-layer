@@ -4,7 +4,6 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
-
 ### Make the layer portable: it broke every host's test runner
 
 - **Status:** Fixed and proven in Python and Node targets. Payload 1,586,874 ->
@@ -107,6 +106,18 @@
 <!-- Append-only, newest entry at the top. Never delete or rewrite an
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
+
+### 2026-08-21 — Spec-defined metrics for objectives 3, 8, 5
+- **Goal**: instrument the Notion spec's own §21 derived metrics —
+  `context_read` (Read-byte proxy for `context_tokens`), `agents_spawned`
+  (new Task-tool counter), `duplicate-operation rate` (already partially
+  wired, now surfaced by name) — replacing an earlier round's invented
+  proxies. See `docs/plans/2026-08-21-three-spec-metrics.md`.
+- **Output**: PR #24 merged to `main`. Full chain ran (`spec-reviewer`,
+  independent `test-verifier`, `no-slop`, `code-review`); caught a stale
+  local `main` ref mid-delivery (this branch's tip predated PR #23's own
+  merge), rebased clean, re-verified.
+- **Status**: Done. `PASS: 54 check(s) green` on the merged candidate.
 
 ### 2026-08-20 — Fix 2 of 4 session-performance bottlenecks
 - **Goal**: close 2 of the 4 bottlenecks found by auditing this session's

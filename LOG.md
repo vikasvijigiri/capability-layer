@@ -1,5 +1,42 @@
 # Log
 
+## 2026-08-21 13:18
+
+**PR #20 (`fix/session-performance-fixes`) merged into `main`; its base had
+gone stale under 4 intervening PRs (#21-#24).** Both branches had grown the
+same seam — `.claude/hooks/hooks_registry.json`/`.claude/settings.json`'s
+`post-tool` section, `docs/research/2026-08-19-agent-layer-comparison.md`'s
+hook count, `LOG.md`, `tools/test_hooks.py` — independently. Resolved by
+hand, additively (every subscriber from both sides kept: `01-context-cost`,
+`02-skill-cost`, `04-read-cost`, `05-agent-cost`); hook count corrected to
+the real post-merge total, 21. Two real, merge-caused defects found and
+fixed, not just textual conflicts: `tools/bench.py` carried a now-unused
+`importlib.util` import (ruff caught it), and `test_hooks.py`'s
+`skills_loaded`-unavailable test silently no-op'd once `02-skill-cost.py`
+existed on the merged tree — added the missing positive-path assertion
+rather than leaving the gap. `PASS: 54 check(s) green`, verified twice
+(before and after re-syncing a stale local `main` ref discovered mid-check).
+
+**Also recorded here, retroactively: PR #21 (`fix/unified-telemetry-schema`)
+merged 2026-08-20, and `main`'s `LOG.md` never got an entry for it** — the
+branch's own knowledge-doc commit was made after the PR closed and never
+reached `main`. New `post-run/09-telemetry.py` consolidated the shell-call
+counter, `chain.gather()`, and the entry classifier's result into one
+per-turn snapshot; every target-spec field this harness cannot populate is
+named with a reason (`UNAVAILABLE_FIELDS`), never faked. `spec-reviewer`
+caught a real bug post-landing: `skills_loaded` read a counter whose
+producer didn't exist on that tree yet, reporting a fabricated zero instead
+of honest unavailability — fixed, red-green-proved by `test-verifier`.
+
+## 2026-08-21 06:10
+
+**Fixed `writing-plans/SKILL.md`'s C4 plan template (permanent).** Every
+plan header this session rendered as one run-together paragraph — no blank
+line separated `**Goal:**`/`**Source brief:**`/etc., so Markdown collapsed
+them. Added one blank line per field, plus a size cap (~300 lines typical,
+~500 a signal the work spans more than one deliverable). Verified
+`analyze.py`'s preamble check is a plain substring search, unaffected.
+
 ## 2026-08-20 09:21
 
 **Closed 2 of 4 session-performance bottlenecks found by auditing this
