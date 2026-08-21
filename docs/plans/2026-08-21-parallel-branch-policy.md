@@ -229,7 +229,10 @@ Constraint below).
   temporarily stripping "parallel" from the push-exception heading --
   `FAIL: \`delivering\` scopes its push exception to a parallel round by
   name` -- then restoring via `git checkout --`, suite green again.
-- [ ] Task 6 — `workflow.md` + ADR
+- [x] Task 6 — `workflow.md` + ADR. **Executed:** `python
+  tools/run_checks.py --tier all --require-test` -> `PASS: 54 check(s)
+  green (audit, build, lint, smoke, test, typecheck)`, including Tasks 1
+  and 5's new cases.
 
 ## Tasks
 
