@@ -401,6 +401,39 @@ for good in (".claude/hooks/post-tool/04-read-cost.py", "tools/bench.py",
              "TASK.md", "src/cli.py:main"):
     check(f"{good!r} looks like a path", pg._looks_like_path(good))
 
+# --- a wrapped bullet must not swallow the bullets after it ------------------
+#
+# Live bug, not hypothetical: docs/plans/2026-08-21-four-more-spec-metrics.md's
+# Task 1-3 bullets each wrap onto an indented continuation line with no `-`
+# marker ("- Create: `x.py` -- on any payload, accumulate ...\n  in `y.json`,
+# mirroring ..."). `field()` read that continuation line as "end of the
+# bullet list" and silently dropped every `- Modify:` bullet after it --
+# including `.claude/settings.json`, a declared SHARED_PATTERNS surface --
+# so three tasks that all touch it were scheduled into one concurrent round.
+
+WRAPPED_BULLET_HIDES_LATER_FILE = """
+### Task 1: A
+**Files:**
+- Create: `src/hook.py` -- on any payload, accumulate a counter
+  in `src/state.json`, mirroring the existing shape exactly
+- Modify: `.claude/settings.json` -- register the new hook
+**Dependencies:** none
+
+### Task 2: B
+**Files:** `src/other.py`
+**Dependencies:** none
+"""
+wrapped_files = pg.parse_plan(WRAPPED_BULLET_HIDES_LATER_FILE)[0][0]["files"]
+check("a bullet's wrapped continuation line does not truncate the Files list",
+      wrapped_files == ["src/hook.py", "src/state.json", ".claude/settings.json"],
+      str(wrapped_files))
+
+wrapped = pg.schedule(WRAPPED_BULLET_HIDES_LATER_FILE)
+check("a task touching .claude/settings.json via a wrapped bullet still "
+      "forces its own serial round",
+      wrapped["valid"] and wrapped["max_concurrency"] == 1,
+      str(wrapped["problems"] or wrapped["groups"]))
+
 
 # --- determinism ------------------------------------------------------------
 #

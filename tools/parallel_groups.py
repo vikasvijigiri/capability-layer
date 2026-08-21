@@ -155,9 +155,16 @@ def field(block: str, key: re.Pattern[str]) -> str | None:
             continue
         if NEXT_KEY.match(line):
             break
-        if not line.lstrip().startswith(("-", "*", "+")):
+        if line.lstrip().startswith(("-", "*", "+")):
+            collected.append(line.strip().lstrip("-*+ ").strip())
+        elif collected:
+            # A wrapped continuation of the bullet above -- writing-plans'
+            # own task template wraps prose onto an indented line with no
+            # bullet marker. Folding it into the current item (not breaking)
+            # is what lets a later bullet on the SAME block still be seen.
+            collected[-1] = collected[-1] + " " + line.strip()
+        else:
             break
-        collected.append(line.strip().lstrip("-*+ ").strip())
     return "\n".join(collected)
 
 
