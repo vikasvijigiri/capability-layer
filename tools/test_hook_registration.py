@@ -169,6 +169,44 @@ import ast  # noqa: E402, PLC0415
 
 SKILL_NAMES = {d.name for d in (ROOT / ".claude" / "skills").iterdir() if d.is_dir()}
 
+# Known non-dispatch collisions between an ordinary word used for something
+# else in a hook's own logic and a Notion single-word skill name that
+# happens to share the substring -- found 2026-08-21 once `security`,
+# `testing`, `research`, `architecture` replaced hyphenated compound names
+# that almost never collided with prose by accident. Each entry names the
+# file and the exact reason it is not a dispatch.
+_KNOWN_COLLISIONS = {
+    # `_hooklib.FAILURE_CLASSES`' own failure-kind label ("this failure is
+    # security-class"), mirrored locally as a dict key -- not the `security`
+    # skill.
+    ("06-artifact-autocommit.py", "security"),
+    # A HARD_STAGE regex PATTERN naming the `permission-security` hook
+    # family (matched against a prompt, never printed) -- the substring
+    # collision is with the family name, not the `security` skill.
+    ("01-entry-classifier.py", "security"),
+}
+
+
+def _all_docstrings(tree: ast.AST) -> set[str]:
+    """Every docstring in the file -- module, class and function-level.
+
+    `ast.get_docstring(node, clean=False)` matches the AST Constant's raw
+    value exactly; the default `clean=True` dedents/strips it, so comparing
+    a cleaned docstring against the raw Constant below was never equal for
+    any real multi-line docstring and silently excluded nothing. Found
+    2026-08-21 the same way as the single-word collisions above: neither
+    bug was visible until Notion's short skill names started appearing
+    inside ordinary docstring prose.
+    """
+    docs: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            doc = ast.get_docstring(node, clean=False)
+            if doc:
+                docs.add(doc)
+    return docs
+
+
 for _path in sorted(HOOKS.rglob("*.py")):
     if "__pycache__" in _path.parts or _path.name.startswith("_"):
         continue
@@ -177,11 +215,13 @@ for _path in sorted(HOOKS.rglob("*.py")):
     except SyntaxError as exc:
         check(f"{_path.name} parses", False, str(exc)[:80])
         continue
-    doc = ast.get_docstring(tree) or ""
+    docs = _all_docstrings(tree)
     emitted = [n.value for n in ast.walk(tree)
                if isinstance(n, ast.Constant) and isinstance(n.value, str)
-               and n.value != doc and len(n.value) < 4000]
-    named = sorted({s for s in SKILL_NAMES if any(s in e for e in emitted)})
+               and n.value not in docs and len(n.value) < 4000]
+    allowed = {s for f, s in _KNOWN_COLLISIONS if f == _path.name}
+    named = sorted({s for s in SKILL_NAMES if s not in allowed
+                    and any(s in e for e in emitted)})
     check(f"{_path.parent.name}/{_path.name} names no skill in what it emits",
           not named, f"names {named} -- workflow.md decides, the hook measures")
 

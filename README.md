@@ -148,11 +148,12 @@ repo-recon → writing-plans ─────────────────
 ```
 
 **The numbers in `workflow.md` are labels, not a sequence.** There is one door:
-`writing-plans` frames the request into six fields, dispatches for whatever it
+`task-analysis` frames the request into six fields, dispatches for whatever it
 could not fill, then decomposes it. A dispatch is not a handoff — each one comes
 back, which is what removed the seam an un-handed-off brief used to fall through.
-`repo-recon` runs only when the repository is unread. `releasing` runs only when
-there is somewhere to deploy. Work too small to plan skips the plan and the gate.
+`repository-navigation` runs only when the repository is unread. `release-git`'s
+releasing procedure runs only when there is somewhere to deploy. Work too small
+to plan skips the plan and the gate.
 
 `.claude/workflow.md` §Entry owns that rule and is the only place it is stated.
 Read it before adding a stage. Each skill states its own triggers and handoff;
@@ -164,7 +165,7 @@ loads only when the task calls for it.
 | Path | What it is |
 |---|---|
 | `.claude/skills/` | the 14 skills, one directory each |
-| `.claude/agents/` | 11 subagents — the read-only fan-out set, plus one implementer |
+| `.claude/agents/` | 8 subagents — the read-only fan-out set, plus one implementer |
 | `.claude/hooks/` | what fires automatically — checkpoints, secret scan, branch guard, state report |
 | `.claude/commands/` | the 12 slash commands, including `/verify`, `/save` and `/publish` |
 | `.claude/constitution.md` | seven articles every plan ticks or justifies |

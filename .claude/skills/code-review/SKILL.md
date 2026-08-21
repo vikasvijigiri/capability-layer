@@ -59,8 +59,8 @@ not `0`. **This decides the security lens in step 5 — it is not advice.**
 Correctness, security, silent failures, test quality, scope drift, dependency
 risk, and repository policy violations, within the scope from step 2.
 
-For a large change, dispatch `diff-reviewer` for independent correctness,
-security, test-quality and scope passes; merge duplicate findings before
+For a large change, dispatch `reviewer` (mode: diff) for independent
+correctness, security, test-quality and scope passes; merge duplicate findings before
 applying recovery. For an independent security pass rather than a reading,
 dispatch `security-reviewer` — it reports, this skill still owns the verdict.
 For a diff wide enough that even those four passes would serialize slowly,

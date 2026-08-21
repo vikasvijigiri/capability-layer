@@ -46,7 +46,7 @@ Read three of those numbers before anything else:
 
 `tools/recon.py --units` prints subsystems whose file sets are **disjoint by
 construction**. That disjointness is the licence to fan out: dispatch one
-`repo-cartographer` per unit, **all in a single message**, so they run
+`researcher` (mode: unit) per unit, **all in a single message**, so they run
 concurrently and no two read the same file.
 
 Give each: the unit name, the repo root, and the detected languages. Nothing

@@ -104,7 +104,7 @@ inst.apply(target, actions)
 
 check("skills landed as <name>/SKILL.md, the only shape that is visible",
       (target / ".claude" / "skills" / "repo-recon" / "SKILL.md").is_file())
-check("agents landed", (target / ".claude" / "agents" / "task-implementer.md").is_file())
+check("agents landed", (target / ".claude" / "agents" / "implementer.md").is_file())
 check("the workflow policy landed", (target / ".claude" / "workflow.md").is_file())
 check("the tools landed", (target / "tools" / "resume.py").is_file()
       and (target / "tools" / "recon.py").is_file())

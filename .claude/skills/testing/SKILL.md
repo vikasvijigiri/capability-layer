@@ -163,11 +163,11 @@ result covers content that no longer exists.
 | Fixing gaps inside the verification | The evidence then describes a tree that no longer exists |
 | Verifying a hook by reading it | Its failure symptom is silence — fire it |
 
-For material changes, dispatch `test-verifier` before declaring the result
+For material changes, dispatch `tester` before declaring the result
 verified. It must independently run the relevant checks and report exact
 evidence; an implementer's own report is never proof. It owns re-running the
 suites and any red-green proof — if `implementation` already dispatched
-`spec-reviewer` on this unit, that agent's plan-compliance check is not this
+`reviewer` (mode: spec) on this unit, that agent's plan-compliance check is not this
 dispatch's job to repeat.
 
 ## Next step — you MUST take it

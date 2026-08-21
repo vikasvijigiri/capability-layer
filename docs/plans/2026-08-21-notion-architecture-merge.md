@@ -142,7 +142,7 @@ sequencing.
 - [x] Task 2 — Hooks: rename, consolidate, install.py
 - [x] Task 3 — E0-E5 router
 - [x] Task 4 — Skill renames/merges + compression
-- [ ] Task 5 — Agent renames/merges
+- [x] Task 5 — Agent renames/merges
 - [ ] Task 6 — Commands, workflows/, policies/
 - [ ] Task 7 — Portability + payload regeneration
 - [ ] Task 8 — Duplicate-call guard

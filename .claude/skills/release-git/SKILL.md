@@ -19,7 +19,7 @@ an inferred yes.
 **Delivering** (below): prepare the reviewed change for safe repository
 integration — branch, PR, rebase, merge. Does not deploy.
 
-**Releasing**: read `references/releasing.md` for putting delivered work
+**Releasing**: read `references/release-procedure.md` for putting delivered work
 into a running environment — deploy, smoke check, observe, rollback, and
 <!-- GATE 2: shipment approval. The chain has two; see .claude/workflow.md. -->
 **Gate 2**, the shipment approval via `AskUserQuestion`. Entered from
@@ -148,12 +148,14 @@ checks, invoke `debugging`.
 
 ## Releasing procedure
 
-See `references/releasing.md` for the full procedure: the shipment gate,
+See `references/release-procedure.md` for the full procedure: the shipment gate,
 `tools/release_candidate.py`, the three preconditions, target detection,
 the irreversibility statement, the smoke check, post-release observation,
 and roll-back-first-diagnose-second. Platform-specific commands live in
 `references/PLATFORMS.md`; SLOs/alerts/runbooks in
-`references/observability-sre.md`.
+`references/observability-sre.md`. After the smoke check, dispatch
+`reviewer` (mode: release) for an independent readiness check when the
+harness supports subagents.
 
 Not every change needs it — skip when there is no environment and say so,
 then go to `documentation`.
@@ -169,7 +171,7 @@ command forward when one exists.
 
 - Mandatory validator (delivering): all-tier checks, secret scan, review
   receipt, and base-branch evidence.
-- Mandatory validator (releasing): the smoke check in `references/releasing.md`.
+- Mandatory validator (releasing): the smoke check in `references/release-procedure.md`.
 - Preceded by `code-review` — this consumes a change that has already been
   reviewed and verified.
 - Terminal handoff: `documentation`, once released (or once delivered, for

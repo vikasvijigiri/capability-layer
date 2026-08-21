@@ -384,7 +384,7 @@ def _names_control_or_sensitive_path(text: str) -> bool:
 # Reports a PREDICTED level at prompt time; telemetry/09-telemetry.py separately
 # records the ACTUAL level once the turn finishes (real skills_loaded/
 # agents_spawned counts), so prediction accuracy becomes measurable over time
-# without a second mechanism -- see decisions/2026-08-21-notion-architecture-merge.md.
+# without a second mechanism -- see the 2026-08-21 Notion-merge decision record.
 #
 # Weighted, not a single eyeballed signal (shape adapted from a production
 # complexity-classifier pattern found by outside investigation, not invented

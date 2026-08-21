@@ -482,3 +482,5 @@ These skills are reusable capabilities, not additional lifecycle stages:
 | Design | `architecture` | a user-facing surface with no design contract; produces `DESIGN.md` |
 | Diagnose | `debugging` | root-cause and bounded recovery |
 | Maintain | `capability-layer-maintenance` | layer contracts and wiring |
+| Analyze | `data-analysis` | a cost/quality/behavior question this layer's own telemetry can answer |
+| Secure | `security` | the deterministic security gate and independent review, at the high risk tier |

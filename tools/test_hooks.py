@@ -226,7 +226,7 @@ for _event, _payload, _label in DENY_CASES:
 # (`test_resume.py`'s temp-repo fixtures, the DENY_CASES above firing real
 # hooks in this real repo).
 _SKILL_COST_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'skill-cost.json'
-_NO_SLOP_SKILL_MD = ROOT / '.claude' / 'skills' / 'no-slop' / 'SKILL.md'
+_NO_SLOP_SKILL_MD = ROOT / '.claude' / 'skills' / 'refactoring' / 'SKILL.md'
 
 
 def _skill_cost_totals():
@@ -237,15 +237,15 @@ def _skill_cost_totals():
 
 
 SKILL_COST_CASES = [
-    ({'tool_name': 'Skill', 'tool_input': {'skill': 'no-slop'}},
+    ({'tool_name': 'Skill', 'tool_input': {'skill': 'refactoring'}},
      'known skill via "skill" key',
      lambda before, after: after['chars'] - before['chars']
      == _NO_SLOP_SKILL_MD.stat().st_size),
-    ({'tool_name': 'Skill', 'tool_input': {'skill_name': 'no-slop'}},
+    ({'tool_name': 'Skill', 'tool_input': {'skill_name': 'refactoring'}},
      'known skill via "skill_name" fallback',
      lambda before, after: after['chars'] - before['chars']
      == _NO_SLOP_SKILL_MD.stat().st_size),
-    ({'tool_name': 'Skill', 'tool_input': {'name': 'no-slop'}},
+    ({'tool_name': 'Skill', 'tool_input': {'name': 'refactoring'}},
      'known skill via "name" fallback',
      lambda before, after: after['chars'] - before['chars']
      == _NO_SLOP_SKILL_MD.stat().st_size),
@@ -579,7 +579,7 @@ def _agent_cost_totals():
 
 
 _before = _agent_cost_totals()
-_p = run_hook('post-tool', {'tool_name': 'Task', 'tool_input': {'subagent_type': 'test-verifier'}})
+_p = run_hook('post-tool', {'tool_name': 'Task', 'tool_input': {'subagent_type': 'tester'}})
 _after = _agent_cost_totals()
 if _p.returncode != 0:
     print(f'FAIL: a Task dispatch errored -- exit {_p.returncode}, stderr: {_p.stderr[:200]!r}')
@@ -587,7 +587,7 @@ if _p.returncode != 0:
 elif _after['calls'] - _before['calls'] != 1:
     print(f'FAIL: agent-cost calls did not increment on a Task dispatch -- before={_before} after={_after}')
     fail = True
-elif _after.get('by_type', {}).get('test-verifier', 0) - _before.get('by_type', {}).get('test-verifier', 0) != 1:
+elif _after.get('by_type', {}).get('tester', 0) - _before.get('by_type', {}).get('tester', 0) != 1:
     print(f'FAIL: agent-cost by_type did not record subagent_type -- before={_before} after={_after}')
     fail = True
 else:

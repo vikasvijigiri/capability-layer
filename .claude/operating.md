@@ -122,7 +122,7 @@ file owns the chain.
 
 **Exactly two approval gates, each with its own tool.** Gate 1 is
 `ExitPlanMode` (the finished plan); Gate 2 is `AskUserQuestion` (shipment, in
-`releasing`). Neither is ever asked in prose — a prose question is answerable by
+`release-git`'s releasing procedure). Neither is ever asked in prose — a prose question is answerable by
 silence and scrolls away. Each declares itself with a `<!-- GATE n: ... -->`
 marker, and `test_process_router.py` pins the set to two, checking each against
 *its own* tool. Open questions are `[NEEDS CLARIFICATION]` markers resolved
@@ -140,5 +140,5 @@ subagents**. `Explore.md` overrides the built-in to pin haiku.
 `.claude/workflow.md` carries the table; `test_process_router.py` asserts each
 agent has a "do NOT use" clause, a `tools:` allowlist, a pinned model, and a
 dispatcher that names it — and that it names its dispatcher back.
-`task-implementer` **never runs two at once**.
+`implementer` **never runs two at once**.
 

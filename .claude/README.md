@@ -37,7 +37,7 @@ write the document.
 | | |
 |---|---|
 | `skills/` | 14 capabilities, triggered **only** by their own `description:` frontmatter. `<skill>/references/` holds depth loaded per task, never per turn |
-| `agents/` | 11 subagents. `tools:` and `model:` are enforced by the host; `allowed-paths:` is not — see the dormancy note in `workflow.md` |
+| `agents/` | 8 subagents (7 custom + the platform-native `Explore` override). `tools:` and `model:` are enforced by the host; `allowed-paths:` is not — see the dormancy note in `workflow.md` |
 | `commands/` | 11 user-invoked slash commands. All carry `disable-model-invocation: true` |
 | `hooks/` | the lifecycle scripts above, plus `.claude/hooks/_hooklib.py` and `.claude/hooks/_projectchecks.py`, which are libraries and not hooks |
 | `rules/` | standing constraints loaded every session — pay for them accordingly |

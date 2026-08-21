@@ -16,7 +16,7 @@ Arguments: `$ARGUMENTS` must identify the saved spec or plan path.
 Read the complete artifact and the relevant repository files. Apply
 `.claude/skills/writing-plans/references/artifact-review.md`; for cross-cutting
 boundaries also invoke
-`architecture-reviewer`. Return the verdict, findings with file or section
+`architect`. Return the verdict, findings with file or section
 evidence, unresolved assumptions, and the exact next routing decision.
 
 Do not edit the artifact, implement any task, or approve on behalf of the user.

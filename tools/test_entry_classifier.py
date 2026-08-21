@@ -400,7 +400,11 @@ def main() -> int:
     src = HOOK.read_text(encoding="utf-8")
     body = src.split('"""', 2)[-1]
     skills = {d.name for d in (ROOT / ".claude" / "skills").iterdir() if d.is_dir()}
-    named = sorted(s for s in skills if s in body)
+    # `permission-security` (a HARD_STAGE regex pattern naming the hook
+    # family, matched against a prompt, never dispatched) contains the
+    # `security` skill name as a pure substring -- same known collision
+    # `test_hook_registration.py` allowlists for the same reason.
+    named = sorted(s for s in skills if s in body and "permission-" + s not in body)
     check("the classifier names no skill outside its docstring", not named,
           f"names {named} -- workflow.md decides, the hook measures")
 

@@ -174,10 +174,10 @@ From the user: *"is that not happening?"* means you assumed without verifying.
 | 3 Hypothesis | One theory, smallest test, one variable | Confirmed, or replaced |
 | 4 Fix | Failing test, one fix, verify, record | Symptom gone, `ISSUES.md` written |
 
-## Parallel work — `failure-investigator`
+## Parallel work — `debugger`
 
 When several *independent* failures land at once — different files, different
-subsystems, no shared cause — dispatch one **`failure-investigator`** per
+subsystems, no shared cause — dispatch one **`debugger`** per
 failure, all in the same message. Each reproduces its own failure, finds the
 root cause, and returns the cause plus the command that proves it. None of them
 fixes anything, so they cannot collide.

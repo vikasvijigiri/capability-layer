@@ -1,5 +1,5 @@
 ---
-name: task-implementer
+name: implementer
 description: Implements ONE task from an approved plan — writes the code, runs the task's own verification, reports what it did. Use only for a task inside a round `tools/parallel_groups.py` computed, so its files are disjoint from every task running beside it and its interfaces are frozen, and only when the user chose subagent execution. Do NOT use without an approved plan, for a task whose declared files overlap one already in flight, or to decide anything the plan left open — it asks instead.
 tools: Read, Write, Edit, Grep, Glob, Bash, PowerShell
 model: sonnet
@@ -32,7 +32,7 @@ You have no memory of the session that dispatched you and no view of the other
 tasks. Everything you need is in the brief you were handed. If something is
 missing, ask — do not infer it.
 
-`executing-plans` dispatched you and still owns the plan file. **Do not tick its
+`implementation` dispatched you and still owns the plan file. **Do not tick its
 checkboxes** — it does that after reading your report, so a task marked complete
 always means somebody looked.
 

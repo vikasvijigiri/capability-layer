@@ -114,7 +114,7 @@ definition comes from elsewhere:
 the same file is duplicated effort, not corruption — so the ceiling on those is
 cost, not safety. Everything that writes needs the check.
 
-**One-per-unit, never one-per-agent-you-can-think-of.** Four `diff-reviewer`
+**One-per-unit, never one-per-agent-you-can-think-of.** Four `reviewer`
 dispatches over four *angles* is a decomposition. Four over the same angle is
 four opinions and no more coverage.
 
@@ -158,7 +158,7 @@ Two rungs carry the weight:
   nobody could see. Nothing reported a stale base, because from inside the
   worktree nothing is wrong -- it is a clean checkout of a real commit.
 
-  **Re-measured since, and it is still true.** Two `task-implementer` agents
+  **Re-measured since, and it is still true.** Two `implementer` agents
   dispatched from a feature branch got worktrees on the default branch instead;
   `git merge-base --is-ancestor <feature> HEAD` inside them exited **1**. Prose
   about this bug did not change the behaviour, because prose was never what set

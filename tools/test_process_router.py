@@ -382,7 +382,7 @@ NOT_SKILLS = {
     "general-purpose", "statusline-setup",
     # document sections and prose
     "task-brief-style", "session-context",
-    # code-review angles handed to a diff-reviewer, not names of anything
+    # code-review angles handed to a reviewer, not names of anything
     "test-quality",
     # the scope vocabulary: verdicts and veto clauses from `tools/scope.py`.
     # Backticked because they are exact values a reader will grep for, which is
@@ -407,6 +407,13 @@ NOT_SKILLS = {
     "writing-plans", "executing-plans", "systematic-debugging",
     "verifying-work", "no-slop", "repo-recon", "knowledge-manager",
     "brainstormer", "designer", "delivering", "releasing",
+    # single-word backticked terms newly visible once the skill-reference
+    # regex widened (2026-08-21) to catch single-word agent names
+    # (architect, debugger, reviewer, ...) -- these are ordinary backticked
+    # prose words, not component names, caught by the same wider net.
+    "ultracode", "unavailable", "finding", "pass", "blocked", "clean",
+    "conflict", "ghstack", "mechanical", "spr", "substantive", "unknown",
+    "confidence", "limit", "offset", "source",
 }
 
 # --- workflow.md's own names resolve --------------------------------------
@@ -473,7 +480,7 @@ for d in sorted(SKILLS.iterdir()):
     text = skill_md.read_text(encoding="utf-8")
     body = text.split("---", 2)[-1]  # skip frontmatter; it names peers freely
 
-    for name in sorted(set(re.findall(r"`([a-z][a-z0-9]+(?:-[a-z0-9]+)+)`", body))):
+    for name in sorted(set(re.findall(r"`([a-z][a-z0-9]{2,}(?:-[a-z0-9]+)*)`", body))):
         if name in NOT_SKILLS or name.endswith(".py") or name.endswith(".md"):
             continue
         if "/" in name or "." in name:
@@ -808,7 +815,7 @@ if AGENTS.exists():
     named_by_skills: set[str] = set()
     for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
         body = (d / "SKILL.md").read_text(encoding="utf-8")
-        for name in set(re.findall(r"`([a-z][a-z0-9]+(?:-[a-z0-9]+)+)`", body)):
+        for name in set(re.findall(r"`([a-z][a-z0-9]{2,}(?:-[a-z0-9]+)*)`", body)):
             if name in agent_names:
                 named_by_skills.add(name)
 
@@ -865,7 +872,7 @@ if AGENTS.exists():
         text = (d / "SKILL.md").read_text(encoding="utf-8")
         body = text.split("---", 2)[-1]
         dispatched = sorted({
-            n for n in re.findall(r"`([a-z][a-z0-9]+(?:-[a-z0-9]+)+)`", body)
+            n for n in re.findall(r"`([a-z][a-z0-9]{2,}(?:-[a-z0-9]+)*)`", body)
             if n in agent_names
         })
         approved = granted_tools(text)
@@ -897,8 +904,8 @@ if AGENTS.exists():
 
     # ...and the reference points back. An agent runs in a fresh context with its
     # own file as the whole brief: if it does not name its dispatcher, it cannot
-    # know where its boundary is. That is not theoretical -- `failure-investigator`
-    # must not write `ISSUES.md` and `task-implementer` must not tick the plan's
+    # know where its boundary is. That is not theoretical -- `debugger`
+    # must not write `ISSUES.md` and `implementer` must not tick the plan's
     # checkboxes, and both facts live only in the sentence naming the owner.
     #
     # Found on 2026-08-03 by a throwaway script: two of four agents were missing
@@ -1304,11 +1311,11 @@ check("...and a narrowed review declares its scope in the verdict",
 # low-risk plans. It is refused, and the refusal needs an assertion rather than
 # a paragraph: a tier computed by the system that wants to ship must never be
 # able to waive the one rule that has no exceptions.
-# The releasing procedure's depth lives in `references/releasing.md` now
+# The releasing procedure's depth lives in `references/release-procedure.md` now
 # (moved there 2026-08-21 during the `delivering`+`releasing` merge into
 # `release-git`), not the top-level SKILL.md -- read that file, not the one
 # `_del`/`_rel` elsewhere in this suite load.
-_rel = (SKILLS / "release-git" / "references" / "releasing.md").read_text(encoding="utf-8")
+_rel = (SKILLS / "release-git" / "references" / "release-procedure.md").read_text(encoding="utf-8")
 check("`release-git`'s releasing procedure shows the risk tier at the shipment gate",
       "tools/scope.py --plan" in _rel,
       "a reader approving a shipment needs to know it touches a migration")

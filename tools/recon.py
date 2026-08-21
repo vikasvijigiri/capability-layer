@@ -25,7 +25,7 @@ a second run.
 
 `--units` is the part that earns its place: it partitions the tree into
 subsystems with **disjoint file sets**, which is exactly the precondition
-`parallel_groups.py` enforces for concurrent agents. One `repo-cartographer` per
+`parallel_groups.py` enforces for concurrent agents. One `researcher` per
 unit, all dispatched in one message, no two reading the same file twice.
 """
 

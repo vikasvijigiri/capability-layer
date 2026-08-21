@@ -15,7 +15,7 @@ Arguments: `$ARGUMENTS` identifies the release version and environment.
 
 Run only approved non-destructive release checks. Confirm the exact artifact,
 environment, smoke result, health signal, observation window, rollback path, and
-risk owner. Dispatch `release-verifier` when available. Return PASS, FAIL, or
+risk owner. Dispatch `reviewer` (mode: release) when available. Return PASS, FAIL, or
 BLOCKED with timestamps and quoted evidence.
 
 Do not deploy, rollback, mutate production, or declare success without health

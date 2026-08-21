@@ -13,7 +13,7 @@ they appear to." But that is an argument for *checking* overlap, not for banning
 concurrency -- and the rule as written meant a twelve-task plan of genuinely
 independent work ran twelve times slower than it had to.
 
-`task-implementer` already carries `isolation: worktree`, whose own comment says
+`implementer` already carries `isolation: worktree`, whose own comment says
 the constraint could be relaxed "deliberately rather than by forgetting it", and
 names what isolation does not solve: frozen interfaces. This file is that
 deliberate relaxation. Concurrency is licensed by a computed property of the
@@ -458,7 +458,7 @@ def render(result: dict) -> str:
         out.append("")
         out.append(f"schedulable: {result['parallel_groups']} group(s) may run "
                    f"concurrently, {result['serialized_groups']} must not.")
-        out.append("Dispatch one `task-implementer` per task within a round, all in "
+        out.append("Dispatch one `implementer` per task within a round, all in "
                    "the SAME message. Verify the whole round before the next.")
     return "\n".join(out)
 

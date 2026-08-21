@@ -137,7 +137,7 @@ the plan is not schedulable; fix the plan (or run it serially), never route
 around the check.
 
 **Each task in such a round gets its own branch, not a shared scratch
-worktree.** Create it yourself — never rely on `task-implementer`'s own
+worktree.** Create it yourself — never rely on `implementer`'s own
 `isolation: worktree` frontmatter (see `references/parallel-dispatch.md`'s
 "own the worktree instead of asking for one"):
 
@@ -147,7 +147,7 @@ worktree.** Create it yourself — never rely on `task-implementer`'s own
 `<plan-base-branch>` is this plan's own working branch tip, verified by `git
 merge-base --is-ancestor` — never the repository's default branch; that
 mistake is the one prior fan-out failure this layer has on record. Dispatch
-one **`task-implementer`** per task in the round, all in the same message,
+one **`implementer`** per task in the round, all in the same message,
 each pointed at its pre-created worktree path.
 
 Give each agent: the **path** to its task's text (never pasted — anything
@@ -159,7 +159,7 @@ non-clean result deliberately — a blocked agent gets escalated or reassigned
 once, never re-dispatched unchanged. Verify the round before dispatching the
 next: an agent reporting success is not evidence; the diff is.
 
-**The dispatcher — never the subagent — commits.** `task-implementer`'s own
+**The dispatcher — never the subagent — commits.** `implementer`'s own
 contract already forbids it ("Never commit, push, merge or deploy"). Once a
 task's diff and its own Verification command both check out, commit it
 yourself inside that task's worktree, on that task's named branch. Hand the
@@ -220,17 +220,17 @@ Isolation is decided **before** the first edit, not after the diff grows.
 Every task green is not the same as the goal met, and this skill cannot judge its
 own output. Do not announce completion before verification has run.
 
-Before that handoff, dispatch `spec-reviewer` when the implementation has an
+Before that handoff, dispatch `reviewer` (mode: spec) when the implementation has an
 approved spec or material acceptance criteria — it checks compliance but does not
 fix or approve the work. Scope its prompt to plan-vs-diff compliance only: does
 every task's Files/Implementation notes/Done-when match what actually landed.
-Re-running the test suites is `testing`'s `test-verifier`, dispatched
+Re-running the test suites is `testing`'s `tester`, dispatched
 next — asking both agents to do that is the same suite run twice.
 
 ## Routing
 
 - Mandatory validator: verification of the completed work.
-- Independent compliance lens: `spec-reviewer` for material approved specs.
+- Independent compliance lens: `reviewer` (mode: spec) for material approved specs.
 - Preceded by planning, which produces the plan this consumes.
 - Terminal handoff: `testing`, then `release-git`.
 - A failure worth remembering goes wherever the project tracks issues; the unit

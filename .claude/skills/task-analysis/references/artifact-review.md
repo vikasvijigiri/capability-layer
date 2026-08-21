@@ -26,7 +26,7 @@ do not implement it or silently repair it.
    State what was checked and what was outside scope.
 5. Return a verdict: APPROVED, APPROVED WITH RECORDED RISK, or REVISE.
 
-For material cross-cutting changes, dispatch `architecture-reviewer` for a
+For material cross-cutting changes, dispatch `architect` for a
 separate architecture lens. This skill still owns the verdict and approval
 gate.
 

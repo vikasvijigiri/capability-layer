@@ -61,7 +61,7 @@ def main():
                 f"({os.path.basename(path)}). Run it directly against a "
                 "realistic input before considering this done -- reading the "
                 "diff is not enough. A past false-positive regex bug here "
-                "only got caught because testing happened to occur anyway; "
+                "only got caught because someone happened to try it anyway; "
                 "nothing enforced it."
             ),
         }

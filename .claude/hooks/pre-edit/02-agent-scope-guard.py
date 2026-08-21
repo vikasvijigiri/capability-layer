@@ -24,10 +24,10 @@ Scope resolution, per agent, read from its own frontmatter in
 `.claude/agents/<name>.md`:
 
   - `allowed-paths: <comma-separated globs>` -- a STATIC scope, fixed at
-    review time (e.g. `source-digger`, which only ever writes the one digest
+    review time (e.g. `researcher`, which only ever writes the one digest
     directory it is dispatched into).
   - `allowed-paths: dispatched` -- scope is decided per round, not per agent
-    (e.g. `task-implementer`, whose files are whatever task it was handed).
+    (e.g. `implementer`, whose files are whatever task it was handed).
     The dispatcher then supplies the actual globs for THIS run in
     `UAIOS_AGENT_SCOPE` (comma-separated, repo-relative, `fnmatch` globs).
 

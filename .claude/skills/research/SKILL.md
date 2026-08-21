@@ -175,10 +175,10 @@ asked for it.
 | Skipping "Not adopted" | The next person re-runs the same search and reaches the same dead end |
 | Treating hit count as signal | The best source that day was the only hit; the 508-hit query was mostly noise |
 
-## Parallel work — `source-digger`
+## Parallel work — `researcher` (mode: source)
 
 When a pass needs several sources and reading them here would be expensive, hand
-each to a **`source-digger`** agent: one per source, all dispatched in the same
+each to a **`researcher`** agent dispatched in `mode: source`: one per source, all dispatched in the same
 message so they run concurrently. Each reads its source in full and writes a
 digest to `docs/research/digests/<topic>-<source>.md`; only the path and a few
 lines come back. The sources never enter this context.
@@ -186,7 +186,7 @@ lines come back. The sources never enter this context.
 Three to five at once. Past that you spend more time merging digests than the
 parallelism saves.
 
-Give each: the one source, the research question, the sub-questions it should
+Give each: the mode (`source`), the one source, the research question, the sub-questions it should
 answer, and its digest path. Then read the digests and synthesise here — Phase 3
 is yours, not theirs. A digger reports; it does not conclude, and it cannot
 compare, because it has seen exactly one source.
@@ -195,7 +195,7 @@ compare, because it has seen exactly one source.
 ladder above and read the sources yourself.
 
 For a question needing more independent cross-verification than a few
-`source-digger` calls buy, Claude Code ships `/deep-research` — a native
+`researcher` (mode: source) calls buy, Claude Code ships `/deep-research` — a native
 workflow that fans out web searches, cross-checks sources against each other,
 and synthesizes a cited report on its own. Worth suggesting to the user when
 the shape matches, rather than approximating it by hand.
