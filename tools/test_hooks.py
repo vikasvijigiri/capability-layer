@@ -296,11 +296,15 @@ _TELEMETRY_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'telemetry.jsonl'
 # 'agents_spawned' moved out of this set once 05-agent-cost.py started
 # measuring it (2026-08-21, spec-defined-metrics plan) -- it now reports a
 # real 'agents_spawned' field on the snapshot instead of a reason string here.
+# 'api_call_count', 'latency', 'retries' and 'escalations' moved out the same
+# way once 06-tool-cost.py, 02-turn-timer.py and the retries read-path
+# started measuring them (2026-08-21, four-more-spec-metrics plan) -- they
+# now report real 'api_calls', 'turn_latency_seconds' and 'retries' fields.
 _EXPECTED_UNAVAILABLE_KEYS = {
-    'execution_level', 'model', 'api_call_count',
-    'context_tokens', 'input_tokens', 'output_tokens', 'latency',
+    'execution_level', 'model',
+    'context_tokens', 'input_tokens', 'output_tokens',
     'parallelism', 'cache_hits', 'cache_misses', 'verification_level',
-    'retries', 'escalations', 'success', 'quality_signal',
+    'success', 'quality_signal',
 }
 
 
@@ -326,7 +330,8 @@ else:
     _row = json.loads(_after_lines[-1])
     _missing_top = {'ts', 'run_scope', 'chain', 'tools_called', 'skills_loaded',
                      'task_type', 'context_read', 'agents_spawned',
-                     'duplicate_rate', 'unavailable'} - _row.keys()
+                     'duplicate_rate', 'api_calls', 'turn_latency_seconds',
+                     'human_interventions', 'retries', 'unavailable'} - _row.keys()
     if _missing_top:
         print(f'FAIL: telemetry row missing top-level keys: {sorted(_missing_top)}')
         fail = True
@@ -579,6 +584,111 @@ if _after != _before:
 else:
     print('OK: a non-Task tool (Bash) is ignored by agent-cost')
 
+# --- post-tool/06-tool-cost.py: total tool-call counter (objective 4) -------
+_TOOL_COST_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'tool-cost.json'
+
+
+def _tool_cost_totals():
+    try:
+        return json.loads(_TOOL_COST_STATE.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return {'calls': 0, 'by_tool': {}}
+
+
+_before = _tool_cost_totals()
+_p = run_hook('post-tool', {'tool_name': 'mcp__github__get_me', 'tool_input': {}})
+_after = _tool_cost_totals()
+if _p.returncode != 0:
+    print(f'FAIL: an mcp__* tool errored in tool-cost -- exit {_p.returncode}, stderr: {_p.stderr[:200]!r}')
+    fail = True
+elif _after['calls'] - _before['calls'] != 1:
+    print(f'FAIL: tool-cost calls did not increment on an mcp__* tool -- before={_before} after={_after}')
+    fail = True
+elif _after.get('by_tool', {}).get('mcp__github__get_me', 0) - _before.get('by_tool', {}).get('mcp__github__get_me', 0) != 1:
+    print(f'FAIL: tool-cost by_tool did not record the mcp tool name -- before={_before} after={_after}')
+    fail = True
+else:
+    print('OK: an mcp__* tool call (never watched by any of the other 4 counters) is counted by tool-cost')
+
+_before = _tool_cost_totals()
+run_hook('post-tool', {'tool_name': 'Grep', 'tool_input': {}})
+_after = _tool_cost_totals()
+if (_after['calls'] - _before['calls'] != 1
+        or _after.get('by_tool', {}).get('Grep', 0) - _before.get('by_tool', {}).get('Grep', 0) != 1):
+    print(f'FAIL: a second, different tool name did not add its own by_tool key -- before={_before} after={_after}')
+    fail = True
+else:
+    print('OK: a different tool name produces its own by_tool key, not a merged count')
+
+# --- user-prompt/02-turn-timer.py: per-turn start timestamp (objective 6) ---
+_TURN_TIMER_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'turn-timer.json'
+
+_before_ts = time.time()
+_p = run_hook('user-prompt', {})
+_after_ts = time.time()
+if _p.returncode != 0:
+    print(f'FAIL: turn-timer errored -- exit {_p.returncode}, stderr: {_p.stderr[:200]!r}')
+    fail = True
+else:
+    try:
+        _started_at = json.loads(_TURN_TIMER_STATE.read_text(encoding='utf-8'))['started_at']
+    except (OSError, ValueError, KeyError):
+        _started_at = None
+    if _started_at is None or not (_before_ts - 1 <= _started_at <= _after_ts + 1):
+        print(f'FAIL: turn-timer started_at {_started_at!r} is not close to the real fire time '
+              f'[{_before_ts}, {_after_ts}]')
+        fail = True
+    else:
+        print('OK: turn-timer records a started_at close to the real UserPromptSubmit fire time')
+
+# A second fire overwrites, it does not accumulate -- one active turn at a time.
+_p = run_hook('user-prompt', {})
+_ts_1 = json.loads(_TURN_TIMER_STATE.read_text(encoding='utf-8'))['started_at']
+time.sleep(0.05)
+_p = run_hook('user-prompt', {})
+_ts_2 = json.loads(_TURN_TIMER_STATE.read_text(encoding='utf-8'))['started_at']
+if _ts_2 <= _ts_1:
+    print(f'FAIL: a second turn-timer fire did not overwrite with a later timestamp -- {_ts_1} -> {_ts_2}')
+    fail = True
+else:
+    print('OK: a second turn-timer fire overwrites the state file rather than accumulating')
+
+# --- post-tool/07-human-cost.py: human-gate counter (objective 1) -----------
+_HUMAN_COST_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'human-cost.json'
+
+
+def _human_cost_totals():
+    try:
+        return json.loads(_HUMAN_COST_STATE.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return {'calls': 0, 'by_tool': {}}
+
+
+for _gate_tool in ('AskUserQuestion', 'ExitPlanMode'):
+    _before = _human_cost_totals()
+    _p = run_hook('post-tool', {'tool_name': _gate_tool, 'tool_input': {}})
+    _after = _human_cost_totals()
+    if _p.returncode != 0:
+        print(f'FAIL: {_gate_tool} errored in human-cost -- exit {_p.returncode}, stderr: {_p.stderr[:200]!r}')
+        fail = True
+    elif _after['calls'] - _before['calls'] != 1:
+        print(f'FAIL: human-cost calls did not increment on {_gate_tool} -- before={_before} after={_after}')
+        fail = True
+    elif _after.get('by_tool', {}).get(_gate_tool, 0) - _before.get('by_tool', {}).get(_gate_tool, 0) != 1:
+        print(f'FAIL: human-cost by_tool did not record {_gate_tool} -- before={_before} after={_after}')
+        fail = True
+    else:
+        print(f'OK: {_gate_tool} increments human-cost calls and its own by_tool entry')
+
+_before = _human_cost_totals()
+run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': 'echo hi'}})
+_after = _human_cost_totals()
+if _after != _before:
+    print(f'FAIL: a non-gate tool affected human-cost state -- before={_before} after={_after}')
+    fail = True
+else:
+    print('OK: a non-gate tool (Bash) is ignored by human-cost')
+
 # --- post-run/09-telemetry.py: duplicate_rate field (objective 5) ---
 _p = run_hook('post-run', {'workflow': 'test', 'status': 'success'})
 _lines = _telemetry_lines()
@@ -607,6 +717,117 @@ else:
             fail = True
         else:
             print('OK: telemetry context_read field present with a chars count')
+    if row_api := _row.get('api_calls'):
+        if not isinstance(row_api, dict) or 'calls' not in row_api:
+            print(f'FAIL: telemetry api_calls malformed -- {row_api!r}')
+            fail = True
+        else:
+            print('OK: telemetry api_calls field present with a calls count')
+    if 'turn_latency_seconds' not in _row['unavailable']:
+        if not isinstance(_row.get('turn_latency_seconds'), (int, float)):
+            print(f'FAIL: turn_latency_seconds should be numeric once the timer has '
+                  f'fired -- {_row.get("turn_latency_seconds")!r}')
+            fail = True
+        else:
+            print('OK: telemetry turn_latency_seconds is a real number once 02-turn-timer.py has fired')
+    row_human = _row.get('human_interventions')
+    if not isinstance(row_human, dict) or 'calls' not in row_human:
+        print(f'FAIL: telemetry human_interventions malformed -- {row_human!r}')
+        fail = True
+    else:
+        print('OK: telemetry human_interventions field present with a calls count')
+    row_retries = _row.get('retries')
+    if (not isinstance(row_retries, dict)
+            or {'attempts', 'max_attempts', 'failure_class', 'rung'} - row_retries.keys()):
+        print(f'FAIL: telemetry retries malformed -- {row_retries!r}')
+        fail = True
+    else:
+        print('OK: telemetry retries field present with attempts/max_attempts/failure_class/rung')
+
+# --- post-run/09-telemetry.py: _retry_facts() white-box (objectives 9/10) ---
+#
+# The live repo's own branch (docs/four-more-spec-metrics) can never reach a
+# real REPAIR/BLOCKED state to exercise the rung path here: tools/resume.py's
+# BRANCH_PREFIX is hardcoded to "feat/" and slug_from_branch strips no other
+# prefix, so branch_exists is always False on a "docs/" branch and
+# derive_state returns BUILD before ever reaching the checks_green/REPAIR
+# clause -- a pre-existing, already-logged gap (LOG.md, 2026-08-20), not
+# something this plan fixes. Forcing derive_state via a substituted loop.py
+# module tests _retry_facts()'s own wiring (state -> kind/budget -> rung())
+# independent of that confound.
+import importlib.util as _ilu  # noqa: E402
+
+
+def _load_telemetry_module():
+    _spec = _ilu.spec_from_file_location(
+        'telemetry_for_test', str(ROOT / '.claude/hooks/post-run/09-telemetry.py'))
+    assert _spec is not None and _spec.loader is not None, 'cannot load 09-telemetry.py'
+    _mod = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+    return _mod
+
+
+_tele = _load_telemetry_module()
+
+# slug=None means "infer from branch" (resume.gather_facts's own contract,
+# not "no plan") -- a branch with no recorded ledger still resolves real
+# facts: 0 attempts, resume.MAX_ATTEMPTS's real default (3, not an invented
+# 0), no failure class, no rung. Never an exception either way.
+_inferred = _tele._retry_facts(None)
+if (_inferred.get('attempts') != 0 or _inferred.get('failure_class') is not None
+        or _inferred.get('rung') is not None or not isinstance(_inferred.get('max_attempts'), int)):
+    print(f'FAIL: _retry_facts(None) on a branch with no recorded ledger should be a real, '
+          f'un-invented degrade -- got {_inferred!r}')
+    fail = True
+else:
+    print(f'OK: _retry_facts(None) infers from the branch and degrades to real facts '
+          f'{_inferred!r}, not an exception')
+
+# When the loop/resume module genuinely cannot be loaded, the hard-coded
+# all-zero fallback is what a caller sees -- proven by breaking the load.
+_real_load_module_for_empty = _tele._load_module
+_tele._load_module = lambda rel, name: None
+try:
+    _empty = _tele._retry_facts('anything')
+finally:
+    _tele._load_module = _real_load_module_for_empty
+_want_empty = {'attempts': 0, 'max_attempts': 0, 'failure_class': None, 'rung': None}
+if _empty != _want_empty:
+    print(f'FAIL: an unloadable loop module should fall back to {_want_empty!r}, got {_empty!r}')
+    fail = True
+else:
+    print('OK: an unloadable loop/resume module degrades to the all-zero fallback, not an exception')
+
+# A forced REPAIR state surfaces the same rung tools/loop.py's own rung()
+# computes directly, for identical inputs.
+_fixture_slug = 'retry-facts-test-fixture'
+_fixture_ledger = ROOT / '.claude' / 'hooks' / 'state' / f'resume-{_fixture_slug}.json'
+_fixture_ledger.write_text(
+    json.dumps({'attempts': 2, 'max_attempts': 3, 'failure_class': 'deterministic'}),
+    encoding='utf-8')
+_rigged_loop = _tele._load_module('tools/loop.py', 'loop_for_retry_test')
+_rigged_loop._rs.derive_state = lambda facts: 'REPAIR'
+_real_load_module = _tele._load_module
+_tele._load_module = (lambda rel, name:
+                       _rigged_loop if rel == 'tools/loop.py' else _real_load_module(rel, name))
+try:
+    _got = _tele._retry_facts(_fixture_slug)
+    _want_rung = _rigged_loop.rung(
+        'deterministic', 2, _rigged_loop.failure_budget('deterministic'),
+        restored=False, has_green=False)
+    if _got.get('attempts') != 2 or _got.get('failure_class') != 'deterministic':
+        print(f'FAIL: retry-facts fixture attempts/failure_class not read from the ledger -- {_got!r}')
+        fail = True
+    elif _got.get('rung') != _want_rung:
+        print(f"FAIL: retries rung {_got.get('rung')!r} != loop.rung()'s own {_want_rung!r} "
+              f'for the same inputs')
+        fail = True
+    else:
+        print(f"OK: retries surfaces the same rung ({_want_rung!r}) tools/loop.py's rung() "
+              f'computes directly, in a forced REPAIR state')
+finally:
+    _tele._load_module = _real_load_module
+    _fixture_ledger.unlink(missing_ok=True)
 
 if fail:
     sys.exit(1)

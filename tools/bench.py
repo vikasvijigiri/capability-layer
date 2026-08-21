@@ -138,6 +138,24 @@ def session_calls() -> tuple[int, int, int]:
             int(totals.get("repeats", 0)))
 
 
+def total_tool_calls() -> tuple[int, int]:
+    """(total calls, distinct tool names) this session, from
+    `post-tool/06-tool-cost.py`'s counter.
+
+    `session_calls()` above only ever saw Bash/PowerShell -- every `Write`,
+    `Edit`, `Grep`, `Glob`, `WebFetch`, `WebSearch`, and `mcp__*` tool call
+    was invisible to it. This is the spec's own `api_call_count` (objective
+    4), counted across every tool name, not one slice of them. Zero means
+    the hook has not fired yet, same convention as its neighbours.
+    """
+    state = (ROOT / ".claude" / "hooks" / "state" / "tool-cost.json")
+    try:
+        totals = json.loads(state.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return 0, 0
+    return int(totals.get("calls", 0)), len(totals.get("by_tool") or {})
+
+
 def skill_body_cost() -> tuple[int, int, int]:
     """(skill invocations, SKILL.md chars loaded, unattributed) this session,
     from `post-tool/02-skill-cost.py`'s counter.
@@ -224,11 +242,23 @@ def render(now: dict, was: dict | None) -> None:
               f"repeats: {repeats:,} ({pct}%)")
         print(f"  duplicate-operation rate: {pct}% ({repeats:,}/{calls:,}) "
               f"-- the spec's own §21 term for this number.")
-        print("  Objective 4 and 5 are graded from this. A repeat is a call whose "
+        print("  Objective 5 is graded from this. A repeat is a call whose "
               "answer\n  was already in context -- reuse before retrieve.")
     else:
         print("\nthis session's shell calls: not yet recorded -- the post-tool "
               "counter\n  writes on the first shell call of a session.")
+
+    total_calls, distinct_tools = total_tool_calls()
+    if total_calls:
+        print(f"\nthis session's total tool calls (every tool, spec's "
+              f"api_call_count): {total_calls:,}  "
+              f"across {distinct_tools} distinct tool name(s)")
+        print("  Objective 4 is graded from this -- the shell-calls line above "
+              "is Bash/PowerShell only.")
+    else:
+        print("\nthis session's total tool calls: not yet recorded -- the "
+              "post-tool counter\n  writes on the first tool call of a "
+              "session.")
 
     skill_calls, skill_chars, unattributed = skill_body_cost()
     if skill_calls:

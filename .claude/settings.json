@@ -21,6 +21,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/user-prompt/02-turn-timer.py\""
+          },
+          {
+            "type": "command",
             "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/user-prompt/01-entry-classifier.py\"",
             "statusMessage": "Classifying the prompt's workflow entry shape..."
           }
@@ -134,6 +138,24 @@
           {
             "type": "command",
             "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-tool/02-skill-cost.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-tool/06-tool-cost.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "AskUserQuestion|ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-tool/07-human-cost.py\""
           }
         ]
       }
