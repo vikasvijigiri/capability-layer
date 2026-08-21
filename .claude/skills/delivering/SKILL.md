@@ -108,6 +108,23 @@ shortcut command, a script, a habit), every one of them needs the same
 confirmation, not a weaker or absent one — one irreversible action should never
 carry zero authorizations from one entry point and two from another.
 
+### Exception: a parallel round's task branches
+
+**Scope, exactly:** branches `executing-plans` created for one round of
+tasks `tools/parallel_groups.py` proved independent (see its "Dispatching
+subagents for parallel tasks" section) — nothing else. For those branches
+only, `git push` and PR-creation happen automatically, per branch, with no
+`AskUserQuestion`. Nothing is merged by this step, each branch is small and
+independently reviewable, and the round's own `no-slop`/`code-review` pass
+still gates the merge (below) — so the irreversible action this section
+exists to gate has not happened yet.
+
+Every other push in this repository — a single-task plan, a manual push, a
+shortcut command — keeps requiring the full per-instance confirmation above,
+unchanged. This exception does not widen to "any push from `executing-plans`"
+or "any small branch"; it is scoped to a round the scheduler itself proved
+independent, and it stays that narrow.
+
 ## Nothing here merges, and that is deliberate
 
 **No skill in this layer runs the merge command.** Grep for it and the only

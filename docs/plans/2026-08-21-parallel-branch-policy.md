@@ -214,7 +214,10 @@ Constraint below).
   parallel-branch-policy` -> `consistent -- 6 task(s), no findings`;
   `python tools/test_referenced_paths.py` -> `All referenced-path tests
   passed`.
-- [ ] Task 3 — `delivering`: automatic push + PR per task branch
+- [x] Task 3 — `delivering`: automatic push + PR per task branch.
+  **Executed:** `python tools/analyze.py --slug parallel-branch-policy` ->
+  `consistent -- 6 task(s), no findings`; `python
+  tools/test_referenced_paths.py` -> `All referenced-path tests passed`.
 - [ ] Task 4 — `delivering`: batched merge confirmation and execution
 - [ ] Task 5 — `test_process_router.py`: pin the new exception's scope
 - [ ] Task 6 — `workflow.md` + ADR
