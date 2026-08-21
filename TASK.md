@@ -115,7 +115,12 @@
   invented here).
 
 ### Cluster C — instruments for objectives 22, 24, 18
-- **Status:** Plan approved (Gate 1). See
+- **Status:** Implemented, 3/3 tasks, independently verified by
+  `test-verifier` (`PASS: 55 check(s) green`; additivity confirmed via
+  diff -- no existing `UNAVAILABLE_FIELDS` entry, hook registration, or
+  `bench.py` function touched; both seeded-violation proofs independently
+  re-derived). Swept by `no-slop` (1 local finding, this line, fixed). Not
+  yet reviewed by `code-review` or delivered. See
   `docs/plans/2026-08-21-cluster-c-telemetry-metrics.md` and its design
   spec `docs/specs/2026-08-21-qualitative-objective-metrics.md`.
 - **Goal:** give objectives 22 (observable/auditable), 24 (self-
