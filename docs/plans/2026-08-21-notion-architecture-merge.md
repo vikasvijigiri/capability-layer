@@ -140,7 +140,7 @@ sequencing.
 ## Progress
 - [x] Task 1 — Decision record
 - [x] Task 2 — Hooks: rename, consolidate, install.py
-- [ ] Task 3 — E0-E5 router
+- [x] Task 3 — E0-E5 router
 - [ ] Task 4 — Skill renames/merges + compression
 - [ ] Task 5 — Agent renames/merges
 - [ ] Task 6 — Commands, workflows/, policies/

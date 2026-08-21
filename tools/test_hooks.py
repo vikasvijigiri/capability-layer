@@ -267,7 +267,7 @@ SKILL_COST_CASES = [
 ]
 for _payload, _label, _assertion in SKILL_COST_CASES:
     _before = _skill_cost_totals()
-    _p = run_hook('post-tool', _payload)
+    _p = run_hook('context-budget', _payload)
     _after = _skill_cost_totals()
     if _p.returncode != 0:
         print(f'FAIL: post-tool ({_label}) exited {_p.returncode}\n{_p.stderr}')
@@ -300,8 +300,13 @@ _TELEMETRY_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'telemetry.jsonl'
 # way once 06-tool-cost.py, 02-turn-timer.py and the retries read-path
 # started measuring them (2026-08-21, four-more-spec-metrics plan) -- they
 # now report real 'api_calls', 'turn_latency_seconds' and 'retries' fields.
+# 'execution_level' moved out the same way once prompt-intake/
+# 01-entry-classifier.py started predicting it and this file started
+# recording the actual level from real counters (2026-08-21,
+# notion-architecture-merge plan) -- it now reports a real
+# {'predicted': ..., 'actual': ...} pair instead of a reason string here.
 _EXPECTED_UNAVAILABLE_KEYS = {
-    'execution_level', 'model',
+    'model',
     'context_tokens', 'input_tokens', 'output_tokens',
     'parallelism', 'cache_hits', 'cache_misses', 'verification_level',
     'success', 'quality_signal',
@@ -329,7 +334,7 @@ else:
     print('OK: post-run appends exactly one telemetry row')
     _row = json.loads(_after_lines[-1])
     _missing_top = {'ts', 'run_scope', 'chain', 'tools_called', 'skills_loaded',
-                     'task_type', 'context_read', 'agents_spawned',
+                     'task_type', 'execution_level', 'context_read', 'agents_spawned',
                      'duplicate_rate', 'api_calls', 'turn_latency_seconds',
                      'human_interventions', 'retries', 'unavailable'} - _row.keys()
     if _missing_top:
@@ -353,7 +358,7 @@ else:
     # tree -- confirmed: `(ROOT / '.claude/hooks/context-budget/02-skill-cost.py')
     # .is_file()` is False here. The honest report is `None` plus a reasoned
     # `unavailable` entry, never a fabricated-looking zero-filled dict.
-    _skill_cost_producer = ROOT / '.claude' / 'hooks' / 'post-tool' / '02-skill-cost.py'
+    _skill_cost_producer = ROOT / '.claude' / 'hooks' / 'context-budget' / '02-skill-cost.py'
     if not _skill_cost_producer.is_file():
         if _row.get('skills_loaded') is not None:
             print(f'FAIL: skills_loaded should be None when its producer '
@@ -382,6 +387,20 @@ else:
         else:
             print('OK: skills_loaded reports a real, populated dict now that '
                   '02-skill-cost.py exists, and is no longer claimed unavailable')
+    _EVEL = {'E0', 'E1', 'E2', 'E3', 'E4', 'E5'}
+    _el = _row.get('execution_level')
+    if not isinstance(_el, dict) or 'predicted' not in _el or 'actual' not in _el:
+        print(f'FAIL: execution_level should be a {{predicted, actual}} pair, got {_el!r}')
+        fail = True
+    elif _el['predicted'] is not None and _el['predicted'] not in _EVEL:
+        print(f'FAIL: execution_level.predicted {_el["predicted"]!r} is not one of {_EVEL}')
+        fail = True
+    elif _el['actual'] is not None and _el['actual'] not in _EVEL:
+        print(f'FAIL: execution_level.actual {_el["actual"]!r} is not one of {_EVEL}')
+        fail = True
+    else:
+        print(f'OK: execution_level reports a real predicted/actual pair '
+              f'{_el!r}, never the old hardcoded gap-string')
 
 # A second fire appends a SECOND row -- proves append-only, not overwrite.
 _p2 = run_hook('stop-finalization', {'workflow': 'test', 'status': 'success'})
@@ -409,7 +428,7 @@ def _call_fp_totals():
 
 # A command >= WARN_CHARS (700) triggers the "[context cost]" notice on stderr.
 _LONG_CMD = 'echo ' + ('x' * 700)
-_p = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': _LONG_CMD}})
+_p = run_hook('context-budget', {'tool_name': 'Bash', 'tool_input': {'command': _LONG_CMD}})
 if _p.returncode != 0 or '[context cost]' not in _p.stderr:
     print(f'FAIL: a >=700-char Bash command did not trigger the context-cost '
           f'notice -- exit {_p.returncode}, stderr: {_p.stderr[:200]!r}')
@@ -419,7 +438,7 @@ else:
 
 # A short command must NOT trigger the notice (WARN_CHARS is a floor, not a
 # hair-trigger) -- proven, not assumed.
-_p = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': 'echo hi'}})
+_p = run_hook('context-budget', {'tool_name': 'Bash', 'tool_input': {'command': 'echo hi'}})
 if '[context cost]' in _p.stderr:
     print('FAIL: a short Bash command wrongly triggered the context-cost notice')
     fail = True
@@ -435,8 +454,8 @@ else:
 _repeat_cmd = (f'python -c "print(12345)"  # run-unique padding {time.time_ns()} '
                f'to clear MIN_REPEAT_CHARS')
 _before = _call_fp_totals()
-_p1 = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': _repeat_cmd}})
-_p2 = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': _repeat_cmd}})
+_p1 = run_hook('context-budget', {'tool_name': 'Bash', 'tool_input': {'command': _repeat_cmd}})
+_p2 = run_hook('context-budget', {'tool_name': 'Bash', 'tool_input': {'command': _repeat_cmd}})
 _after = _call_fp_totals()
 if '[repeat]' in _p1.stderr:
     print('FAIL: the FIRST occurrence of a command wrongly fired [repeat]')
@@ -457,8 +476,8 @@ else:
 # repeat, even run twice -- it is expected to be re-run because its answer
 # changes. Still counted in totals, per the module's own stated design.
 _before = _call_fp_totals()
-run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': 'git status --porcelain -uall --extra-padding-to-clear-min-chars'}})
-_p2 = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': 'git status --porcelain -uall --extra-padding-to-clear-min-chars'}})
+run_hook('context-budget', {'tool_name': 'Bash', 'tool_input': {'command': 'git status --porcelain -uall --extra-padding-to-clear-min-chars'}})
+_p2 = run_hook('context-budget', {'tool_name': 'Bash', 'tool_input': {'command': 'git status --porcelain -uall --extra-padding-to-clear-min-chars'}})
 _after = _call_fp_totals()
 if '[repeat]' in _p2.stderr:
     print('FAIL: a VOLATILE-prefixed command wrongly fired [repeat] on its 2nd run')
@@ -475,7 +494,7 @@ else:
 # post-tool directory, so stderr from that sibling hook is expected here and
 # is not what this case checks.
 _before = _call_fp_totals()
-run_hook('post-tool', {'tool_name': 'Read', 'tool_input': {'file_path': 'README.md'}})
+run_hook('context-budget', {'tool_name': 'Read', 'tool_input': {'file_path': 'README.md'}})
 _after = _call_fp_totals()
 if _after != _before:
     print(f'FAIL: a non-watched tool_name affected context-cost state -- '

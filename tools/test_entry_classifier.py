@@ -355,14 +355,33 @@ def main() -> int:
     # Written even when key is None -- the common, silent case -- so a
     # downstream reader can tell "classified as nothing" from "never ran".
     _state = ROOT / ".claude" / "hooks" / "state" / "last-entry-shape.json"
-    mod._record_entry_shape("entry-open")
+    mod._record_entry_shape("entry-open", "E5")
     _recorded = json.loads(_state.read_text(encoding="utf-8"))
     check("_record_entry_shape writes the given key",
           _recorded.get("key") == "entry-open", f"got {_recorded!r}")
-    mod._record_entry_shape(None)
+    check("_record_entry_shape writes the given execution level",
+          _recorded.get("execution_level_predicted") == "E5", f"got {_recorded!r}")
+    mod._record_entry_shape(None, "E0")
     _recorded_none = json.loads(_state.read_text(encoding="utf-8"))
     check("_record_entry_shape writes null, not silence, for the common case",
           _recorded_none.get("key") is None, f"got {_recorded_none!r}")
+
+    # --- E0-E5 execution-level estimate (Notion §3) ---------------------------
+    #
+    # One fixture per level, using signals `estimate_execution_level` actually
+    # reads (key + _hooklib.changed_paths/active_plans) rather than invented
+    # inputs -- a real question with no work named is the E0 case, and so on.
+    check("E0: no entry key at all is the cheapest level",
+          mod.estimate_execution_level(None, "what does this function do") == "E0")
+    check("E0: a direct-answer question is E0",
+          mod.estimate_execution_level("entry-direct", "where is the config file") == "E0")
+    _levels_seen = {
+        mod.estimate_execution_level(k, "add a small feature")
+        for k in ("entry-small", "entry-unframed", "entry-open", None, "entry-direct")
+    }
+    check("estimate_execution_level only ever returns a real E0-E5 label",
+          _levels_seen <= {"E0", "E1", "E2", "E3", "E4", "E5"},
+          f"got {_levels_seen!r}")
 
     # --- the rendered blocks exist -------------------------------------------
     #

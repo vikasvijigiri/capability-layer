@@ -88,7 +88,6 @@ SPEC_FIELD_COUNT = 21
 # named rather than silently absent. Reused by `tools/bench.py`'s report so
 # the reasons are stated once, not restated.
 UNAVAILABLE_FIELDS: dict[str, str] = {
-    "execution_level": "no E0-E5 router exists yet -- a separate audit gap",
     "model": "no hook payload exposes the active model name",
     "context_tokens": "not observable to a hook in this harness",
     "input_tokens": "not observable to a hook in this harness",
@@ -208,6 +207,30 @@ def _chain_facts() -> dict:
             "progress": facts.get("progress")}
 
 
+def _actual_execution_level(skills_loaded: dict | None, agent_totals: dict,
+                             tool_calls: int) -> str | None:
+    """The E0-E5 level this turn actually reached, from real counters --
+    prompt-intake/01-entry-classifier.py's `execution_level_predicted` is a
+    forecast made before the turn ran; this is what happened, so the two
+    together make prediction accuracy measurable (objective 30) without a
+    second mechanism. `None` when skills_loaded's own producer is absent,
+    matching that field's own unavailability rather than guessing.
+    """
+    if skills_loaded is None:
+        return None
+    agent_calls = agent_totals.get("calls", 0)
+    skill_calls = skills_loaded.get("calls", 0)
+    if agent_calls > 4:
+        return "E4"
+    if agent_calls >= 2:
+        return "E5"
+    if agent_calls == 1:
+        return "E3"
+    if skill_calls >= 1:
+        return "E2" if tool_calls > 2 else "E1"
+    return "E1" if tool_calls > 0 else "E0"
+
+
 def build_snapshot() -> dict:
     call_totals = _load_json(CALL_FINGERPRINTS).get("_totals") or {}
     entry_shape = _load_json(ENTRY_SHAPE)
@@ -251,6 +274,11 @@ def build_snapshot() -> dict:
         },
         "skills_loaded": skills_loaded,
         "task_type": entry_shape.get("key"),
+        "execution_level": {
+            "predicted": entry_shape.get("execution_level_predicted"),
+            "actual": _actual_execution_level(
+                skills_loaded, agent_totals, tool_totals.get("calls", 0)),
+        },
         # Proxy for the spec's `context_tokens` -- see 04-read-cost.py's
         # docstring. Not the real field, which stays in `unavailable` below.
         "context_read": {

@@ -90,7 +90,12 @@ if sys.platform.startswith("win"):
                 pass
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from _hooklib import load_payload  # noqa: E402
+from _hooklib import (  # noqa: E402
+    PROGRESS_TASK_BOX,
+    active_plans,
+    changed_paths,
+    load_payload,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = REPO_ROOT / ".claude" / "workflow.md"
@@ -201,7 +206,7 @@ HARD_STAGE = [
     r"\bcapability layer\b",
     r"\.claude\b",
     r"\bSKILL\.md\b",
-    r"\b(post-run|pre-commit|session-start|pre-edit|pre-deploy|user-prompt)\b",
+    r"\b(stop-finalization|permission-security|session-init|pre-edit|prompt-intake)\b",
     r"\b(hook|skill)s?\b[^.]{0,40}\b(fires?|firing|triggers?|wir(e|ing)|"
     r"registered|registry|never runs|no output)\b",
     r"\b(fires?|firing|triggers?|wir(e|ing)|registered|registry)\b[^.]{0,40}"
@@ -374,6 +379,82 @@ def _names_control_or_sensitive_path(text: str) -> bool:
     return False
 
 
+# --- E0-E5 execution-level estimate (Notion §3) -------------------------------
+#
+# Reports a PREDICTED level at prompt time; telemetry/09-telemetry.py separately
+# records the ACTUAL level once the turn finishes (real skills_loaded/
+# agents_spawned counts), so prediction accuracy becomes measurable over time
+# without a second mechanism -- see decisions/2026-08-21-notion-architecture-merge.md.
+#
+# Weighted, not a single eyeballed signal (shape adapted from a production
+# complexity-classifier pattern found by outside investigation, not invented
+# here):
+#   files affected      0.30  -- this turn's changed paths (_hooklib.changed_paths)
+#   domains/surfaces     0.25  -- how many of those paths hit scope.py's own
+#                                 CONTROL_PATTERNS/SENSITIVE_PATTERNS veto list
+#   steps required        0.25  -- the active plan's own `## Progress` task count
+#   evidence needed        0.20  -- whether classify() already said the approach
+#                                   is open (workflow.md routes that to outside
+#                                   evidence-gathering before framing)
+#
+# Deliberately NOT a gate. `context-budget`'s hook tried a PreToolUse gate on a
+# comparable signal once and it was rejected (2026-08-20 audit, Gap B) -- this
+# hook has the same posture: report, never block.
+def _active_plan_task_count() -> int:
+    """Task count of the newest plan belonging to this unit, or 0.
+
+    Reuses `_hooklib.active_plans`, which already resolves "the plan for THIS
+    branch" rather than any plan ever written -- see its own docstring for why
+    that distinction matters.
+    """
+    try:
+        for p in active_plans(REPO_ROOT):
+            text = p.read_text(encoding="utf-8", errors="ignore")
+            return len(PROGRESS_TASK_BOX.findall(text))
+    except OSError:
+        pass
+    return 0
+
+
+def estimate_execution_level(key: str | None, text: str) -> str:
+    """A predicted E0-E5 label for this turn, from signals already computed
+    elsewhere in this layer -- never a new filesystem-wide scan."""
+    if key is None or key == "entry-direct":
+        return "E0"  # a direct answer needs no procedure and no chain
+
+    try:
+        paths = changed_paths(REPO_ROOT) or []
+    except OSError:
+        paths = []
+    n_files = len(paths)
+    files_score = min(n_files / 10.0, 1.0)
+
+    patterns = _control_or_sensitive_patterns()
+    n_domains = sum(1 for p in paths
+                     if any(fnmatch.fnmatch(p.replace("\\", "/"), pat) for pat in patterns))
+    domains_score = min(n_domains / 3.0, 1.0)
+
+    plan_tasks = _active_plan_task_count()
+    steps_score = min(plan_tasks / 8.0, 1.0)
+
+    evidence_score = 1.0 if key == "entry-open" else 0.0
+
+    score = (0.30 * files_score + 0.25 * domains_score
+             + 0.25 * steps_score + 0.20 * evidence_score)
+
+    if plan_tasks >= 2:
+        # A plan chain already exists. More than a handful of tasks is where
+        # this repo's own scheduler (tools/parallel_groups.py) starts finding
+        # real concurrency in practice -- an approximation, not a call into
+        # that scheduler, to keep this hook cheap and dependency-free.
+        return "E4" if plan_tasks > 4 else "E5"
+    if plan_tasks == 1:
+        return "E3"
+    if score < 0.15:
+        return "E1"
+    return "E2" if score < 0.6 else "E5"
+
+
 def classify(prompt: str) -> str | None:
     """The state key for this prompt, or None when nothing should be said.
 
@@ -457,11 +538,15 @@ ENTRY_SHAPE_STATE = (Path(__file__).resolve().parents[1] / "state"
                      / "last-entry-shape.json")
 
 
-def _record_entry_shape(key: str | None) -> None:
+def _record_entry_shape(key: str | None, execution_level: str) -> None:
     try:
         ENTRY_SHAPE_STATE.parent.mkdir(parents=True, exist_ok=True)
         ENTRY_SHAPE_STATE.write_text(
-            json.dumps({"key": key, "ts": time.strftime("%Y-%m-%dT%H:%M:%S")}),
+            json.dumps({
+                "key": key,
+                "execution_level_predicted": execution_level,
+                "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            }),
             encoding="utf-8")
     except OSError:
         pass  # best-effort; must never affect what this hook emits
@@ -471,8 +556,10 @@ def main() -> int:
     if os.environ.get(OPT_OUT):
         return 0
     payload = load_payload()
-    key = classify(payload.get("prompt") or "")
-    _record_entry_shape(key)
+    prompt = payload.get("prompt") or ""
+    key = classify(prompt)
+    level = estimate_execution_level(key, prompt)
+    _record_entry_shape(key, level)
     if not key:
         return 0
 
