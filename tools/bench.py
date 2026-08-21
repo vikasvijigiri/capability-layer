@@ -242,7 +242,7 @@ def render(now: dict, was: dict | None) -> None:
               f"repeats: {repeats:,} ({pct}%)")
         print(f"  duplicate-operation rate: {pct}% ({repeats:,}/{calls:,}) "
               f"-- the spec's own §21 term for this number.")
-        print("  Objective 4 and 5 are graded from this. A repeat is a call whose "
+        print("  Objective 5 is graded from this. A repeat is a call whose "
               "answer\n  was already in context -- reuse before retrieve.")
     else:
         print("\nthis session's shell calls: not yet recorded -- the post-tool "
@@ -253,6 +253,8 @@ def render(now: dict, was: dict | None) -> None:
         print(f"\nthis session's total tool calls (every tool, spec's "
               f"api_call_count): {total_calls:,}  "
               f"across {distinct_tools} distinct tool name(s)")
+        print("  Objective 4 is graded from this -- the shell-calls line above "
+              "is Bash/PowerShell only.")
     else:
         print("\nthis session's total tool calls: not yet recorded -- the "
               "post-tool counter\n  writes on the first tool call of a "

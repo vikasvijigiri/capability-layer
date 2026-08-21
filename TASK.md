@@ -93,7 +93,15 @@
   merge); anything needing a running service.
 
 ### Spec-defined metrics for 4 more objectives (1, 4, 6, 9/10)
-- **Status:** Plan approved (Gate 1), not yet built. See
+- **Status:** Implemented, 4/4 tasks, independently verified by `test-verifier`
+  (`PASS: 54 check(s) green`; every hook traced against its task spec; the
+  white-box `retries` test confirmed non-vacuous). A real scheduler bug in
+  `tools/parallel_groups.py` (a wrapped `Files:` bullet silently truncating
+  the list) was found and fixed first, changing the schedule from
+  concurrency-4 to fully serial — see the plan's own "Deviations from
+  plan". Swept by `no-slop` (2 local findings, both fixed: this line, and a
+  stale objective-4 attribution in `tools/bench.py`). Not yet reviewed by
+  `code-review` or delivered. See
   `docs/plans/2026-08-21-four-more-spec-metrics.md`.
 - **Goal:** following `docs/plans/2026-08-21-three-spec-metrics.md`
   (objectives 3, 5, 8), instrument the maximum number of remaining Notion
