@@ -84,6 +84,18 @@ round's tasks are independent of each other by construction, but the next round
 depends on all of them, and an agent reporting `DONE` is a claim rather than
 evidence. Read the diff.
 
+**A schedulable round is dispatched by default** — see `executing-plans/
+SKILL.md`'s own "Dispatching subagents for parallel tasks" — and each
+task's worktree is created on its own named branch instead of detaching,
+so its result can be pushed and turned into its own PR:
+
+```bash
+python tools/worktree.py create task6 feat/target-workflow --branch feat/target-workflow/task-6
+```
+
+Everything else about owning the worktree yourself (below) is unchanged —
+the branch mode is additive, not a different creation path.
+
 ## Decomposing a prompt that is not yet a plan
 
 "Fix these five failing tests" and "map this codebase" are already fan-outs; they

@@ -437,6 +437,19 @@ aspiration rather than the implementation, and the ADR is removed.
 **Done when:** `workflow.md` no longer states an aspiration the code does
 not implement, and the ADR is discoverable from `decisions/`'s own listing.
 
+## Deviations from plan
+
+- **Task 2 did not touch `references/parallel-dispatch.md`, though the
+  plan's top-level File map committed to it.** Task 2's own per-task Files
+  list only named `executing-plans/SKILL.md`, and that narrower scope is
+  what actually landed — found by an independent `test-verifier` dispatch
+  during `verifying-work`, which caught the reference doc's "Running it"
+  example still showing the old detached-only invocation beside the new
+  default-parallel policy. Closed post-verification: the example now shows
+  `--branch`, with a note that the branch mode is additive and everything
+  else about owning the worktree is unchanged. `TASK.md`'s status line,
+  also flagged stale by the same pass, was corrected in the same commit.
+
 ## Constitution gate
 - [x] I Evidence — every task names the exact command and expected output
 - [x] II Test first — Tasks 1 and 5 define their failing cases before the
