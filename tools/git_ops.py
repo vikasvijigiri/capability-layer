@@ -36,7 +36,7 @@ fabricated confidence there would be worse than the honest, coarser answer.
 `pr_body()` composes from the plan's `**Goal:**` line, its `## Progress`
 checkboxes, a risk tier, and review findings -- **never from `git log`**. This
 repository's commits are `wip:` checkpoints by design
-(`post-run/06-artifact-autocommit.py`), and squash-merge collapses them; a PR
+(`stop-finalization/06-artifact-autocommit.py`), and squash-merge collapses them; a PR
 body built from that list describes the checkpoints, not the work.
 
 Nothing here pushes, rebases, merges, or force-pushes. `test_process_router.py`

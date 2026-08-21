@@ -10,7 +10,7 @@ unchanged; only where they are paid for is.
 
 ## The commit loop
 
-Commits are automatic and local. `post-run/06-artifact-autocommit.py` fires at
+Commits are automatic and local. `stop-finalization/06-artifact-autocommit.py` fires at
 the end of every turn and commits what changed as a `wip:` checkpoint, if and
 only if all of these hold. What "the checks pass" means is
 `.claude/project-checks.json` resolved by `.claude/hooks/_projectchecks.py` — the
@@ -43,7 +43,7 @@ Two dependencies, both easy to break:
 - Its commits **bypass `PreToolUse`**, so the secret and attribution checks run
   *inline* from `_hooklib`.
 
-**`pre-commit/02-branch-guard.py` resolves the command's target repo, not the
+**`permission-security/02-branch-guard.py` resolves the command's target repo, not the
 session's** — `git -C ../other commit` commits somewhere else. Both hooks use
 `_hooklib.is_git_commit`, a tokeniser rather than a regex, because `-C` takes a
 value and no regex repetition can consume it.

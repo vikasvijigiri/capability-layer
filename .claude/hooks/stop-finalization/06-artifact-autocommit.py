@@ -302,7 +302,7 @@ def build_message(paths, suite_detail):
     listing = "\n".join(f"- {p}" for p in paths)
     return (
         f"{subject}\n\n"
-        f"Automatic checkpoint from post-run/06-artifact-autocommit.py. Not a\n"
+        f"Automatic checkpoint from stop-finalization/06-artifact-autocommit.py. Not a\n"
         f"reviewed commit: squashed at PR time, when a human reads the branch.\n\n"
         f"Verified before committing: {suite_detail}; no credential pattern in\n"
         f"the changed files; branch is not protected.\n\n"

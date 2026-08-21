@@ -24,7 +24,7 @@ Registration: UNREGISTERED as of 2026-08-10. Wiring this into
 task (Task 12 of `docs/plans/2026-08-10-checklist-completion.md`) assigned to
 another agent. Fire it directly for now:
 
-    HOOK_PAYLOAD='{}' python .claude/hooks/pre-run/01-halt-guard.py
+    HOOK_PAYLOAD='{}' python .claude/hooks/pre-tool/01-halt-guard.py
     python tools/run_hook.py pre-run '{}'
 
 Per `decisions/2026-08-04-hooks-never-name-a-skill.md`, this hook names no

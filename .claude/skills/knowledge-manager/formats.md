@@ -92,7 +92,7 @@ section). Update at the end of any work session that changed real state.
 everything from `Current Work` through `Open Questions` (`Completed` stays
 outside, above the markers).
 
-These are currently inert. `session-start/02-bootstrap-docs.py` used to inject
+These are currently inert. `session-init/02-bootstrap-docs.py` used to inject
 what sits between them at every `SessionStart`. It has been unregistered before
 for force-feeding ~20,000 bytes into every session, which
 made a fresh session impossible. The script is still on disk and can be

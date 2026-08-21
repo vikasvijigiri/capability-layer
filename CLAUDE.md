@@ -146,6 +146,6 @@ editing it** -- a broken hook is silent, which reads exactly like a working one.
 - Push, merge, publish or deploy without explicit user approval.
 - Create a duplicate implementation of something that already exists.
 - Put AI attribution in git history. Two layers: `attribution.commit`/`pr` are
-  `""` in `~/.claude/settings.json`, and `pre-commit/03-attribution-guard.py`
+  `""` in `~/.claude/settings.json`, and `permission-security/03-attribution-guard.py`
   DENIES a hand-written `-m` carrying a trailer, plus a `user.name`/`user.email`
   resolving to an AI.

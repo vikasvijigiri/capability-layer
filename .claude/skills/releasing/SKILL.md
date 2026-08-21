@@ -222,7 +222,7 @@ outage in front of them, never a default you pick because it feels quicker.
 
 | Gate | Fires when | The actual fix |
 |---|---|---|
-| `pre-deploy/01-spend-guard.py` | A Bash/PowerShell call invokes a cloud CLI (`vercel`, `netlify`, `flyctl`, `railway`, `supabase`, `doctl`, `heroku`, `aws`, `gcloud`, `az`) outside its known-free command shapes | Use the free-tier-shaped command it names, or get explicit approval for spend. It denies rather than asks, by design — it is built for runs with nobody present |
+| `permission-security/04-spend-guard.py` | A Bash/PowerShell call invokes a cloud CLI (`vercel`, `netlify`, `flyctl`, `railway`, `supabase`, `doctl`, `heroku`, `aws`, `gcloud`, `az`) outside its known-free command shapes | Use the free-tier-shaped command it names, or get explicit approval for spend. It denies rather than asks, by design — it is built for runs with nobody present |
 
 Allowlist-first: unrecognised is denied, not allowed. A denial is the hook
 working. Never route around it by switching tool or shell.

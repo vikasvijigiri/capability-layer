@@ -13,7 +13,7 @@ call for the same reason.
 Why this is not a receipt
 -------------------------
 The obvious shape for a security gate is a record that a review happened. This
-repository built that and deleted it. `pre-commit/03-review-gate.py` wrote into
+repository built that and deleted it. `permission-security/03-review-gate.py` wrote into
 `.claude/hooks/state/review-receipts.json`, and it failed twice over:
 
 - the receipts file was tracked, so `--record` changed the very fingerprint it
@@ -293,7 +293,7 @@ def evaluate(facts: dict) -> list[dict]:
             # credential into a check's output, which is logged in CI.
             add("secret-in-branch", "blocking",
                 f"{len(hits)} added line(s) match a secret pattern. "
-                f"`pre-commit/01-secret-scan.py` sees one commit at a time, so a "
+                f"`permission-security/01-secret-scan.py` sees one commit at a time, so a "
                 f"secret added mid-branch and still present at HEAD is never "
                 f"looked at again.",
                 sorted({f"pattern {h}" for h in hits}))

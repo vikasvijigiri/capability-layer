@@ -16,11 +16,11 @@ registry is the one that is wrong.
 
 | Event | Fires |
 |---|---|
-| `SessionStart` | `session-start/02-bootstrap-docs.py`, `03-state-report.py` |
-| `UserPromptSubmit` | `user-prompt/01-entry-classifier.py` |
-| `PreToolUse` | `pre-run/01-halt-guard.py`, then the commit, deploy and edit guards by matcher |
-| `PostToolUse` | `on-artifact-create/02-hook-self-test-nudge.py`, `post-tool/01-context-cost.py` |
-| `Stop` | `post-run/00-dispatch.py`, which runs checkpoint, auto-commit, layer-drift and chain-continuity in one process |
+| `SessionStart` | `session-init/02-bootstrap-docs.py`, `03-state-report.py` |
+| `UserPromptSubmit` | `prompt-intake/01-entry-classifier.py` |
+| `PreToolUse` | `pre-tool/01-halt-guard.py`, then the commit, deploy and edit guards by matcher |
+| `PostToolUse` | `post-edit-validation/02-hook-self-test-nudge.py`, `context-budget/01-context-cost.py` |
+| `Stop` | `stop-finalization/00-dispatch.py`, which runs checkpoint, auto-commit, layer-drift and chain-continuity in one process |
 
 A hook is silent when it works and silent when it is broken, which is the trap
 this layer has fallen into most often. **Fire one by hand after editing it:**

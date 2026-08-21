@@ -449,7 +449,7 @@ def workflow_block(key: str) -> str:
     return m.group(1).strip() if m else ""
 
 
-# `.claude/hooks/post-run/09-telemetry.py`'s task_type proxy. Written even
+# `.claude/hooks/telemetry/09-telemetry.py`'s task_type proxy. Written even
 # when `key` is None -- the common case, per this module's own "silent when
 # there is nothing to say" design -- so a downstream reader can tell
 # "classified as nothing this turn" apart from "never ran this turn".

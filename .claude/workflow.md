@@ -269,7 +269,7 @@ Four mechanisms, each with a tool and a suite behind it rather than a paragraph:
 
 | | Command | What it refuses, or reports |
 |---|---|---|
-| **Kill switch** | `python tools/halt.py --halt "<reason>"` | While halted, `pre-run/01-halt-guard.py` DENIES every tool that changes state or spawns work. Reads stay allowed on purpose — a halt you cannot investigate is a lockout, not a stop. `--resume` lifts it |
+| **Kill switch** | `python tools/halt.py --halt "<reason>"` | While halted, `pre-tool/01-halt-guard.py` DENIES every tool that changes state or spawns work. Reads stay allowed on purpose — a halt you cannot investigate is a lockout, not a stop. `--resume` lifts it |
 | **Agent file scope** | declared per agent as `allowed-paths:` | `pre-edit/02-agent-scope-guard.py` denies a write outside a dispatched agent's declared files, and an unscoped write with it. **Only when the host sets `UAIOS_AGENT_NAME`, and Claude Code does not** — see below |
 | **Licence and SBOM** | `python tools/deps.py [--sbom]` | A denied licence exits 1; one that could not be read exits 2. `0` ok, and undetermined is never ok |
 | **Release candidate** | `python tools/release_candidate.py --plan <plan>` | The report Gate 2 reads: wheel, rehearsal, licence, SBOM, risk tier, changed paths, and a **rollback that was executed** in a scratch repo |
@@ -290,7 +290,7 @@ to see.
 
 **The security gate is deliberately not a receipt.** A receipt recording that a
 review happened is the obvious shape and this repository already built and
-deleted it: `pre-commit/03-review-gate.py` invalidated every receipt it wrote
+deleted it: `permission-security/03-review-gate.py` invalidated every receipt it wrote
 because the receipts file was tracked, and the model then wrote one asserting a
 sign-off that had not happened — *"a forged receipt and a real one are the same
 file."* It went out on 2026-08-02 under *"Every hook verifies an artefact. Not

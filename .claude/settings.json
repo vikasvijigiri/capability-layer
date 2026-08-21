@@ -5,12 +5,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start/02-bootstrap-docs.py\"",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-init/02-bootstrap-docs.py\"",
             "statusMessage": "Loading knowledge docs into session context..."
           },
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start/03-state-report.py\"",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-init/03-state-report.py\"",
             "statusMessage": "Measuring repo state against the branch point..."
           }
         ]
@@ -21,11 +21,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/user-prompt/02-turn-timer.py\""
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/prompt-intake/02-turn-timer.py\""
           },
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/user-prompt/01-entry-classifier.py\"",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/prompt-intake/01-entry-classifier.py\"",
             "statusMessage": "Classifying the prompt's workflow entry shape..."
           }
         ]
@@ -36,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-run/00-dispatch.py\"",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-finalization/00-dispatch.py\"",
             "statusMessage": "Finalizing recovery, drift, and chain state..."
           }
         ]
@@ -47,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-run/01-halt-guard.py\"",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool/01-halt-guard.py\"",
             "statusMessage": "Checking for a halt..."
           }
         ],
@@ -58,23 +58,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-commit/01-secret-scan.py\"",
-            "statusMessage": "Scanning staged files for secrets..."
-          },
-          {
-            "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-commit/02-branch-guard.py\"",
-            "statusMessage": "Checking commit destination branch..."
-          },
-          {
-            "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-deploy/01-spend-guard.py\"",
-            "statusMessage": "Running deploy spend guard checks..."
-          },
-          {
-            "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-commit/03-attribution-guard.py\"",
-            "statusMessage": "Checking the commit message and author for AI attribution..."
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/permission-security/00-dispatch.py\"",
+            "statusMessage": "Checking secrets, branch, attribution, and deploy spend..."
           }
         ]
       },
@@ -100,7 +85,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/on-artifact-create/02-hook-self-test-nudge.py\"",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-edit-validation/02-hook-self-test-nudge.py\"",
             "statusMessage": "Checking whether a hook script needs testing..."
           }
         ]
@@ -110,7 +95,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-tool/01-context-cost.py\""
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/context-budget/01-context-cost.py\""
           }
         ]
       },
@@ -137,7 +122,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-tool/02-skill-cost.py\""
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/context-budget/02-skill-cost.py\""
           }
         ]
       },

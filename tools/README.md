@@ -39,7 +39,7 @@ Not a suite, but run by the commit gate as a lint check:
   skills and a slash command with every suite still green.
 
 `test_docs_gates.py` was deleted on 2026-08-02 with the two hooks it covered
-(`post-run/05-docs-gate.py`, `pre-commit/05-docs-required.py`).
+(`stop-finalization/05-docs-gate.py`, `permission-security/05-docs-required.py`).
 
 ```bash
 PYTHONIOENCODING=utf-8 python tools/<a suite in this repo>.py

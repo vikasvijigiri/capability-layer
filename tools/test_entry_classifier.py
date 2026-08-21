@@ -34,7 +34,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-HOOK = ROOT / ".claude" / "hooks" / "user-prompt" / "01-entry-classifier.py"
+HOOK = ROOT / ".claude" / "hooks" / "prompt-intake" / "01-entry-classifier.py"
 CORPUS = ROOT / "docs" / "evals" / "trigger-queries.json"
 
 # Which state key each stage's positives must produce. Only the two entry stages
@@ -350,7 +350,7 @@ def main() -> int:
           "current patterns (non-empty), not a hardcoded stub",
           bool(_real_patterns), f"got {_real_patterns!r}")
 
-    # --- classify() persists its result for post-run/09-telemetry.py --------
+    # --- classify() persists its result for telemetry/09-telemetry.py --------
     #
     # Written even when key is None -- the common, silent case -- so a
     # downstream reader can tell "classified as nothing" from "never ran".

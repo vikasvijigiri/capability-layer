@@ -366,8 +366,8 @@ resolvable = skill_names | agent_files
 # no .claude/skills/ directory -- naming one is correct, not a dead reference.
 NOT_SKILLS = {
     # hook event directories
-    "pre-commit", "post-run", "pre-edit", "pre-deploy", "session-start",
-    "pre-compact", "on-artifact-create", "global-session-start",
+    "permission-security", "stop-finalization", "pre-edit", "permission-security", "session-init",
+    "pre-compact", "post-edit-validation", "global-session-start",
     # Claude Code agent types
     "general-purpose", "statusline-setup",
     # document sections and prose

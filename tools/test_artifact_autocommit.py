@@ -1,4 +1,4 @@
-"""Tests for post-run/06-artifact-autocommit.py -- the only hook that commits.
+"""Tests for stop-finalization/06-artifact-autocommit.py -- the only hook that commits.
 
 Its commits are made from a subprocess, so they never pass through `PreToolUse`
 and get none of the gates a model-issued `git commit` gets. The checks it runs
@@ -24,7 +24,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-HOOK = ROOT / ".claude" / "hooks" / "post-run" / "06-artifact-autocommit.py"
+HOOK = ROOT / ".claude" / "hooks" / "stop-finalization" / "06-artifact-autocommit.py"
 failures: list[str] = []
 
 

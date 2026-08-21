@@ -4,7 +4,7 @@
 Why this suite exists
 ---------------------
 Prose in `.claude/` is executable instruction: a skill that says "run
-`python .claude/hooks/pre-commit/03-review-gate.py --record`" is a command the
+`python .claude/hooks/permission-security/03-review-gate.py --record`" is a command the
 model will run. Nothing type-checks it.
 
 On 2026-08-02 deleting three hooks broke four skills and one slash command --
@@ -53,7 +53,7 @@ SOURCES = [
 ]
 
 # Two shapes appear in this repo's prose:
-#   a full path      `.claude/hooks/pre-commit/01-secret-scan.py`, `tools/x.py`
+#   a full path      `.claude/hooks/permission-security/01-secret-scan.py`, `tools/x.py`
 #   a bare hook name `04-delivery-guard.py`, resolved against .claude/hooks/*/
 #
 # The path is NOT anchored to the backticks, and requiring that was a real blind

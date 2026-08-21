@@ -7,8 +7,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SETTINGS_JSON = ROOT / ".claude" / "settings.json"
-BOOTSTRAP_SCRIPT = ROOT / ".claude" / "hooks" / "session-start" / "02-bootstrap-docs.py"
-STATE_SCRIPT = ROOT / ".claude" / "hooks" / "session-start" / "03-state-report.py"
+BOOTSTRAP_SCRIPT = ROOT / ".claude" / "hooks" / "session-init" / "02-bootstrap-docs.py"
+STATE_SCRIPT = ROOT / ".claude" / "hooks" / "session-init" / "03-state-report.py"
 WORKFLOW_MD = ROOT / ".claude" / "workflow.md"
 
 EXPECTED_BOOTSTRAP_FILES = [
@@ -22,8 +22,8 @@ EXPECTED_BOOTSTRAP_FILES = [
 ]
 
 EXPECTED_SESSION_START_SCRIPT_RELATIVES = [
-    ".claude/hooks/session-start/02-bootstrap-docs.py",
-    ".claude/hooks/session-start/03-state-report.py",
+    ".claude/hooks/session-init/02-bootstrap-docs.py",
+    ".claude/hooks/session-init/03-state-report.py",
 ]
 
 

@@ -1,21 +1,25 @@
-"""
-PreToolUse hook -- global, fires on Bash/PowerShell calls that invoke a cloud-provider
-CLI (vercel, netlify, flyctl, railway, supabase, doctl, heroku, aws, gcloud, az).
+"""permission-security -- fires on Bash/PowerShell calls that invoke a
+cloud-provider CLI (vercel, netlify, flyctl, railway, supabase, doctl,
+heroku, aws, gcloud, az).
 
-Scope, by design: fast, deterministic, mechanical checks only -- same discipline as
-pre-commit/04-delivery-guard.py.
+Scope, by design: fast, deterministic, mechanical checks only.
 
-Decision policy, deliberately different from 04-delivery-guard.py: deny or allow,
-**never** ask. 04-delivery-guard.py can force an "ask" because a human is expected to
-be present for a push/PR/release; this hook exists specifically for autonomous runs
-where nobody is present to answer a prompt -- an unanswered "ask" would
-either hang indefinitely or fall back unpredictably. So this hook only ever denies (with
-a reason) or allows silently.
+Decision policy, deliberately different from the branch/attribution checks:
+deny or allow, **never** ask. This check exists specifically for autonomous
+runs where nobody is present to answer a prompt -- an unanswered "ask" would
+either hang indefinitely or fall back unpredictably. So this check only ever
+denies (with a reason) or allows silently.
 
-Allowlist-first, not blocklist-first: a command is denied by default and only allowed
-through if it matches a known-safe, free-tier command shape. A blocklist of "paid-
-looking flags" can never be complete -- that's a false-negative risk with real money
-attached -- so the default is deny, not allow.
+Allowlist-first, not blocklist-first: a command is denied by default and only
+allowed through if it matches a known-safe, free-tier command shape. A
+blocklist of "paid-looking flags" can never be complete -- that's a
+false-negative risk with real money attached -- so the default is deny, not
+allow.
+
+Moved from `pre-deploy/01-spend-guard.py` on 2026-08-21 (renumbered to 04
+since it now shares a family with the three commit-time checks), refactored
+into a `check(payload) -> str | None` function so `00-dispatch.py` can call
+it in-process. Behavior unchanged.
 """
 
 import sys as _sys
@@ -23,7 +27,6 @@ from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
 from _hooklib import load_payload as _load_payload  # noqa: E402
 
-import json
 import re
 
 
@@ -40,9 +43,8 @@ VENDOR_PATTERNS = {
     "supabase": re.compile(r"\bsupabase\b"),
 }
 
-# aws/gcloud/az/doctl: free-tier status isn't statically checkable from a command
-# string, so only read-only verbs are ever allowed -- no allowlist exception exists
-# for a mutating verb on these four, unlike the PaaS vendors below.
+# aws/gcloud/az/doctl: free-tier status isn't statically checkable from a
+# command string, so only read-only verbs are ever allowed.
 READONLY_VERB_PATTERNS = [
     re.compile(r"\bdescribe[-\w]*\b"),
     re.compile(r"\blist[-\w]*\b"),
@@ -64,8 +66,6 @@ MUTATING_VERB_PATTERNS = [
     re.compile(r"\bstop[-\w]*\b"),
 ]
 
-# PaaS vendors: allowlist of known-free command shapes. Re-checked against
-# PAID_SIGNAL_PATTERNS below even on a match -- defense in depth, not either/or.
 SAFE_SHAPES = {
     "vercel": [
         re.compile(r"\bvercel\s+deploy\b"),
@@ -158,71 +158,59 @@ def matches_safe_shape(vendor, command):
     return any(p.search(command) for p in SAFE_SHAPES.get(vendor, []))
 
 
-def deny(reason):
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "deny",
-            "permissionDecisionReason": reason,
-        }
-    }))
+def check(payload: dict) -> str | None:
+    """The deny reason if this command is not a verifiably free-tier call."""
+    if payload.get("tool_name") not in ("Bash", "PowerShell"):
+        return None
 
-
-def main():
-    try:
-        data = _load_payload()
-    except Exception:
-        return
-
-    if data.get("tool_name") not in ("Bash", "PowerShell"):
-        return
-
-    command = (data.get("tool_input") or {}).get("command") or ""
+    command = (payload.get("tool_input") or {}).get("command") or ""
     if not command.strip():
-        return
+        return None
 
     vendor = detect_vendor(command)
     if vendor is None:
-        return  # not a cloud-CLI command -- nothing for this hook to check
+        return None  # not a cloud-CLI command -- nothing for this check
 
     if CHAIN_OPERATOR_PATTERN.search(command):
-        deny(
-            f"deploy-spend-guard: command chaining/piping isn't verifiable as a single "
-            f"safe shape for '{vendor}' -- split into separate commands and retry."
+        return (
+            f"deploy-spend-guard: command chaining/piping isn't verifiable as "
+            f"a single safe shape for '{vendor}' -- split into separate "
+            f"commands and retry."
         )
-        return
 
     if vendor == "heroku":
-        deny("deploy-spend-guard: heroku has had no free tier since 2022 -- blocked outright.")
-        return
+        return "deploy-spend-guard: heroku has had no free tier since 2022 -- blocked outright."
 
     if vendor in ("aws", "gcloud", "az", "doctl"):
         if is_readonly_only(command):
-            return  # allow silently
-        deny(
-            f"deploy-spend-guard: '{vendor}' mutating commands aren't statically "
-            f"verifiable as free-tier -- only read-only (describe/list/get/show/ls) "
-            f"calls are allowed for this vendor."
+            return None  # allow silently
+        return (
+            f"deploy-spend-guard: '{vendor}' mutating commands aren't "
+            f"statically verifiable as free-tier -- only read-only "
+            f"(describe/list/get/show/ls) calls are allowed for this vendor."
         )
-        return
 
     # Remaining vendors: PaaS hosts with a real, CLI-drivable free tier.
     paid_signal = matches_paid_signal(command)
     if paid_signal:
-        deny(f"deploy-spend-guard: command matches a paid-tier signal ({paid_signal}) -- denied.")
-        return
+        return f"deploy-spend-guard: command matches a paid-tier signal ({paid_signal}) -- denied."
 
     if matches_safe_shape(vendor, command):
-        return  # allow silently
+        return None  # allow silently
 
-    deny(
-        f"deploy-spend-guard: command doesn't match a recognized free-tier shape for "
-        f"'{vendor}'; add an explicit allowlist entry to this hook if this is actually $0."
+    return (
+        f"deploy-spend-guard: command doesn't match a recognized free-tier "
+        f"shape for '{vendor}'; add an explicit allowlist entry to this "
+        f"check if this is actually $0."
     )
 
 
 if __name__ == "__main__":
+    from _hooklib import deny as _deny  # noqa: E402
     try:
-        main()
+        data = _load_payload()
+        reason = check(data)
+        if reason:
+            _deny(reason)
     except Exception:
         pass

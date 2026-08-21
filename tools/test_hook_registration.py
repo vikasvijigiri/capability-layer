@@ -6,11 +6,11 @@ Why this suite exists
 `/verify` step 4 has described this exact check in prose since the command was
 written, and the drift it describes accumulated anyway:
 
-- `session-start/02-bootstrap-docs.py` was in the registry, on disk, and NOT in
+- `session-init/02-bootstrap-docs.py` was in the registry, on disk, and NOT in
   `settings.json` — so the hook that injects the knowledge docs into session
   context **never fired in a real session**. CLAUDE.md's "six files carry state
   between sessions" was describing a capability that was not wired.
-- `post-run/05-docs-gate.py` and `pre-commit/05-docs-required.py` were wired and
+- `stop-finalization/05-docs-gate.py` and `permission-security/05-docs-required.py` were wired and
   on disk but absent from the registry, so the file documenting intent disagreed
   with the file that fires.
 
@@ -132,7 +132,7 @@ check("no registry event has an empty subscriber list", not empty_events,
 # This repository intentionally ships no global hook. A user-level settings file
 # must therefore not point at a deleted repository path.
 
-STALE_GLOBAL = {"global-session-start/01-layer-bootstrap.py"}
+STALE_GLOBAL = {"global-session-init/01-layer-bootstrap.py"}
 
 global_settings = Path.home() / ".claude" / "settings.json"
 if not global_settings.is_file():
@@ -194,7 +194,7 @@ for _path in sorted(HOOKS.rglob("*.py")):
 # An unclosed tag is worse: the regex simply does not match, so the block is
 # present, looks correct, and is never emitted.
 
-_report = HOOKS / "session-start" / "03-state-report.py"
+_report = HOOKS / "session-init" / "03-state-report.py"
 _wf = ROOT / ".claude" / "workflow.md"
 if _report.is_file() and _wf.is_file():
     _src = _report.read_text(encoding="utf-8")

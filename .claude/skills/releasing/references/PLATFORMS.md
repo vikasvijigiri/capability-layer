@@ -91,7 +91,7 @@ restores a dropped column.
 - A migration is a **separate, separately-approved** step from the deploy.
 - Additive first: add the column, ship code that writes both, backfill, *then*
   remove the old one. Three deploys, each individually reversible.
-- `post-run/06-artifact-autocommit.py` refuses to auto-commit anything matching
+- `stop-finalization/06-artifact-autocommit.py` refuses to auto-commit anything matching
   `_hooklib.MIGRATION_PATH_PATTERNS`, so a migration cannot land unattended. That
   is a floor, not a review.
 - Say out loud, before running one: what it drops, and what restores it. If the

@@ -59,7 +59,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from _hooklib import load_payload  # noqa: E402
 
-# parents[0] post-run, [1] hooks, [2] .claude, [3] repo root.
+# parents[0] telemetry, [1] hooks, [2] .claude, [3] repo root.
 ROOT = Path(__file__).resolve().parents[3]
 STATE_DIR = Path(__file__).resolve().parents[1] / "state"
 TELEMETRY = STATE_DIR / "telemetry.jsonl"
@@ -68,7 +68,7 @@ READ_COST = STATE_DIR / "read-cost.json"
 AGENT_COST = STATE_DIR / "agent-cost.json"
 SKILL_COST = STATE_DIR / "skill-cost.json"
 SKILL_COST_PRODUCER = (Path(__file__).resolve().parents[1]
-                       / "post-tool" / "02-skill-cost.py")
+                       / "context-budget" / "02-skill-cost.py")
 ENTRY_SHAPE = STATE_DIR / "last-entry-shape.json"
 TOOL_COST = STATE_DIR / "tool-cost.json"
 HUMAN_COST = STATE_DIR / "human-cost.json"

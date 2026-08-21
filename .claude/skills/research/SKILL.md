@@ -29,7 +29,7 @@ is not a source. Read the file.
 `.claude/workflow.md` makes research a stage entered from anywhere, and orders
 its sources internal knowledge, repository, memory,
 *then* web — and that order is load-bearing. A whole feature has been
-proposed to guard against losing uncommitted work; `post-run/03-checkpoint.py`
+proposed to guard against losing uncommitted work; `stop-finalization/03-checkpoint.py`
 had been snapshotting the tree every turn for two days. One `ls` of the hooks
 directory would have replaced the design.
 

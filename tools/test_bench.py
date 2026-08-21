@@ -40,7 +40,7 @@ def load(rel: str, name: str):
 
 
 bench = load("tools/bench.py", "bench_for_test")
-telemetry_mod = load(".claude/hooks/post-run/09-telemetry.py", "telemetry_for_test")
+telemetry_mod = load(".claude/hooks/telemetry/09-telemetry.py", "telemetry_for_test")
 SPEC_FIELD_COUNT = telemetry_mod.SPEC_FIELD_COUNT
 
 

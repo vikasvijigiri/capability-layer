@@ -40,7 +40,7 @@ TELEMETRY = ROOT / ".claude" / "hooks" / "state" / "telemetry.jsonl"
 
 
 def _load_module(rel: str, name: str):
-    """Same seam `.claude/hooks/post-run/09-telemetry.py` and `tools/loop.py`
+    """Same seam `.claude/hooks/telemetry/09-telemetry.py` and `tools/loop.py`
     already use -- one file owns a constant, everyone else imports it rather
     than re-declaring the number."""
     spec = importlib.util.spec_from_file_location(name, ROOT / rel)
@@ -62,7 +62,7 @@ def _telemetry_module():
     global _TELEMETRY_MOD
     if _TELEMETRY_MOD is None:
         _TELEMETRY_MOD = _load_module(
-            ".claude/hooks/post-run/09-telemetry.py", "telemetry_for_bench")
+            ".claude/hooks/telemetry/09-telemetry.py", "telemetry_for_bench")
     return _TELEMETRY_MOD
 
 # Loaded once when a session opens.
@@ -123,7 +123,7 @@ def per_turn_descriptions() -> int:
 
 def session_start() -> tuple[int, float]:
     """(bytes, seconds) the SessionStart hooks emit into every new session."""
-    folder = ROOT / ".claude" / "hooks" / "session-start"
+    folder = ROOT / ".claude" / "hooks" / "session-init"
     if not folder.is_dir():
         return 0, 0.0
     env = {**os.environ, "PYTHONIOENCODING": "utf-8",
@@ -262,7 +262,7 @@ def local_repair_ratio() -> tuple[float | None, dict[str, int]]:
 
 def skill_body_cost() -> tuple[int, int, int]:
     """(skill invocations, SKILL.md chars loaded, unattributed) this session,
-    from `post-tool/02-skill-cost.py`'s counter.
+    from `context-budget/02-skill-cost.py`'s counter.
 
     A full chain run loads a full `SKILL.md` body per stage, on top of the
     per-turn listing `session_calls()`'s neighbour rows already measure --
