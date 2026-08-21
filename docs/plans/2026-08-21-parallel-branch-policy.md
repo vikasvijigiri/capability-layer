@@ -209,7 +209,11 @@ Constraint below).
 - [x] Task 1 — `tools/worktree.py` branch-creation mode. **Executed:**
   `python tools/test_worktree.py` -> `All worktree tests passed` (22
   cases, 6 new for branch mode), default detached path unchanged.
-- [ ] Task 2 — `executing-plans`: parallel dispatch becomes the default, with per-task branches
+- [x] Task 2 — `executing-plans`: parallel dispatch becomes the default, with
+  per-task branches. **Executed:** `python tools/analyze.py --slug
+  parallel-branch-policy` -> `consistent -- 6 task(s), no findings`;
+  `python tools/test_referenced_paths.py` -> `All referenced-path tests
+  passed`.
 - [ ] Task 3 — `delivering`: automatic push + PR per task branch
 - [ ] Task 4 — `delivering`: batched merge confirmation and execution
 - [ ] Task 5 — `test_process_router.py`: pin the new exception's scope

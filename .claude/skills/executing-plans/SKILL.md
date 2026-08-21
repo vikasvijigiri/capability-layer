@@ -128,25 +128,49 @@ terminate.
 
 ## Dispatching subagents for parallel tasks
 
-Only when parallel dispatch was explicitly chosen for this run — that choice is
-the ask; do not spawn agents otherwise. One **`task-implementer`** per task,
-dispatched concurrently within a round.
+**Concurrent dispatch is the default, not an ask.** Run `python
+tools/parallel_groups.py <plan>` before Task 1 of any plan with more than one
+task. Any round it reports with concurrency > 1 is dispatched concurrently
+without waiting for the user to request it — the scheduler's own proof of
+disjoint file sets and frozen interfaces is the license. A non-zero exit means
+the plan is not schedulable; fix the plan (or run it serially), never route
+around the check.
 
-Compute the schedule rather than guessing. Two tasks share a round only if their
-file sets are disjoint and neither depends on the other; migrations, lockfiles
-and shared configuration get a round to themselves. Use the project's scheduling
-script over intuition, and treat a non-zero exit as the plan not being
-schedulable, not something to route around.
+**Each task in such a round gets its own branch, not a shared scratch
+worktree.** Create it yourself — never rely on `task-implementer`'s own
+`isolation: worktree` frontmatter (see `references/parallel-dispatch.md`'s
+"own the worktree instead of asking for one"):
 
-Give each agent: the **path** to its task's text (never pasted — anything pasted
-stays in your context for the session), the interfaces earlier rounds produced,
-the plan's constraints, and where to report back.
+    python tools/worktree.py create <task-name> <plan-base-branch> \
+        --branch <slug>/task-<N>
+
+`<plan-base-branch>` is this plan's own working branch tip, verified by `git
+merge-base --is-ancestor` — never the repository's default branch; that
+mistake is the one prior fan-out failure this layer has on record. Dispatch
+one **`task-implementer`** per task in the round, all in the same message,
+each pointed at its pre-created worktree path.
+
+Give each agent: the **path** to its task's text (never pasted — anything
+pasted stays in your context for the session), the interfaces earlier rounds
+produced, the plan's constraints, and where to report back.
 
 Read what each agent reports rather than trusting it succeeded. Resolve every
 non-clean result deliberately — a blocked agent gets escalated or reassigned
 once, never re-dispatched unchanged. Verify the round before dispatching the
-next: an agent reporting success is not evidence; the diff is. Read
-`references/parallel-dispatch.md` before the first fan-out.
+next: an agent reporting success is not evidence; the diff is.
+
+**The dispatcher — never the subagent — commits.** `task-implementer`'s own
+contract already forbids it ("Never commit, push, merge or deploy"). Once a
+task's diff and its own Verification command both check out, commit it
+yourself inside that task's worktree, on that task's named branch. Hand the
+resulting list of committed branches to `delivering`, which pushes and opens
+one PR per branch automatically and gates the eventual merge behind one
+batched confirmation covering the whole round — see `delivering/SKILL.md`'s
+"Exception: a parallel round's task branches". Do not merge these branches
+into the plan's own working branch yourself; that is what `delivering`'s
+batched step is for.
+
+Read `references/parallel-dispatch.md` before the first fan-out.
 
 ## Environment gotchas that bite during execution
 
