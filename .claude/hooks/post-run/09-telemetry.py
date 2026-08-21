@@ -70,6 +70,9 @@ SKILL_COST = STATE_DIR / "skill-cost.json"
 SKILL_COST_PRODUCER = (Path(__file__).resolve().parents[1]
                        / "post-tool" / "02-skill-cost.py")
 ENTRY_SHAPE = STATE_DIR / "last-entry-shape.json"
+TOOL_COST = STATE_DIR / "tool-cost.json"
+HUMAN_COST = STATE_DIR / "human-cost.json"
+TURN_TIMER = STATE_DIR / "turn-timer.json"
 
 # Every target-spec field this repo's hooks cannot populate, and why --
 # named rather than silently absent. Reused by `tools/bench.py`'s report so
@@ -77,11 +80,9 @@ ENTRY_SHAPE = STATE_DIR / "last-entry-shape.json"
 UNAVAILABLE_FIELDS: dict[str, str] = {
     "execution_level": "no E0-E5 router exists yet -- a separate audit gap",
     "model": "no hook payload exposes the active model name",
-    "api_call_count": "not observable to a hook in this harness",
     "context_tokens": "not observable to a hook in this harness",
     "input_tokens": "not observable to a hook in this harness",
     "output_tokens": "not observable to a hook in this harness",
-    "latency": "needs Start/Stop timestamp pairing per turn, not built here",
     "parallelism": "only known for planned work via parallel_groups.py, "
                    "not live-observed",
     "cache_hits": "the repeat-detector in 01-context-cost.py is a "
@@ -89,8 +90,6 @@ UNAVAILABLE_FIELDS: dict[str, str] = {
     "cache_misses": "the repeat-detector in 01-context-cost.py is a "
                     "near-miss proxy, not a true cache-hit concept",
     "verification_level": "no discrete per-run counter exists yet",
-    "retries": "no discrete per-run counter exists yet",
-    "escalations": "no discrete per-run counter exists yet",
     "success": "no signal exists; needs human or verification-result input",
     "quality_signal": "no signal exists; needs human or verification-result "
                        "input",
@@ -114,6 +113,70 @@ def _load_module(rel: str, name: str):
     except Exception:
         return None
     return mod
+
+
+def _turn_latency() -> tuple[float | None, str | None]:
+    """Seconds since 02-turn-timer.py's last `UserPromptSubmit`, or a reason.
+
+    `None` for the first turn of a session (the timer has never fired) or if
+    the state file cannot be read -- both real absences, not a guessed 0.0.
+    """
+    timer = _load_json(TURN_TIMER)
+    started_at = timer.get("started_at")
+    if not isinstance(started_at, (int, float)):
+        return None, ("02-turn-timer.py has not fired yet this session -- "
+                       "no start timestamp recorded")
+    return time.time() - started_at, None
+
+
+def _retry_facts(slug: str | None) -> dict:
+    """attempts/max_attempts/failure_class/rung, surfaced -- never invented.
+
+    `tools/resume.py:gather_facts()` already computes the first three;
+    `tools/loop.py:rung()` already turns them into the same repair/restore/
+    rebase/retreat/block verdict its own CLI prints. Nothing here recomputes
+    that logic, it reads what both tools already own -- same "surface, don't
+    invent" move as `duplicate_rate` (2026-08-21, three-spec-metrics).
+
+    Offline by default, matching `tools/chain.py:gather(offline=True)`'s own
+    precedent: `Stop` fires every turn, and `gather_facts`'s `gh pr list`
+    calls must never tax it.
+    """
+    empty = {"attempts": 0, "max_attempts": 0, "failure_class": None,
+              "rung": None}
+    loop_mod = _load_module("tools/loop.py", "loop_for_telemetry")
+    if loop_mod is None:
+        return empty
+    resume_mod = getattr(loop_mod, "_rs", None)
+    if resume_mod is None:
+        return empty
+    resume_mod._gh_json = lambda *a, **k: None
+    try:
+        facts = resume_mod.gather_facts(ROOT, slug)
+        state = resume_mod.derive_state(facts)
+        ledger = resume_mod.read_ledger(ROOT, facts.get("slug"))
+    except Exception:
+        return empty
+
+    result = {
+        "attempts": facts.get("attempts", 0),
+        "max_attempts": facts.get("max_attempts", 0),
+        "failure_class": facts.get("failure_class"),
+        "rung": None,
+    }
+    if state in ("REPAIR", "BLOCKED"):
+        try:
+            detail = ledger.get("detail", "") or ""
+            kind = ledger.get("failure_class") or loop_mod.classify_failure(detail)[0]
+            budget = loop_mod.failure_budget(kind)
+            sha = loop_mod.green_sha(ROOT, facts.get("slug"))
+            result["rung"] = loop_mod.rung(
+                kind, int(facts.get("attempts", 0)), budget,
+                restored=bool(ledger.get("restored")), has_green=bool(sha),
+            )
+        except Exception:
+            pass  # attempts/max_attempts/failure_class are still real; rung alone is not
+    return result
 
 
 def _chain_facts() -> dict:
@@ -151,13 +214,20 @@ def build_snapshot() -> dict:
 
     read_totals = _load_json(READ_COST)
     agent_totals = _load_json(AGENT_COST)
+    tool_totals = _load_json(TOOL_COST)
+    human_totals = _load_json(HUMAN_COST)
     calls = call_totals.get("calls", 0)
     repeats = call_totals.get("repeats", 0)
+
+    chain = _chain_facts()
+    turn_latency_seconds, latency_reason = _turn_latency()
+    if latency_reason:
+        unavailable["turn_latency_seconds"] = latency_reason
 
     return {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "run_scope": "session-cumulative",
-        "chain": _chain_facts(),
+        "chain": chain,
         "tools_called": {
             "calls": calls,
             "chars": call_totals.get("chars", 0),
@@ -178,6 +248,20 @@ def build_snapshot() -> dict:
         # Spec's own term (§21 "Duplicate-operation rate"); pure arithmetic
         # over tools_called, which already tracks calls/repeats.
         "duplicate_rate": (repeats / calls) if calls else 0.0,
+        # Total across every tool name (06-tool-cost.py's matcher "*"), not
+        # the narrower Bash/PowerShell-only tools_called above.
+        "api_calls": {
+            "calls": tool_totals.get("calls", 0),
+            "by_tool": tool_totals.get("by_tool", {}),
+        },
+        "turn_latency_seconds": turn_latency_seconds,
+        # Raw counts only -- no invented per-task/per-session denominator,
+        # same as agents_spawned's own already-shipped shape.
+        "human_interventions": {
+            "calls": human_totals.get("calls", 0),
+            "by_tool": human_totals.get("by_tool", {}),
+        },
+        "retries": _retry_facts(chain.get("slug")),
         "unavailable": unavailable,
     }
 

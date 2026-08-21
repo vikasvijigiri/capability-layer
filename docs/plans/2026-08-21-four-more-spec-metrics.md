@@ -176,10 +176,25 @@ existing hook.
   measurable objectives.
 
 ## Progress
-- [ ] Task 1 — total tool-call counter (objective 4, `api_calls`)
-- [ ] Task 2 — per-turn latency (objective 6, `turn_latency_seconds`)
-- [ ] Task 3 — human-intervention counter (objective 1, `human_interventions`)
-- [ ] Task 4 — surface retry/escalation facts (objectives 9/10, `retries`)
+- [x] Task 1 — total tool-call counter (objective 4, `api_calls`). `python
+  tools/test_hooks.py` exits 0, including the new tool-cost cases; fired
+  directly against an `mcp__github__get_me` payload, `calls: 1,
+  by_tool: {"mcp__github__get_me": 1}`.
+- [x] Task 2 — per-turn latency (objective 6, `turn_latency_seconds`).
+  `python tools/test_hooks.py` exits 0; fired directly, `started_at` close
+  to real Unix time; a real 1s sleep between fire and telemetry read
+  produced `turn_latency_seconds: 2.15` (includes interpreter startup).
+- [x] Task 3 — human-intervention counter (objective 1,
+  `human_interventions`). `python tools/test_hooks.py` exits 0; fired
+  directly against `ExitPlanMode`, `calls: 1, ExitPlanMode: 1`; a `Bash`
+  payload left the counter untouched.
+- [x] Task 4 — surface retry/escalation facts (objectives 9/10, `retries`).
+  `python tools/test_hooks.py` exits 0. See Deviations below: the plan's
+  own literal expectation for the "no active plan" case (`max_attempts: 0`)
+  did not match `resume.gather_facts`'s real contract and was corrected in
+  the test, not the code; the REPAIR-state rung path is verified by a
+  white-box substitution (this branch's own `docs/` prefix cannot reach a
+  live REPAIR state -- pre-existing, already-logged bug, out of scope).
 
 ## Tasks
 
@@ -401,3 +416,55 @@ in `telemetry.jsonl`, unprompted, on every turn a plan is active.
 - **Objective 7 (compute/cost).** Already has an instrument
   (`model:` frontmatter across skills/agents, per `docs/objectives.md`) that
   needs no new counter — nothing to add here.
+
+## Deviations from plan
+
+- **Commit shape: one commit for Tasks 1-4 together, not four independent
+  ones.** The Rollback field named four independent, additive commits, but
+  Tasks 1-3 all touch the same three shared files
+  (`.claude/settings.json`, `.claude/hooks/hooks_registry.json`,
+  `.claude/hooks/post-run/09-telemetry.py`) — exactly the shared surface
+  the corrected scheduler above now refuses to run concurrently, for the
+  same underlying reason. Splitting the diff back into four commits after
+  the fact would risk a broken intermediate state on any one of them
+  (e.g. a `settings.json` with Task 1's hook registered but Task 2's or
+  3's syntactically absent mid-history). Reverting this plan's whole
+  change is still one `git revert`, which satisfies Article IV in
+  practice even though the shape differs from what was written.
+- **Scheduler bug found and fixed before dispatch, changing the execution
+  shape.** `tools/parallel_groups.py`'s `field()` broke out of bullet
+  collection on a wrapped continuation line (no `-` marker), silently
+  dropping every `Files:` bullet after the first — so Tasks 1-3's declared
+  `.claude/settings.json`/`hooks_registry.json`/`09-telemetry.py` writes
+  were invisible to the scheduler, which reported `concurrency 4` for a
+  round that actually shares `.claude/settings.json` (a declared
+  `SHARED_PATTERNS` surface) three ways. Fixed in `tools/parallel_groups.py`
+  + a new regression case in `tools/test_parallel_groups.py`
+  (`WRAPPED_BULLET_HIDES_LATER_FILE`), committed separately before any task
+  work. Corrected schedule: **4 rounds, concurrency 1 throughout** — the
+  new branch-per-parallel-task policy (`decisions/
+  2026-08-21-branch-per-parallel-task.md`) does not apply to this plan; all
+  four tasks were executed serially, inline, on this one branch instead.
+- **Task 4's "no active plan (slug is None)" expectation corrected.**
+  The plan text asked for `{"attempts": 0, "max_attempts": 0,
+  "failure_class": None, "rung": None}` when `slug` is `None`. In reality,
+  `resume.gather_facts(root, slug=None)` means "infer the slug from the
+  branch," not "no plan exists," and its `max_attempts` always defaults to
+  `resume.MAX_ATTEMPTS` (3) when no ledger is recorded — never 0. The all-
+  zero struct is real and reachable, but only when the `loop`/`resume`
+  module itself cannot be loaded (the genuine "could not determine
+  anything" case). `tools/test_hooks.py` asserts both cases correctly
+  instead of the plan's literal (and inaccurate) expectation; the
+  implementation was not changed to force a fake 0.
+- **Task 4's REPAIR-state rung path could not be exercised live on this
+  branch.** `tools/resume.py`'s `BRANCH_PREFIX` is hardcoded to `"feat/"`
+  and `slug_from_branch` strips no other prefix, so on a `docs/` branch
+  `branch_exists` is always `False` and `derive_state` returns `BUILD`
+  before ever reaching the `checks_green`/`REPAIR` clause — a pre-existing,
+  already-logged gap (`LOG.md`, 2026-08-20: "`resume.py`'s `BRANCH_PREFIX`
+  strips only one branch prefix, while `_hooklib.py`'s `active_plans()`
+  strips five"), not something this plan fixes (would be scope creep on a
+  telemetry unit). Verified instead by a white-box substitution in
+  `tools/test_hooks.py`, which forces `derive_state` to return `"REPAIR"`
+  and confirms `_retry_facts()` computes the exact same `rung` value
+  `tools/loop.py`'s own `rung()` computes directly for identical inputs.

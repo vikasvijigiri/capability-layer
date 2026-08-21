@@ -10,9 +10,10 @@
       ]
     },
     "user-prompt": {
-      "description": "Before a turn begins; classifies the prompt's entry shape -- work named with a settled approach, work named with an open one, or neither -- and renders the matching [state:<key>] block from workflow.md. Names no skill: it measures prompt shape, workflow.md's Entry table owns what that shape routes to. A hook cannot invoke a skill, so this raises the entry rule's visibility and does not guarantee a handoff.",
+      "description": "Before a turn begins; records this turn's start timestamp for 09-telemetry.py's turn_latency_seconds, then classifies the prompt's entry shape -- work named with a settled approach, work named with an open one, or neither -- and renders the matching [state:<key>] block from workflow.md. Names no skill: it measures prompt shape, workflow.md's Entry table owns what that shape routes to. A hook cannot invoke a skill, so this raises the entry rule's visibility and does not guarantee a handoff.",
       "claude_code_event": "UserPromptSubmit",
       "subscribers": [
+        ".claude/hooks/user-prompt/02-turn-timer.py",
         ".claude/hooks/user-prompt/01-entry-classifier.py"
       ]
     },
@@ -73,13 +74,15 @@
       ]
     },
     "post-tool": {
-      "description": "After a shell tool returns: reports what its input added to permanent session context, names a call this session already made with the same inputs, counts Read-file bytes added to context, and counts Task (agent-spawn) dispatches. After a Skill tool call: counts the invocation and the loaded SKILL.md's byte size into a running total tools/bench.py reports. Separate matchers per script, because each PostToolUse script costs a spawn on every matching call. Reports only -- never blocks. Names no skill in what it emits, per decisions/2026-08-04-hooks-never-name-a-skill.md -- writes to a state file, never to stdout in the normal case",
-      "claude_code_event": "PostToolUse (Bash|PowerShell|Read|Task|Skill)",
+      "description": "After a shell tool returns: reports what its input added to permanent session context, names a call this session already made with the same inputs, counts Read-file bytes added to context, and counts Task (agent-spawn) dispatches. After a Skill tool call: counts the invocation and the loaded SKILL.md's byte size into a running total tools/bench.py reports. After every tool call (matcher \"*\"): counts it into a total-calls tally, by tool name. After AskUserQuestion/ExitPlanMode: counts a human-gate firing, by tool name. Separate matchers per script, because each PostToolUse script costs a spawn on every matching call. Reports only -- never blocks. Names no skill in what it emits, per decisions/2026-08-04-hooks-never-name-a-skill.md -- writes to a state file, never to stdout in the normal case",
+      "claude_code_event": "PostToolUse (*|AskUserQuestion|ExitPlanMode|Bash|PowerShell|Read|Task|Skill)",
       "subscribers": [
         ".claude/hooks/post-tool/01-context-cost.py",
         ".claude/hooks/post-tool/02-skill-cost.py",
         ".claude/hooks/post-tool/04-read-cost.py",
-        ".claude/hooks/post-tool/05-agent-cost.py"
+        ".claude/hooks/post-tool/05-agent-cost.py",
+        ".claude/hooks/post-tool/06-tool-cost.py",
+        ".claude/hooks/post-tool/07-human-cost.py"
       ]
     }
   }

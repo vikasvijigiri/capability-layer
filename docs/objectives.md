@@ -96,13 +96,14 @@ instruments; run them rather than quoting a remembered number.
 | # | Instrument |
 |---|---|
 | 2, 3 | `python tools/bench.py` — per-session and per-turn character costs |
-| 4, 5 | `python tools/bench.py`, from the counters in `post-tool/01-context-cost.py` and `post-tool/02-skill-cost.py` |
-| 6 | `python tools/bench.py` tier timings; `python tools/parallel_groups.py <plan>` |
+| 4, 5 | `python tools/bench.py`, from the counters in `post-tool/01-context-cost.py`, `post-tool/02-skill-cost.py` and `post-tool/06-tool-cost.py` (total tool calls, every tool name) |
+| 6 | `python tools/bench.py` tier timings; `python tools/parallel_groups.py <plan>`; `09-telemetry.py`'s `turn_latency_seconds`, from `user-prompt/02-turn-timer.py` |
 | 7 | `model:` frontmatter across `.claude/skills/` and `.claude/agents/` |
 | 8 | `.claude/hooks/user-prompt/01-entry-classifier.py` replayed over `docs/evals/trigger-queries.json` |
 | 9 | `python tools/scope.py`; `_hooklib.FAILURE_BUDGETS` |
 | 10 | `python tools/run_checks.py --tier all --require-test` |
-| 1 | `python tools/test_process_router.py` — the two-gate ownership assertions |
+| 1 | `python tools/test_process_router.py` — the two-gate ownership assertions; `09-telemetry.py`'s `human_interventions` field, from `post-tool/07-human-cost.py` (live rate, `AskUserQuestion`/`ExitPlanMode` counts) |
+| 9, 10 | `09-telemetry.py`'s `retries` field, surfacing `tools/resume.py`'s `attempts`/`max_attempts`/`failure_class` and `tools/loop.py`'s `rung()` verdict per turn |
 | 14 | `python tools/test_install.py`, `python tools/test_package.py` — fresh install into a Python and Node target |
 | 21 | `python tools/security_gate.py`, `python tools/deps.py` (licence gate), `pre-commit/*` hooks |
 | 23 | `verifying-work`'s HARD-GATE (no completion claim without fresh, quoted evidence) |
@@ -116,4 +117,7 @@ pass and what would make each one measurable.
 **Last full quantitative audit: 2026-08-16 — 4 green (1, 6, 7, 9), 5 amber
 (3, 4, 5, 8, 10), 1 red (2)**, against objectives 1-10 only. Not re-run here —
 see the research doc for what has and hasn't moved since, and for the first
-pass over 11-30 and the architecture sections.
+pass over 11-30 and the architecture sections. Objectives 3, 5, 8 gained real
+instrumentation on 2026-08-21 (`three-spec-metrics`, PR #24); objectives 1, 4,
+6, 9, 10 gained it the same day (`four-more-spec-metrics`) — none of these
+re-grades the 2026-08-16 verdicts above, which stays the last full pass.
