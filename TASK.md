@@ -114,6 +114,20 @@
   objectives 11-13, 15-20, 22, 24-27, 29 (no instrument exists, none
   invented here).
 
+### Cluster C — instruments for objectives 22, 24, 18
+- **Status:** Plan approved (Gate 1). See
+  `docs/plans/2026-08-21-cluster-c-telemetry-metrics.md` and its design
+  spec `docs/specs/2026-08-21-qualitative-objective-metrics.md`.
+- **Goal:** give objectives 22 (observable/auditable), 24 (self-
+  adapting/self-healing), and 18 (adaptive not prescriptive) real,
+  re-runnable instruments — the first of 4 clusters covering the 15
+  Notion-spec objectives that currently have none, per the design spec's
+  own decomposition (Cluster A: 13,15,16,25,27; B: 17,19,20; D: 11,12,26,29
+  — each its own future unit).
+- **Out of Scope:** Clusters A, B, D; turning any new check into a gate; the
+  E0-E5 router and agent-catalogue decision record (separate candidate
+  units); re-grading objectives 1-10; objective 2's paid eval.
+
 ### Implement world-class SessionStart bootstrap scaffolding
 - **Status:** In Progress
 - **Goal:** Implement a SessionStart bootstrap loader that scaffolds project skeleton files and a minimal, maintainable `docs/` structure without creating unnecessary subfolders or a copied `AGENTS.md`.
