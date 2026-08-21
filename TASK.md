@@ -92,21 +92,19 @@
   descriptions, not shorter); reconciling the two routers (a decision, not a
   merge); anything needing a running service.
 
-### Permanent branch-per-parallel-task policy
-- **Status:** Implemented, 6/6 tasks, independently verified by `test-verifier`
-  (`PASS: 54 check(s) green`; additive worktree default confirmed unchanged;
-  `_MERGE_VERBS` confirmed clean). One deviation found and closed:
-  `references/parallel-dispatch.md`'s example was stale, now updated. Not
-  yet delivered. See `docs/plans/2026-08-21-parallel-branch-policy.md`.
-- **Goal:** make branch-per-independent-task the permanent default in
-  `executing-plans` (removing the "only when explicitly chosen" opt-in),
-  with automatic push + PR per task, and merge into `main` gated behind one
-  batched human approval per round instead of one per PR — without
-  weakening `test_process_router.py`'s no-auto-merge invariant.
-- **Out of Scope:** actually dispatching a real parallel round under the
-  new policy (deferred to the next unit, using
-  `docs/plans/2026-08-21-four-more-spec-metrics.md` as the live case);
-  `task-implementer.md`'s `isolation: worktree` frontmatter.
+### Spec-defined metrics for 4 more objectives (1, 4, 6, 9/10)
+- **Status:** Plan approved (Gate 1), not yet built. See
+  `docs/plans/2026-08-21-four-more-spec-metrics.md`.
+- **Goal:** following `docs/plans/2026-08-21-three-spec-metrics.md`
+  (objectives 3, 5, 8), instrument the maximum number of remaining Notion
+  objectives that are quantifiably optimizable without a paid LLM eval:
+  objective 4 (total tool/API/MCP call count), objective 6 (per-turn
+  latency), objective 1 (human-intervention counter), and objectives 9/10
+  (surface already-computed retry/escalation facts from `tools/resume.py`
+  and `tools/loop.py` into telemetry).
+- **Out of Scope:** objective 2 (needs the ~$81 paid eval, its own unit);
+  objectives 11-13, 15-20, 22, 24-27, 29 (no instrument exists, none
+  invented here).
 
 ### Implement world-class SessionStart bootstrap scaffolding
 - **Status:** In Progress
@@ -122,6 +120,26 @@
 <!-- Append-only, newest entry at the top. Never delete or rewrite an
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
+
+### 2026-08-21 — Permanent branch-per-parallel-task policy
+- **Goal:** make branch-per-independent-task the permanent default in
+  `executing-plans` (removing the "only when explicitly chosen" opt-in),
+  with automatic push + PR per task, and merge into `main` gated behind one
+  batched human approval per round instead of one per PR — without
+  weakening `test_process_router.py`'s no-auto-merge invariant.
+- **Output:** 6/6 tasks, independently verified by `test-verifier`
+  (`PASS: 54 check(s) green`; additive worktree default confirmed unchanged;
+  `_MERGE_VERBS` confirmed clean); `no-slop` clean; `code-review` found and
+  fixed one P1 (a self-contradiction between `delivering/SKILL.md`'s
+  "nothing here merges" heading and its own new merge exception). See
+  `docs/plans/2026-08-21-parallel-branch-policy.md` and
+  `decisions/2026-08-21-branch-per-parallel-task.md`.
+- **Result:** PR #25 merged to `main` (`c917e23`).
+- **Out of Scope, and still open:** actually dispatching a real parallel
+  round under the new policy — this is the next unit, using
+  `docs/plans/2026-08-21-four-more-spec-metrics.md` as the live case;
+  `task-implementer.md`'s `isolation: worktree` frontmatter.
+- **Status:** Done
 
 ### 2026-08-21 — Spec-defined metrics for objectives 3, 8, 5
 - **Goal**: instrument the Notion spec's own §21 derived metrics —
