@@ -4,6 +4,16 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Spec-defined metrics for objectives 3, 8, 5
+- **Status:** All 3 tasks executed and verified 2026-08-21 (`PASS: 54
+  check(s) green`). See `docs/plans/2026-08-21-three-spec-metrics.md`'s
+  `## Progress` for per-task evidence. Not yet committed/delivered. Next:
+  `verifying-work` then `delivering`. Instruments the Notion
+  spec's own §21 derived metrics — `context_tokens` (proxy: Read-tool
+  bytes), `agents_spawned` (new counter), `duplicate-operation rate`
+  (already partially wired, now surfaced) — replacing the invented-proxy
+  metrics from an earlier, corrected round. Objective 12 dropped: the spec
+  names no direct metric for it.
 
 ### Make the layer portable: it broke every host's test runner
 

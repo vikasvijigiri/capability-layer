@@ -64,6 +64,8 @@ ROOT = Path(__file__).resolve().parents[3]
 STATE_DIR = Path(__file__).resolve().parents[1] / "state"
 TELEMETRY = STATE_DIR / "telemetry.jsonl"
 CALL_FINGERPRINTS = STATE_DIR / "call-fingerprints.json"
+READ_COST = STATE_DIR / "read-cost.json"
+AGENT_COST = STATE_DIR / "agent-cost.json"
 SKILL_COST = STATE_DIR / "skill-cost.json"
 SKILL_COST_PRODUCER = (Path(__file__).resolve().parents[1]
                        / "post-tool" / "02-skill-cost.py")
@@ -75,7 +77,6 @@ ENTRY_SHAPE = STATE_DIR / "last-entry-shape.json"
 UNAVAILABLE_FIELDS: dict[str, str] = {
     "execution_level": "no E0-E5 router exists yet -- a separate audit gap",
     "model": "no hook payload exposes the active model name",
-    "agents_spawned": "no hook counts Task-tool invocations yet",
     "api_call_count": "not observable to a hook in this harness",
     "context_tokens": "not observable to a hook in this harness",
     "input_tokens": "not observable to a hook in this harness",
@@ -148,17 +149,35 @@ def build_snapshot() -> dict:
             "this tree -- it ships on a separate unit, not yet merged here"
         )
 
+    read_totals = _load_json(READ_COST)
+    agent_totals = _load_json(AGENT_COST)
+    calls = call_totals.get("calls", 0)
+    repeats = call_totals.get("repeats", 0)
+
     return {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "run_scope": "session-cumulative",
         "chain": _chain_facts(),
         "tools_called": {
-            "calls": call_totals.get("calls", 0),
+            "calls": calls,
             "chars": call_totals.get("chars", 0),
-            "repeats": call_totals.get("repeats", 0),
+            "repeats": repeats,
         },
         "skills_loaded": skills_loaded,
         "task_type": entry_shape.get("key"),
+        # Proxy for the spec's `context_tokens` -- see 04-read-cost.py's
+        # docstring. Not the real field, which stays in `unavailable` below.
+        "context_read": {
+            "calls": read_totals.get("calls", 0),
+            "chars": read_totals.get("chars", 0),
+        },
+        "agents_spawned": {
+            "calls": agent_totals.get("calls", 0),
+            "by_type": agent_totals.get("by_type", {}),
+        },
+        # Spec's own term (§21 "Duplicate-operation rate"); pure arithmetic
+        # over tools_called, which already tracks calls/repeats.
+        "duplicate_rate": (repeats / calls) if calls else 0.0,
         "unavailable": unavailable,
     }
 

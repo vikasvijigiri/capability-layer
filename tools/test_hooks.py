@@ -12,6 +12,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 PY = sys.executable
@@ -225,8 +226,11 @@ for _event, _payload, _label in DENY_CASES:
 # same convention as the DENY_CASES/BENIGN_EVENTS above firing real hooks in
 # this real repo, and the skill-cost tests' before/after delta style.
 _TELEMETRY_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'telemetry.jsonl'
+# 'agents_spawned' moved out of this set once 05-agent-cost.py started
+# measuring it (2026-08-21, spec-defined-metrics plan) -- it now reports a
+# real 'agents_spawned' field on the snapshot instead of a reason string here.
 _EXPECTED_UNAVAILABLE_KEYS = {
-    'execution_level', 'model', 'agents_spawned', 'api_call_count',
+    'execution_level', 'model', 'api_call_count',
     'context_tokens', 'input_tokens', 'output_tokens', 'latency',
     'parallelism', 'cache_hits', 'cache_misses', 'verification_level',
     'retries', 'escalations', 'success', 'quality_signal',
@@ -254,7 +258,8 @@ else:
     print('OK: post-run appends exactly one telemetry row')
     _row = json.loads(_after_lines[-1])
     _missing_top = {'ts', 'run_scope', 'chain', 'tools_called', 'skills_loaded',
-                     'task_type', 'unavailable'} - _row.keys()
+                     'task_type', 'context_read', 'agents_spawned',
+                     'duplicate_rate', 'unavailable'} - _row.keys()
     if _missing_top:
         print(f'FAIL: telemetry row missing top-level keys: {sorted(_missing_top)}')
         fail = True
@@ -334,8 +339,13 @@ else:
     print('OK: a short Bash command stays silent')
 
 # A repeated command (long enough to fingerprint, not VOLATILE-prefixed)
-# triggers "[repeat]" on its second occurrence, not its first.
-_repeat_cmd = 'python -c "print(12345)"' + (' ' * 20) + '# padding to clear MIN_REPEAT_CHARS'
+# triggers "[repeat]" on its second occurrence, not its first. The fingerprint
+# is per-run-unique (time.time_ns()) so a stale call-fingerprints.json left
+# over from a prior manual check never makes the "first occurrence" assertion
+# fail -- the fingerprint file is gitignored, session-cumulative, and shared
+# across every run of this suite, not test-isolated.
+_repeat_cmd = (f'python -c "print(12345)"  # run-unique padding {time.time_ns()} '
+               f'to clear MIN_REPEAT_CHARS')
 _before = _call_fp_totals()
 _p1 = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': _repeat_cmd}})
 _p2 = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': _repeat_cmd}})
@@ -372,16 +382,148 @@ elif _after['calls'] - _before['calls'] != 2:
 else:
     print('OK: a VOLATILE-prefixed command is never flagged [repeat], but is still counted')
 
-# A non-watched tool (e.g. Read) is ignored entirely -- no notice, no totals bump.
+# A tool 01-context-cost.py does not watch (e.g. Read) leaves ITS state
+# untouched -- 04-read-cost.py legitimately watches Read and shares the same
+# post-tool directory, so stderr from that sibling hook is expected here and
+# is not what this case checks.
 _before = _call_fp_totals()
-_p = run_hook('post-tool', {'tool_name': 'Read', 'tool_input': {'file_path': 'README.md'}})
+run_hook('post-tool', {'tool_name': 'Read', 'tool_input': {'file_path': 'README.md'}})
 _after = _call_fp_totals()
-if _p.stderr.strip() or _after != _before:
+if _after != _before:
     print(f'FAIL: a non-watched tool_name affected context-cost state -- '
-          f'before={_before} after={_after}, stderr={_p.stderr[:120]!r}')
+          f'before={_before} after={_after}')
     fail = True
 else:
     print('OK: a non-watched tool_name (Read) is ignored entirely')
+
+# --- post-tool/04-read-cost.py: Read-tool byte counter (objective 3 proxy) ---
+_READ_COST_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'read-cost.json'
+
+
+def _read_cost_totals():
+    try:
+        return json.loads(_READ_COST_STATE.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return {'calls': 0, 'chars': 0}
+
+
+# A real file over 700 bytes (WARN_CHARS) warns.
+_before = _read_cost_totals()
+_p = run_hook('post-tool', {'tool_name': 'Read', 'tool_input': {'file_path': str(ROOT / 'README.md')}})
+_after = _read_cost_totals()
+if '[context cost]' not in _p.stderr:
+    print(f'FAIL: reading a >700-byte file did not warn -- stderr: {_p.stderr[:200]!r}')
+    fail = True
+elif _after['calls'] - _before['calls'] != 1:
+    print(f'FAIL: read-cost calls did not increment -- before={_before} after={_after}')
+    fail = True
+else:
+    print('OK: post-tool warns on reading an oversized file, and read-cost calls increment')
+
+# A small file does not warn.
+with tempfile.NamedTemporaryFile('w', suffix='.txt', delete=False, encoding='utf-8') as f:
+    f.write('small')
+    _small_path = f.name
+try:
+    _p = run_hook('post-tool', {'tool_name': 'Read', 'tool_input': {'file_path': _small_path}})
+    if '[context cost]' in _p.stderr:
+        print('FAIL: reading a small file wrongly triggered the context-cost notice')
+        fail = True
+    else:
+        print('OK: reading a small file stays silent')
+finally:
+    Path(_small_path).unlink(missing_ok=True)
+
+# A nonexistent path returns 0 chars, not an error.
+_before = _read_cost_totals()
+_p = run_hook('post-tool', {'tool_name': 'Read', 'tool_input': {'file_path': str(ROOT / 'does-not-exist-xyz.txt')}})
+_after = _read_cost_totals()
+if _p.returncode != 0 or '[context cost]' in _p.stderr:
+    print(f'FAIL: a nonexistent Read path errored or warned -- exit {_p.returncode}, stderr: {_p.stderr[:200]!r}')
+    fail = True
+elif _after['calls'] - _before['calls'] != 1:
+    print(f'FAIL: a nonexistent Read path did not still bump calls -- before={_before} after={_after}')
+    fail = True
+else:
+    print('OK: a nonexistent Read path returns 0 chars, not an error, and still counts the call')
+
+# Totals accumulate across two fires (chars from README.md counted twice).
+_before = _read_cost_totals()
+run_hook('post-tool', {'tool_name': 'Read', 'tool_input': {'file_path': str(ROOT / 'README.md')}})
+run_hook('post-tool', {'tool_name': 'Read', 'tool_input': {'file_path': str(ROOT / 'README.md')}})
+_after = _read_cost_totals()
+_readme_size = (ROOT / 'README.md').stat().st_size
+if _after['calls'] - _before['calls'] != 2 or _after['chars'] - _before['chars'] != _readme_size * 2:
+    print(f'FAIL: read-cost totals did not accumulate correctly -- before={_before} after={_after}, '
+          f'readme_size={_readme_size}')
+    fail = True
+else:
+    print('OK: read-cost totals accumulate across two fires')
+
+# --- post-tool/05-agent-cost.py: Task-tool (agent spawn) counter (objective 8) ---
+_AGENT_COST_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'agent-cost.json'
+
+
+def _agent_cost_totals():
+    try:
+        return json.loads(_AGENT_COST_STATE.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return {'calls': 0, 'by_type': {}}
+
+
+_before = _agent_cost_totals()
+_p = run_hook('post-tool', {'tool_name': 'Task', 'tool_input': {'subagent_type': 'test-verifier'}})
+_after = _agent_cost_totals()
+if _p.returncode != 0:
+    print(f'FAIL: a Task dispatch errored -- exit {_p.returncode}, stderr: {_p.stderr[:200]!r}')
+    fail = True
+elif _after['calls'] - _before['calls'] != 1:
+    print(f'FAIL: agent-cost calls did not increment on a Task dispatch -- before={_before} after={_after}')
+    fail = True
+elif _after.get('by_type', {}).get('test-verifier', 0) - _before.get('by_type', {}).get('test-verifier', 0) != 1:
+    print(f'FAIL: agent-cost by_type did not record subagent_type -- before={_before} after={_after}')
+    fail = True
+else:
+    print('OK: a Task dispatch increments agent-cost calls and records its subagent_type')
+
+# A non-Task tool is ignored entirely -- no state change.
+_before = _agent_cost_totals()
+run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': 'echo hi'}})
+_after = _agent_cost_totals()
+if _after != _before:
+    print(f'FAIL: a non-Task tool affected agent-cost state -- before={_before} after={_after}')
+    fail = True
+else:
+    print('OK: a non-Task tool (Bash) is ignored by agent-cost')
+
+# --- post-run/09-telemetry.py: duplicate_rate field (objective 5) ---
+_p = run_hook('post-run', {'workflow': 'test', 'status': 'success'})
+_lines = _telemetry_lines()
+if not _lines:
+    print('FAIL: no telemetry row to check duplicate_rate against')
+    fail = True
+else:
+    _row = json.loads(_lines[-1])
+    _totals = _call_fp_totals()
+    _want_rate = (_totals['repeats'] / _totals['calls']) if _totals.get('calls') else 0.0
+    _got = _row.get('duplicate_rate')
+    if _got is None or abs(_got - _want_rate) > 1e-9:
+        print(f'FAIL: duplicate_rate wrong -- got {_got!r}, want {_want_rate!r} from totals {_totals}')
+        fail = True
+    else:
+        print(f'OK: telemetry duplicate_rate matches hand-computed {_want_rate:.4f} from call totals')
+    if row_agents := _row.get('agents_spawned'):
+        if not isinstance(row_agents, dict) or 'calls' not in row_agents:
+            print(f'FAIL: telemetry agents_spawned malformed -- {row_agents!r}')
+            fail = True
+        else:
+            print('OK: telemetry agents_spawned field present with a calls count')
+    if row_context := _row.get('context_read'):
+        if not isinstance(row_context, dict) or 'chars' not in row_context:
+            print(f'FAIL: telemetry context_read malformed -- {row_context!r}')
+            fail = True
+        else:
+            print('OK: telemetry context_read field present with a chars count')
 
 if fail:
     sys.exit(1)

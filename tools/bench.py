@@ -238,6 +238,8 @@ def render(now: dict, was: dict | None) -> None:
         print(f"\nthis session's shell calls: {calls:,}  "
               f"({call_chars:,} chars of input, ~{call_chars // 4:,} tok)  "
               f"repeats: {repeats:,} ({pct}%)")
+        print(f"  duplicate-operation rate: {pct}% ({repeats:,}/{calls:,}) "
+              f"-- the spec's own §21 term for this number.")
         print("  Objective 4 and 5 are graded from this. A repeat is a call whose "
               "answer\n  was already in context -- reuse before retrieve.")
     else:
