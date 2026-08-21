@@ -218,7 +218,11 @@ Constraint below).
   **Executed:** `python tools/analyze.py --slug parallel-branch-policy` ->
   `consistent -- 6 task(s), no findings`; `python
   tools/test_referenced_paths.py` -> `All referenced-path tests passed`.
-- [ ] Task 4 — `delivering`: batched merge confirmation and execution
+- [x] Task 4 — `delivering`: batched merge confirmation and execution.
+  **Executed:** `python tools/test_process_router.py` -> `All skill-layer
+  tests passed (14 skills, 11 agents)`, including `OK: delivering/SKILL.md
+  does not merge` and `OK: \`delivering\` confirms push, PR and merge with
+  AskUserQuestion` -- the MCP tool name does not trip `_MERGE_VERBS`.
 - [ ] Task 5 — `test_process_router.py`: pin the new exception's scope
 - [ ] Task 6 — `workflow.md` + ADR
 

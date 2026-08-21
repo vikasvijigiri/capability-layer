@@ -139,6 +139,27 @@ API can simply refuse to confirm one exists on a given repository's tier.
 defer to it** — handing off to something that may not exist is how a step
 becomes nobody's.
 
+### Exception: a parallel round's batched merge
+
+Once every PR from a round (the "Exception: a parallel round's task
+branches" case above) is open, run one scoped `no-slop` + `code-review` pass
+over the round's *combined* diff — one review for the round, not one per
+branch; this is what still gates the merge, since the push/PR-open above
+skipped it for speed. Then present **exactly one** `AskUserQuestion` naming
+every PR in the round (number, branch, one-line summary) and asking which,
+if any, to merge now. This is still a live, per-invocation approval — never
+a standing pre-authorization — it is simply one question covering N PRs
+instead of N questions covering one each.
+
+On approval, merge each named PR with the GitHub MCP tool
+`mcp__github__merge_pull_request` — never the CLI phrase this section
+otherwise prohibits — respecting the squash-vs-stack rule below. On decline
+or partial approval, state plainly which PRs remain open and unmerged;
+nothing here retries automatically. This is the one place in this file a
+merge actually executes, and it happens only after this exact, named,
+per-invocation approval — every other case in this file still ends at "open
+the PR, report it, stop."
+
 ## Stacked PRs — state the merge strategy before you open the second one
 
 A branch opened against another open PR's branch is a **stack**, and stacks
