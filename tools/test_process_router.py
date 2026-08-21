@@ -1111,6 +1111,29 @@ for _skill, _what in sorted(OUTWARD_SKILLS.items()):
     check(f"...and `{_skill}` says a prose question does not count",
           re.search(r"prose question", _body, re.I) is not None,
           "the rule is the tool, not the asking")
+
+# --- the parallel-round push/merge exceptions stay narrowly scoped -----------
+#
+# `delivering` carves two exceptions to the rules just asserted above: a
+# parallel round's task branches skip the per-push AskUserQuestion, and a
+# batched question replaces one-per-PR at merge time. Both must name
+# "parallel" in their own heading -- not buried in the file somewhere -- or a
+# later edit could widen either into the general rule with nothing to catch
+# it. Written after the exceptions themselves, per this plan's own
+# "VI Mechanism" article: a rule this plan adds is enforced by a test.
+_PARALLEL_EXCEPTION_HEADINGS = re.compile(
+    r"^###\s+Exception:.*parallel.*$", re.M | re.I)
+_push_headings = _PARALLEL_EXCEPTION_HEADINGS.findall(_del)
+check("`delivering` scopes its push exception to a parallel round by name",
+      any("task branches" in h for h in _push_headings),
+      f"headings found: {_push_headings!r}")
+check("...and scopes its merge exception to a parallel round by name too",
+      any("batched merge" in h for h in _push_headings),
+      f"headings found: {_push_headings!r}")
+check("the batched-merge exception names the real merge mechanism",
+      "mcp__github__merge_pull_request" in _del,
+      "the actual tool must be named, not left implicit")
+
 # --- a skill's claim about another skill's output must be true ---------------
 #
 # `executing-plans` says: "Tick `- [ ]` -> `- [x]` as each step lands.

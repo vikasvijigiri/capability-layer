@@ -223,7 +223,12 @@ Constraint below).
   tests passed (14 skills, 11 agents)`, including `OK: delivering/SKILL.md
   does not merge` and `OK: \`delivering\` confirms push, PR and merge with
   AskUserQuestion` -- the MCP tool name does not trip `_MERGE_VERBS`.
-- [ ] Task 5 — `test_process_router.py`: pin the new exception's scope
+- [x] Task 5 — `test_process_router.py`: pin the new exception's scope.
+  **Executed:** `python tools/test_process_router.py` -> `All skill-layer
+  tests passed`, including the 3 new assertions; red-green proved by
+  temporarily stripping "parallel" from the push-exception heading --
+  `FAIL: \`delivering\` scopes its push exception to a parallel round by
+  name` -- then restoring via `git checkout --`, suite green again.
 - [ ] Task 6 — `workflow.md` + ADR
 
 ## Tasks
