@@ -26,6 +26,7 @@ a dependency this repo does not otherwise need, and the ratio between two runs
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -35,6 +36,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = ROOT / ".claude" / "hooks" / "state" / "bench-baseline.json"
+TELEMETRY = ROOT / ".claude" / "hooks" / "state" / "telemetry.jsonl"
+
+
+def _load_module(rel: str, name: str):
+    """Same seam `.claude/hooks/post-run/09-telemetry.py` and `tools/loop.py`
+    already use -- one file owns a constant, everyone else imports it rather
+    than re-declaring the number."""
+    spec = importlib.util.spec_from_file_location(name, ROOT / rel)
+    assert spec is not None and spec.loader is not None, f"cannot load {rel}"
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 # Loaded once when a session opens.
 SESSION_FILES = ("CLAUDE.md", "CLAUDE.local.md")
@@ -156,6 +169,33 @@ def total_tool_calls() -> tuple[int, int]:
     return int(totals.get("calls", 0)), len(totals.get("by_tool") or {})
 
 
+def schema_coverage() -> tuple[float | None, list[str], bool]:
+    """(coverage ratio, missing field names, trace-completeness) -- objective
+    22 (observable and auditable), from the latest `telemetry.jsonl` row.
+
+    `coverage_ratio = (SPEC_FIELD_COUNT - len(unavailable)) / SPEC_FIELD_COUNT`
+    against the Notion spec SS21's own 21 named fields, `SPEC_FIELD_COUNT`
+    imported from `09-telemetry.py` rather than re-declared here (one place
+    owns the count, so a name added to `UNAVAILABLE_FIELDS` there is
+    reflected here without a second edit). `trace_complete` checks
+    `chain.fingerprint`, never `chain.slug` -- slug is legitimately `None`
+    for a turn with no active plan, fingerprint is always computable. `None`
+    coverage means no telemetry row exists yet, not zero coverage.
+    """
+    try:
+        lines = TELEMETRY.read_text(encoding="utf-8").splitlines()
+        row = json.loads(lines[-1])
+    except (OSError, ValueError, IndexError):
+        return None, [], False
+    telemetry = _load_module(".claude/hooks/post-run/09-telemetry.py",
+                             "telemetry_for_bench")
+    spec_field_count = telemetry.SPEC_FIELD_COUNT
+    unavailable = row.get("unavailable") or {}
+    ratio = (spec_field_count - len(unavailable)) / spec_field_count
+    trace_complete = bool((row.get("chain") or {}).get("fingerprint"))
+    return ratio, list(unavailable.keys()), trace_complete
+
+
 def skill_body_cost() -> tuple[int, int, int]:
     """(skill invocations, SKILL.md chars loaded, unattributed) this session,
     from `post-tool/02-skill-cost.py`'s counter.
@@ -269,6 +309,14 @@ def render(now: dict, was: dict | None) -> None:
         print("\nthis session's skill-body loads: not yet recorded -- the "
               "post-tool counter\n  writes on the first Skill-tool "
               "invocation of a session.")
+
+    coverage, missing, trace_complete = schema_coverage()
+    if coverage is None:
+        print("\nobjective 22 (schema coverage): not yet recorded -- no "
+              "telemetry row exists yet this session.")
+    else:
+        print(f"\nobjective 22 (schema coverage): {coverage:.0%}  "
+              f"missing: {missing or 'none'}  trace_complete: {trace_complete}")
 
     print("\n" + TIMING_CAVEAT)
     if was is None:

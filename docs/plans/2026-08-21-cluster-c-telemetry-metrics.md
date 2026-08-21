@@ -198,7 +198,11 @@ cannot be loaded.
   closing sentence's uninstrumented range re-split to exclude 18.
 
 ## Progress
-- [ ] Task 1 — Objective 22: schema coverage + trace completeness
+- [x] Task 1 — Objective 22: schema coverage + trace completeness. `python
+  tools/test_bench.py` exits 0, all 5 cases including the 2 seeded-violation
+  ones; `python tools/bench.py` prints a real `38%` against 8/21 populated
+  fields; full tier `PASS: 55 check(s) green` (found and fixed a real
+  README.md suite-count drift, 44 -> 45, caught by the same run).
 - [ ] Task 2 — Objective 24: local-repair ratio
 - [ ] Task 3 — Objective 18: route-presence + fallback-safety check, docs update
 

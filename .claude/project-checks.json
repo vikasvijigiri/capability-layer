@@ -8,6 +8,7 @@
   "_why_lint": "ruff.toml selects E,F,I,B,S,UP -- the S set is bandit's rules native to ruff, so shell=True is caught without a second tool. Enabling it on 2026-08-03 found four unused imports in shipped hooks. The JSON check is listed explicitly because a configured list REPLACES detection; it is here rather than in a test suite because a stray comma in settings.json silently turns the whole hook layer off.",
   "test": [
     "python tools/test_hooks.py",
+    "python tools/test_bench.py",
     "python tools/test_process_router.py",
     "python tools/test_layer_comparison_contract.py",
     "python tools/test_workflow_contract.py",
@@ -57,6 +58,8 @@
     "tools/parallel_groups.py": "python tools/test_parallel_groups.py",
     "tools/worktree.py": "python tools/test_worktree.py",
     "tools/scope.py": "python tools/test_scope.py",
+    "tools/bench.py": "python tools/test_bench.py",
+    ".claude/hooks/post-run/09-telemetry.py": "python tools/test_bench.py",
     "tools/chain.py": "python tools/test_chain.py",
     "tools/memory.py": "python tools/test_memory.py",
     "tools/halt.py": "python tools/test_halt.py",
