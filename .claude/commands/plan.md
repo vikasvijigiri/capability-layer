@@ -8,13 +8,13 @@ description: Review a saved specification or implementation plan for requirement
 disable-model-invocation: false
 ---
 
-# Plan Review
+# Plan
 
 Mode: read-only
 Arguments: `$ARGUMENTS` must identify the saved spec or plan path.
 
 Read the complete artifact and the relevant repository files. Apply
-`.claude/skills/writing-plans/references/artifact-review.md`; for cross-cutting
+`.claude/skills/task-analysis/references/artifact-review.md`; for cross-cutting
 boundaries also invoke
 `architect`. Return the verdict, findings with file or section
 evidence, unresolved assumptions, and the exact next routing decision.

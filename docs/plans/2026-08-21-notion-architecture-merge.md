@@ -143,7 +143,7 @@ sequencing.
 - [x] Task 3 — E0-E5 router
 - [x] Task 4 — Skill renames/merges + compression
 - [x] Task 5 — Agent renames/merges
-- [ ] Task 6 — Commands, workflows/, policies/
+- [x] Task 6 — Commands, workflows/, policies/
 - [ ] Task 7 — Portability + payload regeneration
 - [ ] Task 8 — Duplicate-call guard
 - [ ] Task 9 — Full verification + regression pass

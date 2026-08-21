@@ -117,7 +117,7 @@ to discover why it is not.
   Those settings decide what may merge unattended; an agent that configures its
   own gates has removed the reason the gates exist. Print them, let a human set them.
 - Never `gh pr merge`, `--admin`, or `--auto` in this command. Landing is
-  `delivering`'s business and the queue's, after review.
+  `release-git`'s business and the queue's, after review.
 - Never publish a repository whose tree has uncommitted secrets — step 1 runs
   the secret scan as part of the tier, and a red tier stops here.
 - Never guess the owner, and never fall back to the active personal account when
