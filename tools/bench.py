@@ -49,6 +49,22 @@ def _load_module(rel: str, name: str):
     spec.loader.exec_module(mod)
     return mod
 
+
+_TELEMETRY_MOD = None
+
+
+def _telemetry_module():
+    """Cached load of 09-telemetry.py -- its own top-level `sys.path.insert`
+    is a real side effect of `_load_module()`, not just a constant read, so
+    a caller reloading it on every call grows `sys.path` by one duplicate
+    entry each time (measured: 2 loads -> 2 identical entries). Loaded once
+    per process instead."""
+    global _TELEMETRY_MOD
+    if _TELEMETRY_MOD is None:
+        _TELEMETRY_MOD = _load_module(
+            ".claude/hooks/post-run/09-telemetry.py", "telemetry_for_bench")
+    return _TELEMETRY_MOD
+
 # Loaded once when a session opens.
 SESSION_FILES = ("CLAUDE.md", "CLAUDE.local.md")
 RULES_DIR = ROOT / ".claude" / "rules"
@@ -187,9 +203,7 @@ def schema_coverage() -> tuple[float | None, list[str], bool]:
         row = json.loads(lines[-1])
     except (OSError, ValueError, IndexError):
         return None, [], False
-    telemetry = _load_module(".claude/hooks/post-run/09-telemetry.py",
-                             "telemetry_for_bench")
-    spec_field_count = telemetry.SPEC_FIELD_COUNT
+    spec_field_count = _telemetry_module().SPEC_FIELD_COUNT
     unavailable = row.get("unavailable") or {}
     ratio = (spec_field_count - len(unavailable)) / spec_field_count
     trace_complete = bool((row.get("chain") or {}).get("fingerprint"))
