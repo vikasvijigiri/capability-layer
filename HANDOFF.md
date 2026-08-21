@@ -14,40 +14,47 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**PR #18 merged; `main` is at `247103e`.** Closed 2 of the 5 gaps from the
-2026-08-16 audit (`docs/plans/2026-08-20-router-progress-consistency.md`),
-bundled with 2 unrelated inherited commits from the prior
-`skills/quality-audit-fixes` session (skill-content audit, portability work —
-see `LOG.md` 2026-08-19). `python tools/run_checks.py --tier all
---require-test` on `main`: **`PASS: 54 check(s) green`**, verified fresh.
+**PR #20 open against `main` (`fix/session-performance-fixes`), not yet
+merged.** `docs/plans/2026-08-20-session-performance-fixes.md`: a
+skill-body-load counter (`post-tool/02-skill-cost.py` + `bench.py`
+`skill_body_cost()`) — a full 9-stage chain run loads ~104,000 chars
+(~26,000 tok) of `SKILL.md` bodies and nothing measured it before this — and
+scoped `spec-reviewer`/`test-verifier` dispatch instructions in
+`executing-plans`/`verifying-work` so the two independent-review dispatches
+stop redoing ~70% of the same work. `python tools/run_checks.py --tier all
+--require-test`: **`PASS: 54 check(s) green`**, verified fresh at every stage.
 
-**The chain ran end to end for the first time this session.** `spec-reviewer`
-and an independent `test-verifier` (red-green-proved, not just re-run) both
-returned no findings; `no-slop` found and repaired 2 local issues; `code-review`
-passed. The user merged PR #18 directly via GitHub rather than through
-`releasing`'s `AskUserQuestion` — no deploy target exists, so that stage was
-skipped per its own contract (confirmed with the user first). The shipment
-decision is still recorded in the ledger: `python tools/chain.py --gate 2
---decision ship --reason "..."` was run retroactively against the actual
-GitHub merge event, so the ledger's zero-gate-2-rows gap (noted below as an
-Open Question for months) is now closed.
+**Task 2's fix measured working on itself, same session.** A `spec-reviewer`
+dispatch scoped per the new guidance ran 91.7s/39,096 tok on this unit, versus
+183.9s+219.7s/112,743 tok combined for the *prior* unit's two unscoped,
+overlapping dispatches on a comparably-sized diff.
 
-**Two Pending/Open-Questions items below are now closed by this unit** —
-Pending #2 (the checkbox regex defined four ways) and Open Questions #10/#14
-(the two routers disagreeing) — struck through in place rather than deleted,
-per this file's own convention.
+**`.claude/hooks/post-tool/02-skill-cost.py`'s real payload shape is
+unverified.** Whether Claude Code's `Skill` tool actually fires
+`PostToolUse` with a `tool_input["skill"]` field was never observed live —
+confirmed empirically mid-session that `settings.json` hook registrations
+load once at session start, so it can't be tested live until a fresh
+session invokes a skill after this merges. Check `python tools/bench.py`'s
+"skill-body loads" line in the next fresh session; zero after several real
+skill invocations means the field-name guess needs revisiting with real
+data.
 
-**Found during verification, not fixed:** `tools/resume.py`'s
-`BRANCH_PREFIX = "feat/"` strips only one branch prefix, while
-`.claude/hooks/_hooklib.py`'s `active_plans()` strips five
-(`feat/`/`fix/`/`docs/`/`chore/`/`refactor/`) — confirmed unrelated to this
-diff, but it meant `resume.py` could not resolve its own active plan by slug
-for this entire session, since the branch was `fix/router-progress-consistency`.
-See `TASK.md`'s Completed entry for the full trace. Worth its own small unit.
+**11 unrelated, pre-existing uncommitted files sit in the working tree** —
+present since before this session started, not touched by this unit or the
+prior one (both stashed them around their own pushes and restored them
+intact). Almost certainly **`TASK.md`'s own "Implement world-class
+SessionStart bootstrap scaffolding" task's in-progress work**, not a
+mystery: the changed set (`.claude/settings.json`, a deleted
+`session-start/02-bootstrap-docs.py`, a new `session-start/
+02-session-context.py`, `tools/test_session_start_contract.py`, ...) matches
+that task's own stated Constraints/Inputs file-for-file. Whoever resumes
+that task should reconcile this working-tree state with it rather than
+starting fresh or discarding it.
 
-**Objective 2 (17,900 ch/turn) and objective 8's remaining router surface are
-still open** — this unit closed the *specific reproduced case* HANDOFF named,
-not the whole class. See Pending/Open Questions below, unchanged.
+**`tools/resume.py`'s `BRANCH_PREFIX` gap is still open** (only strips
+`feat/`, `_hooklib.py`'s `active_plans()` strips five) — found 2026-08-20
+morning, not yet its own unit. See `TASK.md`'s router-progress-consistency
+Completed entry.
 
 **`main`'s remote is `vikasvijigiri/capability-layer`.**
 

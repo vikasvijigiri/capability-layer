@@ -26,7 +26,6 @@ a dependency this repo does not otherwise need, and the ratio between two runs
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import os
 import re
@@ -139,37 +138,22 @@ def session_calls() -> tuple[int, int, int]:
             int(totals.get("repeats", 0)))
 
 
-def _load(rel: str, name: str):
-    spec = importlib.util.spec_from_file_location(name, ROOT / rel)
-    if spec is None or spec.loader is None:
-        return None
-    mod = importlib.util.module_from_spec(spec)
-    try:
-        spec.loader.exec_module(mod)
-    except Exception:
-        return None
-    return mod
+def skill_body_cost() -> tuple[int, int, int]:
+    """(skill invocations, SKILL.md chars loaded, unattributed) this session,
+    from `post-tool/02-skill-cost.py`'s counter.
 
-
-def telemetry_summary() -> dict | None:
-    """The latest row from `post-run/09-telemetry.py`'s snapshot, or `None`
-    if the hook has not fired yet this session.
-
-    Reuses that module's `UNAVAILABLE_FIELDS` constant rather than
-    restating the reasons here -- one source, per this repo's own
-    single-source-of-truth convention.
+    A full chain run loads a full `SKILL.md` body per stage, on top of the
+    per-turn listing `session_calls()`'s neighbour rows already measure --
+    nothing counted this before. Zeros mean the hook has not fired yet, same
+    convention as `session_calls()`.
     """
-    state = ROOT / ".claude" / "hooks" / "state" / "telemetry.jsonl"
+    state = (ROOT / ".claude" / "hooks" / "state" / "skill-cost.json")
     try:
-        lines = state.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return None
-    if not lines:
-        return None
-    try:
-        return json.loads(lines[-1])
-    except ValueError:
-        return None
+        totals = json.loads(state.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return 0, 0, 0
+    return (int(totals.get("calls", 0)), int(totals.get("chars", 0)),
+            int(totals.get("unattributed", 0)))
 
 
 def tier(name: str) -> float:
@@ -246,24 +230,15 @@ def render(now: dict, was: dict | None) -> None:
         print("\nthis session's shell calls: not yet recorded -- the post-tool "
               "counter\n  writes on the first shell call of a session.")
 
-    snapshot = telemetry_summary()
-    if snapshot:
-        print(f"\ntelemetry (session-cumulative, as of {snapshot.get('ts')}):")
-        print(f"  chain: {snapshot.get('chain')}")
-        print(f"  tools_called: {snapshot.get('tools_called')}")
-        print(f"  skills_loaded: {snapshot.get('skills_loaded')}")
-        print(f"  task_type: {snapshot.get('task_type')!r}")
-        telemetry_mod = _load(".claude/hooks/post-run/09-telemetry.py",
-                              "telemetry_for_bench")
-        unavailable = (snapshot.get("unavailable")
-                       or getattr(telemetry_mod, "UNAVAILABLE_FIELDS", {}))
-        print(f"  unavailable ({len(unavailable)} target-spec fields, "
-              f"reasoned not faked):")
-        for field, reason in sorted(unavailable.items()):
-            print(f"    {field}: {reason}")
+    skill_calls, skill_chars, unattributed = skill_body_cost()
+    if skill_calls:
+        note = f"  ({unattributed:,} unattributed)" if unattributed else ""
+        print(f"\nthis session's skill-body loads: {skill_calls:,}  "
+              f"({skill_chars:,} chars, ~{skill_chars // 4:,} tok){note}")
     else:
-        print("\ntelemetry: not yet recorded -- post-run/09-telemetry.py "
-              "writes on the first Stop event of a session.")
+        print("\nthis session's skill-body loads: not yet recorded -- the "
+              "post-tool counter\n  writes on the first Skill-tool "
+              "invocation of a session.")
 
     print("\n" + TIMING_CAVEAT)
     if was is None:

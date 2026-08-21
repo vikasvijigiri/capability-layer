@@ -4,17 +4,6 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
-### Spec-defined metrics for objectives 3, 8, 5
-- **Status:** All 3 tasks executed and verified 2026-08-21 (`PASS: 54
-  check(s) green`). See `docs/plans/2026-08-21-three-spec-metrics.md`'s
-  `## Progress` for per-task evidence. Not yet committed/delivered. Next:
-  `verifying-work` then `delivering`. Instruments the Notion
-  spec's own §21 derived metrics — `context_tokens` (proxy: Read-tool
-  bytes), `agents_spawned` (new counter), `duplicate-operation rate`
-  (already partially wired, now surfaced) — replacing the invented-proxy
-  metrics from an earlier, corrected round. Objective 12 dropped: the spec
-  names no direct metric for it.
-
 ### Make the layer portable: it broke every host's test runner
 
 - **Status:** Fixed and proven in Python and Node targets. Payload 1,586,874 ->
@@ -118,43 +107,49 @@
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
 
-### 2026-08-20 — Unified per-run telemetry schema
-- **Goal**: consolidate `bench.session_calls()` and `01-context-cost.py`
-  into one per-turn telemetry snapshot matching a useful subset of the
-  Notion target's schema, closing Gap C from a same-session audit. Chosen
-  as the highest-priority of 4 audit candidates (the other 3: E0-E5
-  execution-level router, agent-catalogue decision record,
-  `01-context-cost.py` test coverage — not started).
-- **Output**: `docs/plans/2026-08-20-unified-telemetry-schema.md`, 3/3
-  tasks. New `.claude/hooks/post-run/09-telemetry.py` (Stop finalizer,
-  registered in `00-dispatch.py`/`hooks_registry.json`); a small write in
-  `01-entry-classifier.py` persisting its classification as a `task_type`
-  proxy; `tools/bench.py`'s `telemetry_summary()` report.
-- **Done Checks**: met. `PASS: 54 check(s) green`. `spec-reviewer` found 3
-  real issues after first landing, all fixed: (1) `skills_loaded` always
-  read `skill-cost.json` unconditionally, reporting a fabricated-looking
-  zero even though that file's producer, `02-skill-cost.py`, was built
-  earlier the same session but on a *separate, unmerged branch*
-  (`fix/session-performance-fixes`) and does not exist here — fixed to
-  check the producer file's presence and report genuine unavailability
-  with a reason instead; (2) the plan's own Grounding section wrongly
-  claimed `02-skill-cost.py` and the audit doc it cites already existed on
-  this branch — corrected in place; (3) this file's own status line had
-  gone stale. Two more deviations found and fixed during execution itself:
-  a `ROOT` path off-by-one (`parents[2]` vs `[3]`, same class as an earlier
-  same-session fix elsewhere), and an AST skill-name-scanner false positive
-  on the word "research" inside a docstring.
-- **Not verified**: end-to-end delivery — branch
-  `fix/unified-telemetry-schema`, 4 commits, not yet reviewed by
-  `code-review` or delivered. `docs/research/2026-08-20-notion-objectives-
-  audit.md` and `02-skill-cost.py` are not present on this branch (both
-  ship via separate, unmerged units) — this unit does not depend on either
-  landing first, by design, after the `spec-reviewer` finding above.
-- **Out of Scope, and still out**: `agents_spawned` counting, per-turn
-  latency pairing, token counts, `success`/`quality_signal` — all named in
-  `UNAVAILABLE_FIELDS` with reasons, per the plan's own Out of Scope.
-- **Status**: Done — implementation, spec-review and its fixes complete;
-  delivery pending.
+### 2026-08-21 — Spec-defined metrics for objectives 3, 8, 5
+- **Goal**: instrument the Notion spec's own §21 derived metrics —
+  `context_read` (Read-byte proxy for `context_tokens`), `agents_spawned`
+  (new Task-tool counter), `duplicate-operation rate` (already partially
+  wired, now surfaced by name) — replacing an earlier round's invented
+  proxies. See `docs/plans/2026-08-21-three-spec-metrics.md`.
+- **Output**: PR #24 merged to `main`. Full chain ran (`spec-reviewer`,
+  independent `test-verifier`, `no-slop`, `code-review`); caught a stale
+  local `main` ref mid-delivery (this branch's tip predated PR #23's own
+  merge), rebased clean, re-verified.
+- **Status**: Done. `PASS: 54 check(s) green` on the merged candidate.
+
+### 2026-08-20 — Fix 2 of 4 session-performance bottlenecks
+- **Goal**: close 2 of the 4 bottlenecks found by auditing this session's
+  own resource use — a full 9-stage chain loads ~104,000 chars of `SKILL.md`
+  bodies per run and nothing measured it; `spec-reviewer`/`test-verifier`
+  independently redid ~70% of the same work on the prior unit.
+- **Output**: `docs/plans/2026-08-20-session-performance-fixes.md`, 2/2
+  tasks. `.claude/hooks/post-tool/02-skill-cost.py` (new hook, mirrors
+  `01-context-cost.py`) + `tools/bench.py`'s `skill_body_cost()`; one scoping
+  clause each in `executing-plans/SKILL.md` and `verifying-work/SKILL.md`.
+- **Done Checks**: met. `PASS: 54 check(s) green` fresh at every stage,
+  independently by `test-verifier` too (red-green-proved 6 new hook cases by
+  deleting/restoring the hook file). `spec-reviewer` (scoped per this unit's
+  own Task 2) found 1 wording-only nit, fixed. `no-slop` found and fixed a
+  path-traversal gap in the new hook's skill-name lookup. `code-review`
+  passed.
+- **Measured self-effect**: `spec-reviewer` scoped per Task 2 ran
+  91.7s/39,096 tok on this unit vs 183.9s+219.7s/112,743 tok combined for
+  the prior unit's two unscoped, overlapping dispatches — direct evidence
+  Task 2 works, not just an argument for it.
+- **Not verified**: whether Claude Code's `Skill` tool actually fires
+  `PostToolUse` with a `tool_input["skill"]` field — `.claude/settings.json`
+  changes only take effect in a fresh session, confirmed empirically
+  mid-session, so this can't be proven live until one starts. Check
+  `python tools/bench.py`'s new line in the next fresh session.
+- **Out of Scope, and still out**: the other 2 bottlenecks (redundant
+  full-tier reruns, response verbosity) — verified the "fix" for the first
+  would have duplicated guidance already in `executing-plans/SKILL.md` and
+  `verifying-work/SKILL.md`; real causes were branch hygiene and adherence,
+  recorded not coded around.
+- **Status**: Done — implementation, verification, sweep and review
+  complete; PR #20 open against `main`, delivery pending.
 
 ### 2026-08-20 — Close the router-disagreement and progress-checkbox audit gaps
 - **Goal**: close 2 of the 5 gaps found in the 2026-08-16

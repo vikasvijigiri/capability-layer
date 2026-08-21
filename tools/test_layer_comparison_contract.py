@@ -50,8 +50,8 @@ def main() -> int:
         for path in HOOKS.glob("*/*.py")
         if not path.name.startswith("_") and path.name != "check_config_json.py"
     }
-    if len(executable) != 20:
-        fail(f"comparison inventory expects 20 executable hooks, found {len(executable)}")
+    if len(executable) != 21:
+        fail(f"comparison inventory expects 21 executable hooks, found {len(executable)}")
     if registered != executable:
         registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
         documented = {
@@ -74,14 +74,14 @@ def main() -> int:
             fail(f"hook does not load its event payload: {path.relative_to(ROOT)}")
 
     report = REPORT.read_text(encoding="utf-8")
-    for marker in ("## Findings", "## Disagreements", "## Not adopted", "## Sources", "14 skills", "20 executable event hooks"):
+    for marker in ("## Findings", "## Disagreements", "## Not adopted", "## Sources", "14 skills", "21 executable event hooks"):
         if marker not in report:
             fail(f"comparison report missing {marker!r}")
     for source in ("obra/superpowers", "anthropics/skills", "github/awesome-copilot"):
         if source not in report:
             fail(f"comparison report missing primary source {source!r}")
 
-    print("OK: 14 skills and 20 executable hooks have local contracts")
+    print("OK: 14 skills and 21 executable hooks have local contracts")
     print("OK: comparison report names the inventory, evidence boundaries, and three primary repositories")
     return 0
 

@@ -218,6 +218,73 @@ for _event, _payload, _label in DENY_CASES:
     else:
         print(f'OK: {_event} denies {_label}')
 
+# --- post-tool/02-skill-cost.py: skill-body-load counter --------------------
+#
+# `.claude/hooks/state/skill-cost.json` is a real, gitignored, running total
+# (see `.gitignore:28`) -- these assert on the DELTA a fire produces, not an
+# absolute value, matching how this repo already tests against real state
+# (`test_resume.py`'s temp-repo fixtures, the DENY_CASES above firing real
+# hooks in this real repo).
+_SKILL_COST_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'skill-cost.json'
+_NO_SLOP_SKILL_MD = ROOT / '.claude' / 'skills' / 'no-slop' / 'SKILL.md'
+
+
+def _skill_cost_totals():
+    try:
+        return json.loads(_SKILL_COST_STATE.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return {'calls': 0, 'chars': 0, 'unattributed': 0}
+
+
+SKILL_COST_CASES = [
+    ({'tool_name': 'Skill', 'tool_input': {'skill': 'no-slop'}},
+     'known skill via "skill" key',
+     lambda before, after: after['chars'] - before['chars']
+     == _NO_SLOP_SKILL_MD.stat().st_size),
+    ({'tool_name': 'Skill', 'tool_input': {'skill_name': 'no-slop'}},
+     'known skill via "skill_name" fallback',
+     lambda before, after: after['chars'] - before['chars']
+     == _NO_SLOP_SKILL_MD.stat().st_size),
+    ({'tool_name': 'Skill', 'tool_input': {'name': 'no-slop'}},
+     'known skill via "name" fallback',
+     lambda before, after: after['chars'] - before['chars']
+     == _NO_SLOP_SKILL_MD.stat().st_size),
+    ({'tool_name': 'Skill', 'tool_input': {}},
+     'no candidate key -- counted as unattributed, not silently dropped',
+     lambda before, after: after['unattributed'] - before['unattributed'] == 1
+     and after['chars'] == before['chars']),
+    ({'tool_name': 'Skill', 'tool_input': {'skill': 'does-not-exist'}},
+     'a stale/renamed skill name resolves to 0 chars, not an error',
+     lambda before, after: after['chars'] == before['chars']
+     and after['calls'] - before['calls'] == 1),
+    ({'tool_name': 'Skill', 'tool_input': {'skill': '../../../../etc/passwd'}},
+     'a traversal-shaped skill name is rejected, not resolved outside skills/',
+     lambda before, after: after['chars'] == before['chars']
+     and after['calls'] - before['calls'] == 1),
+    ({'tool_name': 'Bash', 'tool_input': {'command': 'echo hi'}},
+     'a non-Skill tool_name is ignored entirely',
+     lambda before, after: after == before),
+]
+for _payload, _label, _assertion in SKILL_COST_CASES:
+    _before = _skill_cost_totals()
+    _p = run_hook('post-tool', _payload)
+    _after = _skill_cost_totals()
+    if _p.returncode != 0:
+        print(f'FAIL: post-tool ({_label}) exited {_p.returncode}\n{_p.stderr}')
+        fail = True
+    elif not _assertion(_before, _after):
+        print(f'FAIL: post-tool skill-cost ({_label}) -- before={_before} '
+              f'after={_after}')
+        fail = True
+    else:
+        print(f'OK: post-tool skill-cost -- {_label}')
+    # Every case increments `calls` by 1 except the ignored non-Skill tool.
+    _want_calls_delta = 0 if _payload.get('tool_name') != 'Skill' else 1
+    if _after['calls'] - _before['calls'] != _want_calls_delta:
+        print(f'FAIL: post-tool skill-cost ({_label}) -- calls delta '
+              f'{_after["calls"] - _before["calls"]}, want {_want_calls_delta}')
+        fail = True
+
 # --- post-run/09-telemetry.py: unified per-run snapshot ---------------------
 #
 # Fired via the `post-run` event, which runs `00-dispatch.py`'s whole STEPS
@@ -294,6 +361,22 @@ else:
         else:
             print('OK: skills_loaded honestly reports "unavailable" -- its '
                   'producer is absent on this tree, not a fabricated zero')
+    else:
+        # Producer present (02-skill-cost.py merged in) -- the positive path:
+        # skills_loaded must be a real populated dict, and must NOT still be
+        # named in "unavailable" now that something writes it.
+        _sl = _row.get('skills_loaded')
+        if not isinstance(_sl, dict) or 'calls' not in _sl or 'chars' not in _sl:
+            print(f'FAIL: skills_loaded should be a real {{calls,chars,unattributed}} '
+                  f'dict now that its producer exists, got {_sl!r}')
+            fail = True
+        elif 'skills_loaded' in _row.get('unavailable', {}):
+            print('FAIL: skills_loaded is populated but still listed in '
+                  '"unavailable" -- stale claim once the counter exists')
+            fail = True
+        else:
+            print('OK: skills_loaded reports a real, populated dict now that '
+                  '02-skill-cost.py exists, and is no longer claimed unavailable')
 
 # A second fire appends a SECOND row -- proves append-only, not overwrite.
 _p2 = run_hook('post-run', {'workflow': 'test', 'status': 'success'})

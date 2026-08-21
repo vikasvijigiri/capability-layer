@@ -127,6 +127,15 @@
             "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-tool/05-agent-cost.py\""
           }
         ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-tool/02-skill-cost.py\""
+          }
+        ]
       }
     ]
   },

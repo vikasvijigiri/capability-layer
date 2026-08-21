@@ -73,10 +73,11 @@
       ]
     },
     "post-tool": {
-      "description": "After a shell tool returns: reports what its input added to permanent session context, names a call this session already made with the same inputs, counts Read-file bytes added to context, and counts Task (agent-spawn) dispatches. Separate matchers per script, because each PostToolUse script costs a spawn on every matching call. Reports only -- never blocks",
-      "claude_code_event": "PostToolUse (Bash|PowerShell|Read|Task)",
+      "description": "After a shell tool returns: reports what its input added to permanent session context, names a call this session already made with the same inputs, counts Read-file bytes added to context, and counts Task (agent-spawn) dispatches. After a Skill tool call: counts the invocation and the loaded SKILL.md's byte size into a running total tools/bench.py reports. Separate matchers per script, because each PostToolUse script costs a spawn on every matching call. Reports only -- never blocks. Names no skill in what it emits, per decisions/2026-08-04-hooks-never-name-a-skill.md -- writes to a state file, never to stdout in the normal case",
+      "claude_code_event": "PostToolUse (Bash|PowerShell|Read|Task|Skill)",
       "subscribers": [
         ".claude/hooks/post-tool/01-context-cost.py",
+        ".claude/hooks/post-tool/02-skill-cost.py",
         ".claude/hooks/post-tool/04-read-cost.py",
         ".claude/hooks/post-tool/05-agent-cost.py"
       ]
