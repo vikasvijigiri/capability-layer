@@ -127,10 +127,11 @@ independent, and it stays that narrow.
 
 ## Nothing here merges, and that is deliberate
 
-**No skill in this layer runs the merge command.** Grep for it and the only
-hits should be prohibitions. This stage prepares the candidate and stops; a
-human presses the button. Say so plainly in the report: open the PR, report
-it, stop.
+**No skill in this layer runs the merge command — except the one narrow,
+explicitly-gated case below.** Grep for it and every hit outside that one
+exception should be a prohibition. In every other case this stage prepares
+the candidate and stops; a human presses the button. Say so plainly in the
+report: open the PR, report it, stop.
 
 Deferring to "the merge queue" is worse than saying "a human merges this,"
 because a merge queue is often a paid or plan-gated feature, and the hosting
