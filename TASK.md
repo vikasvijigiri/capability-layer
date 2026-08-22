@@ -4,6 +4,34 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Merge the layer into the Notion "Agentic Workflows (IDE)" architecture
+
+- **Status:** Implemented, 9/10 tasks (`docs/plans/2026-08-21-notion-architecture-merge.md`).
+  Task 10 (this record) closes it. `python tools/run_checks.py --tier all
+  --require-test`: `PASS: 55 check(s) green`. Full naming map, measured
+  numbers, 25-section coverage table and 20-principle traceability table in
+  `decisions/2026-08-21-notion-architecture-merge.md`.
+- **Goal:** rename/merge hooks (10 Notion families), skills (12 + 2
+  grounded extensions), agents (7 + platform-native `Explore`), commands,
+  and add `workflows/`/`policies/` to match the Notion target, closing two
+  real gaps flagged in the 2026-08-20 objectives audit: the E0-E5
+  execution-level router (Gap 1, previously a hardcoded apology string) and
+  the agent-catalogue Amber finding (near-duplicate `reviewer`/`researcher`
+  dispatches, now merged with a mode argument).
+- **Constraints:** merge into the target, not a rewrite; full literal
+  rename (not stage-shaped names kept); no downstream-repo migration in
+  scope (objective 20, stated explicitly, not silently skipped).
+- **Done Checks:** all 43 individual suites green standalone, not just
+  the aggregate; regression-checked against objectives 14, 21, 28 (each
+  still passes its own named instrument); `execution_level` reports a real
+  `{predicted, actual}` pair (E4/E4 observed live) instead of the old
+  hardcoded string; PreToolUse processes for one Bash call 5 -> 2; SKILL.md
+  total 157,180 -> 143,125 bytes despite two new real-content skills.
+- **Out of Scope:** re-grading all 30 Notion objectives from scratch; a
+  request-fingerprint API-call cache (objective 2.2/12, principle-level
+  only); row-for-row parity with Notion's 7-tier verification-depth table
+  (this repo's coarser 3-tier risk model is functionally equivalent).
+
 ### Make the layer portable: it broke every host's test runner
 
 - **Status:** Fixed and proven in Python and Node targets. Payload 1,586,874 ->

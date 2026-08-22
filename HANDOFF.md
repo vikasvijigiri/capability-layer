@@ -14,47 +14,36 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**PR #20 open against `main` (`fix/session-performance-fixes`), not yet
-merged.** `docs/plans/2026-08-20-session-performance-fixes.md`: a
-skill-body-load counter (`post-tool/02-skill-cost.py` + `bench.py`
-`skill_body_cost()`) — a full 9-stage chain run loads ~104,000 chars
-(~26,000 tok) of `SKILL.md` bodies and nothing measured it before this — and
-scoped `spec-reviewer`/`test-verifier` dispatch instructions in
-`executing-plans`/`verifying-work` so the two independent-review dispatches
-stop redoing ~70% of the same work. `python tools/run_checks.py --tier all
---require-test`: **`PASS: 54 check(s) green`**, verified fresh at every stage.
+**All 10 tasks of the Notion "Agentic Workflows (IDE)" architecture merge
+are done and verified, not yet delivered.** Branch
+`feat/notion-architecture-merge`, worktree at
+`.worktrees/notion-architecture-merge`, built on top of
+`cluster-c-telemetry-metrics` (so it carries that unit's 5 commits too — not
+yet confirmed merged into `main` separately; check before assuming a clean
+diff). 8 commits for this unit specifically, `f2f9a2d`..`63c9c35`. Full
+naming map, measured numbers, and the 25-section/20-principle coverage
+tables are in `decisions/2026-08-21-notion-architecture-merge.md`; the plan
+is `docs/plans/2026-08-21-notion-architecture-merge.md` (all 10 boxes
+ticked). `TASK.md`'s "Merge the layer into the Notion..." entry has the
+compact Done Checks. `python tools/run_checks.py --tier all
+--require-test`: **`PASS: 55 check(s) green`**, plus all 43 individual
+suites confirmed green standalone (not just the aggregate).
 
-**Task 2's fix measured working on itself, same session.** A `spec-reviewer`
-dispatch scoped per the new guidance ran 91.7s/39,096 tok on this unit, versus
-183.9s+219.7s/112,743 tok combined for the *prior* unit's two unscoped,
-overlapping dispatches on a comparably-sized diff.
+**Next step is `release-git`'s Delivering procedure** — Gate 2
+(`AskUserQuestion`) approval for a PR has not been asked yet. Nothing has
+been pushed.
 
-**`.claude/hooks/post-tool/02-skill-cost.py`'s real payload shape is
-unverified.** Whether Claude Code's `Skill` tool actually fires
-`PostToolUse` with a `tool_input["skill"]` field was never observed live —
-confirmed empirically mid-session that `settings.json` hook registrations
-load once at session start, so it can't be tested live until a fresh
-session invokes a skill after this merges. Check `python tools/bench.py`'s
-"skill-body loads" line in the next fresh session; zero after several real
-skill invocations means the field-name guess needs revisiting with real
-data.
-
-**11 unrelated, pre-existing uncommitted files sit in the working tree** —
-present since before this session started, not touched by this unit or the
-prior one (both stashed them around their own pushes and restored them
-intact). Almost certainly **`TASK.md`'s own "Implement world-class
-SessionStart bootstrap scaffolding" task's in-progress work**, not a
-mystery: the changed set (`.claude/settings.json`, a deleted
-`session-start/02-bootstrap-docs.py`, a new `session-start/
-02-session-context.py`, `tools/test_session_start_contract.py`, ...) matches
-that task's own stated Constraints/Inputs file-for-file. Whoever resumes
-that task should reconcile this working-tree state with it rather than
-starting fresh or discarding it.
+**Task 9's verification pass found 5 real classes of defect the renames
+left behind** (dated-provenance claims, stale hardcoded old-name paths in
+4 different test files, `install.py`'s own `entry_point()` prose carrying
+the same bug as its fixtures, a hook-count constant, and a corpus/classifier
+generalization gap) — see `LOG.md`'s 2026-08-22 06:21 entry for the full
+list; all fixed and reverified, not left as known issues.
 
 **`tools/resume.py`'s `BRANCH_PREFIX` gap is still open** (only strips
 `feat/`, `_hooklib.py`'s `active_plans()` strips five) — found 2026-08-20
 morning, not yet its own unit. See `TASK.md`'s router-progress-consistency
-Completed entry.
+Completed entry. Unrelated to this session's work.
 
 **`main`'s remote is `vikasvijigiri/capability-layer`.**
 

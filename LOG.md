@@ -1,5 +1,26 @@
 # Log
 
+## 2026-08-22 06:21
+
+**Merged the layer into the Notion "Agentic Workflows (IDE)" target
+architecture** — full literal rename (hooks, skills, agents, commands,
+plus new `workflows/`/`policies/`), closing the E0-E5 execution-level gap
+(was a hardcoded string; now a live `{predicted, actual}` pair) and the
+"Agents: 11 vs ~6-8" Amber finding (now 8). 10-task plan
+(`docs/plans/2026-08-21-notion-architecture-merge.md`), reasoning in
+`decisions/2026-08-21-notion-architecture-merge.md`, `PASS: 55 check(s)
+green`.
+
+Verification (Task 9) found 5 classes of defect the renames left behind
+that no earlier task's own check exercised: dated-provenance claims in
+skill/agent bodies, stale hardcoded old-name paths in 4 test files
+(`FileNotFoundError` only once the rename actually lands, not before), a
+hook-count constant, an eval-corpus remap, and `install.py`'s own
+`entry_point()` prose carrying the same bug as the fixtures asserting
+against it — found by tracing past the fixture into the function itself,
+since the failure string wasn't literal source text. See `TASK.md`'s entry
+for the full Done Checks.
+
 ## 2026-08-21 13:18
 
 **PR #20 (`fix/session-performance-fixes`) merged into `main`; its base had
