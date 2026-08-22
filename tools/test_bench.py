@@ -186,6 +186,67 @@ check("_actual_execution_level: >4 agents spawned is the TOP of the scale, "
       "not E4 (the actual bug: this was inverted with the E4 case above)",
       _ael({"calls": 1}, {"calls": 6}, 5) == "E5")
 
+# --- build_snapshot()'s execution_level.actual: per-turn delta, not the ------
+# --- session-cumulative total (2026-08-22 fix) -------------------------------
+#
+# `_actual_execution_level()` above is proven correct against per-turn-shaped
+# inputs. This is the regression case for the OTHER half: before this fix,
+# `build_snapshot()` passed the raw cumulative counters straight into it.
+# Previous row: 4 agent calls "so far". Current cumulative state: 7 (3 more
+# happened this turn). The old, buggy code reads cumulative 7 -> "E5" (>4).
+# The fix reads the delta of 3 -> "E4" (2-4), the correct read of this turn.
+
+
+def with_telemetry_state(prev_row: dict, skill_calls: int, agent_calls: int,
+                          tool_calls: int):
+    """Point every state path `build_snapshot()` reads at throwaway files,
+    seeded with `prev_row` as history and the given CUMULATIVE totals as
+    current state. Returns the restore callback."""
+    fd, tpath = tempfile.mkstemp(suffix=".jsonl")
+    os.close(fd)
+    telem = Path(tpath)
+    telem.write_text(json.dumps(prev_row) + "\n", encoding="utf-8")
+
+    def _tmp_json(data: dict) -> Path:
+        fd2, p2 = tempfile.mkstemp(suffix=".json")
+        os.close(fd2)
+        path = Path(p2)
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    skill_path = _tmp_json({"calls": skill_calls, "chars": 0, "unattributed": 0})
+    agent_path = _tmp_json({"calls": agent_calls, "by_type": {}})
+    tool_path = _tmp_json({"calls": tool_calls, "by_type": {}})
+
+    originals = (telemetry_mod.TELEMETRY, telemetry_mod.SKILL_COST,
+                 telemetry_mod.AGENT_COST, telemetry_mod.TOOL_COST)
+    telemetry_mod.TELEMETRY = telem
+    telemetry_mod.SKILL_COST = skill_path
+    telemetry_mod.AGENT_COST = agent_path
+    telemetry_mod.TOOL_COST = tool_path
+
+    def _restore():
+        (telemetry_mod.TELEMETRY, telemetry_mod.SKILL_COST,
+         telemetry_mod.AGENT_COST, telemetry_mod.TOOL_COST) = originals
+        for p in (telem, skill_path, agent_path, tool_path):
+            p.unlink(missing_ok=True)
+
+    return _restore
+
+
+_prev_row = {"skills_loaded": {"calls": 1}, "agents_spawned": {"calls": 4},
+             "api_calls": {"calls": 10}}
+_restore = with_telemetry_state(_prev_row, skill_calls=1, agent_calls=7,
+                                 tool_calls=12)
+_snapshot = telemetry_mod.build_snapshot()
+_restore()
+check("build_snapshot(): execution_level.actual is a per-turn delta (E4 for "
+      "3 new agent calls this turn), not the session-cumulative total "
+      "(which would wrongly read E5 for 7 total agent calls)",
+      _snapshot["execution_level"]["actual"] == "E4",
+      f"got {_snapshot['execution_level']['actual']!r}, want 'E4' -- "
+      f"cumulative agents_spawned.calls=7 alone would produce E5")
+
 if failures:
     print(f"\n{len(failures)} failed: " + "; ".join(failures))
     raise SystemExit(1)

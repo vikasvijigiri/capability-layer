@@ -129,9 +129,11 @@ evaluate my summarize-changes skill with skill-creator
 ```
 
 ### 10. Iterate on the description before the body
-If a skill fires too rarely: broaden `description`, add `when_to_use` with
-concrete trigger phrases. If it fires too often: narrow `description`, or
-switch to `disable-model-invocation: true` for full manual control.
+Claude reads only `name` and `description` to decide whether to trigger a
+skill — there is no separate `when_to_use` field in the format. If a skill
+fires too rarely: broaden `description` with concrete trigger phrases. If
+it fires too often: narrow `description`, or switch to
+`disable-model-invocation: true` for full manual control.
 
 ---
 

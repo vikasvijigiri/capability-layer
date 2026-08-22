@@ -45,7 +45,7 @@ this always exits 0, regardless of what `00-dispatch.py`'s earlier steps did.
 
 Fire it directly:
 
-    python tools/run_hook.py post-run '{"workflow":"test","status":"success"}'
+    python tools/run_hook.py telemetry '{"workflow":"test","status":"success"}'
 """
 
 from __future__ import annotations
@@ -114,6 +114,25 @@ UNAVAILABLE_FIELDS: dict[str, str] = {
 def _load_json(path: Path) -> dict:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _tail_last_json_line(path: Path, max_bytes: int = 8192) -> dict:
+    """The last JSON object in an append-only JSONL file, or {} -- never a
+    full-file read. `telemetry.jsonl` is append-only and never truncated (see
+    module docstring), so it only grows over a repo's lifetime; a bounded tail
+    read keeps this hook's own cost from growing with it."""
+    try:
+        size = path.stat().st_size
+        with path.open("rb") as fh:
+            fh.seek(max(0, size - max_bytes))
+            chunk = fh.read()
+        lines = [ln for ln in chunk.decode("utf-8", errors="ignore").split("\n")
+                 if ln.strip()]
+        if not lines:
+            return {}
+        return json.loads(lines[-1])
     except (OSError, ValueError):
         return {}
 
@@ -263,6 +282,30 @@ def build_snapshot() -> dict:
     if latency_reason:
         unavailable["turn_latency_seconds"] = latency_reason
 
+    # `execution_level.actual` must reflect THIS turn, not the session so
+    # far -- `_actual_execution_level()` is unit-tested against per-turn-
+    # shaped inputs (tools/test_bench.py), so the cumulative totals above
+    # are diffed against the previous row before being passed in. Read
+    # before this row is appended (main() opens TELEMETRY for append only
+    # after build_snapshot() returns), so `previous` never sees this turn.
+    previous = _tail_last_json_line(TELEMETRY)
+    prev_skill_calls = (previous.get("skills_loaded") or {}).get("calls", 0)
+    prev_agent_calls = (previous.get("agents_spawned") or {}).get("calls", 0)
+    prev_tool_calls = (previous.get("api_calls") or {}).get("calls", 0)
+    agent_calls_now = agent_totals.get("calls", 0)
+    tool_calls_now = tool_totals.get("calls", 0)
+    # max(0, ...): a reset state file (e.g. .claude/hooks/state/ cleared
+    # between turns) would otherwise produce a negative delta, which is not
+    # a real negative count.
+    delta_agent_calls = max(0, agent_calls_now - prev_agent_calls)
+    delta_tool_calls = max(0, tool_calls_now - prev_tool_calls)
+    if skills_loaded is None:
+        skills_loaded_delta = None
+    else:
+        delta_skill_calls = max(
+            0, skills_loaded.get("calls", 0) - prev_skill_calls)
+        skills_loaded_delta = {"calls": delta_skill_calls}
+
     return {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "run_scope": "session-cumulative",
@@ -277,7 +320,9 @@ def build_snapshot() -> dict:
         "execution_level": {
             "predicted": entry_shape.get("execution_level_predicted"),
             "actual": _actual_execution_level(
-                skills_loaded, agent_totals, tool_totals.get("calls", 0)),
+                skills_loaded_delta,
+                {"calls": delta_agent_calls},
+                delta_tool_calls),
         },
         # Proxy for the spec's `context_tokens` -- see 04-read-cost.py's
         # docstring. Not the real field, which stays in `unavailable` below.
