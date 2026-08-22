@@ -1,5 +1,21 @@
 # Log
 
+## 2026-08-23 00:20
+
+Fixed `README.md`'s install commands, reported by the user as installing
+"old files, not the latest." Reproduced in an isolated venv: `pip install`
+(and `--upgrade`) on the README's exact `git+URL` silently no-ops on a
+second run because `pyproject.toml`'s `version` never changes — pip sees
+"already satisfied" and keeps the stale install with no error. Fixed to
+`--force-reinstall --no-deps`, verified to force a real reinstall every
+time; also corrected the URL from an old GitHub org name (`NG-VikasV`,
+still redirects today but isn't canonical) to `vikasvijigiri`. Full
+diagnosis in `ISSUES.md` 2026-08-23 00:20; promoted to `MEMORY.md` as a
+general pip/packaging lesson. `.claude/skills/documentation/SKILL.md`
+updated per the user's ask: README's setup commands are now called out as
+executable claims to run, not prose to proofread, with a matching Red
+Flag entry.
+
 ## 2026-08-22 23:55
 
 Salvaged from an orphaned commit on `feat/cluster-d-layer-self-grading`

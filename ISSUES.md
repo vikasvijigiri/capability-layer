@@ -6,6 +6,16 @@ systematic-debugging skill once its four-phase loop reaches a terminal state.
 Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
 of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
 
+## 2026-08-23 00:20 — README.md's install commands silently installed a stale package
+- **Phase/Context**: user reported "old files are getting installed, not the latest ones" after following `README.md`'s exact `pip install`/`capability_layer install` commands.
+- **Symptom**: no error, no warning — `pip install "git+https://github.com/NG-VikasV/capability-layer"` (the README's literal command) succeeds and reports installed, but the files that land in the target repo are from an older commit than `main`'s current tip.
+- **Diagnosis**: reproduced live in an isolated venv, three runs. Run 1 (fresh venv): correctly installed the current `main` tip. Run 2 (same venv, same command again): printed no install action at all for `capability-layer`, only "Requirement already satisfied" for its `pyyaml` dependency — pip silently kept the old install. Run 3 (`pip install --upgrade` added): identical silent no-op. Root cause: `pyproject.toml`'s `version = "0.1.0"` never changes between commits, so pip's dependency resolver treats any already-installed `capability-layer==0.1.0` as satisfying a fresh `git+URL` requirement — `--upgrade` does not override this for a VCS dependency whose version string is unchanged. Separately, and not the root cause but worth fixing: the URL itself named an old GitHub org (`NG-VikasV`) that happens to still redirect to the canonical `vikasvijigiri/capability-layer`, confirmed via `gh repo view` (redirect works today, is not guaranteed to keep working).
+- **Attempts**:
+  - 1. Tested `pip install --upgrade "git+URL"` alone → still silently skipped, confirmed by output showing no reinstall action for `capability-layer`.
+  - 2. Tested `pip install --force-reinstall --no-deps "git+URL"` → confirmed real reinstall each time ("Attempting uninstall... Successfully uninstalled... Successfully installed"), regardless of the unchanged version string → fixed.
+- **Fix**: `README.md`'s both install and upgrade command blocks now use `--force-reinstall --no-deps` and the canonical `vikasvijigiri` URL, with an inline explanation of why the flag is load-bearing, not stylistic. `.claude/skills/documentation/SKILL.md` updated: README's setup/install commands are now called out as executable claims that must be run before being documented, not proofread, plus a matching Red Flag entry.
+- **Status**: `Resolved`
+
 ## 2026-08-19 11:21 — Windows git.exe invocation invisible to the branch/attribution guards
 - **Phase/Context**: reviewing PR #13's `_projectchecks.py` fix (below) for sibling instances of the same bug class.
 - **Symptom**: `_hooklib.is_git_commit()`/`git_dash_c()` matched a bare `git` token or a POSIX `/git`-ending path, never `git.exe` — Git for Windows' own default install path (`C:\Program Files\Git\...`) has a space in it, and a quoted, fully-qualified invocation matched neither shape. Both `02-branch-guard.py` and `03-attribution-guard.py` gate on this function.
