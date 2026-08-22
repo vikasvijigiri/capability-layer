@@ -171,7 +171,7 @@ loads only when the task calls for it.
 | `.claude/constitution.md` | seven articles every plan ticks or justifies |
 | `.claude/workflow.md` | stage → owner → artefact, the entry rule, and the `[state:*]` blocks the session-start hook renders |
 | `.claude/install.py` | copies the layer into another repository; merges `settings.json`, never overwrites a decision |
-| `tools/` | `run_checks.py`, `resume.py`, `loop.py`, `recon.py`, `parallel_groups.py`, `scope.py`, `worktree.py`, `security_gate.py`, `bench.py`, and the 45 suites that keep all of it honest |
+| `tools/` | `run_checks.py`, `resume.py`, `loop.py`, `recon.py`, `parallel_groups.py`, `scope.py`, `worktree.py`, `security_gate.py`, `bench.py`, and the 46 suites that keep all of it honest |
 | `capability_layer/` | the console entry points; `pyproject.toml` builds the wheel |
 | `decisions/` | dated ADRs for the choices that were not obvious |
 | `templates/`, `guide/` | how to author a skill, hook, command or workflow here |

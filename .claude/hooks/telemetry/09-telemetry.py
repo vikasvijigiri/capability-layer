@@ -92,9 +92,6 @@ UNAVAILABLE_FIELDS: dict[str, str] = {
     "context_tokens": "not observable to a hook in this harness",
     "input_tokens": "not observable to a hook in this harness",
     "output_tokens": "not observable to a hook in this harness",
-    "run_id": "this repo's telemetry has no per-user-task run boundary -- "
-              "every row is session-cumulative, appended every Stop, a "
-              "different unit than the target's 'one run'",
     "escalations": "folded into retries.rung's block/retreat outcomes -- "
                    "no separate counter; see objective 24's "
                    "local_repair_ratio() in tools/bench.py",
@@ -282,6 +279,23 @@ def build_snapshot() -> dict:
     if latency_reason:
         unavailable["turn_latency_seconds"] = latency_reason
 
+    # `run_id`: not the target's strict "one user task" boundary -- this
+    # repo has no such thing (see module docstring's "What 'one run' means
+    # here"). What it IS: a real identifier for which unit of work, at what
+    # tree state, `chain.py` already computes as slug+fingerprint. Naming it
+    # `run_id` exposes that existing identifier rather than inventing a new
+    # concept; a future reader should not assume it changes per-invocation.
+    run_slug = chain.get("slug")
+    run_fp = chain.get("fingerprint")
+    if run_slug and run_fp:
+        run_id = f"{run_slug}:{run_fp}"
+    else:
+        run_id = None
+        unavailable["run_id"] = (
+            "no active chain state this turn -- slug and/or fingerprint "
+            "unresolved; see tools/chain.py"
+        )
+
     # `execution_level.actual` must reflect THIS turn, not the session so
     # far -- `_actual_execution_level()` is unit-tested against per-turn-
     # shaped inputs (tools/test_bench.py), so the cumulative totals above
@@ -309,6 +323,7 @@ def build_snapshot() -> dict:
     return {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "run_scope": "session-cumulative",
+        "run_id": run_id,
         "chain": chain,
         "tools_called": {
             "calls": calls,

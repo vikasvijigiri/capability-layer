@@ -247,6 +247,25 @@ check("build_snapshot(): execution_level.actual is a per-turn delta (E4 for "
       f"got {_snapshot['execution_level']['actual']!r}, want 'E4' -- "
       f"cumulative agents_spawned.calls=7 alone would produce E5")
 
+# --- build_snapshot()'s run_id (2026-08-22 addition) -------------------------
+#
+# `run_id` is not invented data -- it is `_chain_facts()`'s own slug+fingerprint,
+# exposed under a new name. This repo always has real chain state (an active
+# branch), so build_snapshot() run against the real tree must produce a run_id
+# matching that same call's own chain facts -- not a mock.
+_chain_now = telemetry_mod._chain_facts()
+_snapshot_run_id = telemetry_mod.build_snapshot()
+check("build_snapshot(): run_id is present and matches slug:fingerprint from "
+      "_chain_facts(), when both resolve",
+      (_chain_now.get("slug") and _chain_now.get("fingerprint")) is None
+      or _snapshot_run_id["run_id"] == f"{_chain_now['slug']}:{_chain_now['fingerprint']}",
+      f"run_id={_snapshot_run_id['run_id']!r}, chain={_chain_now!r}")
+check("build_snapshot(): run_id absent from 'unavailable' when chain facts "
+      "resolve, matching a real repo's active-branch state",
+      ("run_id" not in _snapshot_run_id["unavailable"])
+      if (_chain_now.get("slug") and _chain_now.get("fingerprint")) else True,
+      str(_snapshot_run_id["unavailable"].get("run_id")))
+
 if failures:
     print(f"\n{len(failures)} failed: " + "; ".join(failures))
     raise SystemExit(1)
