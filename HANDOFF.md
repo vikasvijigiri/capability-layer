@@ -15,30 +15,35 @@ the concurrent check tier. See `LOG.md` for each.
 ## Current Work — START HERE
 
 **All 10 tasks of the Notion "Agentic Workflows (IDE)" architecture merge
-are done and verified, not yet delivered.** Branch
-`feat/notion-architecture-merge`, worktree at
+are done, independently reviewed, and verified — not yet delivered.**
+Branch `feat/notion-architecture-merge`, worktree at
 `.worktrees/notion-architecture-merge`, built on top of
 `cluster-c-telemetry-metrics` (so it carries that unit's 5 commits too — not
 yet confirmed merged into `main` separately; check before assuming a clean
-diff). 8 commits for this unit specifically, `f2f9a2d`..`63c9c35`. Full
+diff). 9 commits for this unit specifically, `f2f9a2d`..`4f52a76`. Full
 naming map, measured numbers, and the 25-section/20-principle coverage
 tables are in `decisions/2026-08-21-notion-architecture-merge.md`; the plan
 is `docs/plans/2026-08-21-notion-architecture-merge.md` (all 10 boxes
 ticked). `TASK.md`'s "Merge the layer into the Notion..." entry has the
 compact Done Checks. `python tools/run_checks.py --tier all
---require-test`: **`PASS: 55 check(s) green`**, plus all 43 individual
-suites confirmed green standalone (not just the aggregate).
+--require-test`: **`PASS: 55 check(s) green`**.
 
 **Next step is `release-git`'s Delivering procedure** — Gate 2
 (`AskUserQuestion`) approval for a PR has not been asked yet. Nothing has
-been pushed.
+been pushed. Before opening a PR: decide whether it should carry just the
+9 Notion-merge commits or the whole branch (see the next paragraph) —
+`diff-reviewer`'s scope pass flagged this as a packaging decision, not a
+code defect.
 
 **Task 9's verification pass found 5 real classes of defect the renames
-left behind** (dated-provenance claims, stale hardcoded old-name paths in
-4 different test files, `install.py`'s own `entry_point()` prose carrying
-the same bug as its fixtures, a hook-count constant, and a corpus/classifier
-generalization gap) — see `LOG.md`'s 2026-08-22 06:21 entry for the full
-list; all fixed and reverified, not left as known issues.
+left behind**, and a subsequent independent code-review round (4 diff
+angles + a security-reviewer pass over the full diff) found 2 more —
+including a critical one: `estimate_execution_level`/
+`_actual_execution_level` had E4 and E5 swapped on both the predicted and
+actual sides, so a real multi-task plan chain read as E4 instead of E5 (a
+false "predicted matches actual" reading, since both sides carried the
+identical bug). All fixed and reverified with real regression tests, not
+left as known issues — see `LOG.md`'s 2026-08-22 entries for the full list.
 
 **`tools/resume.py`'s `BRANCH_PREFIX` gap is still open** (only strips
 `feat/`, `_hooklib.py`'s `active_plans()` strips five) — found 2026-08-20

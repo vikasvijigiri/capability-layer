@@ -1,5 +1,18 @@
 # Log
 
+## 2026-08-22 10:40
+
+**Code-review found a critical E4/E5 inversion in the E0-E5 router this
+merge built** (both `01-entry-classifier.py`'s predicted side and
+`09-telemetry.py`'s actual side), plus a fail-open-turned-fail-silent gap
+in `permission-security/00-dispatch.py`. 4 diff-review angles + an
+independent security-reviewer pass over the full unit diff; both findings
+reproduced live before fixing, not fixed on the report alone. New
+regression tests (monkeypatched signals, not invented prompts) confirmed
+red on the reverted bug and green on the fix, replacing two tautological
+"returns some valid label" checks that could not have caught it. `PASS: 55
+check(s) green` after. See `4f52a76`.
+
 ## 2026-08-22 06:21
 
 **Merged the layer into the Notion "Agentic Workflows (IDE)" target
