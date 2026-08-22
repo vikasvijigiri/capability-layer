@@ -39,6 +39,17 @@ REGISTRY = HOOKS / "hooks_registry.json"
 # Directories under .claude/hooks/ that hold no hook scripts.
 NON_EVENT_DIRS = {"state", "__pycache__"}
 
+# Family names this repo used before the Notion architecture merge renamed
+# and consolidated them, per `hooks_registry.json`'s own `_note` field --
+# `post-tool` deliberately excluded since it survived the rename unchanged and
+# is still a real, current family. A hook's own docstring self-labelling with
+# one of these is unambiguous staleness (see the check below), not a naming
+# variant to allow.
+RETIRED_HOOK_FAMILIES = {
+    "session-start", "user-prompt", "post-run", "pre-commit",
+    "pre-deploy", "on-artifact-create", "pre-run",
+}
+
 failures: list[str] = []
 
 
@@ -233,6 +244,32 @@ for _path in sorted(HOOKS.rglob("*.py")):
                     and any(s in e for e in emitted)})
     check(f"{_path.parent.name}/{_path.name} names no skill in what it emits",
           not named, f"names {named} -- workflow.md decides, the hook measures")
+
+    # A hook's own module docstring commonly opens "<family> -- <what this
+    # does>" (e.g. "permission-security -- refuses..."), self-labelling which
+    # event family it belongs to. A rename moves the FILE and updates every
+    # functional reference (settings.json, hooks_registry.json, run_hook.py
+    # dispatch) -- all mechanically checked above and elsewhere in this suite
+    # -- but nothing ever re-read the PROSE inside the file to see whether its
+    # own opening label still agreed with where it now lives. 10 hook files
+    # opened with their pre-Notion-merge family name for exactly this reason,
+    # caught only by a manual audit after the rename had already shipped and
+    # been reviewed. This is the permanent version of that audit: a docstring
+    # opening with a family name that no longer exists anywhere under
+    # `.claude/hooks/` is unambiguous staleness, not a style choice -- unlike
+    # asserting the label equals the CURRENT directory (which would wrongly
+    # flag the handful of "global" hooks that legitimately self-label by
+    # Claude Code event name instead, e.g. "PreToolUse hook --").
+    _module_doc = ast.get_docstring(tree) or ""
+    _label_match = re.match(r"^([a-z][a-z-]*)\s+--", _module_doc)
+    if _label_match:
+        _label = _label_match.group(1)
+        check(f"{_rel} does not self-label with a retired hook family",
+              _label not in RETIRED_HOOK_FAMILIES,
+              f"docstring opens '{_label} --', but '{_label}' was retired in "
+              f"the Notion architecture merge (decisions/"
+              f"2026-08-21-notion-architecture-merge.md) -- update the label "
+              f"to '{_path.parent.name}' or this file's real family")
 
 # --- every state the report hook can emit has a workflow.md block -----------
 #

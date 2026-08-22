@@ -87,7 +87,7 @@ mod = load()
 # ---------------------------------------------------------------- re-entry guard
 #
 # The bug this prevents was found by a two-minute timeout, not by an error:
-# test_hooks.py fires the whole post-run event -> this hook -> run_suites() ->
+# test_hooks.py fires the whole stop-finalization event -> this hook -> run_suites() ->
 # test_hooks.py, unbounded. A hang and a pass look identical from outside, which
 # is the exact failure mode CLAUDE.md warns about for hooks.
 

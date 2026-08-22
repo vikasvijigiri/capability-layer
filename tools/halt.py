@@ -31,7 +31,7 @@ change -- wiring it into `.claude/settings.json` and
 `.claude/hooks/hooks_registry.json` is a separate task (Task 12 of
 `docs/plans/2026-08-10-checklist-completion.md`), assigned to another agent
 running concurrently on those files. Firing it for real requires
-`tools/run_hook.py pre-run '<payload>'` until that registration lands.
+`tools/run_hook.py pre-tool '<payload>'` until that registration lands.
 
 Per `decisions/2026-08-04-hooks-never-name-a-skill.md`, neither this module
 nor the guard names a skill. `.claude/workflow.md` owns what a halted state

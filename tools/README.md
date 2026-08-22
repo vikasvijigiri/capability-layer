@@ -8,7 +8,7 @@ Helper scripts and the repo's test suites.
 - `security_gate.py` — `python tools/security_gate.py --base main`. Five clauses,
   every one a fact about the artefact rather than about process: a security
   control that lost an entry between base and head, a secret anywhere in the
-  branch (the pre-commit scan sees one commit at a time), a sensitive path no
+  branch (the permission-security scan sees one commit at a time), a sensitive path no
   `test_map` glob covers, an agent that may write and declares no
   `allowed-paths:`, and a moved dependency tree `deps.py` rejects. Exit `0`/`1`/`2`,
   and `2` is not `0`. Read its docstring before adding a clause — the reason it

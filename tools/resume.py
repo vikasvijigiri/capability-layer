@@ -268,7 +268,7 @@ def rejections(text: str) -> list[str]:
 def _layer_owned(root: Path) -> set[str]:
     """Repo-relative paths the capability layer installed, or empty.
 
-    Fails open to empty rather than raising: this runs inside the session-start
+    Fails open to empty rather than raising: this runs inside the session-init
     hook, where an exception is invisible and a wrong count is merely wrong.
     """
     try:
@@ -557,7 +557,7 @@ def derive_state(facts: dict) -> str:
 
 
 def state_line(facts: dict, state: str) -> str:
-    """The one line the session-start hook prints. Kept short on purpose -- it is
+    """The one line the session-init hook prints. Kept short on purpose -- it is
     injected every session, so it is charged for every session."""
     pr = facts.get("pr_number")
     orphan = ""

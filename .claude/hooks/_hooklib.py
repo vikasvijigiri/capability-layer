@@ -35,9 +35,10 @@ HOOKS_DIR = Path(__file__).resolve().parent
 # --- shared refusal rules ---------------------------------------------------
 #
 # One definition each, because two hooks now enforce them at different moments.
-# `pre-commit/01-secret-scan.py` catches a commit the model is about to run;
-# `post-run/06-artifact-autocommit.py` catches one it makes itself from a
-# subprocess, which never passes through PreToolUse and so sees no gate at all.
+# `permission-security/01-secret-scan.py` catches a commit the model is about
+# to run; `stop-finalization/06-artifact-autocommit.py` catches one it makes
+# itself from a subprocess, which never passes through PreToolUse and so sees
+# no gate at all.
 # Two copies of these patterns would diverge, and the copy that diverged would
 # be the one guarding the unattended path.
 
@@ -467,9 +468,9 @@ def changed_paths(repo_root=None):
     """Paths git reports as changed, or None when git cannot answer.
 
     The single source of truth for "what did this turn touch".
-    `post-run/06-artifact-autocommit.py` commits exactly this set, so a second
-    near-copy of this parsing would decide what gets committed the first time the
-    two diverged.
+    `stop-finalization/06-artifact-autocommit.py` commits exactly this set, so a
+    second near-copy of this parsing would decide what gets committed the first
+    time the two diverged.
     """
     root = Path(repo_root) if repo_root else HOOKS_DIR.parents[1]
     try:
@@ -924,9 +925,10 @@ def minimal_diff_violations(paths, declared) -> list:
 def minimal_diff_refusal(paths, declared) -> str | None:
     """The refusal message for an unrelated file, or None when the diff is clean.
 
-    Formatted the way every other gate in `post-run/06-artifact-autocommit.py`
-    speaks a refusal -- a REFUSED message naming what tripped it -- so a
-    caller can `speak()` it verbatim once wired in.
+    Formatted the way every other gate in
+    `stop-finalization/06-artifact-autocommit.py` speaks a refusal -- a
+    REFUSED message naming what tripped it -- so a caller can `speak()` it
+    verbatim once wired in.
     """
     unnamed = minimal_diff_violations(paths, declared)
     if not unnamed:

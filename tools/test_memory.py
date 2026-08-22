@@ -85,8 +85,8 @@ check("a topic term matches prose with no path",
 # --- rot, and every false positive that had to be calibrated out ---------------
 with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     tmp = Path(d)
-    (tmp / ".claude" / "hooks" / "session-start").mkdir(parents=True)
-    (tmp / ".claude" / "hooks" / "session-start" / "02-bootstrap.py").write_text(
+    (tmp / ".claude" / "hooks" / "session-init").mkdir(parents=True)
+    (tmp / ".claude" / "hooks" / "session-init" / "02-bootstrap.py").write_text(
         "x\n", encoding="utf-8")
     (tmp / "tools").mkdir()
     (tmp / "tools" / "loop.py").write_text("x\n", encoding="utf-8")

@@ -45,6 +45,15 @@ NOISE_DIRS = {
     ".git", ".venv", "venv", "env", "node_modules", "__pycache__", ".mypy_cache",
     ".pytest_cache", ".ruff_cache", "dist", "build", "out", ".next", ".nuxt",
     "target", "vendor", "coverage", ".tox", ".gradle", "Pods", ".terraform",
+    # This repository's own parallel-worktree convention
+    # (decisions/2026-08-21-branch-per-parallel-task.md, `tools/worktree.py`'s
+    # `WORKTREE_DIR`). A nested worktree is a full checkout of this same repo,
+    # so scanning into it double-counts every test file and fixture string it
+    # contains under a different path -- found when a left-behind worktree made
+    # test_recon.py fail on its own "no skipped test outside this suite's own
+    # fixtures" assertion, reporting the SAME fixture line twice, once at its
+    # real path and once inside the worktree.
+    ".worktrees",
 }
 
 # One row per ecosystem: manifest -> (language, install, test). The same data-table

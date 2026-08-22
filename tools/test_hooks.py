@@ -2,7 +2,7 @@
 """Test suite for the hooks subsystem (tools/run_hook.py).
 
 Verifies each implemented event runs its subscriber(s) successfully, and that
-pre-commit correctly fails (non-zero exit) when a secret pattern is present.
+permission-security correctly fails (non-zero exit) when a secret pattern is present.
 
 Usage:
     python tools/test_hooks.py
@@ -40,7 +40,7 @@ def run_hook(event, payload_obj):
 # and exits 0 for an unknown event, so leaving them listed would have asserted
 # nothing while looking like coverage.
 #
-# `post-run` fires 06-artifact-autocommit.py, which runs every suite in tools/ --
+# `stop-finalization` fires 06-artifact-autocommit.py, which runs every suite in tools/ --
 # including this one. The env flag is the documented re-entry guard; without it
 # this line recurses until the harness times out, with no error to show for it.
 BENIGN_EVENTS = [
@@ -74,15 +74,15 @@ for event, payload in BENIGN_EVENTS:
     else:
         print(f'OK: {event}')
 
-# 2. pre-commit with a clean file should pass.
+# 2. permission-security with a clean file should pass.
 p = run_hook('permission-security', {'files': ['requirements.txt']})
 if p.returncode != 0:
-    print(f'FAIL: pre-commit (clean) exited {p.returncode}\n{p.stdout}')
+    print(f'FAIL: permission-security (clean) exited {p.returncode}\n{p.stdout}')
     fail = True
 else:
-    print('OK: pre-commit (clean file)')
+    print('OK: permission-security (clean file)')
 
-# 3. pre-commit with a planted secret should emit a structured deny and return 0.
+# 3. permission-security with a planted secret should emit a structured deny and return 0.
 # The fake key is assembled at runtime rather than written as one literal:
 # 01-secret-scan.py scans this file too, and a literal `AKIA` + 16 chars here
 # makes the repo permanently uncommittable. The bytes written to the temp file
@@ -96,10 +96,10 @@ try:
     rel = secret_file.relative_to(ROOT).as_posix()
     p = run_hook('permission-security', {'files': [rel]})
     if p.returncode != 0 or '"permissionDecision": "deny"' not in p.stdout:
-        print('FAIL: pre-commit did not emit a structured deny')
+        print('FAIL: permission-security did not emit a structured deny')
         fail = True
     else:
-        print('OK: pre-commit detected planted secret with structured deny')
+        print('OK: permission-security detected planted secret with structured deny')
 finally:
     secret_file.unlink(missing_ok=True)
 
@@ -287,7 +287,7 @@ for _payload, _label, _assertion in SKILL_COST_CASES:
 
 # --- telemetry/09-telemetry.py: unified per-run snapshot ---------------------
 #
-# Fired via the `post-run` event, which runs `00-dispatch.py`'s whole STEPS
+# Fired via the `stop-finalization` event, which runs `00-dispatch.py`'s whole STEPS
 # sequence -- the new finalizer runs alongside the existing four. Asserts on
 # the real, gitignored `.claude/hooks/state/telemetry.jsonl` (`.gitignore:28`),
 # same convention as the DENY_CASES/BENIGN_EVENTS above firing real hooks in
@@ -324,14 +324,14 @@ _before_lines = _telemetry_lines()
 _p = run_hook('stop-finalization', {'workflow': 'test', 'status': 'success'})
 _after_lines = _telemetry_lines()
 if _p.returncode != 0:
-    print(f'FAIL: post-run (telemetry finalizer) exited {_p.returncode}\n{_p.stderr}')
+    print(f'FAIL: stop-finalization (telemetry finalizer) exited {_p.returncode}\n{_p.stderr}')
     fail = True
 elif len(_after_lines) != len(_before_lines) + 1:
     print(f'FAIL: telemetry.jsonl grew by {len(_after_lines) - len(_before_lines)} '
-          f'line(s), want 1 (append-only, one row per post-run fire)')
+          f'line(s), want 1 (append-only, one row per stop-finalization fire)')
     fail = True
 else:
-    print('OK: post-run appends exactly one telemetry row')
+    print('OK: stop-finalization appends exactly one telemetry row')
     _row = json.loads(_after_lines[-1])
     _missing_top = {'ts', 'run_scope', 'chain', 'tools_called', 'skills_loaded',
                      'task_type', 'execution_level', 'context_read', 'agents_spawned',
@@ -406,11 +406,11 @@ else:
 _p2 = run_hook('stop-finalization', {'workflow': 'test', 'status': 'success'})
 _after2_lines = _telemetry_lines()
 if _p2.returncode != 0 or len(_after2_lines) != len(_after_lines) + 1:
-    print(f'FAIL: a second post-run fire did not append a second telemetry row '
+    print(f'FAIL: a second stop-finalization fire did not append a second telemetry row '
           f'(exit {_p2.returncode}, {len(_after2_lines)} lines vs {len(_after_lines)} before)')
     fail = True
 else:
-    print('OK: a second post-run fire appends a second telemetry row (append-only)')
+    print('OK: a second stop-finalization fire appends a second telemetry row (append-only)')
 
 # --- context-budget/01-context-cost.py: had zero test coverage anywhere in the ---
 # repo (Notion-objectives audit finding, objective 12) until now. Asserts on
