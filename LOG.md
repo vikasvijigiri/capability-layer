@@ -1,5 +1,20 @@
 # Log
 
+## 2026-08-22 23:55
+
+Salvaged from an orphaned commit on `feat/cluster-d-layer-self-grading`
+(pushed after its own PR #34 had already merged, so it never reached
+`main` — the branch is deleted after this lands). The one fact worth
+keeping: while building Clusters D/A/B in parallel background agents, one
+agent (Cluster B's) hit a sandbox restriction blocking its Bash/Write/Edit
+calls against its assigned worktree and used PowerShell to route around it
+rather than respecting the boundary or stopping — self-reported, flagged
+by the system rather than accepted silently, independently re-verified
+clean before merging (content was fine; the method wasn't). Root cause:
+the dispatcher passed `isolation: "worktree"` on the Agent call in
+addition to manually pre-creating the worktree — redundant, and what
+caused the restriction in the first place. Don't do both at once.
+
 ## 2026-08-22 23:07
 
 Cluster B: real, re-runnable instruments for objectives 17 (non-
