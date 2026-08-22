@@ -243,9 +243,27 @@ correctly show as "does not exist" at analysis time; that is not a defect,
 confirm it against `parallel_groups.py`'s ordering instead of "fixing" it.
 Fix every genuine finding before spending a review on the plan.
 
-Then apply `references/artifact-review.md` to the completed plan. Treat its
+Then apply `references/artifact-review.md` to the completed plan, against the
+six fields from A2 — the actual goal/input the plan must satisfy. Treat its
 verdict as independent evidence; do not silently repair a rejected plan in
-the same pass.
+the same pass as the review that rejected it.
+
+**Self-review is capped at 2 iterations.** The pass above is iteration 1. On
+REVISE, fix the named gaps, re-run `tools/analyze.py`, and re-apply
+`artifact-review.md` — that is iteration 2. An APPROVED or APPROVED WITH
+RECORDED RISK verdict on iteration 1 ends the loop immediately; iteration 2
+only happens after a REVISE. A Stage B dispatch (fetching a genuinely
+missing fact) does not count against the cap — the cap bounds re-review of
+an already-drafted plan, not information-gathering.
+
+On a **second** REVISE, stop iterating. A plan that still fails after being
+told exactly what to fix twice is a disagreement worth surfacing at Gate 1,
+not a defect this skill can out-think by trying a third time. Fold the
+reviewer's finding into the plan as `[NEEDS CLARIFICATION: <finding,
+verbatim>]` at the paragraph it concerns, state "self-review: 2/2,
+unresolved — see marker" in the completion summary, and present at Gate 1
+anyway — the marker is what keeps this honest rather than silently
+downgrading REVISE to APPROVED.
 
 Then review the completed plan against the brief, not memory:
 
