@@ -184,6 +184,26 @@
   E0-E5 router and agent-catalogue decision record (separate candidate
   units); re-grading objectives 1-10; objective 2's paid eval.
 
+### Cluster D — instruments for objectives 11, 12, 26, 29
+- **Status:** Implemented, 7/7 tasks (`docs/plans/2026-08-22-cluster-d-layer-self-grading.md`).
+  `python tools/run_checks.py --tier all --require-test`: `PASS: 59 check(s)
+  green` (up from 55). 4 new checks wired into `.claude/project-checks.json`
+  plus `test_context_cost.py` (existed, was unwired). Real findings, not
+  synthetic: fixed 2 genuine portability violations
+  (`tools/bench.py`, `.claude/hooks/session-init/02-bootstrap-docs.py`) and
+  surfaced one more still-open gap (`tools/test_smoke.py`, also unwired).
+  Cluster B's objective-20 marker resolved with fresh research (not built).
+  Not yet reviewed by `code-review`/`reviewer` or delivered.
+- **Goal:** give objectives 11 (world-class engineering), 12 (production-
+  grade), 26 (low-coupling), and 29 (no hardcoded project truth) real,
+  re-runnable instruments — the second of 4 clusters, next per the spec's
+  own build order (C done → D → B → A). Also resolves Cluster B's open
+  objective-20 marker with fresh research (not built this pass).
+- **Out of Scope:** Clusters A, B (marker resolved, not built); fixing
+  `tools/resume.py`'s hardcoded `BRANCH_PREFIX` (separate logged bug, only
+  surfaced by this cluster's own check); turning any new check into a gate;
+  re-grading objectives 1-10.
+
 ### Implement world-class SessionStart bootstrap scaffolding
 - **Status:** In Progress
 - **Goal:** Implement a SessionStart bootstrap loader that scaffolds project skeleton files and a minimal, maintainable `docs/` structure without creating unnecessary subfolders or a copied `AGENTS.md`.

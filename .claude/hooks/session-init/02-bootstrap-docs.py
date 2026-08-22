@@ -273,8 +273,8 @@ def main():
     if is_stub_claude_md(claude_md_path):
         sections.append(
             "--- CLAUDE.md is still a stub ---\n"
-            "This repo's CLAUDE.md hasn't been filled in yet (still the auto-generated "
-            "skeleton). Once there's enough context about this repo, fill it in with "
+            "CLAUDE.md hasn't been filled in yet (still the "
+            "auto-generated skeleton). Once there's enough context about the repository, fill it in with "
             "real project specifics — commands, layout, gotchas, and hard rules."
         )
     # Full CLAUDE.md content is deliberately NOT injected here -- Claude Code

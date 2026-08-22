@@ -316,9 +316,10 @@ ROWS = [
 
 
 TIMING_CAVEAT = (
-    "Character counts are exact. The SECONDS are not: this repo's fast tier\n"
-    "measured 11s and 27s within one hour on an unchanged tree, because the\n"
-    "suites are disk-bound and the machine's other work moves them ~2x. Do not\n"
+    "Character counts are exact. The SECONDS are not: a fast tier's own\n"
+    "measurement can drift by 2x or more within one hour on an unchanged\n"
+    "tree, because the suites are disk-bound and the machine's other work\n"
+    "moves them. Do not\n"
     "compare a second-figure across runs taken at different times -- to compare\n"
     "two configurations, run them INTERLEAVED (a, b, a, b) so drift hits both."
 )

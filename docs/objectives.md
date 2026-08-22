@@ -112,13 +112,17 @@ instruments; run them rather than quoting a remembered number.
 | 18 | `tools/test_entry_classifier.py`'s full-corpus route-presence check (`entry-small`/`entry-direct` both confirmed reachable) plus a fallback-safety check on `01-entry-classifier.py`'s `_control_or_sensitive_patterns()` |
 | 22 | `python tools/bench.py`'s `schema_coverage()` — `09-telemetry.py`'s own `unavailable` map against its `SPEC_FIELD_COUNT`, plus `chain.fingerprint` trace-completeness |
 | 24 | `python tools/bench.py`'s `local_repair_ratio()` — incident-deduplicated aggregate over `telemetry.jsonl`'s `retries.rung` history |
+| 11 | `python tools/test_instrumented_surface.py` — live-wired hooks and `tools/*.py` sources ÷ those named in `.claude/project-checks.json`'s `test` array; a floor, never proof of adequate coverage |
+| 12 | `python tools/test_hook_conformance.py` — per-hook boolean vector over 5 clauses (payload via `_hooklib.load_payload()`, no detached-process escape, ≤1 state file, a representative-payload test, a declared behavior classification); report only |
+| 26 | `python tools/test_import_independence.py` — stdlib `ast` import-graph walk: hook families independent except through `_hooklib`; `tools/*` ↔ `.claude/hooks/*` independent except through `_hooklib`, with a named `_load()`-per-file allowlist |
+| 29 | `python tools/test_no_slop.py --scope portability` — now also reads `.claude/hooks/**/*.py` and `tools/*.py` (code only, docstrings/comments stripped, `test_*.py` excluded) for the same dated-claim/this-repo/sibling-repo patterns already applied to skill, agent and command `.md` files |
 
-Objectives 11-13, 15-17, 19-20, 22, 24-27, 29 have no dedicated instrument
+Objectives 13, 15, 16, 17, 19, 20, 25, 27 have no dedicated instrument
 yet — see `docs/research/2026-08-20-notion-objectives-audit.md` for a
 qualitative first pass and what would make each one measurable, and
 `docs/specs/2026-08-21-qualitative-objective-metrics.md` for the design that
-closed 18, 22 and 24 (Cluster C of 4) and the plan for the remaining
-clusters.
+closed 18, 22, 24 (Cluster C) and 11, 12, 26, 29 (Cluster D), plus the plan
+for Clusters B and A.
 
 **Last full quantitative audit: 2026-08-22 — 5 green (1, 7, 8, 9, 10), 5 amber
 (2, 3, 4, 5, 6), 0 red**, against objectives 1-10 only — see
