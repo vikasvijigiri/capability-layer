@@ -1,5 +1,22 @@
 # Log
 
+## 2026-08-22 16:52
+
+Fixed `09-telemetry.py`'s `execution_level.actual`, which fed
+`_actual_execution_level()` raw session-cumulative counters against a
+genuinely per-turn `predicted` — could only drift toward `E5` on a long
+session regardless of real turn size (`predicted: E0, actual: E5`,
+observed live). Now diffs against the previous `telemetry.jsonl` row
+(bounded tail-read; the file is append-only, never truncated) and
+passes per-turn deltas. Independently red-greened by a `tester`
+subagent from scratch, not just accepted. Also fixed the docstring's
+own stale example command (`post-run` → `telemetry`, a rename leftover)
+and two unrelated stale `when_to_use` cross-references
+(`guide/how_to_create_skills.md`, `templates/Skills.md`). `PASS: 55
+check(s) green`. PR #32 → `main` (retargeted from a planned stack: PR
+#30 merged into `main` mid-session with its branch auto-deleted, so the
+stack base no longer existed).
+
 ## 2026-08-22 15:02
 
 Merged `when_to_use` into `description` across all 14 skills — the
