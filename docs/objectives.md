@@ -112,13 +112,20 @@ instruments; run them rather than quoting a remembered number.
 | 18 | `tools/test_entry_classifier.py`'s full-corpus route-presence check (`entry-small`/`entry-direct` both confirmed reachable) plus a fallback-safety check on `01-entry-classifier.py`'s `_control_or_sensitive_patterns()` |
 | 22 | `python tools/bench.py`'s `schema_coverage()` — `09-telemetry.py`'s own `unavailable` map against its `SPEC_FIELD_COUNT`, plus `chain.fingerprint` trace-completeness |
 | 24 | `python tools/bench.py`'s `local_repair_ratio()` — incident-deduplicated aggregate over `telemetry.jsonl`'s `retries.rung` history |
+| 19 | `python tools/test_idempotence.py` — install-twice byte-level tree delta, plus stateless decision-hook (`pre-edit`/`permission-security`/`pre-tool`) determinism across two identical firings |
+| 17 | `python tools/test_preservation_rate.py` — fraction of a fixture target's own pre-existing files that survive an install byte-identical |
+| 20 | `python tools/test_contract_surface.py` against `.claude/contracts/layer-contract.golden.json` — skill/hook/capability/project-checks surface plus a two-tier stable/unstable telemetry-field split |
 
-Objectives 11-13, 15-17, 19-20, 22, 24-27, 29 have no dedicated instrument
-yet — see `docs/research/2026-08-20-notion-objectives-audit.md` for a
-qualitative first pass and what would make each one measurable, and
-`docs/specs/2026-08-21-qualitative-objective-metrics.md` for the design that
-closed 18, 22 and 24 (Cluster C of 4) and the plan for the remaining
-clusters.
+Objectives 11, 12, 13, 15, 16, 25, 26, 27, 29 (Clusters A and D) have no
+dedicated instrument yet on this branch — see `docs/research/
+2026-08-20-notion-objectives-audit.md` for a qualitative first pass and
+what would make each one measurable, and `docs/specs/2026-08-21-
+qualitative-objective-metrics.md` for the design that closed 18, 22, 24
+(Cluster C) and 17, 19, 20 (Cluster B) here, plus the plan for Clusters A
+and D (D built independently on `feat/cluster-d-layer-self-grading`, not
+yet merged to this branch). (Cluster C's own closure edit left `22` and
+`24` in this line despite already having rows above — corrected here
+alongside the Cluster B removal.)
 
 **Last full quantitative audit: 2026-08-22 — 5 green (1, 7, 8, 9, 10), 5 amber
 (2, 3, 4, 5, 6), 0 red**, against objectives 1-10 only — see

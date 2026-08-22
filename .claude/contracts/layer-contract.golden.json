@@ -1,0 +1,79 @@
+{
+  "_note": "Frozen contract surface for objective 20 (backward-compatible where practical). Diffed by tools/test_contract_surface.py: a name here that is MISSING from the live tree is a removal/rename -- reported as breaking for every category except telemetry.unstable, which only warns. A name present live but absent here is an addition and is silent-safe. Update this file in the SAME commit as a deliberate, reviewed breaking change -- that is what makes the break visible in review instead of invisible in a diff. A field moves telemetry.unstable -> telemetry.stable only by a deliberate edit here, never automatically (cargo-semver-checks' unstable/nightly exclusion + per-lint warn downgrade, per the 2026-08-22 resolution in docs/specs/2026-08-21-qualitative-objective-metrics.md). Computed from the live tree 2026-08-22 by cluster-b-rerun-safety's Task 3.",
+  "skills": {
+    "names": [
+      "architecture",
+      "capability-layer-maintenance",
+      "code-review",
+      "data-analysis",
+      "debugging",
+      "documentation",
+      "implementation",
+      "refactoring",
+      "release-git",
+      "repository-navigation",
+      "research",
+      "security",
+      "task-analysis",
+      "testing"
+    ],
+    "frontmatter_keys": [
+      "allowed-tools",
+      "description",
+      "disable-model-invocation",
+      "effort",
+      "model",
+      "name"
+    ]
+  },
+  "hook_events": [
+    "PostToolUse",
+    "PreToolUse",
+    "SessionStart",
+    "Stop",
+    "UserPromptSubmit"
+  ],
+  "capabilities": [
+    "command_execution",
+    "delegation",
+    "explicit_confirmation",
+    "lifecycle_hooks",
+    "plan_approval",
+    "repository_read",
+    "repository_write",
+    "skill_discovery",
+    "web_research"
+  ],
+  "project_checks_keys": [
+    "audit",
+    "build",
+    "lint",
+    "max_files",
+    "smoke",
+    "test",
+    "test_map",
+    "timeout"
+  ],
+  "telemetry": {
+    "stable": [
+      "ts",
+      "run_scope",
+      "chain",
+      "tools_called",
+      "skills_loaded",
+      "task_type",
+      "context_read",
+      "agents_spawned",
+      "duplicate_rate",
+      "api_calls",
+      "turn_latency_seconds",
+      "human_interventions",
+      "unavailable"
+    ],
+    "unstable": [
+      "run_id",
+      "execution_level",
+      "retries"
+    ]
+  }
+}

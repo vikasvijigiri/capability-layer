@@ -4,6 +4,30 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Cluster B -- instruments for objectives 17, 19, 20
+- **Status:** Implemented, 4/4 tasks (`docs/plans/2026-08-22-cluster-b-rerun-safety.md`).
+  `python tools/run_checks.py --tier all --require-test`: `PASS: 58 check(s)
+  green` (up from 55). 3 new checks wired into `.claude/project-checks.json`
+  plus a new frozen golden (`.claude/contracts/layer-contract.golden.json`).
+  Real finding, not synthetic: `.claude/layer-manifest.json` is not
+  byte-stable across a second install -- SEED files (`ruff.toml`,
+  `mypy.ini`, `.github/workflows/checks.yml`, `CODEOWNERS`) drop out of
+  the manifest on a repeat run because `write_manifest()`'s owned-action
+  filter excludes `"preserve"`; found and named, not fixed (a behavior
+  change, out of scope for an instrumentation task). Not yet reviewed by
+  `code-review` or delivered.
+- **Goal:** give objectives 17 (non-destructive integration), 19
+  (idempotent and repeatable), and 20 (backward-compatible where
+  practical) real, re-runnable instruments -- the third of 4 clusters,
+  next per the spec's own build order (C done -> D done [separate
+  branch] -> **B** -> A). Resolves Cluster B's own objective-20
+  golden-surface marker on this branch (D's resolution of the same
+  marker lives on a separate, not-yet-merged branch).
+- **Out of Scope:** Cluster A; turning any new check into a gate;
+  re-grading objectives 1-10; objective 2's paid eval. Cluster D exists
+  independently on `feat/cluster-d-layer-self-grading`, not yet merged
+  to this branch.
+
 ### Cap the plan self-review loop at 2 iterations
 
 - **Status:** Closed 2026-08-22 (`docs/plans/2026-08-22-plan-review-iteration-cap.md`).
@@ -180,9 +204,11 @@
   Notion-spec objectives that currently have none, per the design spec's
   own decomposition (Cluster A: 13,15,16,25,27; B: 17,19,20; D: 11,12,26,29
   — each its own future unit).
-- **Out of Scope:** Clusters A, B, D; turning any new check into a gate; the
-  E0-E5 router and agent-catalogue decision record (separate candidate
-  units); re-grading objectives 1-10; objective 2's paid eval.
+- **Out of Scope:** Cluster A (B and D since done independently -- B on
+  this branch, D on `feat/cluster-d-layer-self-grading`, not yet merged
+  here); turning any new check into a gate; the E0-E5 router and
+  agent-catalogue decision record (separate candidate units); re-grading
+  objectives 1-10; objective 2's paid eval.
 
 ### Implement world-class SessionStart bootstrap scaffolding
 - **Status:** In Progress
