@@ -13,10 +13,9 @@ allowed-tools: Read Grep Glob Task Bash EnterPlanMode ExitPlanMode AskUserQuesti
 Owns the whole path from a named request to an approved plan: intake and
 state, a genuine-task check, framing, fetching what is missing, then
 decomposing. The deliverable is one plan document — not code, scaffolding,
-migrations, tests, or implementation edits. Built 2026-08-21 from the
-former `writing-plans` skill (Notion architecture merge), compressed —
-see `references/plan-format.md` for the templates this body used to
-inline.
+migrations, tests, or implementation edits. Built from the former
+`writing-plans` skill, compressed — see `references/plan-format.md` for
+the templates this body used to inline.
 
 **Maps to Notion §1's pre-execution pipeline**, so nothing here is a new
 concept, only a name: INTAKE+STATE is `tools/resume.py` (below); the TASK

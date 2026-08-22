@@ -10,13 +10,12 @@ allowed-tools: Read Grep Glob Bash
 
 # Data Analysis
 
-Formalizes what `docs/research/*.md` has done ad hoc since 2026-08-16: turn
-this layer's own real telemetry into a structured answer, grounded in
-numbers, not a remembered impression. Built 2026-08-21 (Notion architecture
-merge) from real, existing usage — not a stub for an unused Notion
-category. This repo ships no application code (`CLAUDE.md`), so the "data"
-here is always the layer's own operational record, never a downstream
-product's.
+Formalizes what `docs/research/*.md` has done ad hoc: turn this layer's own
+real telemetry into a structured answer, grounded in numbers, not a
+remembered impression. Built from real, existing usage — not a stub for an
+unused Notion category. This repo ships no application code (`CLAUDE.md`),
+so the "data" here is always the layer's own operational record, never a
+downstream product's.
 
 ## Sources, in order of cost (cheapest first)
 

@@ -10,11 +10,10 @@ allowed-tools: Read Grep Glob Bash Task AskUserQuestion
 
 # Release / Git
 
-Two procedures, merged 2026-08-21 from the former `delivering` and
-`releasing` skills (Notion architecture merge — both own "get reviewed work
-into the world," one for the repository, one for a running target). Same
-two-gate discipline throughout: nothing here pushes, merges, or deploys on
-an inferred yes.
+Two procedures, merged from the former `delivering` and `releasing`
+skills — both own "get reviewed work into the world," one for the
+repository, one for a running target. Same two-gate discipline throughout:
+nothing here pushes, merges, or deploys on an inferred yes.
 
 **Delivering** (below): prepare the reviewed change for safe repository
 integration — branch, PR, rebase, merge. Does not deploy.

@@ -10,10 +10,10 @@ allowed-tools: Read Grep Glob Bash
 
 # Architecture
 
-Two procedures, merged 2026-08-21 from the former `brainstormer` and
-`designer` skills (Notion architecture merge — both own "decide the shape
-before anyone builds it," one for approach, one for a user-facing surface).
-Same dispatcher, same handoff target, same HARD-GATE on interrupting anyone.
+Two procedures, merged from the former `brainstormer` and `designer`
+skills — both own "decide the shape before anyone builds it," one for
+approach, one for a user-facing surface. Same dispatcher, same handoff
+target, same HARD-GATE on interrupting anyone.
 
 **Options-comparison** (below, the default): turn an idea into a committed
 design spec, without interrupting anyone. Discover the problem space before

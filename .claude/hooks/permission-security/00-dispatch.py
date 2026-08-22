@@ -28,8 +28,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from _hooklib import deny, load_payload  # noqa: E402
 
-import importlib
-
 _MODULES = (
     "01-secret-scan",
     "02-branch-guard",

@@ -41,12 +41,13 @@ CORPUS = ROOT / "docs" / "evals" / "trigger-queries.json"
 # appear: the classifier is silent for every later stage by design, and asserting
 # that here would duplicate the OTHER_STAGE pass rather than check it.
 CLASS_OF = {
-    "writing-plans": "entry-unframed",
-    "brainstormer": "entry-open",
+    "task-analysis": "entry-unframed",
+    "architecture": "entry-open",
 }
 
-# `writing-plans` absorbed the framing skill on 2026-08-09, and that broke the
-# assumption this suite was built on: that a skill name is one entry shape.
+# `task-analysis` (formerly `writing-plans`) absorbed the framing skill, and
+# that broke the assumption this suite was built on: that a skill name is one
+# entry shape.
 #
 # It now owns two. "add a dark mode toggle" arrives unframed and the entry rule
 # is worth injecting; "break this down into steps" is already framed and enters
@@ -58,7 +59,15 @@ CLASS_OF = {
 # The alternative was a private list of framing-shaped queries in this file,
 # which is the drift this suite was written to avoid -- two labellings of one
 # corpus, one of them invisible to the harness that spends money on it.
-ENTRY_FIELD_STAGES = {"writing-plans"}
+#
+# `architecture` (formerly `brainstormer` + `designer`) has the identical
+# problem for the identical reason: one skill, two prior owners, two shapes.
+# `brainstormer`'s positives are `entry-open`; `designer`'s are silent --
+# surface design is off-chain and the surface skill's own description routes
+# it, matching this same file's `KNOWN_COLLISIONS` note above. The marker
+# word is per-stage (`"unframed"` vs `"open"`) because the two prior skills
+# used different words for "this is the CLASS_OF shape, not silent".
+ENTRY_FIELD_STAGES = {"task-analysis": "unframed", "architecture": "open"}
 
 # Queries the corpus labels for one stage that are textually indistinguishable
 # from another stage's, mapped to the resolution and the reason.
@@ -142,11 +151,12 @@ def main() -> int:
                 # A missing `entry` on a stage that owns two shapes is a hole in
                 # the corpus, not a default. Defaulting it would quietly assert
                 # whichever shape happened to be right for the last query added.
+                own_marker = ENTRY_FIELD_STAGES[stage]
                 marked = e.get("entry")
                 check(f"[{stage}] {q[:44]} declares its entry shape",
-                      marked in ("unframed", "silent"),
+                      marked in (own_marker, "silent"),
                       f"got {marked!r}; a stage owning two shapes must say which")
-                expect = want if marked == "unframed" else None
+                expect = want if marked == own_marker else None
                 check(f"[{marked}] {q[:52]}", got == expect, f"got {got!r}")
                 continue
             check(f"[{want}] {q[:58]}", got == want, f"got {got!r}")

@@ -1,8 +1,7 @@
 # Releasing procedure
 
-Merged from the former `releasing` skill (2026-08-21, Notion architecture
-merge). Get delivered work running in a real environment, with signals.
-Workflow stage 8.
+Merged from the former `releasing` skill. Get delivered work running in a
+real environment, with signals. Workflow stage 8.
 
 At the shipment gate, present the release candidate, smoke evidence, rollback,
 <!-- GATE 2: shipment approval. The chain has two; see .claude/workflow.md. -->

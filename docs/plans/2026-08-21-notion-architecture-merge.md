@@ -146,7 +146,7 @@ sequencing.
 - [x] Task 6 — Commands, workflows/, policies/
 - [x] Task 7 — Portability + payload regeneration
 - [x] Task 8 — Duplicate-call guard
-- [ ] Task 9 — Full verification + regression pass
+- [x] Task 9 — Full verification + regression pass
 - [ ] Task 10 — Record (knowledge-manager)
 
 ## Tasks

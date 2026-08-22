@@ -11,22 +11,21 @@ allowed-tools: Read Grep Glob Bash Task
 # Security
 
 Formalizes triggering this layer's existing, deterministic security
-machinery — built 2026-08-21 (Notion architecture merge) from real,
-existing usage (`tools/security_gate.py`, the `security-review` command,
-`code-review`'s security lens, the `security-reviewer` agent), not a stub.
-**This skill does not implement new security logic** — it is the trigger
-surface and the procedure for using what already exists correctly, in
-order.
+machinery — built from real, existing usage (`tools/security_gate.py`, the
+`security-review` command, `code-review`'s security lens, the
+`security-reviewer` agent), not a stub. **This skill does not implement new
+security logic** — it is the trigger surface and the procedure for using
+what already exists correctly, in order.
 
 ## The gate is a fact-checker, not a receipt
 
-`decisions/2026-08-02-gate-on-blast-radius.md` and `tools/security_gate.py`'s
-own docstring: every clause is a fact about the artefact, computable from
-two git revisions, never a record that someone reviewed it. A receipt that
-can be forged is worse than no receipt — this repository built and deleted
-that shape once (`permission-security/*`'s predecessor
-`03-review-gate.py`). Do not add a "security reviewed" flag anywhere; run
-the gate instead.
+The decisions record backing this repository's blast-radius gating and
+`tools/security_gate.py`'s own docstring agree: every clause is a fact
+about the artefact, computable from two git revisions, never a record that
+someone reviewed it. A receipt that can be forged is worse than no
+receipt — this repository built and deleted that shape once
+(`permission-security/*`'s predecessor `03-review-gate.py`). Do not add a
+"security reviewed" flag anywhere; run the gate instead.
 
 ## Procedure
 

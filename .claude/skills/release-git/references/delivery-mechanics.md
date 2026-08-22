@@ -1,8 +1,8 @@
 # Delivery mechanics — stacked PRs, recovery, red flags
 
-Split out of the former `delivering` skill's body (2026-08-21, Notion
-architecture merge) to keep `SKILL.md` scannable. Read this when a stack
-exists, a conflict needs recovery, or before asserting delivery readiness.
+Split out of the former `delivering` skill's body to keep `SKILL.md`
+scannable. Read this when a stack exists, a conflict needs recovery, or
+before asserting delivery readiness.
 
 ## Stacked PRs — the failure table
 

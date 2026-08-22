@@ -1,9 +1,9 @@
 # Design contract procedure
 
-Merged from the former `designer` skill (2026-08-21, Notion-architecture
-merge). Read this file when the spec covers a screen, a flow, or anything a
-person looks at — product feeling, voice, colour/type/spacing tokens,
-layout, components, motion, responsive states, and the accessibility floor.
+Merged from the former `designer` skill. Read this file when the spec
+covers a screen, a flow, or anything a person looks at — product feeling,
+voice, colour/type/spacing tokens, layout, components, motion, responsive
+states, and the accessibility floor.
 
 Create or audit the design contract before implementation. Do not turn
 design decisions into untracked chat context; write the contract or a dated

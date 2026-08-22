@@ -406,21 +406,21 @@ check("rejections accumulate rather than overwrite", len(rs.rejections(two)) == 
 # approved, which is the one failure this mechanism exists to prevent. Nothing
 # else binds the two, so this does.
 
-_plans = (ROOT / ".claude/skills/writing-plans/SKILL.md").read_text(encoding="utf-8")
-_brain = (ROOT / ".claude/skills/brainstormer/SKILL.md").read_text(encoding="utf-8")
+_plans = (ROOT / ".claude/skills/task-analysis/SKILL.md").read_text(encoding="utf-8")
+_brain = (ROOT / ".claude/skills/architecture/SKILL.md").read_text(encoding="utf-8")
 
-check("writing-plans states the clarification marker verbatim",
+check("task-analysis states the clarification marker verbatim",
       rs.CLARIFICATION_MARKER in _plans, rs.CLARIFICATION_MARKER)
-check("writing-plans states the approval marker verbatim",
+check("task-analysis states the approval marker verbatim",
       rs.APPROVAL_MARKER in _plans, rs.APPROVAL_MARKER)
-check("brainstormer routes non-directional questions to a marker",
+check("architecture routes non-directional questions to a marker",
       rs.CLARIFICATION_MARKER in _brain)
 # The property is that every marker is resolved TOGETHER, at the gate -- not
 # one interruption per question as they arise, which is what turned two gates
 # into nine. The tool that asks changed (`AskUserQuestion` -> `ExitPlanMode`,
 # whose contract is precisely a plan approval); the property did not, so the
 # assertion follows the property rather than the tool name.
-check("writing-plans batches the markers into one approval at the gate",
+check("task-analysis batches the markers into one approval at the gate",
       "ExitPlanMode" in _plans and "one batch, at the gate" in _plans.lower())
 
 

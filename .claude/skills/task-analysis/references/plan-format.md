@@ -1,9 +1,8 @@
 # Plan document format — the exact templates
 
-Split out of `task-analysis/SKILL.md`'s Stage C (2026-08-21, Notion
-architecture merge, compression pass) so the main body states the
-procedure once and points here for the literal shape to copy. Read this at
-C3/C4, not before.
+Split out of `task-analysis/SKILL.md`'s Stage C, a compression pass, so the
+main body states the procedure once and points here for the literal shape
+to copy. Read this at C3/C4, not before.
 
 ## The Progress block (C3)
 

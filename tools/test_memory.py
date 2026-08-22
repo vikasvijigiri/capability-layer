@@ -159,8 +159,8 @@ else:
           f"stale={memory.stale(real, ROOT)[:1]} counts={memory.count_rot(ROOT)[:1]}")
 
 # The one that proves the wiring, not just the tool: planning consults it.
-plans_skill = (ROOT / ".claude/skills/writing-plans/SKILL.md").read_text(encoding="utf-8")
-check("`writing-plans` queries memory before freezing the file map",
+plans_skill = (ROOT / ".claude/skills/task-analysis/SKILL.md").read_text(encoding="utf-8")
+check("`task-analysis` queries memory before freezing the file map",
       "tools/memory.py" in plans_skill,
       "written-but-never-read is the gap this closes")
 check("...and is told to say so when nothing is known",

@@ -96,18 +96,18 @@ instruments; run them rather than quoting a remembered number.
 | # | Instrument |
 |---|---|
 | 2, 3 | `python tools/bench.py` — per-session and per-turn character costs |
-| 4, 5 | `python tools/bench.py`, from the counters in `post-tool/01-context-cost.py`, `post-tool/02-skill-cost.py` and `post-tool/06-tool-cost.py` (total tool calls, every tool name) |
-| 6 | `python tools/bench.py` tier timings; `python tools/parallel_groups.py <plan>`; `09-telemetry.py`'s `turn_latency_seconds`, from `user-prompt/02-turn-timer.py` |
+| 4, 5 | `python tools/bench.py`, from the counters in `context-budget/01-context-cost.py`, `context-budget/02-skill-cost.py` and `post-tool/06-tool-cost.py` (total tool calls, every tool name) |
+| 6 | `python tools/bench.py` tier timings; `python tools/parallel_groups.py <plan>`; `09-telemetry.py`'s `turn_latency_seconds`, from `prompt-intake/02-turn-timer.py` |
 | 7 | `model:` frontmatter across `.claude/skills/` and `.claude/agents/` |
-| 8 | `.claude/hooks/user-prompt/01-entry-classifier.py` replayed over `docs/evals/trigger-queries.json` |
+| 8 | `.claude/hooks/prompt-intake/01-entry-classifier.py` replayed over `docs/evals/trigger-queries.json` |
 | 9 | `python tools/scope.py`; `_hooklib.FAILURE_BUDGETS` |
 | 10 | `python tools/run_checks.py --tier all --require-test` |
 | 1 | `python tools/test_process_router.py` — the two-gate ownership assertions; `09-telemetry.py`'s `human_interventions` field, from `post-tool/07-human-cost.py` (live rate, `AskUserQuestion`/`ExitPlanMode` counts) |
 | 9, 10 | `09-telemetry.py`'s `retries` field, surfacing `tools/resume.py`'s `attempts`/`max_attempts`/`failure_class` and `tools/loop.py`'s `rung()` verdict per turn |
 | 14 | `python tools/test_install.py`, `python tools/test_package.py` — fresh install into a Python and Node target |
-| 21 | `python tools/security_gate.py`, `python tools/deps.py` (licence gate), `pre-commit/*` hooks |
-| 23 | `verifying-work`'s HARD-GATE (no completion claim without fresh, quoted evidence) |
-| 28 | `[NEEDS CLARIFICATION]` markers in `writing-plans`; `EnterPlanMode`/`ExitPlanMode` gate |
+| 21 | `python tools/security_gate.py`, `python tools/deps.py` (licence gate), `permission-security/*` hooks |
+| 23 | `testing`'s HARD-GATE (no completion claim without fresh, quoted evidence) |
+| 28 | `[NEEDS CLARIFICATION]` markers in `task-analysis`; `EnterPlanMode`/`ExitPlanMode` gate |
 | 30 | `tools/bench.py --save` baselines; `decisions/` records (e.g. `budget.ELAPSED_CEILING_HOURS` deliberately not refit from one noisy measurement) |
 | 18 | `tools/test_entry_classifier.py`'s full-corpus route-presence check (`entry-small`/`entry-direct` both confirmed reachable) plus a fallback-safety check on `01-entry-classifier.py`'s `_control_or_sensitive_patterns()` |
 | 22 | `python tools/bench.py`'s `schema_coverage()` — `09-telemetry.py`'s own `unavailable` map against its `SPEC_FIELD_COUNT`, plus `chain.fingerprint` trace-completeness |

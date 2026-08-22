@@ -13,9 +13,9 @@ the same name replaces it while keeping its own frontmatter. Exploration is the
 highest-volume, lowest-judgement work in the chain, so it runs on `haiku`.
 
 Same reasoning the former `source-digger` used for the same choice: read a
-lot, decide nothing. `source-digger` merged into `researcher` on 2026-08-21
-and moved to `sonnet` there — a different tradeoff for a merged agent that
-also does unit-mapping work needing more reasoning — but the "high-volume,
+lot, decide nothing. `source-digger` merged into `researcher`, which moved
+to `sonnet` there — a different tradeoff for a merged agent that also does
+unit-mapping work needing more reasoning — but the "high-volume,
 low-judgement work runs cheap" principle this file follows is unchanged.
 
 ## What you return
