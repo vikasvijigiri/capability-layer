@@ -24,7 +24,7 @@
 - **Done Checks:** all 43 individual suites green standalone, not just
   the aggregate; regression-checked against objectives 14, 21, 28 (each
   still passes its own named instrument); `execution_level` reports a real
-  `{predicted, actual}` pair (E4/E4 observed live) instead of the old
+  `{predicted, actual}` pair (E5/E5 observed live) instead of the old
   hardcoded string; PreToolUse processes for one Bash call 5 -> 2; SKILL.md
   total 157,180 -> 143,125 bytes despite two new real-content skills.
 - **Out of Scope:** re-grading all 30 Notion objectives from scratch; a

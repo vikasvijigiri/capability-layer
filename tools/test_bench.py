@@ -160,6 +160,32 @@ check("local_repair_ratio() falls back to (None, {}) when telemetry.jsonl "
       "does not exist",
       (ratio_none, counts_none) == (None, {}), str((ratio_none, counts_none)))
 
+# --- _actual_execution_level() (Notion §3, the "actual" half of the pair) ----
+#
+# A membership-only check ("returns some E0-E5 label") is a tautology --
+# every branch returns one of exactly six literals by construction, so it
+# cannot catch a mapping bug. This is the specific regression case: agent
+# fan-out > 4 must map to the TOP of the scale (E5), not below a smaller
+# fan-out (E4) -- code-review found these swapped in the first draft.
+_ael = telemetry_mod._actual_execution_level
+check("_actual_execution_level: no skills_loaded producer -> None, not a guess",
+      _ael(None, {"calls": 0}, 0) is None)
+check("_actual_execution_level: no calls at all -> E0",
+      _ael({"calls": 0}, {"calls": 0}, 0) == "E0")
+check("_actual_execution_level: tool calls but no skill/agent -> E1",
+      _ael({"calls": 0}, {"calls": 0}, 3) == "E1")
+check("_actual_execution_level: a skill fired, few tool calls -> E1",
+      _ael({"calls": 1}, {"calls": 0}, 1) == "E1")
+check("_actual_execution_level: a skill fired, several tool calls -> E2",
+      _ael({"calls": 1}, {"calls": 0}, 5) == "E2")
+check("_actual_execution_level: exactly one agent spawned -> E3",
+      _ael({"calls": 1}, {"calls": 1}, 5) == "E3")
+check("_actual_execution_level: 2-4 agents spawned is BELOW full fan-out",
+      _ael({"calls": 1}, {"calls": 3}, 5) == "E4")
+check("_actual_execution_level: >4 agents spawned is the TOP of the scale, "
+      "not E4 (the actual bug: this was inverted with the E4 case above)",
+      _ael({"calls": 1}, {"calls": 6}, 5) == "E5")
+
 if failures:
     print(f"\n{len(failures)} failed: " + "; ".join(failures))
     raise SystemExit(1)

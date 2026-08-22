@@ -221,9 +221,9 @@ def _actual_execution_level(skills_loaded: dict | None, agent_totals: dict,
     agent_calls = agent_totals.get("calls", 0)
     skill_calls = skills_loaded.get("calls", 0)
     if agent_calls > 4:
-        return "E4"
-    if agent_calls >= 2:
         return "E5"
+    if agent_calls >= 2:
+        return "E4"
     if agent_calls == 1:
         return "E3"
     if skill_calls >= 1:

@@ -179,11 +179,19 @@ _KNOWN_COLLISIONS = {
     # `_hooklib.FAILURE_CLASSES`' own failure-kind label ("this failure is
     # security-class"), mirrored locally as a dict key -- not the `security`
     # skill.
-    ("06-artifact-autocommit.py", "security"),
+    ("stop-finalization/06-artifact-autocommit.py", "security"),
     # A HARD_STAGE regex PATTERN naming the `permission-security` hook
     # family (matched against a prompt, never printed) -- the substring
     # collision is with the family name, not the `security` skill.
-    ("01-entry-classifier.py", "security"),
+    ("prompt-intake/01-entry-classifier.py", "security"),
+    # The `[permission-security]` prefix on the fail-open visibility notice
+    # (code-review found the prior silent-fail-open a real defect; this
+    # print is the fix) names the hook's own family in its own log line,
+    # not the `security` skill. Two files share the basename `00-dispatch.py`
+    # (this one and stop-finalization's), so the key carries the parent
+    # directory too -- a bare-basename entry here would also blind the check
+    # to a real future violation in stop-finalization/00-dispatch.py.
+    ("permission-security/00-dispatch.py", "security"),
 }
 
 
@@ -219,7 +227,8 @@ for _path in sorted(HOOKS.rglob("*.py")):
     emitted = [n.value for n in ast.walk(tree)
                if isinstance(n, ast.Constant) and isinstance(n.value, str)
                and n.value not in docs and len(n.value) < 4000]
-    allowed = {s for f, s in _KNOWN_COLLISIONS if f == _path.name}
+    _rel = f"{_path.parent.name}/{_path.name}"
+    allowed = {s for f, s in _KNOWN_COLLISIONS if f == _rel}
     named = sorted({s for s in SKILL_NAMES if s not in allowed
                     and any(s in e for e in emitted)})
     check(f"{_path.parent.name}/{_path.name} names no skill in what it emits",

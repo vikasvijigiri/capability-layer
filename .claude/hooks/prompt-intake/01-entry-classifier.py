@@ -447,7 +447,7 @@ def estimate_execution_level(key: str | None, text: str) -> str:
         # this repo's own scheduler (tools/parallel_groups.py) starts finding
         # real concurrency in practice -- an approximation, not a call into
         # that scheduler, to keep this hook cheap and dependency-free.
-        return "E4" if plan_tasks > 4 else "E5"
+        return "E5" if plan_tasks > 4 else "E4"
     if plan_tasks == 1:
         return "E3"
     if score < 0.15:

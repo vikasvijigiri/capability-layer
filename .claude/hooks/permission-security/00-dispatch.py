@@ -21,6 +21,7 @@ dispatcher denies once, with every reason that fired, not just the first.
 from __future__ import annotations
 
 import sys
+import traceback
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -58,6 +59,18 @@ def main() -> int:
             # One check's own bug must not silently allow through, but must
             # also not wedge every shell call in the session -- fail open on
             # THIS check only, matching each module's own standalone posture.
+            # Fail open must still be VISIBLE: the 4 separate hooks this
+            # replaced each surfaced a broken check as a nonzero exit and a
+            # traceback on stderr (docs/harness-hook-bridge.md's "hook-error
+            # notice surfaced to the operator"); silently swallowing the
+            # exception here would make a broken secret-scan indistinguishable
+            # from a clean one. This does not deny -- only the check's own
+            # `reason` return value can do that -- it only makes the failure
+            # audible.
+            print(f"[permission-security] {name}.py raised and could not run "
+                  f"this call's check -- fail-open, not a denial, but the "
+                  f"operator should see this:\n{traceback.format_exc()}",
+                  file=sys.stderr)
             reason = None
         if reason:
             reasons.append(reason)

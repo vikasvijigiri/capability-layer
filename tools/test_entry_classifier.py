@@ -385,6 +385,42 @@ def main() -> int:
           mod.estimate_execution_level(None, "what does this function do") == "E0")
     check("E0: a direct-answer question is E0",
           mod.estimate_execution_level("entry-direct", "where is the config file") == "E0")
+
+    # E1-E5 each depend on real repo state (changed_paths, the active plan's
+    # task count) that this test cannot control by picking a fixture prompt --
+    # so the underlying signals are monkeypatched instead, per level, and
+    # restored after. A membership-only check here ("returns some valid
+    # label") is a tautology: every branch of the function returns one of
+    # exactly six literals by construction, so it cannot catch a mapping bug
+    # -- which is exactly the shape of the real bug this exposed (E4/E5 was
+    # inverted: `plan_tasks > 4` returned the LOWER level).
+    _orig_changed_paths = mod.changed_paths
+    _orig_plan_tasks = mod._active_plan_task_count
+    try:
+        mod.changed_paths = lambda root=None: []
+        mod._active_plan_task_count = lambda: 0
+        check("E1: no plan, no changed files, no evidence signal -- score 0",
+              mod.estimate_execution_level("entry-small", "add a small feature") == "E1")
+        check("E2: no plan, no changed files, evidence signal alone (0.20) "
+              "clears the E1 floor",
+              mod.estimate_execution_level("entry-open", "what are our options") == "E2")
+
+        mod._active_plan_task_count = lambda: 1
+        check("E3: a one-task plan, regardless of other signals",
+              mod.estimate_execution_level("entry-unframed", "add X") == "E3")
+
+        mod._active_plan_task_count = lambda: 3
+        check("E4: a 2-4 task plan chain is BELOW full-team scale",
+              mod.estimate_execution_level("entry-unframed", "add X") == "E4")
+
+        mod._active_plan_task_count = lambda: 6
+        check("E5: a >4-task plan chain is the top of the scale, not E4 "
+              "(the actual bug: this was inverted with the E4 case above)",
+              mod.estimate_execution_level("entry-unframed", "add X") == "E5")
+    finally:
+        mod.changed_paths = _orig_changed_paths
+        mod._active_plan_task_count = _orig_plan_tasks
+
     _levels_seen = {
         mod.estimate_execution_level(k, "add a small feature")
         for k in ("entry-small", "entry-unframed", "entry-open", None, "entry-direct")

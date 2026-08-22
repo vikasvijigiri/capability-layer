@@ -81,7 +81,7 @@ replacing the hardcoded apology string this section quotes above. See
 `decisions/2026-08-21-notion-architecture-merge.md`'s "The E0-E5
 execution-level router" paragraph (under `## Why`) for the weighting and
 grounding, and `TASK.md`'s "Merge the layer into the Notion..." entry for
-the live confirmation (E4/E4 observed).
+the live confirmation (E5/E5 observed).
 
 ### Gap B — No deterministic context-budget hook (§7, §2.1)
 
