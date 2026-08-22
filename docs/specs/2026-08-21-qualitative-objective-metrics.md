@@ -202,7 +202,19 @@ Accuracy against labels is objective 8's instrument and is not duplicated here.
 
 ---
 
-## Cluster D — Layer self-grading (11, 12, 26, 29)
+## Cluster D — Layer self-grading (11, 12, 26, 29) — Closed 2026-08-22
+
+Built in `docs/plans/2026-08-22-cluster-d-layer-self-grading.md`:
+`tools/test_hook_conformance.py` (12), `tools/test_import_independence.py`
+(26), `tools/test_no_slop.py --scope portability` extended to `.py` logic
+files (29), `tools/test_instrumented_surface.py` (11) — plus
+`tools/test_context_cost.py` (already existed, added the same day this
+spec's own #11 finding named it, but was unwired until this unit) wired into
+`.claude/project-checks.json`'s gating `test` array. See that plan's
+Progress block for the concrete, real (not synthetic) findings each
+instrument produced when actually run, including a second unwired-coverage
+gap (`tools/test_smoke.py`) the corrected objective-11 instrument surfaced
+beyond the one this section already named.
 
 Shared mechanism: static parse of this layer's own Python and JSON; each lands
 as a `tools/test_*.py` in `project-checks.json`'s `test` list.
@@ -388,13 +400,20 @@ Source: https://github.com/obi1kenobi/cargo-semver-checks
 audit graded **Unmeasured** (not even Amber): "No versioning or
 compatibility-testing convention observed for the layer's own contract surface."
 
-[NEEDS CLARIFICATION: what exactly belongs in the frozen contract surface?
-Skill names + frontmatter keys, hook event registrations, `capabilities.json`
-capability names and `project-checks.json` keys are clearly in. Telemetry field
-names are the real question — three were added this week alone, so freezing them
-either makes routine additive work noisy (each needs a golden update, which is
-arguably correct) or leaves the most actively-changing contract unguarded.
-Include telemetry fields, or exclude them and say why?]
+**Resolved 2026-08-22** (`docs/research/2026-08-22-cluster-d-b-grounding-refresh.md`):
+include telemetry fields in the frozen golden, in an explicit two-tier
+split — `stable` (removal or rename fails the check) and `unstable` (free
+addition; removal or rename only warns, never fails). This is the direct
+transplant of a verified mechanism, not an invented tier: `cargo-semver-checks`
+excludes features literally named `unstable`/`nightly`/etc. from
+breaking-change detection by default, and separately supports downgrading
+individual lints to `warn` via `[package.metadata.cargo-semver-checks.lints]`
+— tracked and visible, never silently unguarded. A field promotes
+`unstable` → `stable` only by a deliberate, reviewed edit to the golden
+file, never automatically, preserving the "additive change is visible in
+review" property the whole golden-diff mechanism exists for. Cluster B
+itself (17, 19, 20) is not built by this resolution — only the design
+question is answered, ahead of that cluster's own implementation unit.
 
 ---
 

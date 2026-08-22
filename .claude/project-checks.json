@@ -51,7 +51,11 @@
     "python tools/test_budget.py",
     "python tools/test_release_candidate.py",
     "python tools/test_security_gate.py",
-    "python tools/test_doc_entries.py"
+    "python tools/test_doc_entries.py",
+    "python tools/test_context_cost.py",
+    "python tools/test_hook_conformance.py",
+    "python tools/test_import_independence.py",
+    "python tools/test_instrumented_surface.py"
   ],
   "_why_test": "Every executable suite in the repository runs as the test tier, so `--require-test` distinguishes real evidence from a disabled check. No count is stated here on purpose -- the last one said eleven while there were seventeen, and a number nothing enforces is a number that rots.",
   "test_map": {
