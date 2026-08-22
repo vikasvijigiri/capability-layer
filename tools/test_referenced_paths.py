@@ -45,7 +45,14 @@ HOOKS_DIR = ROOT / ".claude" / "hooks"
 # `AGENTS.md` joins it for the same reason: it is the contract every non-Claude
 # host reads, so a stale claim there is wrong for every harness at once.
 SOURCES = [
-    *(ROOT / ".claude").rglob("*.md"),
+    # `.claude/worktrees/` is gitignored -- a parallel-dispatch agent's own
+    # isolated checkout, not this repo's prose. Its LOG.md/README.md/etc. are
+    # a stale snapshot from whenever the worktree was created and will always
+    # disagree with live counts; scanning them was drift-detection noise, not
+    # a real finding. Confirmed live: it produced 554 false failures while
+    # two such worktrees were mid-build (2026-08-22).
+    *(p for p in (ROOT / ".claude").rglob("*.md")
+      if "worktrees" not in p.relative_to(ROOT / ".claude").parts),
     ROOT / "CLAUDE.md",
     ROOT / "README.md",
     ROOT / "AGENTS.md",
@@ -344,7 +351,7 @@ doc_sources = list(SOURCES) + [
     p for p in sorted((ROOT / "tools").glob("*.py"))
 ] + [
     p for p in sorted((ROOT / ".claude").rglob("*.py"))
-    if "__pycache__" not in p.parts
+    if "__pycache__" not in p.parts and "worktrees" not in p.parts
 ]
 
 doc_failures: list[str] = []
