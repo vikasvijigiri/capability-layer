@@ -193,7 +193,8 @@
   (`tools/bench.py`, `.claude/hooks/session-init/02-bootstrap-docs.py`) and
   surfaced one more still-open gap (`tools/test_smoke.py`, also unwired).
   Cluster B's objective-20 marker resolved with fresh research (not built).
-  Not yet reviewed by `code-review`/`reviewer` or delivered.
+  Reviewed PASS by `reviewer` (mode: spec) — all 7 tasks match the plan.
+  Not yet delivered (no PR opened).
 - **Goal:** give objectives 11 (world-class engineering), 12 (production-
   grade), 26 (low-coupling), and 29 (no hardcoded project truth) real,
   re-runnable instruments — the second of 4 clusters, next per the spec's

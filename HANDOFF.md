@@ -14,29 +14,46 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**PR #30 and PR #31 are both merged into `main`** (confirmed via `gh pr
-view 30`) — the skill-metadata-duplication unit and the pre-existing
-post-merge dedupe sweep are both live. `chore/dedupe-layer-post-merge`
-and `trim-skill-metadata-duplication` were both auto-deleted on GitHub
-after merge; only their content in `main` is current, don't branch from
-either name again.
+**PRs #30, #31, #32 and #33 are all merged into `main`** (confirmed via
+`git log --oneline`: `5d15067` merges #33, `09b1b79` merges #32) — the
+telemetry per-turn execution-level fix and the run_id/VOLATILE-cd-prefix
+fix are both live. Their branches are gone; don't branch from either name
+again.
 
-**PR #32 open now, awaiting human merge decision: `telemetry-per-turn-
-execution-level` → `main`.** Fixes `09-telemetry.py`'s
-`execution_level.actual`, which fed the session-cumulative counters
-into a comparison meant to be per-turn (`predicted: E0, actual: E5`
-observed live, stuck). Now diffs against the previous `telemetry.jsonl`
-row. Independently red-greened by a `tester` subagent from scratch (not
-just accepted), swept clean, reviewed `passed: true`. Plan
-`docs/plans/2026-08-22-telemetry-per-turn-execution-level.md`. This was
-1 of 5 items from a "make this layer world-class" gap list found this
-session (`git log`/`LOG.md` for the grounded-verdict evidence); the
-other 4 — telemetry schema coverage at 43%, a full re-audit of
-objectives 1-10 (none since 2026-08-16), a duplicate-call-rate
-investigation (~9%, root cause unknown), — are each their own
-not-yet-started follow-up, scoped in this session's conversation but
-not written down as plans. `python tools/run_checks.py --tier all
---require-test`: `PASS: 55 check(s) green`.
+**Cluster D (objectives 11, 12, 26, 29) is implemented and reviewed, not
+yet delivered.** Branch `feat/cluster-d-layer-self-grading`, commit
+`4fc5420`, plan `docs/plans/2026-08-22-cluster-d-layer-self-grading.md`
+(7/7 tasks). Gives world-class-engineering, production-grade,
+low-coupling, and no-hardcoded-project-truth their first real instruments:
+`tools/test_hook_conformance.py`, `tools/test_import_independence.py`,
+`tools/test_instrumented_surface.py`, plus extending
+`tools/test_no_slop.py --scope portability` to `.py` logic files and
+wiring the pre-existing `tools/test_context_cost.py` into the gate.
+`python tools/run_checks.py --tier all --require-test`: `PASS: 59
+check(s) green` (up from 55), re-confirmed fresh twice. Independently
+reviewed by a `reviewer` (mode: spec) subagent — verdict PASS, all 7
+tasks match the plan, every recorded deviation checked out against the
+diff. **Next step: open a PR via `release-git` when the user wants to
+ship it** — nothing has been pushed.
+
+Two real findings worth knowing before touching this area again:
+`tools/test_smoke.py` has real passing coverage but, like
+`test_context_cost.py` before this unit, is still absent from
+`.claude/project-checks.json`'s gating `test` array — a named, open gap,
+not fixed here (out of this unit's declared scope). And the portability
+check's three regexes (dated claim / this-repo possessive / sibling-repo
+name) target narrative provenance only — they do **not** catch
+`tools/resume.py:61`'s `BRANCH_PREFIX = "feat/"` bug (see Pending below),
+a structurally different violation shape objective 29 also names but no
+instrument covers yet.
+
+Cluster B's objective-20 marker (frozen contract-surface golden: include
+telemetry fields or not) is resolved with fresh research — include them,
+two-tier (`stable`/`unstable`), citing `cargo-semver-checks`'s verified
+mechanism — but Cluster B itself (objectives 17, 19, 20) is not built.
+Clusters A (13, 15, 16, 25, 27) and B are the remaining follow-on units,
+per `docs/specs/2026-08-21-qualitative-objective-metrics.md`'s own
+recommended order (C done, D done → B → A).
 
 **The Notion architecture-merge unit previously tracked here is done** —
 merged via PR #28 (see `git log`); this section previously described it
