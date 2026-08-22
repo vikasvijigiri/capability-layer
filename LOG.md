@@ -1,5 +1,24 @@
 # Log
 
+## 2026-08-22 20:10
+
+Built Cluster A — instruments for objectives 15, 16, 25, 27, per
+`docs/specs/2026-08-21-qualitative-objective-metrics.md`. One new file,
+`tools/test_target_matrix.py`, over one shared fixture corpus (5 stages +
+1 Go-layout stack) generated at test time, never checked in — preserves
+the objective-14 payload-size win. Objective 13 needed no new instrument
+(already Green). The required seeded-violation proof caught a real bug:
+the objective-27 check compared a fixture command's stdout before/after
+install, and a missing file made two EMPTY strings compare equal, passing
+vacuously; fixed to also assert exit code and a known literal output.
+Naive design ran the real fast tier (mypy+ruff) against all 4 Python
+fixtures at ~3.15s each; rescoped to one representative stage, cutting the
+fast-tier addition from ~15s to a measured +4.7s (39.6s → 44.3s). A
+pre-existing flake in `test_project_checks.py`'s concurrency probe
+surfaced once under the added load, clean on re-run — not a regression.
+`PASS: 56 check(s) green`. See
+`docs/plans/2026-08-22-cluster-a-target-matrix.md`.
+
 ## 2026-08-22 16:52
 
 Fixed `09-telemetry.py`'s `execution_level.actual`, which fed

@@ -51,7 +51,8 @@
     "python tools/test_budget.py",
     "python tools/test_release_candidate.py",
     "python tools/test_security_gate.py",
-    "python tools/test_doc_entries.py"
+    "python tools/test_doc_entries.py",
+    "python tools/test_target_matrix.py"
   ],
   "_why_test": "Every executable suite in the repository runs as the test tier, so `--require-test` distinguishes real evidence from a disabled check. No count is stated here on purpose -- the last one said eleven while there were seventeen, and a number nothing enforces is a number that rots.",
   "test_map": {
@@ -95,7 +96,8 @@
     "ISSUES.md": "python tools/test_doc_entries.py",
     "tools/test_doc_entries.py": "python tools/test_doc_entries.py",
     ".claude/install.py": "python tools/test_install.py",
-    "tools/conftest.py": "python tools/test_install.py"
+    "tools/conftest.py": "python tools/test_install.py",
+    "tools/test_target_matrix.py": "python tools/test_target_matrix.py"
   },
   "_why_test_map": "Read by `run_checks.py --scoped` to narrow the test set on a change `tools/scope.py` calls `small`. It is a coverage CLAIM and nothing proves its judgement -- `test_process_router.py` asserts its shape (every command is a real registered suite, every key is a plausible path) but cannot assert that the mapped suite actually covers the mapped file. A wrongly-mapped path makes a small change fast and under-checked, and that failure is silent. An unmapped code path escalates to the full tier rather than running nothing, so the gaps fail safe; the wrong entries do not.",
   "_why_typecheck_absent": "Absent, not false: detection finds mypy.ini and runs it. It was disabled on the assumption an unannotated codebase would drown in findings -- measured instead, it was six errors across nineteen files, all one pattern, all real. A fresh clone without mypy installed skips the check with a note rather than failing.",
