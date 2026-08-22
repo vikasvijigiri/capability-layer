@@ -1,7 +1,6 @@
 ---
 name: release-git
-description: Land reviewed work in the repository, then get it running live. Covers branch, PR, rebase, merge, deploy, smoke check, SLOs, and rollback, with signals. Never pushes, merges, or deploys without explicit human approval. Triggers include "open a PR", "push this up", "merge it", "ship it", "resolve these conflicts", "deploy this", "release this", "go live", "roll it back", "add SLOs", "is this observable". Use this whenever reviewed work must reach the repository or a running target. Do NOT use to review the code (code-review), diagnose a failing check (debugging), or prove the change meets the brief (testing).
-when_to_use: Trigger when the user says open a PR, push this up, merge it, land this, ship it, rebase onto main, resolve these conflicts, deploy this, release this, cut a release, go live, roll it back, add SLOs, or is this observable.
+description: Land reviewed work in the repository, then get it running live. Covers branch, PR, rebase, merge, deploy, smoke check, SLOs, and rollback, with signals. Never pushes, merges, or deploys without explicit human approval. Triggers include "open a PR", "push this up", "merge it", "ship it", "resolve these conflicts", "deploy this", "go live", "roll it back", or "is this observable". Use this whenever reviewed work must reach the repository or a running target. Do NOT use to review the code (code-review), diagnose a failing check (debugging), or prove the change meets the brief (testing).
 effort: high
 model: sonnet
 disable-model-invocation: false

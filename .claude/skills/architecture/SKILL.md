@@ -1,7 +1,6 @@
 ---
 name: architecture
-description: Generate and compare genuinely different approaches, then choose one. Also decides a user-facing surface's visual rules, writing DESIGN.md. Covers architecture, build versus buy, framework choice, rollout strategy, and any screen a person looks at. Triggers include "any ideas", "let us brainstorm", "what are our options", "should I use X or Y", "compare these two designs", "I am stuck", "design this screen", "what should this look like", "make this look better", "set up a design system". Use this whenever the approach is open or a surface has no design contract. Do NOT use once a design exists, when scope is vague (task-analysis), or to implement the choice.
-when_to_use: Trigger when the user says any ideas, let us brainstorm, what are our options, how should we approach this, is there a better way, should I use X or Y, compare these two designs, I am stuck, design this screen, what should this look like, make this look better, set up a design system, pick the colors, or improve the UX.
+description: Generate and compare genuinely different approaches, then choose one. Also sets a user-facing surface's visual rules in DESIGN.md. Covers architecture, build vs buy, framework choice, rollout strategy, any screen a person looks at. Triggers include "any ideas", "let us brainstorm", "what are our options", "how should we approach this", "should I use X or Y", "compare these designs", "I am stuck", "design this screen", "pick the colors", or "improve the UX". Use this whenever the approach is open or a surface has no design contract. Do NOT use once a design exists, when scope is vague (task-analysis), or to implement the choice.
 effort: high
 model: opus
 disable-model-invocation: false

@@ -1,8 +1,6 @@
 ---
 name: documentation
-description: Update the durable project docs when they stop matching reality. Owns README, TASK, MEMORY, HANDOFF, LOG, ISSUES and decisions/, recording only what a future reader could not reconstruct from the diff. Triggers include "update the README", "update the docs", "log this", "record this", "write this down", "note this decision", "write an ADR", "handoff", "hand this over", "where did we get to", "what did we do", "catch me up". Do NOT use for CLAUDE.md or agent-layer contracts (capability-layer-maintenance), or to restate a diff. Use this whenever a unit of work ends, even if unasked.
-when_to_use: Trigger when the user says update the README, update the docs, log this, record this, write this down, note this decision, document the decision, write an ADR, handoff, hand this over, where did we get to, what did we do, or catch me up.
-  - formats.md
+description: Update the durable project docs when they stop matching reality. Owns README, TASK, MEMORY, HANDOFF, LOG, ISSUES and decisions/, recording only what a future reader could not reconstruct from the diff. Triggers include "update the README", "update the docs", "log this", "record this", "note this decision", "write an ADR", "hand this over", or "catch me up". Do NOT use for CLAUDE.md or agent-layer contracts (capability-layer-maintenance), or to restate a diff. Use this whenever a unit of work ends, even if unasked.
 effort: low
 model: sonnet
 disable-model-invocation: false
@@ -37,7 +35,12 @@ an ADR.
 4. Request the write permission, then write the entries, each anchored to
   something a reader can verify. `Write` is intentionally not pre-approved in
   this layer because these documents are durable repository state.
-5. State which files you wrote and what you deliberately left unchanged.
+5. If this turn wrote to `LOG.md` or `ISSUES.md`, run `python
+  tools/test_doc_entries.py` before moving on. It checks only the
+  entry you just wrote (uncommitted, append-only), so a failure names
+  your own new entry, not the backlog. Cut it to size or split it, then
+  re-run, before calling the write done.
+6. State which files you wrote and what you deliberately left unchanged.
 
 ## Gather evidence before you write
 
@@ -146,11 +149,15 @@ visible in `git show`.
 
 ## Routing
 
-- Mandatory validator: none, and **nothing warns either.** `05-docs-gate.py`
-  (blocked the turn), `05-docs-required.py` (denied the commit) and
-  `04-docs-staleness.py` (warned each turn) were all deleted.
-  Recording is entirely on you now — and the auto-commit will happily checkpoint
-  a turn's work with no log entry behind it.
+- Mandatory validator: `python tools/test_doc_entries.py`, when `LOG.md`
+  or `ISSUES.md` was written this turn — see "The order" step 5. No hook
+  runs it for you: `05-docs-gate.py` (blocked the turn), `05-docs-required.py`
+  (denied the commit) and `04-docs-staleness.py` (warned each turn) were
+  all deleted — the direction for this file family is pull, not push.
+  The check itself already exists and is already registered
+  against both files in `.claude/project-checks.json`'s `test_map`, so
+  `tools/run_checks.py --scoped` also catches a violation later — this
+  step is what catches it now, before it is committed.
 - Terminal handoff: none. This records and stops.
 - Invoked at the end of a unit of work, not at the end of a session — a session
   that ran four units owes four log entries, written as each finished.
