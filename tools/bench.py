@@ -369,6 +369,8 @@ def render(now: dict, was: dict | None) -> None:
         note = f"  ({unattributed:,} unattributed)" if unattributed else ""
         print(f"\nthis session's skill-body loads: {skill_calls:,}  "
               f"({skill_chars:,} chars, ~{skill_chars // 4:,} tok){note}")
+        print("  upper bound -- does not know which calls Claude Code's own "
+              "dedup already served for free")
     else:
         print("\nthis session's skill-body loads: not yet recorded -- the "
               "post-tool counter\n  writes on the first Skill-tool "

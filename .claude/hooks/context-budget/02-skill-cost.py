@@ -18,6 +18,15 @@ them still counts as a call, under `unattributed`, rather than being
 silently dropped: the raw invocation count must stay honest even when
 per-skill attribution cannot.
 
+This counter also cannot see Claude Code's own dedup: a repeat `Skill`
+invocation whose rendered content is unchanged (same args, no differing
+dynamic context) gets a short "already loaded" note instead of the full
+body again, but this hook still adds that skill's full on-disk size --
+it has no way to observe which invocation the harness actually served
+from cache. So `calls`/`chars` here is an upper bound on real per-session
+skill-body cost, not a measured one. `tools/bench.py`'s report states
+this same limitation where it prints the figure.
+
 Silent by default, matching `01-context-cost.py`: this reports state, it
 does not warn. Also keeps it outside `decisions/2026-08-04-hooks-never-
 name-a-skill.md`'s literal scope, which bans a skill name in anything a hook

@@ -1,7 +1,6 @@
 ---
 name: refactoring
-description: Sweep a codebase for accumulated slop, then repair what is approved. Finds dead code, unused files, placeholders and TODOs, stale counts, dangling references, duplicated guidance, hedging, and claims nothing backs - reading standing artefacts including files the change never touched. Triggers include "clean up this repo", "tidy this up", "refactoring check", "is this clean enough to ship", "audit this before we merge", "remove the dead code", "anything unused", "any leftover placeholders", "tech debt". Do NOT use to review a single diff before it lands - that is code-review. Use this proactively before shipping, even if the user does not ask for a sweep.
-when_to_use: Trigger when the user says clean up this repo, tidy this up, refactoring check, sweep this, is this clean enough to ship, audit this before we merge, remove the dead code, anything unused, any leftover placeholders, is there duplication here, are the docs still true, or tech debt.
+description: Sweep a codebase for accumulated slop, then repair what is approved. Finds dead code, unused files, placeholders and TODOs, stale counts, dangling references, duplicated guidance, hedging, and claims nothing backs - reading standing artefacts including files the change never touched. Triggers include "clean up this repo", "tidy this up", "refactoring check", "is this clean enough to ship", "audit this before we merge", "remove the dead code", "anything unused", or "tech debt". Do NOT use to review a single diff before it lands - that is code-review. Use this proactively before shipping, even if the user does not ask for a sweep.
 effort: high
 model: sonnet
 disable-model-invocation: false

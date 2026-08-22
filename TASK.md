@@ -199,6 +199,17 @@
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
 
+### 2026-08-22 — Cut this layer's own token overhead: skill-metadata, telemetry, doc-caps
+- **Goal:** merge `when_to_use` into `description` across all 14 skills
+  (canonical Agent Skills format has no such field); state
+  `02-skill-cost.py`/`bench.py`'s skill-load figure as an upper bound;
+  wire the existing `test_doc_entries.py` check into `documentation`'s
+  own procedure.
+- **Output:** `docs/plans/2026-08-22-trim-skill-metadata-duplication.md`,
+  all 3 tasks done, independently tested (PASS) and reviewed
+  (passed: true). PR #30.
+- **Status:** Done
+
 ### 2026-08-21 — Permanent branch-per-parallel-task policy
 - **Goal:** make branch-per-independent-task the permanent default in
   `executing-plans` (removing the "only when explicitly chosen" opt-in),

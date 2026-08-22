@@ -1,7 +1,6 @@
 ---
 name: testing
-description: Prove finished work meets the brief, before review or delivery. Every claim carries a command and its quoted output; produces a coverage verdict and names the unbacked set, keeping what nobody checked separate from what nothing could check. Triggers include "is this done", "are we finished", "did that work", "does this meet the brief", "prove it works", "show me it works", "confirm this is complete", "is it working now", "did the fix land". Do NOT use to hunt defects in a diff (code-review), to diagnose a known failure (debugging), or when nothing has been claimed. Use this whenever completion is claimed in any wording, even if unasked.
-when_to_use: Trigger when the user says is this done, are we finished, did that work, does this meet the brief, prove it works, show me it works, confirm this is complete, is it working now, did the fix land, or whenever you are about to report something as done, finished, fixed, working or complete.
+description: Prove finished work meets the brief, before review or delivery. Every claim carries a command and its quoted output; produces a coverage verdict and names the unbacked set, keeping what nobody checked separate from what nothing could check. Triggers include "is this done", "are we finished", "did that work", "does this meet the brief", "prove it works", "show me it works", "confirm this is complete", or "did the fix land". Do NOT use to hunt defects in a diff (code-review), to diagnose a known failure (debugging), or when nothing has been claimed. Use this whenever completion is claimed in any wording, even if unasked.
 effort: medium
 model: sonnet
 disable-model-invocation: false

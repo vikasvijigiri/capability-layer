@@ -1,7 +1,6 @@
 ---
 name: task-analysis
-description: Turn named work into a bounded brief and an ordered, verifiable plan. Tasks in dependency order, the files each touches, the check that proves each, risks and rollback. Triggers include "add X", "build X", "we need a way to", "users should be able to", "make it so that", "write the implementation plan", "plan this out", "break this down", "what order should I build this in", "where do I start", "scope this", or the word PLAN. Do NOT use to implement it (implementation), to diagnose a failure (debugging), to choose between approaches (architecture), or for a direct question. Use this whenever work is named and needs scoping, even if the user does not ask.
-when_to_use: Trigger when the user says add X, build X, we need a way to, users should be able to, make it so that, I want to support, can we have, write the implementation plan, plan this out, break this down, what order should I build this in, where do I start, how long will this take, scope this, or uses the word PLAN.
+description: Turn named work into a bounded brief and an ordered, verifiable plan. Tasks in dependency order, the files each touches, the check that proves each, risks and rollback. Triggers include "add X", "build X", "we need a way to", "make it so that", "write the implementation plan", "plan this out", "break this down", "where do I start", "scope this", or the word PLAN. Do NOT use to implement it (implementation), to diagnose a failure (debugging), to choose between approaches (architecture), or for a direct question. Use this whenever work is named and needs scoping, even if the user does not ask.
 effort: high
 model: opus
 disable-model-invocation: false

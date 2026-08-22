@@ -1,7 +1,6 @@
 ---
 name: security
-description: Run the deterministic security gate and an independent review. Covers authentication, authorization, secrets, external input, dependencies, hooks, deployment, and unsafe agent actions on a high-risk or trust-boundary change. Triggers include "run the security gate", "did we weaken a security control", "is there a secret in this branch", "is this dependency change risky", "security review before shipping", "residual risk report". Use this whenever a plan or diff hits the high risk tier. Do NOT use to fix findings, exploit live systems, or replace human sign-off — this reports, it does not sign off.
-when_to_use: Trigger when the user says run the security gate, did we weaken a control, is there a secret in this branch, is this dependency risky, security review before shipping, residual risk report, or the change touches auth, permissions, secrets, or deployment at the high risk tier.
+description: Run the deterministic security gate and an independent review. Covers authentication, authorization, secrets, external input, dependencies, hooks, deployment, and unsafe agent actions on a high-risk or trust-boundary change. Triggers include "run the security gate", "did we weaken a security control", "is there a secret in this branch", "is this dependency change risky", "security review before shipping", or "residual risk report". Use this whenever a plan or diff hits the high risk tier. Do NOT use to fix findings, exploit live systems, or replace human sign-off — this reports, it does not sign off.
 effort: high
 model: opus
 disable-model-invocation: false

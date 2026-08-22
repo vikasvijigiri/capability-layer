@@ -1,5 +1,22 @@
 # Log
 
+## 2026-08-22 15:02
+
+Merged `when_to_use` into `description` across all 14 skills — the
+canonical Agent Skills format (`anthropics/skills`, fetched directly)
+has no such field, and this repo's own copy had drifted into full
+duplication with it. First draft (prune overlap only) was revised at
+Gate 1 after the user asked for evidence rather than opinion; a
+proposed new hard word-count test was then dropped mid-implementation
+when `test_process_router.py:66-70`'s own on-record reasoning against
+one was found. Also: `02-skill-cost.py`/`bench.py` now state their
+skill-load count is an upper bound, not a measured cost (can't see
+Claude Code's native dedup); `documentation/SKILL.md` now runs
+`test_doc_entries.py` after writing `LOG.md`/`ISSUES.md`, a check that
+already existed but was never invoked at write time. Independently
+verified (`tester`, PASS) and reviewed (`code-review`, passed: true).
+`PASS: 55 check(s) green`. PR #30.
+
 ## 2026-08-22 10:40
 
 **Code-review found a critical E4/E5 inversion in the E0-E5 router this

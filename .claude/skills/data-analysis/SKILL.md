@@ -1,7 +1,6 @@
 ---
 name: data-analysis
-description: Answer a question about this layer's cost or behavior from real telemetry. Never an impression — covers token/call/latency trends, duplicate-call rate, execution-level accuracy, local-repair ratio. Triggers include "how much are we spending on X", "is this actually faster now", "what does the telemetry say", "how often does X happen", "compare before and after", "what changed in cost", "is the predicted execution level accurate", "analyze the session data". Use this whenever a question could be answered with a real number instead of a guess. Do NOT use for a one-off shell command that answers it directly, or a downstream product's own data.
-when_to_use: Trigger when the user says how much are we spending on, is this actually faster, what does the telemetry say, how often does this happen, compare before and after, what changed in cost, is the prediction accurate, or analyze the session data.
+description: Answer a question about this layer's cost or behavior from real telemetry. Never an impression. Covers token/call/latency trends, duplicate-call rate, execution-level accuracy, local-repair ratio. Triggers include "how much are we spending on X", "is this actually faster now", "what does the telemetry say", "how often does X happen", "compare before and after", "what changed in cost", or "analyze the session data". Use this whenever a question could be answered with a real number instead of a guess. Do NOT use for a one-off shell command that answers it directly, or a downstream product's own data.
 effort: medium
 model: sonnet
 disable-model-invocation: false
