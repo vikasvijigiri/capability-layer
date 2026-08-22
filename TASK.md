@@ -4,6 +4,29 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Cap the plan self-review loop at 2 iterations
+
+- **Status:** Closed 2026-08-22 (`docs/plans/2026-08-22-plan-review-iteration-cap.md`).
+  `python tools/test_process_router.py`: green, including the new cap
+  assertion; the check was proven live by planting the regression (removing
+  the cap wording), confirming `FAIL`, then restoring it.
+- Modify: `.claude/skills/task-analysis/SKILL.md`, `.claude/skills/task-analysis/references/artifact-review.md`, `tools/test_process_router.py`
+- Create: `docs/plans/2026-08-22-plan-review-iteration-cap.md`
+- **Goal:** bound `task-analysis` Stage C5's plan-vs-brief self-review loop
+  at 2 iterations, so a plan that still fails review after two rounds is
+  surfaced at Gate 1 with the residual gap recorded, not looped indefinitely.
+- **Constraints:** reuse the existing self-review/`artifact-review.md` loop
+  rather than adding a new skill (a new skill would duplicate that verdict
+  contract and grow skill count for no reason); the literal count "2" lives
+  in exactly one place (`decisions/2026-08-07-one-workflow-engine.md`'s
+  "one budget table" rule).
+- **Done Checks:** `python tools/test_process_router.py` asserts the cap is
+  stated in `task-analysis/SKILL.md` and not restated in
+  `artifact-review.md`.
+- **Out of Scope:** `tools/loop.py`'s execution-time retry ladder (a
+  different, already-bounded mechanism for code/test failures, not plan
+  review).
+
 ### Merge the layer into the Notion "Agentic Workflows (IDE)" architecture
 
 - **Status:** Implemented, 9/10 tasks (`docs/plans/2026-08-21-notion-architecture-merge.md`).

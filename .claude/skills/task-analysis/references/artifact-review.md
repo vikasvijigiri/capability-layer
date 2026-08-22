@@ -37,6 +37,9 @@ gate.
   repository and the source requirements.
 - A REVISE verdict returns a spec to `architecture` or a plan to
   `task-analysis`; it must not jump directly to implementation.
+- Called at most twice per plan by `task-analysis` Stage C5 before that
+  skill stops iterating and surfaces the residual gap at Gate 1 instead —
+  the cap lives there, not here.
 
 ## Routing
 

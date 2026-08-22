@@ -541,6 +541,24 @@ check("task-analysis keeps the (inferred) marking that replaced the brief gate",
       "(inferred)" in _wp,
       "the markers are what let framing skip an approval without hiding a guess")
 
+# Stage C5's self-review loop (plan vs. brief, via `artifact-review.md`) is
+# capped at 2 iterations -- decisions/2026-08-07-one-workflow-engine.md's "one
+# budget table" rule means the literal count lives in exactly one place, so it
+# is asserted where it is stated (here) and asserted ABSENT where it must not
+# be restated (artifact-review.md, below) -- a second copy could drift out of
+# sync and cap at the wrong number by coincidence.
+check("task-analysis caps its plan self-review loop at 2 iterations",
+      re.search(r"2.{0,20}iteration", _wp, re.I) is not None,
+      "an uncapped review-and-fix loop can retry a plan indefinitely instead "
+      "of surfacing the disagreement at Gate 1")
+
+_ar = (SKILLS / "task-analysis" / "references" / "artifact-review.md").read_text(
+    encoding="utf-8")
+check("artifact-review.md does not itself restate a competing iteration count",
+      re.search(r"\d.{0,20}iteration", _ar, re.I) is None,
+      "the cap is owned by task-analysis Stage C5; a number here too is the "
+      "second copy the one-budget-table rule exists to prevent")
+
 # The `## Next step` section and the `## Routing` terminal-handoff line are two
 # statements of the same fact, so they can disagree -- and three of them did on
 # 2026-08-02, each written before the successor skill existed. Assert they name
