@@ -1,4 +1,4 @@
-"""post-run -- records this unit's state, and says so when the chain stops moving.
+"""stop-finalization -- records this unit's state, and says so when the chain stops moving.
 
 Behaviour classification: **record state**, and **detect drift**. It writes only
 to ignored hook state and prints; it authors nothing, edits nothing, and blocks

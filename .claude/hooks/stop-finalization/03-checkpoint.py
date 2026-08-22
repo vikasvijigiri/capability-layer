@@ -1,4 +1,4 @@
-"""post-run -- writes a recoverable snapshot of the working tree at turn end.
+"""stop-finalization -- writes a recoverable snapshot of the working tree at turn end.
 
 The safety net: if work is lost, overwritten or a change goes wrong, every turn
 boundary is recoverable. Local only -- it never pushes, never creates a branch

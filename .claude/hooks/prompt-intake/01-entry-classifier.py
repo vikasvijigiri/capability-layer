@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""user-prompt -- classifies the prompt's entry shape and lets workflow.md route it.
+"""prompt-intake -- classifies the prompt's entry shape and lets workflow.md route it.
 
 Fires on UserPromptSubmit, before the turn begins, so the entry rule is in
 context on the turn that needs it rather than one turn late.

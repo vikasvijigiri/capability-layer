@@ -191,7 +191,7 @@ def run_query(query: str, timeout: int = 180, cwd: Path | None = None) -> tuple[
     Cost is returned rather than discarded, because a harness that spends real
     money silently is how you find out afterwards.
     """
-    # Each invocation is a REAL session in this repository, so its post-run hook
+    # Each invocation is a REAL session in this repository, so its stop-finalization hook
     # would auto-commit whatever happens to be in the working tree -- forty times,
     # while an eval is running. `UAIOS_AUTOCOMMIT_RUNNING` is the re-entry guard
     # that hook already checks; setting it here is the same mechanism the check

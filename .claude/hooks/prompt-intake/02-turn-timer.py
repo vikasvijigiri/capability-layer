@@ -1,4 +1,4 @@
-"""user-prompt -- records this turn's start time, for `09-telemetry.py`'s
+"""prompt-intake -- records this turn's start time, for `09-telemetry.py`'s
 `turn_latency_seconds` (Notion spec §21's `latency` field, objective 6).
 
 Fires on every `UserPromptSubmit`, before `01-entry-classifier.py`'s own

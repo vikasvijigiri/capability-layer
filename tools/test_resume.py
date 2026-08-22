@@ -479,7 +479,7 @@ _plan("2026-04-04-checkout-retry.md", "# newer\n")
 check("the newest matching plan wins, so a replanned unit reads its latest",
       rs.plan_path(_r, "checkout-retry")[0].name == "2026-04-04-checkout-retry.md")
 
-# The state line is the only thing the session-start hook prints, so a mismatch
+# The state line is the only thing the session-init hook prints, so a mismatch
 # that does not reach it is a mismatch nobody sees.
 _orphaned = facts(plan_exists=False, plans_on_disk=3,
                   plan_reason="3 plan(s) exist, none for slug 'x'")

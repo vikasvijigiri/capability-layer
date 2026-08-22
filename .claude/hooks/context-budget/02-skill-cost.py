@@ -1,4 +1,4 @@
-"""post-tool -- counts Skill tool invocations and the SKILL.md bytes each one
+"""context-budget -- counts Skill tool invocations and the SKILL.md bytes each one
 loads into context, mirroring `01-context-cost.py`'s shape for a second cost
 category `tools/bench.py` could not see before this: a full 9-stage chain run
 loads ~104,000 chars (~26,000 tok) of skill-body prose in one session, and

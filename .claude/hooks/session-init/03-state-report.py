@@ -1,4 +1,4 @@
-"""session-start -- reports what the repo's state is, and lets workflow.md say
+"""session-init -- reports what the repo's state is, and lets workflow.md say
 what that state means.
 
 Fires on SessionStart, which covers a fresh start, a `--resume`, and the restart

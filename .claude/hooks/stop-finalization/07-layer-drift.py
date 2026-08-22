@@ -1,4 +1,4 @@
-"""post-run -- read-only capability-layer drift detector.
+"""stop-finalization -- read-only capability-layer drift detector.
 
 This hook detects stale references and harness-contract drift after a turn. It
 never edits strategic documents, capability files, source, or configuration;
