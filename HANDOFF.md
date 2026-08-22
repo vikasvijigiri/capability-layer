@@ -14,23 +14,29 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**PR #30 open, awaiting human merge decision: `trim-skill-metadata-
-duplication` → `chore/dedupe-layer-post-merge`.** Cuts this layer's own
-per-turn/per-dispatch overhead in 3 tasks — merge `when_to_use` into
-`description` across all 14 skills (the canonical Agent Skills format,
-fetched directly from `anthropics/skills`, has no such field), state
-`02-skill-cost.py`/`bench.py`'s skill-load figure as an upper bound (it
-cannot see Claude Code's own native dedup), and wire the already-
-registered `test_doc_entries.py` check into `documentation/SKILL.md`'s
-own procedure. Plan `docs/plans/2026-08-22-trim-skill-metadata-duplication.md`
-(revised once at Gate 1 — a proposed hard word-count test was dropped
-mid-implementation after it was found to contradict `test_process_router.py`'s
-own on-record reasoning against one). Independently tested (`tester`,
-PASS), swept (`refactoring`, clean; 2 structural findings routed
-separately — stale `when_to_use` guidance in `guide/how_to_create_skills.md`
-and `templates/Skills.md`), reviewed (`code-review`, passed: true).
-`python tools/run_checks.py --tier all --require-test`: `PASS: 55
-check(s) green`.
+**PR #30 and PR #31 are both merged into `main`** (confirmed via `gh pr
+view 30`) — the skill-metadata-duplication unit and the pre-existing
+post-merge dedupe sweep are both live. `chore/dedupe-layer-post-merge`
+and `trim-skill-metadata-duplication` were both auto-deleted on GitHub
+after merge; only their content in `main` is current, don't branch from
+either name again.
+
+**PR #32 open now, awaiting human merge decision: `telemetry-per-turn-
+execution-level` → `main`.** Fixes `09-telemetry.py`'s
+`execution_level.actual`, which fed the session-cumulative counters
+into a comparison meant to be per-turn (`predicted: E0, actual: E5`
+observed live, stuck). Now diffs against the previous `telemetry.jsonl`
+row. Independently red-greened by a `tester` subagent from scratch (not
+just accepted), swept clean, reviewed `passed: true`. Plan
+`docs/plans/2026-08-22-telemetry-per-turn-execution-level.md`. This was
+1 of 5 items from a "make this layer world-class" gap list found this
+session (`git log`/`LOG.md` for the grounded-verdict evidence); the
+other 4 — telemetry schema coverage at 43%, a full re-audit of
+objectives 1-10 (none since 2026-08-16), a duplicate-call-rate
+investigation (~9%, root cause unknown), — are each their own
+not-yet-started follow-up, scoped in this session's conversation but
+not written down as plans. `python tools/run_checks.py --tier all
+--require-test`: `PASS: 55 check(s) green`.
 
 **The Notion architecture-merge unit previously tracked here is done** —
 merged via PR #28 (see `git log`); this section previously described it

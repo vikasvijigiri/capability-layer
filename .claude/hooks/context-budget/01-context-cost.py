@@ -92,7 +92,25 @@ VOLATILE = ("git status", "git diff", "git log", "git branch", "ls", "pwd",
             "python tools/run_checks", "python tools/bench.py", "gh run",
             "python tools/chain.py")
 
+# Every real command in this environment is wrapped `cd "<dir>" && <command>`
+# (or `; `), so a bare `startswith()` against VOLATILE never matches -- a
+# repo-wide check of this session's own transcript found `git status`,
+# `tools/resume.py` and similar intentionally-exempt commands were NOT being
+# excluded, inflating the reported duplicate-call rate with false positives.
+# Stripped only for the VOLATILE/MIN_REPEAT_CHARS checks below, never for the
+# fingerprint hash -- genuine repeat detection must keep hashing the full
+# command, wrapper included, since that is what actually repeats verbatim.
+_CD_PREFIX_RE = re.compile(r'^cd\s+(?:"[^"]*"|\'[^\']*\'|\S+)\s*(?:&&|;)\s*')
+
+
+def _strip_cd_prefix(command: str) -> str:
+    return _CD_PREFIX_RE.sub("", command, count=1)
+
+
 # Below this the call is too cheap for the notice to be worth its own tokens.
+# Measured against the command with any `cd ... &&` wrapper stripped -- the
+# wrapper's own length must not count toward "is this substantial enough to
+# flag", or a trivial `ls` clears the floor on the wrapper alone.
 MIN_REPEAT_CHARS = 40
 
 # Bounded so a long session cannot grow the file without limit.
@@ -148,8 +166,9 @@ def repeat_notice(name: str, command: str) -> str:
     """The notice for a command this session already ran, or '' for a new one."""
     seen = _load()
     normalised = re.sub(r"\s+", " ", command).strip()
-    skip = (len(command) < MIN_REPEAT_CHARS
-            or any(normalised.startswith(v) for v in VOLATILE))
+    check_target = _strip_cd_prefix(normalised)
+    skip = (len(check_target) < MIN_REPEAT_CHARS
+            or any(check_target.startswith(v) for v in VOLATILE))
     if skip:
         # Still counted. The totals answer "how many calls did this session
         # make", which does not care whether the call was worth fingerprinting.

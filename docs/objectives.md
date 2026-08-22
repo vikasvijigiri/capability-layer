@@ -120,10 +120,12 @@ qualitative first pass and what would make each one measurable, and
 closed 18, 22 and 24 (Cluster C of 4) and the plan for the remaining
 clusters.
 
-**Last full quantitative audit: 2026-08-16 — 4 green (1, 6, 7, 9), 5 amber
-(3, 4, 5, 8, 10), 1 red (2)**, against objectives 1-10 only. Not re-run here —
-see the research doc for what has and hasn't moved since, and for the first
-pass over 11-30 and the architecture sections. Objectives 3, 5, 8 gained real
-instrumentation on 2026-08-21 (`three-spec-metrics`, PR #24); objectives 1, 4,
-6, 9, 10 gained it the same day (`four-more-spec-metrics`) — none of these
-re-grades the 2026-08-16 verdicts above, which stays the last full pass.
+**Last full quantitative audit: 2026-08-22 — 5 green (1, 7, 8, 9, 10), 5 amber
+(2, 3, 4, 5, 6), 0 red**, against objectives 1-10 only — see
+`docs/research/2026-08-22-objectives-1-10-requant.md` for the exact command
+and number behind each grade. Real movement since the 2026-08-16 pass (4
+green / 5 amber / 1 red): objective 2 moved red -> amber (skill-metadata
+listing cost cut ~26%) and objective 8 moved amber -> green (the E0-E5
+router now matches the labelled corpus, not just asserted). Objectives 11-30
+are still only the 2026-08-20 qualitative pass
+(`docs/research/2026-08-20-notion-objectives-audit.md`) — not re-run here.
