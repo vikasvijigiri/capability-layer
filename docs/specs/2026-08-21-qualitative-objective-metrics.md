@@ -328,7 +328,7 @@ currently uncounted by anything.
 
 ---
 
-## Cluster B — Re-run safety (17, 19, 20)
+## Cluster B — Re-run safety (17, 19, 20) — Closed 2026-08-22
 
 Shared mechanism: fixture install targets (extending `test_install.py`'s
 existing harness) plus one checked-in golden contract file.
@@ -414,6 +414,25 @@ file, never automatically, preserving the "additive change is visible in
 review" property the whole golden-diff mechanism exists for. Cluster B
 itself (17, 19, 20) is not built by this resolution — only the design
 question is answered, ahead of that cluster's own implementation unit.
+
+**Resolved 2026-08-22** (built as part of `cluster-b-rerun-safety`,
+`docs/plans/2026-08-22-cluster-b-rerun-safety.md`): include telemetry
+fields in the frozen golden, in an explicit two-tier split — `stable`
+(removal or rename fails the check) and `unstable` (free addition;
+removal or rename only warns, never fails). Direct transplant of a
+verified mechanism, not an invented tier: `cargo-semver-checks` excludes
+features literally named `unstable`/`nightly`/etc. from breaking-change
+detection by default, and separately supports downgrading individual
+lints to `warn` via `[package.metadata.cargo-semver-checks.lints]` —
+tracked and visible, never silently unguarded. A field promotes
+`unstable` -> `stable` only by a deliberate, reviewed edit to the golden
+file, never automatically. The three `unstable` fields (`run_id`,
+`execution_level`, `retries`) are grounded in this repo's own `LOG.md`:
+each was added or structurally rewritten in the 48 hours before this
+unit, while the other 13 top-level telemetry fields trace to the
+2026-08-20 schema-consolidation commit (PR #21) and are `stable`. See
+`.claude/contracts/layer-contract.golden.json` and
+`tools/test_contract_surface.py`.
 
 ---
 

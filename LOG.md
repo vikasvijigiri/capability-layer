@@ -1,5 +1,23 @@
 # Log
 
+## 2026-08-22 23:07
+
+Cluster B: real, re-runnable instruments for objectives 17 (non-
+destructive integration), 19 (idempotent and repeatable), 20 (backward-
+compatible where practical) -- `tools/test_idempotence.py`,
+`tools/test_preservation_rate.py`, `tools/test_contract_surface.py`
+against a new frozen golden (`.claude/contracts/layer-contract.golden.json`).
+All three report-only (exit 0), wired into `.claude/project-checks.json`.
+Real finding, not seeded: `.claude/layer-manifest.json` is not byte-
+stable across a second install -- SEED files (`ruff.toml`, `mypy.ini`,
+`checks.yml`, `CODEOWNERS`) drop out of the manifest on a repeat run
+because `write_manifest()`'s owned-action filter excludes `"preserve"`;
+named, not fixed. Also caught and fixed while verifying: a missing
+`stdin=subprocess.DEVNULL` on a spawned-hook subprocess call (this
+repo's own 2026-08-07 hang trap), a mypy element-type annotation, and a
+stale README suite count. `docs/plans/2026-08-22-cluster-b-rerun-safety.md`,
+4/4 tasks. `PASS: 58 check(s) green`, up from 55.
+
 ## 2026-08-22 20:10
 
 Built Cluster A — instruments for objectives 15, 16, 25, 27, per

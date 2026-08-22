@@ -4,6 +4,25 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Cluster B -- instruments for objectives 17, 19, 20
+- **Status:** Implemented, 4/4 tasks (`docs/plans/2026-08-22-cluster-b-rerun-safety.md`).
+  `python tools/run_checks.py --tier all --require-test`: `PASS: 58 check(s)
+  green` (up from 55). 3 new checks wired into `.claude/project-checks.json`
+  plus a new frozen golden (`.claude/contracts/layer-contract.golden.json`).
+  Real finding, not synthetic: `.claude/layer-manifest.json` is not
+  byte-stable across a second install -- SEED files (`ruff.toml`,
+  `mypy.ini`, `.github/workflows/checks.yml`, `CODEOWNERS`) drop out of
+  the manifest on a repeat run because `write_manifest()`'s owned-action
+  filter excludes `"preserve"`; found and named, not fixed (a behavior
+  change, out of scope for an instrumentation task). Not yet reviewed by
+  `code-review` or delivered.
+- **Goal:** give objectives 17 (non-destructive integration), 19
+  (idempotent and repeatable), and 20 (backward-compatible where
+  practical) real, re-runnable instruments -- the last of the 4 clusters
+  (C, D and A all merged into `main` ahead of this one).
+- **Out of Scope:** turning any new check into a gate; re-grading
+  objectives 1-10; objective 2's paid eval.
+
 ### Cluster A — instruments for objectives 15, 16, 25, 27
 - **Status:** Implemented, 6/6 tasks. `python tools/run_checks.py --tier
   all --require-test`: `PASS: 56 check(s) green (audit, build, lint,
@@ -33,10 +52,8 @@
   end, the other four use the cheaper `resolve_checks` detection path).
   Measured cost: fast tier 39.6s → 44.3s (+~4.7s), one clean before/after
   run.
-- **Out of Scope:** Cluster B (17, 19, 20) — not yet built; Cluster D (11,
-  12, 26, 29) — built on a separate, not-yet-merged branch
-  (`feat/cluster-d-layer-self-grading`), not touched by this unit; turning
-  the new check into a gate (report-before-gate, per the spec).
+- **Out of Scope:** turning the new check into a gate (report-before-gate,
+  per the spec).
 
 ### Cap the plan self-review loop at 2 iterations
 
@@ -214,9 +231,11 @@
   Notion-spec objectives that currently have none, per the design spec's
   own decomposition (Cluster A: 13,15,16,25,27; B: 17,19,20; D: 11,12,26,29
   — each its own future unit).
-- **Out of Scope:** Clusters A, B, D; turning any new check into a gate; the
-  E0-E5 router and agent-catalogue decision record (separate candidate
-  units); re-grading objectives 1-10; objective 2's paid eval.
+- **Out of Scope:** Cluster A (B and D since done independently -- B on
+  this branch, D on `feat/cluster-d-layer-self-grading`, not yet merged
+  here); turning any new check into a gate; the E0-E5 router and
+  agent-catalogue decision record (separate candidate units); re-grading
+  objectives 1-10; objective 2's paid eval.
 
 ### Cluster D — instruments for objectives 11, 12, 26, 29
 - **Status:** Implemented, 7/7 tasks (`docs/plans/2026-08-22-cluster-d-layer-self-grading.md`).
