@@ -417,18 +417,32 @@ question is answered, ahead of that cluster's own implementation unit.
 
 ---
 
-## Cluster A — Target-matrix conformance (13, 15, 16, 25, 27)
+## Cluster A — Target-matrix conformance (13, 15, 16, 25, 27) — CLOSED 2026-08-22
 
 Shared mechanism: **one fixture corpus of synthetic target repositories**, plus
 the adapter conformance fields. Five objectives, one piece of machinery — which
 is the whole reason they cluster.
 
-[NEEDS CLARIFICATION: should the fixture corpus be checked into the repo
-(hermetic and diffable, but adds tracked files and grows the installable
-payload) or generated at test time by a fixture builder (nothing tracked, but
-the corpus itself is then code that can drift)? `test_install.py` already builds
-its Python and Node targets at test time — following that precedent argues for
-generated, but a five-stage corpus is materially larger than what it builds.]
+**Resolved:** the fixture corpus is generated at test time by a fixture
+builder inline in `tools/test_target_matrix.py`, never checked into the
+repo. `test_install.py`'s own `fresh_repo()` is the precedent, and this
+repo fought hard to shrink its installable payload (1,586,874 →
+1,172,851 bytes, `TASK.md`'s "Make the layer portable" entry) — checking in
+a five-stage corpus would partially undo that objective-14 win. The corpus
+stayed small in practice: five stages plus one non-Python stack, a handful
+of files each, built and torn down in one run
+(`docs/plans/2026-08-22-cluster-a-target-matrix.md`).
+
+**Delivered:** `tools/test_target_matrix.py`, one file covering all four
+objectives against the shared corpus — stage-fixture pass rate (15),
+real-structure detection plus zero check-leakage from this repo's own
+gating list (16), non-Python stack coverage via a bare Go layout (25), and
+a zero-migration boolean (27). Objective 13 needed no new instrument
+(already Green via `.claude/adapters/*.json` +
+`test_portability_contract.py`). Measured cost: +~4.7s on the fast tier
+(39.6s → 44.3s, one clean before/after run with the file moved aside and
+restored) — reported honestly per the spec's own "say so rather than hide
+it" instruction, not hidden.
 
 ### Objective 13 — Universal / generic
 
