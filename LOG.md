@@ -18,6 +18,46 @@ repo's own 2026-08-07 hang trap), a mypy element-type annotation, and a
 stale README suite count. `docs/plans/2026-08-22-cluster-b-rerun-safety.md`,
 4/4 tasks. `PASS: 58 check(s) green`, up from 55.
 
+## 2026-08-22 20:10
+
+Built Cluster A — instruments for objectives 15, 16, 25, 27, per
+`docs/specs/2026-08-21-qualitative-objective-metrics.md`. One new file,
+`tools/test_target_matrix.py`, over one shared fixture corpus (5 stages +
+1 Go-layout stack) generated at test time, never checked in — preserves
+the objective-14 payload-size win. Objective 13 needed no new instrument
+(already Green). The required seeded-violation proof caught a real bug:
+the objective-27 check compared a fixture command's stdout before/after
+install, and a missing file made two EMPTY strings compare equal, passing
+vacuously; fixed to also assert exit code and a known literal output.
+Naive design ran the real fast tier (mypy+ruff) against all 4 Python
+fixtures at ~3.15s each; rescoped to one representative stage, cutting the
+fast-tier addition from ~15s to a measured +4.7s (39.6s → 44.3s). A
+pre-existing flake in `test_project_checks.py`'s concurrency probe
+surfaced once under the added load, clean on re-run — not a regression.
+`PASS: 56 check(s) green`. See
+`docs/plans/2026-08-22-cluster-a-target-matrix.md`.
+
+## 2026-08-22 19:40
+
+Cluster D (`docs/plans/2026-08-22-cluster-d-layer-self-grading.md`, `4fc5420`)
+gave objectives 11, 12, 26, 29 real instruments. Two real gate-affecting
+findings along the way, not synthetic: (1) `tools/test_context_cost.py` and
+`tools/test_smoke.py` both had real passing coverage but were absent from
+`project-checks.json`'s gating `test` array — the first fixed, the second
+still open. (2) The extended `check_portability()` first scored 287
+findings scanning full `.py` bodies (mostly legitimate dated rationale in
+comments/docstrings against an already-gating check) — rescoped to
+code-only (`ast`-stripped docstrings/comments, `test_*.py` excluded),
+converging to 2 real violations in `tools/bench.py` and
+`02-bootstrap-docs.py`, both fixed. Confirmed the extended check does
+**not** catch `resume.py`'s `BRANCH_PREFIX` bug — a different violation
+shape (hardcoded logic value, not narrative provenance) than its three
+regexes target; recorded as a known limitation, not overclaimed.
+`PASS: 59 check(s) green` (was 55). Reviewed PASS by a `reviewer` (mode:
+spec) subagent. Also resolved Cluster B's objective-20 marker via research
+(`docs/research/2026-08-22-cluster-d-b-grounding-refresh.md`) without
+building Cluster B.
+
 ## 2026-08-22 16:52
 
 Fixed `09-telemetry.py`'s `execution_level.actual`, which fed

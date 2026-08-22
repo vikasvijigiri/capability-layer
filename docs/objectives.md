@@ -93,39 +93,53 @@ and say so in `LOG.md`; a copy that drifts is worse than no copy.
 Grades are worthless without the command that produced them. These are the
 instruments; run them rather than quoting a remembered number.
 
+**Sorted by objective number** — deliberately, not by when it was added.
+Three clusters landed as separate PRs in one evening and each one's own
+edit collided with the others' on this exact table; numeric order means
+two branches adding *different* objective numbers touch different rows
+instead of the same insertion point, which is what actually caused those
+conflicts. See `decisions/2026-08-22-sort-shared-ledgers.md`.
+
 | # | Instrument |
 |---|---|
+| 1 | `python tools/test_process_router.py` — the two-gate ownership assertions; `09-telemetry.py`'s `human_interventions` field, from `post-tool/07-human-cost.py` (live rate, `AskUserQuestion`/`ExitPlanMode` counts) |
 | 2, 3 | `python tools/bench.py` — per-session and per-turn character costs |
 | 4, 5 | `python tools/bench.py`, from the counters in `context-budget/01-context-cost.py`, `context-budget/02-skill-cost.py` and `post-tool/06-tool-cost.py` (total tool calls, every tool name) |
 | 6 | `python tools/bench.py` tier timings; `python tools/parallel_groups.py <plan>`; `09-telemetry.py`'s `turn_latency_seconds`, from `prompt-intake/02-turn-timer.py` |
 | 7 | `model:` frontmatter across `.claude/skills/` and `.claude/agents/` |
 | 8 | `.claude/hooks/prompt-intake/01-entry-classifier.py` replayed over `docs/evals/trigger-queries.json` |
 | 9 | `python tools/scope.py`; `_hooklib.FAILURE_BUDGETS` |
-| 10 | `python tools/run_checks.py --tier all --require-test` |
-| 1 | `python tools/test_process_router.py` — the two-gate ownership assertions; `09-telemetry.py`'s `human_interventions` field, from `post-tool/07-human-cost.py` (live rate, `AskUserQuestion`/`ExitPlanMode` counts) |
 | 9, 10 | `09-telemetry.py`'s `retries` field, surfacing `tools/resume.py`'s `attempts`/`max_attempts`/`failure_class` and `tools/loop.py`'s `rung()` verdict per turn |
+| 10 | `python tools/run_checks.py --tier all --require-test` |
+| 11 | `python tools/test_instrumented_surface.py` — live-wired hooks and `tools/*.py` sources ÷ those named in `.claude/project-checks.json`'s `test` array; a floor, never proof of adequate coverage |
+| 12 | `python tools/test_hook_conformance.py` — per-hook boolean vector over 5 clauses (payload via `_hooklib.load_payload()`, no detached-process escape, ≤1 state file, a representative-payload test, a declared behavior classification); report only |
 | 14 | `python tools/test_install.py`, `python tools/test_package.py` — fresh install into a Python and Node target |
-| 21 | `python tools/security_gate.py`, `python tools/deps.py` (licence gate), `permission-security/*` hooks |
-| 23 | `testing`'s HARD-GATE (no completion claim without fresh, quoted evidence) |
-| 28 | `[NEEDS CLARIFICATION]` markers in `task-analysis`; `EnterPlanMode`/`ExitPlanMode` gate |
-| 30 | `tools/bench.py --save` baselines; `decisions/` records (e.g. `budget.ELAPSED_CEILING_HOURS` deliberately not refit from one noisy measurement) |
-| 18 | `tools/test_entry_classifier.py`'s full-corpus route-presence check (`entry-small`/`entry-direct` both confirmed reachable) plus a fallback-safety check on `01-entry-classifier.py`'s `_control_or_sensitive_patterns()` |
-| 22 | `python tools/bench.py`'s `schema_coverage()` — `09-telemetry.py`'s own `unavailable` map against its `SPEC_FIELD_COUNT`, plus `chain.fingerprint` trace-completeness |
-| 24 | `python tools/bench.py`'s `local_repair_ratio()` — incident-deduplicated aggregate over `telemetry.jsonl`'s `retries.rung` history |
-| 19 | `python tools/test_idempotence.py` — install-twice byte-level tree delta, plus stateless decision-hook (`pre-edit`/`permission-security`/`pre-tool`) determinism across two identical firings |
+| 15, 16, 25, 27 | `python tools/test_target_matrix.py` — one fixture corpus (5 stages + 1 non-Python stack, generated at test time, never checked in): stage-fixture pass rate (15), real-structure detection plus zero check-leakage (16), non-Python stack coverage (25), zero-migration boolean (27) |
 | 17 | `python tools/test_preservation_rate.py` — fraction of a fixture target's own pre-existing files that survive an install byte-identical |
+| 18 | `tools/test_entry_classifier.py`'s full-corpus route-presence check (`entry-small`/`entry-direct` both confirmed reachable) plus a fallback-safety check on `01-entry-classifier.py`'s `_control_or_sensitive_patterns()` |
+| 19 | `python tools/test_idempotence.py` — install-twice byte-level tree delta, plus stateless decision-hook (`pre-edit`/`permission-security`/`pre-tool`) determinism across two identical firings |
 | 20 | `python tools/test_contract_surface.py` against `.claude/contracts/layer-contract.golden.json` — skill/hook/capability/project-checks surface plus a two-tier stable/unstable telemetry-field split |
+| 21 | `python tools/security_gate.py`, `python tools/deps.py` (licence gate), `permission-security/*` hooks |
+| 22 | `python tools/bench.py`'s `schema_coverage()` — `09-telemetry.py`'s own `unavailable` map against its `SPEC_FIELD_COUNT`, plus `chain.fingerprint` trace-completeness |
+| 23 | `testing`'s HARD-GATE (no completion claim without fresh, quoted evidence) |
+| 24 | `python tools/bench.py`'s `local_repair_ratio()` — incident-deduplicated aggregate over `telemetry.jsonl`'s `retries.rung` history |
+| 26 | `python tools/test_import_independence.py` — stdlib `ast` import-graph walk: hook families independent except through `_hooklib`; `tools/*` ↔ `.claude/hooks/*` independent except through `_hooklib`, with a named `_load()`-per-file allowlist |
+| 28 | `[NEEDS CLARIFICATION]` markers in `task-analysis`; `EnterPlanMode`/`ExitPlanMode` gate |
+| 29 | `python tools/test_no_slop.py --scope portability` — now also reads `.claude/hooks/**/*.py` and `tools/*.py` (code only, docstrings/comments stripped, `test_*.py` excluded) for the same dated-claim/this-repo/sibling-repo patterns already applied to skill, agent and command `.md` files |
+| 30 | `tools/bench.py --save` baselines; `decisions/` records (e.g. `budget.ELAPSED_CEILING_HOURS` deliberately not refit from one noisy measurement) |
 
-Objectives 11, 12, 13, 15, 16, 25, 26, 27, 29 (Clusters A and D) have no
-dedicated instrument yet on this branch — see `docs/research/
-2026-08-20-notion-objectives-audit.md` for a qualitative first pass and
-what would make each one measurable, and `docs/specs/2026-08-21-
-qualitative-objective-metrics.md` for the design that closed 18, 22, 24
-(Cluster C) and 17, 19, 20 (Cluster B) here, plus the plan for Clusters A
-and D (D built independently on `feat/cluster-d-layer-self-grading`, not
-yet merged to this branch). (Cluster C's own closure edit left `22` and
-`24` in this line despite already having rows above — corrected here
-alongside the Cluster B removal.)
+Objective 13 (universal/generic) needed no new row: it is already Green via
+`.claude/adapters/*.json`'s `conformance` field and
+`tools/test_portability_contract.py`, which detect regression rather than
+re-litigate a passing grade.
+
+**Every one of the 30 objectives now has a real instrument** — the
+"objectives with none yet" sentence that used to live here is gone on
+purpose, not lost: it named the fifteen this session's four clusters
+(C, D, A, B) closed, in order, and now names nothing. If the Notion spec
+ever grows past 30 or an instrument regresses, that is new information
+this table doesn't have space to predict — write a fresh sentence then,
+grounded in whatever is actually missing at the time.
 
 **Last full quantitative audit: 2026-08-22 — 5 green (1, 7, 8, 9, 10), 5 amber
 (2, 3, 4, 5, 6), 0 red**, against objectives 1-10 only — see

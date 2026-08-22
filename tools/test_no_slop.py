@@ -48,6 +48,7 @@ different checks. The instruction and skill checks are already whole by nature.
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import subprocess
 import sys
@@ -165,17 +166,76 @@ THIS_REPO_RE = re.compile(r"\bthis repo's\b|\bin this repo\b", re.IGNORECASE)
 SIBLING_RE = re.compile(r"\b(?:physrun|UAIOS)\b")
 
 
+# Objective 29 (no hardcoded project truth) reads "never embedded into
+# universal WORKFLOW LOGIC" -- the `.py` under `.claude/hooks/` and `tools/`
+# is that logic and was unread by this check until this line. Scoped to CODE
+# only, not comments or docstrings: this check is already wired into
+# `.claude/project-checks.json`'s gating `test` list (confirmed live this
+# session), and this repo's own convention -- endorsed in CLAUDE.md -- is to
+# carry dated, repo-specific rationale in comments explaining a fix's WHY.
+# Scanning full file bodies measured 287 findings, almost all narrative
+# docstring history, which would break the existing gate over legitimate,
+# already-accepted documentation rather than catch a real logic violation
+# (confirmed: that scan did NOT catch tools/resume.py:61's real
+# `BRANCH_PREFIX = "feat/"` bug either -- these three regexes target
+# narrative provenance, not hardcoded config values, a different violation
+# shape objective 29 also names but this instrument does not claim to catch).
+# Genuinely configured defaults belong in this allowlist, each with the
+# file:line that earned it -- a silent allowlist is indistinguishable from a
+# violation nobody noticed.
+LOGIC_PORTABILITY_ALLOWLIST: set[str] = set()
+
+
+def _strip_comments_and_docstrings(path: Path, body: str) -> str:
+    """CODE only -- blank out module/class/function docstrings (`ast`) and
+    trailing `#` comments (naive, does not special-case `#` inside a string
+    literal), line count preserved so reported line numbers stay accurate."""
+    lines = body.splitlines()
+    try:
+        tree = ast.parse(body, filename=str(path))
+    except SyntaxError:
+        return body
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            doc_node = node.body[0] if node.body else None
+            if (isinstance(doc_node, ast.Expr) and isinstance(doc_node.value, ast.Constant)
+                    and isinstance(doc_node.value.value, str)):
+                end_lineno = doc_node.end_lineno or doc_node.lineno
+                for lineno in range(doc_node.lineno, end_lineno + 1):
+                    lines[lineno - 1] = ""
+    stripped = []
+    for line in lines:
+        idx = line.find("#")
+        stripped.append(line[:idx] if idx != -1 else line)
+    return "\n".join(stripped)
+
+
 def check_portability() -> int:
     """Is the layer safe to copy into a repository that is not this one?"""
-    targets = sorted(list(SKILLS.rglob("*.md")) + list(AGENTS.rglob("*.md"))
-                     + list((CLAUDE / "commands").rglob("*.md")))
+    doc_targets = sorted(list(SKILLS.rglob("*.md")) + list(AGENTS.rglob("*.md"))
+                         + list((CLAUDE / "commands").rglob("*.md")))
+    # tools/test_*.py excluded: fixture/verification code, not the
+    # "universal workflow logic" objective 29 names -- a test asserting
+    # against a fixture date is not embedding project truth, and the
+    # regexes above matching their OWN pattern definitions (e.g.
+    # SIBLING_RE's literal "physrun") would otherwise self-flag.
+    logic_targets = sorted(
+        [p for p in (CLAUDE / "hooks").rglob("*.py") if not p.name.startswith("test_")]
+        + [p for p in (ROOT / "tools").glob("*.py") if not p.name.startswith("test_")]
+    )
+    targets = doc_targets + logic_targets
     counts = {"dated claim": 0, "names this repo": 0, "names a sibling repo": 0}
 
     for path in targets:
         body = read_text(path)
         if body is None:
             continue
-        for lineno, line in enumerate(body.splitlines(), 1):
+        scan_body = (_strip_comments_and_docstrings(path, body)
+                     if path in logic_targets else body)
+        for lineno, line in enumerate(scan_body.splitlines(), 1):
+            key = f"{rel(path)}:{lineno}"
+            if key in LOGIC_PORTABILITY_ALLOWLIST:
+                continue
             for label, rx in (("dated claim", DATE_RE),
                               ("names this repo", THIS_REPO_RE),
                               ("names a sibling repo", SIBLING_RE)):
@@ -186,8 +246,9 @@ def check_portability() -> int:
                          f"false in any other repository; keep the lesson, "
                          f"drop the provenance")
 
-    print(f"scope=portability: read {len(targets)} skill, agent and command "
-          f"files\n")
+    print(f"scope=portability: read {len(doc_targets)} skill, agent and "
+          f"command file(s), {len(logic_targets)} hook and tool .py file(s) "
+          f"(code only, comments/docstrings excluded)\n")
     if failures:
         for f in failures[:40]:
             print(f"FAIL: {f}")

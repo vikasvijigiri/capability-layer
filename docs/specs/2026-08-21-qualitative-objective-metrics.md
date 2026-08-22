@@ -202,7 +202,19 @@ Accuracy against labels is objective 8's instrument and is not duplicated here.
 
 ---
 
-## Cluster D — Layer self-grading (11, 12, 26, 29)
+## Cluster D — Layer self-grading (11, 12, 26, 29) — Closed 2026-08-22
+
+Built in `docs/plans/2026-08-22-cluster-d-layer-self-grading.md`:
+`tools/test_hook_conformance.py` (12), `tools/test_import_independence.py`
+(26), `tools/test_no_slop.py --scope portability` extended to `.py` logic
+files (29), `tools/test_instrumented_surface.py` (11) — plus
+`tools/test_context_cost.py` (already existed, added the same day this
+spec's own #11 finding named it, but was unwired until this unit) wired into
+`.claude/project-checks.json`'s gating `test` array. See that plan's
+Progress block for the concrete, real (not synthetic) findings each
+instrument produced when actually run, including a second unwired-coverage
+gap (`tools/test_smoke.py`) the corrected objective-11 instrument surfaced
+beyond the one this section already named.
 
 Shared mechanism: static parse of this layer's own Python and JSON; each lands
 as a `tools/test_*.py` in `project-checks.json`'s `test` list.
@@ -388,13 +400,20 @@ Source: https://github.com/obi1kenobi/cargo-semver-checks
 audit graded **Unmeasured** (not even Amber): "No versioning or
 compatibility-testing convention observed for the layer's own contract surface."
 
-[NEEDS CLARIFICATION: what exactly belongs in the frozen contract surface?
-Skill names + frontmatter keys, hook event registrations, `capabilities.json`
-capability names and `project-checks.json` keys are clearly in. Telemetry field
-names are the real question — three were added this week alone, so freezing them
-either makes routine additive work noisy (each needs a golden update, which is
-arguably correct) or leaves the most actively-changing contract unguarded.
-Include telemetry fields, or exclude them and say why?]
+**Resolved 2026-08-22** (`docs/research/2026-08-22-cluster-d-b-grounding-refresh.md`):
+include telemetry fields in the frozen golden, in an explicit two-tier
+split — `stable` (removal or rename fails the check) and `unstable` (free
+addition; removal or rename only warns, never fails). This is the direct
+transplant of a verified mechanism, not an invented tier: `cargo-semver-checks`
+excludes features literally named `unstable`/`nightly`/etc. from
+breaking-change detection by default, and separately supports downgrading
+individual lints to `warn` via `[package.metadata.cargo-semver-checks.lints]`
+— tracked and visible, never silently unguarded. A field promotes
+`unstable` → `stable` only by a deliberate, reviewed edit to the golden
+file, never automatically, preserving the "additive change is visible in
+review" property the whole golden-diff mechanism exists for. Cluster B
+itself (17, 19, 20) is not built by this resolution — only the design
+question is answered, ahead of that cluster's own implementation unit.
 
 **Resolved 2026-08-22** (built as part of `cluster-b-rerun-safety`,
 `docs/plans/2026-08-22-cluster-b-rerun-safety.md`): include telemetry
@@ -417,18 +436,32 @@ unit, while the other 13 top-level telemetry fields trace to the
 
 ---
 
-## Cluster A — Target-matrix conformance (13, 15, 16, 25, 27)
+## Cluster A — Target-matrix conformance (13, 15, 16, 25, 27) — CLOSED 2026-08-22
 
 Shared mechanism: **one fixture corpus of synthetic target repositories**, plus
 the adapter conformance fields. Five objectives, one piece of machinery — which
 is the whole reason they cluster.
 
-[NEEDS CLARIFICATION: should the fixture corpus be checked into the repo
-(hermetic and diffable, but adds tracked files and grows the installable
-payload) or generated at test time by a fixture builder (nothing tracked, but
-the corpus itself is then code that can drift)? `test_install.py` already builds
-its Python and Node targets at test time — following that precedent argues for
-generated, but a five-stage corpus is materially larger than what it builds.]
+**Resolved:** the fixture corpus is generated at test time by a fixture
+builder inline in `tools/test_target_matrix.py`, never checked into the
+repo. `test_install.py`'s own `fresh_repo()` is the precedent, and this
+repo fought hard to shrink its installable payload (1,586,874 →
+1,172,851 bytes, `TASK.md`'s "Make the layer portable" entry) — checking in
+a five-stage corpus would partially undo that objective-14 win. The corpus
+stayed small in practice: five stages plus one non-Python stack, a handful
+of files each, built and torn down in one run
+(`docs/plans/2026-08-22-cluster-a-target-matrix.md`).
+
+**Delivered:** `tools/test_target_matrix.py`, one file covering all four
+objectives against the shared corpus — stage-fixture pass rate (15),
+real-structure detection plus zero check-leakage from this repo's own
+gating list (16), non-Python stack coverage via a bare Go layout (25), and
+a zero-migration boolean (27). Objective 13 needed no new instrument
+(already Green via `.claude/adapters/*.json` +
+`test_portability_contract.py`). Measured cost: +~4.7s on the fast tier
+(39.6s → 44.3s, one clean before/after run with the file moved aside and
+restored) — reported honestly per the spec's own "say so rather than hide
+it" instruction, not hidden.
 
 ### Objective 13 — Universal / generic
 

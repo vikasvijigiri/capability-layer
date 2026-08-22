@@ -18,15 +18,42 @@
   `code-review` or delivered.
 - **Goal:** give objectives 17 (non-destructive integration), 19
   (idempotent and repeatable), and 20 (backward-compatible where
-  practical) real, re-runnable instruments -- the third of 4 clusters,
-  next per the spec's own build order (C done -> D done [separate
-  branch] -> **B** -> A). Resolves Cluster B's own objective-20
-  golden-surface marker on this branch (D's resolution of the same
-  marker lives on a separate, not-yet-merged branch).
-- **Out of Scope:** Cluster A; turning any new check into a gate;
-  re-grading objectives 1-10; objective 2's paid eval. Cluster D exists
-  independently on `feat/cluster-d-layer-self-grading`, not yet merged
-  to this branch.
+  practical) real, re-runnable instruments -- the last of the 4 clusters
+  (C, D and A all merged into `main` ahead of this one).
+- **Out of Scope:** turning any new check into a gate; re-grading
+  objectives 1-10; objective 2's paid eval.
+
+### Cluster A — instruments for objectives 15, 16, 25, 27
+- **Status:** Implemented, 6/6 tasks. `python tools/run_checks.py --tier
+  all --require-test`: `PASS: 56 check(s) green (audit, build, lint,
+  smoke, test, typecheck)`. Every check proven to fail on a seeded
+  violation first — including one REAL bug the seeded proof for objective
+  27 caught: the first draft compared `check.py`'s stdout before/after
+  install, and a missing `check.py` returns rc≠0 with EMPTY stdout both
+  times, so the comparison passed vacuously; fixed to also assert
+  `rc == 0` and a known literal output. A pre-existing, timing-sensitive
+  flake in `test_project_checks.py`'s own concurrency probe surfaced once
+  under the added load and passed clean on a second run — not a
+  regression in this unit's code, recorded in the plan. Not yet reviewed
+  by `code-review` or delivered. See
+  `docs/plans/2026-08-22-cluster-a-target-matrix.md`.
+- **Goal:** give objectives 15 (stage-agnostic), 16 (repository-agnostic),
+  25 (technology-agnostic), and 27 (progressively adoptable) real,
+  re-runnable instruments over one shared, generated-at-test-time fixture
+  corpus (5 stages + 1 non-Python stack), per
+  `docs/specs/2026-08-21-qualitative-objective-metrics.md`'s Cluster A
+  design. Objective 13 needed no new work — already Green via
+  `.claude/adapters/*.json` + `test_portability_contract.py`.
+- **Output:** `tools/test_target_matrix.py` (one file, all four
+  objectives); `.claude/project-checks.json` gains one `test` entry and
+  one `test_map` row; `docs/objectives.md` and the design spec updated;
+  cost trade-off recorded (in-process calls instead of subprocess-per-
+  fixture; only one stage runs the real fast-tier `mypy`/`ruff` end to
+  end, the other four use the cheaper `resolve_checks` detection path).
+  Measured cost: fast tier 39.6s → 44.3s (+~4.7s), one clean before/after
+  run.
+- **Out of Scope:** turning the new check into a gate (report-before-gate,
+  per the spec).
 
 ### Cap the plan self-review loop at 2 iterations
 
@@ -209,6 +236,27 @@
   here); turning any new check into a gate; the E0-E5 router and
   agent-catalogue decision record (separate candidate units); re-grading
   objectives 1-10; objective 2's paid eval.
+
+### Cluster D — instruments for objectives 11, 12, 26, 29
+- **Status:** Implemented, 7/7 tasks (`docs/plans/2026-08-22-cluster-d-layer-self-grading.md`).
+  `python tools/run_checks.py --tier all --require-test`: `PASS: 59 check(s)
+  green` (up from 55). 4 new checks wired into `.claude/project-checks.json`
+  plus `test_context_cost.py` (existed, was unwired). Real findings, not
+  synthetic: fixed 2 genuine portability violations
+  (`tools/bench.py`, `.claude/hooks/session-init/02-bootstrap-docs.py`) and
+  surfaced one more still-open gap (`tools/test_smoke.py`, also unwired).
+  Cluster B's objective-20 marker resolved with fresh research (not built).
+  Reviewed PASS by `reviewer` (mode: spec) — all 7 tasks match the plan.
+  Not yet delivered (no PR opened).
+- **Goal:** give objectives 11 (world-class engineering), 12 (production-
+  grade), 26 (low-coupling), and 29 (no hardcoded project truth) real,
+  re-runnable instruments — the second of 4 clusters, next per the spec's
+  own build order (C done → D → B → A). Also resolves Cluster B's open
+  objective-20 marker with fresh research (not built this pass).
+- **Out of Scope:** Clusters A, B (marker resolved, not built); fixing
+  `tools/resume.py`'s hardcoded `BRANCH_PREFIX` (separate logged bug, only
+  surfaced by this cluster's own check); turning any new check into a gate;
+  re-grading objectives 1-10.
 
 ### Implement world-class SessionStart bootstrap scaffolding
 - **Status:** In Progress
