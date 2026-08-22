@@ -104,6 +104,21 @@ waste this table exists to prevent.
 | `ISSUES.md` | a diagnose-fix loop reached a terminal state (`debugging` writes these) | append at top, one entry per incident |
 | `decisions/` | a non-obvious, hard-to-reverse choice was made | one new file |
 
+**`README.md`'s install/setup commands are executable claims, not prose —
+run them, don't proofread them.** A wrong URL, a stale org name, or a
+missing flag reads fine and fails silently for the next person who copies
+it. Found live: the install commands named an old GitHub org
+(`NG-VikasV`, redirects but is not the canonical remote) and, more
+seriously, omitted `--force-reinstall` — `pyproject.toml`'s static
+`version = "0.1.0"` means a plain `pip install` (even with `--upgrade`)
+sees "already satisfied" and silently keeps whatever was installed
+before, no error, no warning (`decisions/` or `ISSUES.md` per the fix's
+weight — this one was small enough for a direct `LOG.md`/`ISSUES.md`
+entry, not a full ADR). When `README.md`'s install, setup, or verify
+commands are the thing changing, actually run them — a fresh venv or a
+scratch directory, the same evidence standard as any other check — before
+writing the section that claims they work.
+
 Two rules cut across every format and are easy to get wrong:
 
 - **Every field-shaped block uses bullets, never bare `Field: value` lines.**
@@ -133,6 +148,9 @@ visible in `git show`.
 - Writing `HANDOFF.md` as a second `LOG.md`. Handoff is state; log is history.
 - Recording a decision without the alternative it beat — that is an assertion,
   not a decision record.
+- "The install command in `README.md` looks right, I'll skip running it."
+  It looked right the last time too, right up until it silently installed
+  a stale package.
 - Copying the diff into `LOG.md`.
 
 **Each of these means: go back and read the actual state first.**

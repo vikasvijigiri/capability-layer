@@ -20,9 +20,21 @@ There is no application code here. This repository *is* the layer.
 ## Install it into your repo
 
 ```bash
-pip install "git+https://github.com/NG-VikasV/capability-layer"
+pip install --force-reinstall --no-deps "git+https://github.com/vikasvijigiri/capability-layer"
 python -m capability_layer install --into .
 ```
+
+**`--force-reinstall --no-deps` is not optional, and this is not a style
+preference — without it you silently get an old copy.** `pyproject.toml`'s
+`version` is a fixed `0.1.0` (there is no per-commit version bump), so pip's
+own dependency resolver sees "`capability-layer==0.1.0` already installed"
+and skips reinstalling — even `pip install --upgrade` alone does this, since
+`--upgrade` still short-circuits on a version match. Reproduced live: a
+plain `pip install` of this exact URL a second time in the same
+environment printed no error and no warning, and left the previous
+install's files completely unchanged. `--force-reinstall` is the only flag
+that bypasses the version check and actually re-clones and reinstalls;
+`--no-deps` keeps it from redundantly reinstalling `pyyaml` every time.
 
 Verified end to end from `main` into a fresh repository: 218 payload files land,
 the target's own tier comes back `PASS: 30 check(s) green (lint, test,
@@ -38,10 +50,12 @@ fine when PATH cooperates; the module form needs only the interpreter.
 The repository is **private**, so pip needs credentials that can read it.
 
 Already have it installed? `upgrade`, never `install` — the second overwrites
-whatever you have edited:
+whatever you have edited. The `pip install` line still needs
+`--force-reinstall --no-deps` for the same reason as above; `--upgrade`
+does nothing extra here and is omitted:
 
 ```bash
-pip install --upgrade "git+https://github.com/NG-VikasV/capability-layer"
+pip install --force-reinstall --no-deps "git+https://github.com/vikasvijigiri/capability-layer"
 python -m capability_layer upgrade --into .
 ```
 

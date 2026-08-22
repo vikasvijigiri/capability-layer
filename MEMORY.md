@@ -64,6 +64,12 @@ in HANDOFF.md; chronological events belong in LOG.md. -->
   branch in play. Create the worktree explicitly with `tools/worktree.py`, naming
   the base, and prove it with `git merge-base --is-ancestor` read from the tree —
   never from the agent's own report.
+- `pip install "git+URL"` (even with `--upgrade`) silently no-ops when a
+  package with the same version is already installed — a static
+  `pyproject.toml` `version` (this repo's stays `0.1.0`) means every commit
+  looks identical to pip's resolver, so a "successful" second install can
+  leave the old code in place with no error. `--force-reinstall --no-deps`
+  is the only flag that actually bypasses this. See `ISSUES.md` 2026-08-23.
 
 ## MCP and local configuration
 
