@@ -28,8 +28,8 @@ def main_body_calls(path: Path) -> set[str]:
     }
 
 
-bootstrap = ROOT / ".claude/hooks/session-start/02-bootstrap-docs.py"
-drift = ROOT / ".claude/hooks/post-run/07-layer-drift.py"
+bootstrap = ROOT / ".claude/hooks/session-init/02-bootstrap-docs.py"
+drift = ROOT / ".claude/hooks/stop-finalization/07-layer-drift.py"
 require("bootstrap hook exists", bootstrap.is_file())
 require("drift hook exists", drift.is_file())
 if bootstrap.is_file():

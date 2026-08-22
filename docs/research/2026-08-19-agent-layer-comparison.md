@@ -21,14 +21,17 @@
 
 - 14 skills under `.claude/skills/<name>/SKILL.md` were compared for frontmatter,
 	routing, output/verification language, and success criteria.
-- 24 executable event hooks under `.claude/hooks/<event>/*.py` were compared for
+- 25 executable event hooks under `.claude/hooks/<event>/*.py` were compared for
 	module purpose, payload loading, event registration, deny behavior where
 	applicable, and strategic-file write boundaries (17 at this report's original
 	writing on 2026-08-19; `post-tool/02-skill-cost.py` and
 	`post-run/09-telemetry.py` added 2026-08-20; `post-tool/04-read-cost.py`
 	and `post-tool/05-agent-cost.py` added 2026-08-21; `post-tool/06-tool-cost.py`,
 	`user-prompt/02-turn-timer.py` and `post-tool/07-human-cost.py` added
-	2026-08-21, same day, `four-more-spec-metrics`).
+	2026-08-21, same day, `four-more-spec-metrics`; renamed to the Notion
+	"Agentic Workflows (IDE)" hook families later on 2026-08-21, and
+	`permission-security/00-dispatch.py` added as an in-process consolidation
+	of the four former `pre-commit`/`pre-deploy` scripts, net +1).
 - The inventory is structural evidence only; it does not prove that a model
 	triggers every skill or that another host executes every hook.
 

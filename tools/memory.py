@@ -166,7 +166,7 @@ def relevant(entries: list[dict], paths, terms=None) -> list[dict]:
             hits.append({**entry, "why": "names the file"})
             continue
         # Prefix in EITHER direction. A note about `.claude/hooks/_hooklib.py`
-        # is exactly what someone editing `.claude/hooks/post-run/06-*.py`
+        # is exactly what someone editing `.claude/hooks/stop-finalization/06-*.py`
         # needs, and comparing directories for equality missed it -- one is
         # nested below the other. Nesting is the common shape in this layer, so
         # equality would have made directory matching almost never fire.
@@ -271,7 +271,7 @@ def _definitely_missing(root: Path, token: str) -> bool:
     # Resolve by BASENAME anywhere in the tree, never by the literal token.
     #
     # Third calibration, and the last: notes refer to files by partial path --
-    # `session-start/02-bootstrap-docs.py` for something that lives under
+    # `session-init/02-bootstrap-docs.py` for something that lives under
     # `.claude/hooks/`. Checking `root / token` reported three such entries as
     # deleted while all three were present one directory up.
     #

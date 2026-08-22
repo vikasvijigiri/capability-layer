@@ -46,6 +46,7 @@ TREES = (
     ".claude/rules",
     ".claude/output-styles",
     ".claude/workflows",
+    ".claude/policies",
     ".claude/agent-memory",
     "tools",
     # Fixtures the suites read. `test_pilot_contract.py` and `test_recon.py` are
@@ -403,7 +404,7 @@ def entry_point(target: Path) -> str:
 
     Deliberately shallow: this is a deterministic script, not the session. It
     reports a signal and names the skill that consumes it. Deciding what the
-    work actually is belongs to `repo-recon`, which can read code.
+    work actually is belongs to `repository-navigation`, which can read code.
     """
     has_git = (target / ".git").exists()
     has_plan = any((target / "docs" / "plans").glob("*.md")) \
@@ -428,11 +429,11 @@ def entry_point(target: Path) -> str:
     if has_plan:
         return "docs/plans/ already has a plan -- run `python tools/resume.py`"
     if tracked > 20:
-        return ("an existing codebase with no plan -- start at `repo-recon`, "
-                "which reads the repo and writes the brief")
+        return ("an existing codebase with no plan -- start at "
+                "`repository-navigation`, which reads the repo and writes the brief")
     if has_task:
-        return "TASK.md exists -- resume `writing-plans` at its planning stage"
-    return "empty or near-empty -- start at `writing-plans`"
+        return "TASK.md exists -- resume `task-analysis` at its planning stage"
+    return "empty or near-empty -- start at `task-analysis`"
 
 
 def plan(target: Path) -> tuple[list[tuple[Path, str]], list[str]]:

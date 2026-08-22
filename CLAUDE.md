@@ -73,8 +73,12 @@ The largest lever is request shape, and it is the user's: one goal per request.
 
 `.claude/commands/` holds them and each states its own contract. `/verify` and
 `/verify-change` (checks), `/save` (confirmed local commit, never pushes),
-`/wip` `/git-state` `/handoff` (state), `/plan-review` `/security-review`
+`/wip` `/git-state` `/handoff` (state), `/plan` `/security-review`
 `/pr-review` (independent review), `/release-check` `/publish` (delivery).
+Notion's 6-command shape (`/task` `/plan` `/debug` `/review` `/research`
+`/release`) sits alongside these repo-specific extras — thin entries that
+route to the same skills and, for `/review`/`/release`, the same underlying
+commands, not a second implementation.
 
 Safety rails, one tool each with a suite behind it — `.claude/workflow.md` owns
 the table: `security_gate.py` (artefact facts, not a receipt) · `halt.py` ·
@@ -146,6 +150,6 @@ editing it** -- a broken hook is silent, which reads exactly like a working one.
 - Push, merge, publish or deploy without explicit user approval.
 - Create a duplicate implementation of something that already exists.
 - Put AI attribution in git history. Two layers: `attribution.commit`/`pr` are
-  `""` in `~/.claude/settings.json`, and `pre-commit/03-attribution-guard.py`
+  `""` in `~/.claude/settings.json`, and `permission-security/03-attribution-guard.py`
   DENIES a hand-written `-m` carrying a trailer, plus a `user.name`/`user.email`
   resolving to an AI.

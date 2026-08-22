@@ -6,11 +6,11 @@ Why this suite exists
 `/verify` step 4 has described this exact check in prose since the command was
 written, and the drift it describes accumulated anyway:
 
-- `session-start/02-bootstrap-docs.py` was in the registry, on disk, and NOT in
+- `session-init/02-bootstrap-docs.py` was in the registry, on disk, and NOT in
   `settings.json` — so the hook that injects the knowledge docs into session
   context **never fired in a real session**. CLAUDE.md's "six files carry state
   between sessions" was describing a capability that was not wired.
-- `post-run/05-docs-gate.py` and `pre-commit/05-docs-required.py` were wired and
+- `stop-finalization/05-docs-gate.py` and `permission-security/05-docs-required.py` were wired and
   on disk but absent from the registry, so the file documenting intent disagreed
   with the file that fires.
 
@@ -132,7 +132,7 @@ check("no registry event has an empty subscriber list", not empty_events,
 # This repository intentionally ships no global hook. A user-level settings file
 # must therefore not point at a deleted repository path.
 
-STALE_GLOBAL = {"global-session-start/01-layer-bootstrap.py"}
+STALE_GLOBAL = {"global-session-init/01-layer-bootstrap.py"}
 
 global_settings = Path.home() / ".claude" / "settings.json"
 if not global_settings.is_file():
@@ -169,6 +169,52 @@ import ast  # noqa: E402, PLC0415
 
 SKILL_NAMES = {d.name for d in (ROOT / ".claude" / "skills").iterdir() if d.is_dir()}
 
+# Known non-dispatch collisions between an ordinary word used for something
+# else in a hook's own logic and a Notion single-word skill name that
+# happens to share the substring -- found 2026-08-21 once `security`,
+# `testing`, `research`, `architecture` replaced hyphenated compound names
+# that almost never collided with prose by accident. Each entry names the
+# file and the exact reason it is not a dispatch.
+_KNOWN_COLLISIONS = {
+    # `_hooklib.FAILURE_CLASSES`' own failure-kind label ("this failure is
+    # security-class"), mirrored locally as a dict key -- not the `security`
+    # skill.
+    ("stop-finalization/06-artifact-autocommit.py", "security"),
+    # A HARD_STAGE regex PATTERN naming the `permission-security` hook
+    # family (matched against a prompt, never printed) -- the substring
+    # collision is with the family name, not the `security` skill.
+    ("prompt-intake/01-entry-classifier.py", "security"),
+    # The `[permission-security]` prefix on the fail-open visibility notice
+    # (code-review found the prior silent-fail-open a real defect; this
+    # print is the fix) names the hook's own family in its own log line,
+    # not the `security` skill. Two files share the basename `00-dispatch.py`
+    # (this one and stop-finalization's), so the key carries the parent
+    # directory too -- a bare-basename entry here would also blind the check
+    # to a real future violation in stop-finalization/00-dispatch.py.
+    ("permission-security/00-dispatch.py", "security"),
+}
+
+
+def _all_docstrings(tree: ast.AST) -> set[str]:
+    """Every docstring in the file -- module, class and function-level.
+
+    `ast.get_docstring(node, clean=False)` matches the AST Constant's raw
+    value exactly; the default `clean=True` dedents/strips it, so comparing
+    a cleaned docstring against the raw Constant below was never equal for
+    any real multi-line docstring and silently excluded nothing. Found
+    2026-08-21 the same way as the single-word collisions above: neither
+    bug was visible until Notion's short skill names started appearing
+    inside ordinary docstring prose.
+    """
+    docs: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            doc = ast.get_docstring(node, clean=False)
+            if doc:
+                docs.add(doc)
+    return docs
+
+
 for _path in sorted(HOOKS.rglob("*.py")):
     if "__pycache__" in _path.parts or _path.name.startswith("_"):
         continue
@@ -177,11 +223,14 @@ for _path in sorted(HOOKS.rglob("*.py")):
     except SyntaxError as exc:
         check(f"{_path.name} parses", False, str(exc)[:80])
         continue
-    doc = ast.get_docstring(tree) or ""
+    docs = _all_docstrings(tree)
     emitted = [n.value for n in ast.walk(tree)
                if isinstance(n, ast.Constant) and isinstance(n.value, str)
-               and n.value != doc and len(n.value) < 4000]
-    named = sorted({s for s in SKILL_NAMES if any(s in e for e in emitted)})
+               and n.value not in docs and len(n.value) < 4000]
+    _rel = f"{_path.parent.name}/{_path.name}"
+    allowed = {s for f, s in _KNOWN_COLLISIONS if f == _rel}
+    named = sorted({s for s in SKILL_NAMES if s not in allowed
+                    and any(s in e for e in emitted)})
     check(f"{_path.parent.name}/{_path.name} names no skill in what it emits",
           not named, f"names {named} -- workflow.md decides, the hook measures")
 
@@ -194,7 +243,7 @@ for _path in sorted(HOOKS.rglob("*.py")):
 # An unclosed tag is worse: the regex simply does not match, so the block is
 # present, looks correct, and is never emitted.
 
-_report = HOOKS / "session-start" / "03-state-report.py"
+_report = HOOKS / "session-init" / "03-state-report.py"
 _wf = ROOT / ".claude" / "workflow.md"
 if _report.is_file() and _wf.is_file():
     _src = _report.read_text(encoding="utf-8")

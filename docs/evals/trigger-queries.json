@@ -1,104 +1,6 @@
 {
   "_method": "anthropics/skills -> skill-creator, description-optimization. ~20 queries per skill, half should-trigger and half genuine near-misses. Queries must be what a person would actually type: concrete, with paths and context, sometimes lowercase or sloppy. An obviously-irrelevant negative tests nothing -- the valuable ones share vocabulary with the skill and still need something else.",
-  "code-review": [
-    {
-      "query": "i just finished the retry work on the checkout branch, can you go through the diff before i open a PR",
-      "should_trigger": true
-    },
-    {
-      "query": "before this goes out, look at what changed in src/api/session.ts and tell me if the auth handling is sound",
-      "should_trigger": true
-    },
-    {
-      "query": "we're adding stripe webhooks. is there anything in this branch that would let someone replay a request?",
-      "should_trigger": true
-    },
-    {
-      "query": "npm added 14 packages when i installed the pdf thing. anything in there i should worry about",
-      "should_trigger": true
-    },
-    {
-      "query": "the new settings modal - can a keyboard user actually get out of it? check the diff",
-      "should_trigger": true
-    },
-    {
-      "query": "someone said the dashboard got slower after my change. its in components/Dashboard.tsx",
-      "should_trigger": true
-    },
-    {
-      "query": "give this branch a once over, i've been staring at it too long to see anything",
-      "should_trigger": true
-    },
-    {
-      "query": "is this ready to merge or did i miss something",
-      "should_trigger": true
-    },
-    {
-      "query": "check whether i accidentally left scope creep in here, i touched more files than the ticket asked for",
-      "should_trigger": true
-    },
-    {
-      "query": "review the changes and tell me what would break in production",
-      "should_trigger": true
-    },
-    {
-      "query": "fix the two eslint errors in src/utils/date.ts for me",
-      "should_trigger": false
-    },
-    {
-      "query": "the checkout test is failing with a 500 and i cant work out why",
-      "should_trigger": false
-    },
-    {
-      "query": "write me a plan for adding SSO, we agreed on the approach yesterday",
-      "should_trigger": false
-    },
-    {
-      "query": "deploy the current main to staging",
-      "should_trigger": false
-    },
-    {
-      "query": "what did we decide about the retry backoff last week? check the decisions folder",
-      "should_trigger": false
-    },
-    {
-      "query": "open the PR for this branch and add the reviewers",
-      "should_trigger": false
-    },
-    {
-      "query": "how do other teams usually handle idempotency keys for payments?",
-      "should_trigger": false
-    },
-    {
-      "query": "rename getUserData to fetchUserProfile everywhere",
-      "should_trigger": false
-    },
-    {
-      "query": "is the auth service actually up right now",
-      "should_trigger": false
-    },
-    {
-      "query": "add a test for the empty-cart case",
-      "should_trigger": false
-    },
-    {
-      "query": "look over the diff on this branch before it merges",
-      "should_trigger": true
-    },
-    {
-      "query": "is the repo tidy enough to hand over",
-      "should_trigger": false
-    },
-    {
-      "query": "is the retry work finished",
-      "should_trigger": false
-    },
-    {
-      "query": "why did the retry test go red after my change",
-      "should_trigger": false
-    }
-  ],
-  "systematic-debugging": [
+  "debugging": [
     {
       "query": "the checkout test passes locally and fails in CI, every single time",
       "should_trigger": true
@@ -188,7 +90,7 @@
       "should_trigger": false
     }
   ],
-  "repo-recon": [
+  "repository-navigation": [
     {
       "query": "i just cloned this thing and have no idea what it does, where do i start",
       "should_trigger": true
@@ -246,119 +148,7 @@
       "should_trigger": false
     }
   ],
-  "delivering": [
-    {
-      "query": "review is done, open the PR against main",
-      "should_trigger": true
-    },
-    {
-      "query": "everything is green, push this branch up",
-      "should_trigger": true
-    },
-    {
-      "query": "can you get this into the merge queue",
-      "should_trigger": true
-    },
-    {
-      "query": "the PR has conflicts with main now, sort that out",
-      "should_trigger": true
-    },
-    {
-      "query": "is this ready to land or is something still missing",
-      "should_trigger": true
-    },
-    {
-      "query": "squash these wip commits and open the pull request",
-      "should_trigger": true
-    },
-    {
-      "query": "deploy this to staging",
-      "should_trigger": false
-    },
-    {
-      "query": "roll it back, the canary is unhealthy",
-      "should_trigger": false
-    },
-    {
-      "query": "go through the diff and tell me if the auth handling is sound",
-      "should_trigger": false
-    },
-    {
-      "query": "the CI check on the PR is red, why",
-      "should_trigger": false
-    },
-    {
-      "query": "add SLO alerts for the checkout endpoint",
-      "should_trigger": false
-    },
-    {
-      "query": "prove this actually meets what the brief asked for",
-      "should_trigger": false
-    },
-    {
-      "query": "get the merged change onto staging",
-      "should_trigger": false
-    },
-    {
-      "query": "land the reviewed branch on main",
-      "should_trigger": true
-    }
-  ],
-  "capability-layer-maintenance": [
-    {
-      "query": "my new skill never fires, figure out what is wrong with the wiring",
-      "should_trigger": true
-    },
-    {
-      "query": "the post-run hook produces no output at all",
-      "should_trigger": true
-    },
-    {
-      "query": "CLAUDE.md says ten agents and there are eleven",
-      "should_trigger": true
-    },
-    {
-      "query": "audit .claude for drift",
-      "should_trigger": true
-    },
-    {
-      "query": "add a subagent for reviewing migrations and wire it into the review skill",
-      "should_trigger": true
-    },
-    {
-      "query": "settings.json and hooks_registry.json disagree about what is registered",
-      "should_trigger": true
-    },
-    {
-      "query": "explain what a Claude Code hook is",
-      "should_trigger": false
-    },
-    {
-      "query": "the api tests are failing after my change",
-      "should_trigger": false
-    },
-    {
-      "query": "write the plan for the new billing module",
-      "should_trigger": false
-    },
-    {
-      "query": "clean up the repo before we ship",
-      "should_trigger": false
-    },
-    {
-      "query": "review the diff on this branch",
-      "should_trigger": false
-    },
-    {
-      "query": "update the README to describe the new CLI",
-      "should_trigger": false
-    },
-    {
-      "query": "this skill never fires when i ask for it",
-      "should_trigger": true
-    }
-  ],
-  "executing-plans": [
+  "implementation": [
     {
       "query": "plan is approved, start on task 1",
       "should_trigger": true
@@ -420,65 +210,7 @@
       "should_trigger": true
     }
   ],
-  "brainstormer": [
-    {
-      "query": "any ideas for how to onboard new users faster",
-      "should_trigger": true
-    },
-    {
-      "query": "what are our options for handling offline edits",
-      "should_trigger": true
-    },
-    {
-      "query": "i am stuck on how to structure the permissions model",
-      "should_trigger": true
-    },
-    {
-      "query": "is there a better way to do this than polling",
-      "should_trigger": true
-    },
-    {
-      "query": "what should the settings screen look like",
-      "should_trigger": true
-    },
-    {
-      "query": "we already picked event sourcing, write the plan",
-      "should_trigger": false
-    },
-    {
-      "query": "add a settings screen with three tabs",
-      "should_trigger": false
-    },
-    {
-      "query": "what is the prior art for CRDTs",
-      "should_trigger": false
-    },
-    {
-      "query": "the permissions check is failing for admins",
-      "should_trigger": false
-    },
-    {
-      "query": "start building the onboarding flow",
-      "should_trigger": false
-    },
-    {
-      "query": "we need multi-currency support, and i do not know how to model it yet",
-      "should_trigger": true
-    },
-    {
-      "query": "add csv export to the reports page",
-      "should_trigger": false
-    },
-    {
-      "query": "how do other teams usually do idempotency keys",
-      "should_trigger": false
-    },
-    {
-      "query": "the settings screen looks inconsistent with the rest",
-      "should_trigger": false
-    }
-  ],
-  "writing-plans": [
+  "task-analysis": [
     {
       "query": "the spec is approved, turn it into tasks",
       "should_trigger": true,
@@ -585,7 +317,7 @@
       "should_trigger": false
     }
   ],
-  "verifying-work": [
+  "testing": [
     {
       "query": "is this done",
       "should_trigger": true
@@ -639,7 +371,7 @@
       "should_trigger": false
     }
   ],
-  "no-slop": [
+  "refactoring": [
     {
       "query": "clean up the repo before we ship",
       "should_trigger": true
@@ -701,57 +433,7 @@
       "should_trigger": false
     }
   ],
-  "releasing": [
-    {
-      "query": "deploy this to staging",
-      "should_trigger": true
-    },
-    {
-      "query": "push it live",
-      "should_trigger": true
-    },
-    {
-      "query": "is it live yet",
-      "should_trigger": true
-    },
-    {
-      "query": "roll it back, error rate spiked",
-      "should_trigger": true
-    },
-    {
-      "query": "set up alerts for the checkout endpoint",
-      "should_trigger": true
-    },
-    {
-      "query": "open a PR and merge it",
-      "should_trigger": false
-    },
-    {
-      "query": "prove this meets the brief",
-      "should_trigger": false
-    },
-    {
-      "query": "review the diff before release",
-      "should_trigger": false
-    },
-    {
-      "query": "write the release notes",
-      "should_trigger": false
-    },
-    {
-      "query": "is the branch ready to land",
-      "should_trigger": false
-    },
-    {
-      "query": "get the merged change onto staging",
-      "should_trigger": true
-    },
-    {
-      "query": "land the reviewed branch on main",
-      "should_trigger": false
-    }
-  ],
-  "knowledge-manager": [
+  "documentation": [
     {
       "query": "update the README to describe the new CLI",
       "should_trigger": true
@@ -805,6 +487,388 @@
       "should_trigger": true
     }
   ],
+  "release-git": [
+    {
+      "query": "review is done, open the PR against main",
+      "should_trigger": true
+    },
+    {
+      "query": "everything is green, push this branch up",
+      "should_trigger": true
+    },
+    {
+      "query": "can you get this into the merge queue",
+      "should_trigger": true
+    },
+    {
+      "query": "the PR has conflicts with main now, sort that out",
+      "should_trigger": true
+    },
+    {
+      "query": "is this ready to land or is something still missing",
+      "should_trigger": true
+    },
+    {
+      "query": "squash these wip commits and open the pull request",
+      "should_trigger": true
+    },
+    {
+      "query": "deploy this to staging",
+      "should_trigger": false
+    },
+    {
+      "query": "roll it back, the canary is unhealthy",
+      "should_trigger": false
+    },
+    {
+      "query": "go through the diff and tell me if the auth handling is sound",
+      "should_trigger": false
+    },
+    {
+      "query": "the CI check on the PR is red, why",
+      "should_trigger": false
+    },
+    {
+      "query": "add SLO alerts for the checkout endpoint",
+      "should_trigger": false
+    },
+    {
+      "query": "prove this actually meets what the brief asked for",
+      "should_trigger": false
+    },
+    {
+      "query": "get the merged change onto staging",
+      "should_trigger": false
+    },
+    {
+      "query": "land the reviewed branch on main",
+      "should_trigger": true
+    },
+    {
+      "query": "deploy this to staging",
+      "should_trigger": true
+    },
+    {
+      "query": "push it live",
+      "should_trigger": true
+    },
+    {
+      "query": "is it live yet",
+      "should_trigger": true
+    },
+    {
+      "query": "roll it back, error rate spiked",
+      "should_trigger": true
+    },
+    {
+      "query": "set up alerts for the checkout endpoint",
+      "should_trigger": true
+    },
+    {
+      "query": "open a PR and merge it",
+      "should_trigger": false
+    },
+    {
+      "query": "prove this meets the brief",
+      "should_trigger": false
+    },
+    {
+      "query": "review the diff before release",
+      "should_trigger": false
+    },
+    {
+      "query": "write the release notes",
+      "should_trigger": false
+    },
+    {
+      "query": "is the branch ready to land",
+      "should_trigger": false
+    },
+    {
+      "query": "get the merged change onto staging",
+      "should_trigger": true
+    },
+    {
+      "query": "land the reviewed branch on main",
+      "should_trigger": false
+    }
+  ],
+  "architecture": [
+    {
+      "query": "any ideas for how to onboard new users faster",
+      "should_trigger": true,
+      "entry": "open"
+    },
+    {
+      "query": "what are our options for handling offline edits",
+      "should_trigger": true,
+      "entry": "open"
+    },
+    {
+      "query": "i am stuck on how to structure the permissions model",
+      "should_trigger": true,
+      "entry": "open"
+    },
+    {
+      "query": "is there a better way to do this than polling",
+      "should_trigger": true,
+      "entry": "open"
+    },
+    {
+      "query": "what should the settings screen look like",
+      "should_trigger": true
+    },
+    {
+      "query": "we already picked event sourcing, write the plan",
+      "should_trigger": false
+    },
+    {
+      "query": "add a settings screen with three tabs",
+      "should_trigger": false
+    },
+    {
+      "query": "what is the prior art for CRDTs",
+      "should_trigger": false
+    },
+    {
+      "query": "the permissions check is failing for admins",
+      "should_trigger": false
+    },
+    {
+      "query": "start building the onboarding flow",
+      "should_trigger": false
+    },
+    {
+      "query": "we need multi-currency support, and i do not know how to model it yet",
+      "should_trigger": true,
+      "entry": "open"
+    },
+    {
+      "query": "add csv export to the reports page",
+      "should_trigger": false
+    },
+    {
+      "query": "how do other teams usually do idempotency keys",
+      "should_trigger": false
+    },
+    {
+      "query": "design this settings screen",
+      "should_trigger": true,
+      "entry": "silent"
+    },
+    {
+      "query": "what should this dashboard look like",
+      "should_trigger": true,
+      "entry": "silent"
+    },
+    {
+      "query": "set up a design system for the app",
+      "should_trigger": true,
+      "entry": "silent"
+    },
+    {
+      "query": "pick the colors for the new page",
+      "should_trigger": true,
+      "entry": "silent"
+    },
+    {
+      "query": "our UI is inconsistent across screens",
+      "should_trigger": true,
+      "entry": "silent"
+    },
+    {
+      "query": "define the color tokens",
+      "should_trigger": true,
+      "entry": "silent"
+    },
+    {
+      "query": "make the landing page look better",
+      "should_trigger": true,
+      "entry": "silent"
+    },
+    {
+      "query": "write DESIGN.md for this project",
+      "should_trigger": true,
+      "entry": "silent"
+    },
+    {
+      "query": "implement the settings screen from the plan",
+      "should_trigger": false,
+      "owner": "executing-plans"
+    },
+    {
+      "query": "clean up the repo before shipping",
+      "should_trigger": false,
+      "owner": "no-slop"
+    },
+    {
+      "query": "should we build a settings screen at all",
+      "should_trigger": true,
+      "entry": "open"
+    },
+    {
+      "query": "review this diff for accessibility problems",
+      "should_trigger": false,
+      "owner": "code-review"
+    },
+    {
+      "query": "the settings screen looks inconsistent with the rest",
+      "should_trigger": true,
+      "entry": "silent"
+    }
+  ],
+  "code-review": [
+    {
+      "query": "i just finished the retry work on the checkout branch, can you go through the diff before i open a PR",
+      "should_trigger": true
+    },
+    {
+      "query": "before this goes out, look at what changed in src/api/session.ts and tell me if the auth handling is sound",
+      "should_trigger": true
+    },
+    {
+      "query": "we're adding stripe webhooks. is there anything in this branch that would let someone replay a request?",
+      "should_trigger": true
+    },
+    {
+      "query": "npm added 14 packages when i installed the pdf thing. anything in there i should worry about",
+      "should_trigger": true
+    },
+    {
+      "query": "the new settings modal - can a keyboard user actually get out of it? check the diff",
+      "should_trigger": true
+    },
+    {
+      "query": "someone said the dashboard got slower after my change. its in components/Dashboard.tsx",
+      "should_trigger": true
+    },
+    {
+      "query": "give this branch a once over, i've been staring at it too long to see anything",
+      "should_trigger": true
+    },
+    {
+      "query": "is this ready to merge or did i miss something",
+      "should_trigger": true
+    },
+    {
+      "query": "check whether i accidentally left scope creep in here, i touched more files than the ticket asked for",
+      "should_trigger": true
+    },
+    {
+      "query": "review the changes and tell me what would break in production",
+      "should_trigger": true
+    },
+    {
+      "query": "fix the two eslint errors in src/utils/date.ts for me",
+      "should_trigger": false
+    },
+    {
+      "query": "the checkout test is failing with a 500 and i cant work out why",
+      "should_trigger": false
+    },
+    {
+      "query": "write me a plan for adding SSO, we agreed on the approach yesterday",
+      "should_trigger": false
+    },
+    {
+      "query": "deploy the current main to staging",
+      "should_trigger": false
+    },
+    {
+      "query": "what did we decide about the retry backoff last week? check the decisions folder",
+      "should_trigger": false
+    },
+    {
+      "query": "open the PR for this branch and add the reviewers",
+      "should_trigger": false
+    },
+    {
+      "query": "how do other teams usually handle idempotency keys for payments?",
+      "should_trigger": false
+    },
+    {
+      "query": "rename getUserData to fetchUserProfile everywhere",
+      "should_trigger": false
+    },
+    {
+      "query": "is the auth service actually up right now",
+      "should_trigger": false
+    },
+    {
+      "query": "add a test for the empty-cart case",
+      "should_trigger": false
+    },
+    {
+      "query": "look over the diff on this branch before it merges",
+      "should_trigger": true
+    },
+    {
+      "query": "is the repo tidy enough to hand over",
+      "should_trigger": false
+    },
+    {
+      "query": "is the retry work finished",
+      "should_trigger": false
+    },
+    {
+      "query": "why did the retry test go red after my change",
+      "should_trigger": false
+    }
+  ],
+  "capability-layer-maintenance": [
+    {
+      "query": "my new skill never fires, figure out what is wrong with the wiring",
+      "should_trigger": true
+    },
+    {
+      "query": "the post-run hook produces no output at all",
+      "should_trigger": true
+    },
+    {
+      "query": "CLAUDE.md says ten agents and there are eleven",
+      "should_trigger": true
+    },
+    {
+      "query": "audit .claude for drift",
+      "should_trigger": true
+    },
+    {
+      "query": "add a subagent for reviewing migrations and wire it into the review skill",
+      "should_trigger": true
+    },
+    {
+      "query": "settings.json and hooks_registry.json disagree about what is registered",
+      "should_trigger": true
+    },
+    {
+      "query": "explain what a Claude Code hook is",
+      "should_trigger": false
+    },
+    {
+      "query": "the api tests are failing after my change",
+      "should_trigger": false
+    },
+    {
+      "query": "write the plan for the new billing module",
+      "should_trigger": false
+    },
+    {
+      "query": "clean up the repo before we ship",
+      "should_trigger": false
+    },
+    {
+      "query": "review the diff on this branch",
+      "should_trigger": false
+    },
+    {
+      "query": "update the README to describe the new CLI",
+      "should_trigger": false
+    },
+    {
+      "query": "this skill never fires when i ask for it",
+      "should_trigger": true
+    }
+  ],
   "research": [
     {
       "query": "how do people usually handle rate limiting at this scale",
@@ -855,62 +919,144 @@
       "should_trigger": true
     }
   ],
-  "designer": [
+  "data-analysis": [
     {
-      "query": "design this settings screen",
+      "query": "how much are we spending on shell calls in a typical session",
       "should_trigger": true
     },
     {
-      "query": "what should this dashboard look like",
+      "query": "is the fast tier actually faster after the hook consolidation, or does it just feel that way",
       "should_trigger": true
     },
     {
-      "query": "set up a design system for the app",
+      "query": "what does telemetry.jsonl say about turn latency over the last 20 runs",
       "should_trigger": true
     },
     {
-      "query": "pick the colors for the new page",
+      "query": "how often does a repeat command actually happen in a session",
       "should_trigger": true
     },
     {
-      "query": "our UI is inconsistent across screens",
+      "query": "compare skill-body-load chars before and after the compression pass",
       "should_trigger": true
     },
     {
-      "query": "define the color tokens",
+      "query": "what changed in the duplicate-call rate since we added the notice",
       "should_trigger": true
     },
     {
-      "query": "make the landing page look better",
+      "query": "is the predicted execution level actually matching what happens, or is it just guessing",
       "should_trigger": true
     },
     {
-      "query": "write DESIGN.md for this project",
+      "query": "can you analyze the session data and tell me where the tokens are going",
       "should_trigger": true
     },
     {
-      "query": "implement the settings screen from the plan",
-      "should_trigger": false,
-      "owner": "executing-plans"
-    },
-    {
-      "query": "clean up the repo before shipping",
-      "should_trigger": false,
-      "owner": "no-slop"
-    },
-    {
-      "query": "should we build a settings screen at all",
-      "should_trigger": false,
-      "owner": "brainstormer"
-    },
-    {
-      "query": "review this diff for accessibility problems",
-      "should_trigger": false,
-      "owner": "code-review"
-    },
-    {
-      "query": "the settings screen looks inconsistent with the rest",
+      "query": "pull the real numbers on how much context a bash call adds on average",
       "should_trigger": true
+    },
+    {
+      "query": "what's our actual local-repair ratio been this month",
+      "should_trigger": true
+    },
+    {
+      "query": "just run tools/bench.py and paste the output, no need to explain it",
+      "should_trigger": false
+    },
+    {
+      "query": "how much does the aws bill come to this month",
+      "should_trigger": false
+    },
+    {
+      "query": "why is 06-tool-cost.py throwing a KeyError on startup",
+      "should_trigger": false
+    },
+    {
+      "query": "check the diff and see if this change is safe to ship",
+      "should_trigger": false
+    },
+    {
+      "query": "did we weaken any security controls in this pr",
+      "should_trigger": false
+    },
+    {
+      "query": "document what fields the telemetry schema has for the next person",
+      "should_trigger": false
+    },
+    {
+      "query": "is this dependency bump safe to add",
+      "should_trigger": false
+    },
+    {
+      "query": "plan out how we'd add a new counter for API spend",
+      "should_trigger": false
+    }
+  ],
+  "security": [
+    {
+      "query": "run the security gate against main before we merge this",
+      "should_trigger": true
+    },
+    {
+      "query": "did we weaken any security control in this branch",
+      "should_trigger": true
+    },
+    {
+      "query": "is there a secret committed in this branch anywhere",
+      "should_trigger": true
+    },
+    {
+      "query": "we bumped a dependency in package.json, is that risky",
+      "should_trigger": true
+    },
+    {
+      "query": "do a security review before this ships to prod",
+      "should_trigger": true
+    },
+    {
+      "query": "give me a residual risk report for this change",
+      "should_trigger": true
+    },
+    {
+      "query": "this touches the auth middleware in src/auth.py, can you check it for security issues",
+      "should_trigger": true
+    },
+    {
+      "query": "is this deployment change safe from a security standpoint",
+      "should_trigger": true
+    },
+    {
+      "query": "fix the sql injection you just found in the login handler",
+      "should_trigger": false
+    },
+    {
+      "query": "go exploit this endpoint and see if it's actually vulnerable",
+      "should_trigger": false
+    },
+    {
+      "query": "review this diff for correctness and test coverage",
+      "should_trigger": false
+    },
+    {
+      "query": "how many tool calls did this session make",
+      "should_trigger": false
+    },
+    {
+      "query": "why did permission-security/00-dispatch.py fail silently",
+      "should_trigger": false
+    },
+    {
+      "query": "plan out the migration to the new auth system",
+      "should_trigger": false
+    },
+    {
+      "query": "mark this pr as security reviewed and merge it",
+      "should_trigger": false
+    },
+    {
+      "query": "what's the duplicate-call rate looking like lately",
+      "should_trigger": false
     }
   ]
 }

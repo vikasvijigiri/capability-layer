@@ -31,18 +31,18 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 
 CONSTITUTION = ROOT / ".claude" / "constitution.md"
-PLANS_SKILL = ROOT / ".claude" / "skills" / "writing-plans" / "SKILL.md"
+PLANS_SKILL = ROOT / ".claude" / "skills" / "task-analysis" / "SKILL.md"
 
 check("the constitution exists", CONSTITUTION.is_file(), str(CONSTITUTION))
-check("writing-plans exists", PLANS_SKILL.is_file(), str(PLANS_SKILL))
+check("task-analysis exists", PLANS_SKILL.is_file(), str(PLANS_SKILL))
 if failures:
     sys.exit(1)
 
 text = CONSTITUTION.read_text(encoding="utf-8")
 
-# The skill IS its SKILL.md plus its references/ -- `writing-plans` loads them by
+# The skill IS its SKILL.md plus its references/ -- `task-analysis` loads them by
 # name and they are part of what it instructs. Reading only SKILL.md was correct
-# until the plan template moved into `references/plan-document.md` under the
+# until the plan template moved into `references/plan-format.md` under the
 # 200-line prose budget, at which point every gate assertion below went red while
 # the template was intact and one file away.
 #

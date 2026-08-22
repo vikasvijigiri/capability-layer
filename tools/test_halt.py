@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for tools/halt.py and .claude/hooks/pre-run/01-halt-guard.py.
+"""Tests for tools/halt.py and .claude/hooks/pre-tool/01-halt-guard.py.
 
 Three things this suite has to prove, because a kill switch that fails any one
 of them is worse than none:
@@ -28,7 +28,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-GUARD = ROOT / ".claude" / "hooks" / "pre-run" / "01-halt-guard.py"
+GUARD = ROOT / ".claude" / "hooks" / "pre-tool" / "01-halt-guard.py"
 STATE_DIR = ROOT / ".claude" / "hooks" / "state"
 failures: list[str] = []
 

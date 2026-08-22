@@ -39,7 +39,7 @@ Then, only if an upstream exists:
     git rev-list --left-right --count <base>...HEAD    # behind<TAB>ahead
 
 Report: branch, whether it is protected (`main`, `master`, `develop`, `release` —
-`pre-commit/02-branch-guard.py` denies commits there), the base actually found,
+`permission-security/02-branch-guard.py` denies commits there), the base actually found,
 and ahead/behind. Say "no upstream" plainly rather than printing 0.
 
 ## 2. The four buckets, and why they overlap
@@ -51,7 +51,7 @@ and ahead/behind. Say "no upstream" plainly rather than printing 0.
 
 **`-uall` is mandatory.** Plain `--porcelain` collapses a new directory to one
 entry (`?? docs/specs/`), hiding every file in it. That bug made
-`post-run/06-artifact-autocommit.py` see no new spec at all.
+`stop-finalization/06-artifact-autocommit.py` see no new spec at all.
 
 The first three do not sum to the fourth: one file can be both staged and
 unstaged (staged, then edited again). Report all four and say so — a single
@@ -79,14 +79,14 @@ across 50 files means pure renames.
     git diff --cached --name-only | wc -l            # staged right now
     git log -1 --format='%h %ar %s'                  # when the last commit landed
 
-**No longer tracked automatically.** `session-start/03-index-baseline.py` and
-`pre-commit/06-index-scope-guard.py` recorded and guarded this until they were
+**No longer tracked automatically.** `session-init/03-index-baseline.py` and
+`permission-security/06-index-scope-guard.py` recorded and guarded this until they were
 deleted, along with the `_hooklib` helpers this section used to
 call. Git itself cannot tell "staged a moment ago" from "staged on Tuesday", so
 if the index is non-empty and the last commit is old, say the staged set is of
 **unknown provenance** rather than guessing.
 
-The condition that made this valuable is gone: `post-run/06-artifact-autocommit.py`
+The condition that made this valuable is gone: `stop-finalization/06-artifact-autocommit.py`
 commits every turn, so the index does not accumulate across sessions any more. If
 you find a large staged set here, that is itself the finding — the auto-commit
 has been refusing, and its reason is in the Stop output.
@@ -104,7 +104,7 @@ has been refusing, and its reason is in the Stop output.
       --format='%(refname:short)  %(creatordate:relative)' refs/checkpoints/
     git stash list | wc -l
 
-`post-run/03-checkpoint.py` snapshots the whole tree every turn. This is why a
+`stop-finalization/03-checkpoint.py` snapshots the whole tree every turn. This is why a
 large uncommitted pile is a reviewability problem, not a safety one — say that
 explicitly, because the size of the number invites the opposite conclusion.
 

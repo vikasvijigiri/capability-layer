@@ -44,9 +44,9 @@ def run_hook(event, payload_obj):
 # including this one. The env flag is the documented re-entry guard; without it
 # this line recurses until the harness times out, with no error to show for it.
 BENIGN_EVENTS = [
-    ('post-run', {'workflow': 'oauth-workflow', 'status': 'success'}),
-    ('on-artifact-create', {'event': 'test', 'capabilities_written': 7}),
-    ('session-start', {}),
+    ('stop-finalization', {'workflow': 'oauth-workflow', 'status': 'success'}),
+    ('post-edit-validation', {'event': 'test', 'capabilities_written': 7}),
+    ('session-init', {}),
     # Fired from cwd=ROOT, so the source-repo refusal holds and nothing is
     # installed. This asserts only that it imports and exits clean -- the
     # install/refuse behaviour is exercised by firing it with a `cwd` payload
@@ -61,7 +61,7 @@ BENIGN_EVENTS = [
     # what it exists to refuse. A benign payload proves they load and allow; the
     # refusal paths are asserted separately below.
     ('pre-edit', {'tool_name': 'Write', 'tool_input': {'file_path': 'README.md'}}),
-    ('pre-deploy', {'tool_name': 'Bash', 'tool_input': {'command': 'echo hello'}}),
+    ('permission-security', {'tool_name': 'Bash', 'tool_input': {'command': 'echo hello'}}),
 ]
 
 os.environ['UAIOS_AUTOCOMMIT_RUNNING'] = '1'
@@ -75,7 +75,7 @@ for event, payload in BENIGN_EVENTS:
         print(f'OK: {event}')
 
 # 2. pre-commit with a clean file should pass.
-p = run_hook('pre-commit', {'files': ['requirements.txt']})
+p = run_hook('permission-security', {'files': ['requirements.txt']})
 if p.returncode != 0:
     print(f'FAIL: pre-commit (clean) exited {p.returncode}\n{p.stdout}')
     fail = True
@@ -94,7 +94,7 @@ with tempfile.NamedTemporaryFile('w', suffix='.txt', delete=False, encoding='utf
     secret_file = Path(f.name)
 try:
     rel = secret_file.relative_to(ROOT).as_posix()
-    p = run_hook('pre-commit', {'files': [rel]})
+    p = run_hook('permission-security', {'files': [rel]})
     if p.returncode != 0 or '"permissionDecision": "deny"' not in p.stdout:
         print('FAIL: pre-commit did not emit a structured deny')
         fail = True
@@ -128,7 +128,7 @@ def _load(path, name):
 
 os.environ.setdefault('HOOK_PAYLOAD', '{}')
 _hl = _load(ROOT / '.claude' / 'hooks' / '_hooklib.py', '_hooklib')
-_bg = _load(ROOT / '.claude' / 'hooks' / 'pre-commit' / '02-branch-guard.py',
+_bg = _load(ROOT / '.claude' / 'hooks' / 'permission-security' / '02-branch-guard.py',
             'branch_guard')
 
 COMMIT_CASES = [
@@ -200,12 +200,12 @@ DENY_CASES = [
     ('pre-edit', {'tool_name': 'Write',
                   'tool_input': {'file_path': 'package-lock.json'}},
      'a lockfile write'),
-    ('pre-deploy', {'tool_name': 'Bash', 'tool_input': {'command': _CLOUD}},
+    ('permission-security', {'tool_name': 'Bash', 'tool_input': {'command': _CLOUD}},
      'an unattended cloud-spend command'),
     # Assembled at runtime for the same reason as _CLOUD and PLANTED_KEY: the
     # guard scans this repo's own commands, and a literal trailer here would make
     # the file that tests it uncommittable.
-    ('pre-commit', {'tool_name': 'Bash', 'tool_input': {'command': _DIRTY_COMMIT}},
+    ('permission-security', {'tool_name': 'Bash', 'tool_input': {'command': _DIRTY_COMMIT}},
      'AI attribution in a commit message'),
 ]
 for _event, _payload, _label in DENY_CASES:
@@ -218,7 +218,7 @@ for _event, _payload, _label in DENY_CASES:
     else:
         print(f'OK: {_event} denies {_label}')
 
-# --- post-tool/02-skill-cost.py: skill-body-load counter --------------------
+# --- context-budget/02-skill-cost.py: skill-body-load counter --------------------
 #
 # `.claude/hooks/state/skill-cost.json` is a real, gitignored, running total
 # (see `.gitignore:28`) -- these assert on the DELTA a fire produces, not an
@@ -226,7 +226,7 @@ for _event, _payload, _label in DENY_CASES:
 # (`test_resume.py`'s temp-repo fixtures, the DENY_CASES above firing real
 # hooks in this real repo).
 _SKILL_COST_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'skill-cost.json'
-_NO_SLOP_SKILL_MD = ROOT / '.claude' / 'skills' / 'no-slop' / 'SKILL.md'
+_NO_SLOP_SKILL_MD = ROOT / '.claude' / 'skills' / 'refactoring' / 'SKILL.md'
 
 
 def _skill_cost_totals():
@@ -237,15 +237,15 @@ def _skill_cost_totals():
 
 
 SKILL_COST_CASES = [
-    ({'tool_name': 'Skill', 'tool_input': {'skill': 'no-slop'}},
+    ({'tool_name': 'Skill', 'tool_input': {'skill': 'refactoring'}},
      'known skill via "skill" key',
      lambda before, after: after['chars'] - before['chars']
      == _NO_SLOP_SKILL_MD.stat().st_size),
-    ({'tool_name': 'Skill', 'tool_input': {'skill_name': 'no-slop'}},
+    ({'tool_name': 'Skill', 'tool_input': {'skill_name': 'refactoring'}},
      'known skill via "skill_name" fallback',
      lambda before, after: after['chars'] - before['chars']
      == _NO_SLOP_SKILL_MD.stat().st_size),
-    ({'tool_name': 'Skill', 'tool_input': {'name': 'no-slop'}},
+    ({'tool_name': 'Skill', 'tool_input': {'name': 'refactoring'}},
      'known skill via "name" fallback',
      lambda before, after: after['chars'] - before['chars']
      == _NO_SLOP_SKILL_MD.stat().st_size),
@@ -267,7 +267,7 @@ SKILL_COST_CASES = [
 ]
 for _payload, _label, _assertion in SKILL_COST_CASES:
     _before = _skill_cost_totals()
-    _p = run_hook('post-tool', _payload)
+    _p = run_hook('context-budget', _payload)
     _after = _skill_cost_totals()
     if _p.returncode != 0:
         print(f'FAIL: post-tool ({_label}) exited {_p.returncode}\n{_p.stderr}')
@@ -285,7 +285,7 @@ for _payload, _label, _assertion in SKILL_COST_CASES:
               f'{_after["calls"] - _before["calls"]}, want {_want_calls_delta}')
         fail = True
 
-# --- post-run/09-telemetry.py: unified per-run snapshot ---------------------
+# --- telemetry/09-telemetry.py: unified per-run snapshot ---------------------
 #
 # Fired via the `post-run` event, which runs `00-dispatch.py`'s whole STEPS
 # sequence -- the new finalizer runs alongside the existing four. Asserts on
@@ -300,8 +300,13 @@ _TELEMETRY_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'telemetry.jsonl'
 # way once 06-tool-cost.py, 02-turn-timer.py and the retries read-path
 # started measuring them (2026-08-21, four-more-spec-metrics plan) -- they
 # now report real 'api_calls', 'turn_latency_seconds' and 'retries' fields.
+# 'execution_level' moved out the same way once prompt-intake/
+# 01-entry-classifier.py started predicting it and this file started
+# recording the actual level from real counters (2026-08-21,
+# notion-architecture-merge plan) -- it now reports a real
+# {'predicted': ..., 'actual': ...} pair instead of a reason string here.
 _EXPECTED_UNAVAILABLE_KEYS = {
-    'execution_level', 'model',
+    'model',
     'context_tokens', 'input_tokens', 'output_tokens',
     'parallelism', 'cache_hits', 'cache_misses', 'verification_level',
     'success', 'quality_signal',
@@ -316,7 +321,7 @@ def _telemetry_lines():
 
 
 _before_lines = _telemetry_lines()
-_p = run_hook('post-run', {'workflow': 'test', 'status': 'success'})
+_p = run_hook('stop-finalization', {'workflow': 'test', 'status': 'success'})
 _after_lines = _telemetry_lines()
 if _p.returncode != 0:
     print(f'FAIL: post-run (telemetry finalizer) exited {_p.returncode}\n{_p.stderr}')
@@ -329,7 +334,7 @@ else:
     print('OK: post-run appends exactly one telemetry row')
     _row = json.loads(_after_lines[-1])
     _missing_top = {'ts', 'run_scope', 'chain', 'tools_called', 'skills_loaded',
-                     'task_type', 'context_read', 'agents_spawned',
+                     'task_type', 'execution_level', 'context_read', 'agents_spawned',
                      'duplicate_rate', 'api_calls', 'turn_latency_seconds',
                      'human_interventions', 'retries', 'unavailable'} - _row.keys()
     if _missing_top:
@@ -350,10 +355,10 @@ else:
         print(f'FAIL: "unavailable" entries with no real reason string: {_bad_reasons}')
         fail = True
     # `02-skill-cost.py` (skills_loaded's producer) does not exist on this
-    # tree -- confirmed: `(ROOT / '.claude/hooks/post-tool/02-skill-cost.py')
+    # tree -- confirmed: `(ROOT / '.claude/hooks/context-budget/02-skill-cost.py')
     # .is_file()` is False here. The honest report is `None` plus a reasoned
     # `unavailable` entry, never a fabricated-looking zero-filled dict.
-    _skill_cost_producer = ROOT / '.claude' / 'hooks' / 'post-tool' / '02-skill-cost.py'
+    _skill_cost_producer = ROOT / '.claude' / 'hooks' / 'context-budget' / '02-skill-cost.py'
     if not _skill_cost_producer.is_file():
         if _row.get('skills_loaded') is not None:
             print(f'FAIL: skills_loaded should be None when its producer '
@@ -382,9 +387,23 @@ else:
         else:
             print('OK: skills_loaded reports a real, populated dict now that '
                   '02-skill-cost.py exists, and is no longer claimed unavailable')
+    _EVEL = {'E0', 'E1', 'E2', 'E3', 'E4', 'E5'}
+    _el = _row.get('execution_level')
+    if not isinstance(_el, dict) or 'predicted' not in _el or 'actual' not in _el:
+        print(f'FAIL: execution_level should be a {{predicted, actual}} pair, got {_el!r}')
+        fail = True
+    elif _el['predicted'] is not None and _el['predicted'] not in _EVEL:
+        print(f'FAIL: execution_level.predicted {_el["predicted"]!r} is not one of {_EVEL}')
+        fail = True
+    elif _el['actual'] is not None and _el['actual'] not in _EVEL:
+        print(f'FAIL: execution_level.actual {_el["actual"]!r} is not one of {_EVEL}')
+        fail = True
+    else:
+        print(f'OK: execution_level reports a real predicted/actual pair '
+              f'{_el!r}, never the old hardcoded gap-string')
 
 # A second fire appends a SECOND row -- proves append-only, not overwrite.
-_p2 = run_hook('post-run', {'workflow': 'test', 'status': 'success'})
+_p2 = run_hook('stop-finalization', {'workflow': 'test', 'status': 'success'})
 _after2_lines = _telemetry_lines()
 if _p2.returncode != 0 or len(_after2_lines) != len(_after_lines) + 1:
     print(f'FAIL: a second post-run fire did not append a second telemetry row '
@@ -393,7 +412,7 @@ if _p2.returncode != 0 or len(_after2_lines) != len(_after_lines) + 1:
 else:
     print('OK: a second post-run fire appends a second telemetry row (append-only)')
 
-# --- post-tool/01-context-cost.py: had zero test coverage anywhere in the ---
+# --- context-budget/01-context-cost.py: had zero test coverage anywhere in the ---
 # repo (Notion-objectives audit finding, objective 12) until now. Asserts on
 # the real, gitignored call-fingerprints.json (.gitignore:28), same
 # before/after-delta style as the skill-cost/telemetry blocks above.
@@ -409,7 +428,7 @@ def _call_fp_totals():
 
 # A command >= WARN_CHARS (700) triggers the "[context cost]" notice on stderr.
 _LONG_CMD = 'echo ' + ('x' * 700)
-_p = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': _LONG_CMD}})
+_p = run_hook('context-budget', {'tool_name': 'Bash', 'tool_input': {'command': _LONG_CMD}})
 if _p.returncode != 0 or '[context cost]' not in _p.stderr:
     print(f'FAIL: a >=700-char Bash command did not trigger the context-cost '
           f'notice -- exit {_p.returncode}, stderr: {_p.stderr[:200]!r}')
@@ -419,7 +438,7 @@ else:
 
 # A short command must NOT trigger the notice (WARN_CHARS is a floor, not a
 # hair-trigger) -- proven, not assumed.
-_p = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': 'echo hi'}})
+_p = run_hook('context-budget', {'tool_name': 'Bash', 'tool_input': {'command': 'echo hi'}})
 if '[context cost]' in _p.stderr:
     print('FAIL: a short Bash command wrongly triggered the context-cost notice')
     fail = True
@@ -435,8 +454,8 @@ else:
 _repeat_cmd = (f'python -c "print(12345)"  # run-unique padding {time.time_ns()} '
                f'to clear MIN_REPEAT_CHARS')
 _before = _call_fp_totals()
-_p1 = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': _repeat_cmd}})
-_p2 = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': _repeat_cmd}})
+_p1 = run_hook('context-budget', {'tool_name': 'Bash', 'tool_input': {'command': _repeat_cmd}})
+_p2 = run_hook('context-budget', {'tool_name': 'Bash', 'tool_input': {'command': _repeat_cmd}})
 _after = _call_fp_totals()
 if '[repeat]' in _p1.stderr:
     print('FAIL: the FIRST occurrence of a command wrongly fired [repeat]')
@@ -457,8 +476,8 @@ else:
 # repeat, even run twice -- it is expected to be re-run because its answer
 # changes. Still counted in totals, per the module's own stated design.
 _before = _call_fp_totals()
-run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': 'git status --porcelain -uall --extra-padding-to-clear-min-chars'}})
-_p2 = run_hook('post-tool', {'tool_name': 'Bash', 'tool_input': {'command': 'git status --porcelain -uall --extra-padding-to-clear-min-chars'}})
+run_hook('context-budget', {'tool_name': 'Bash', 'tool_input': {'command': 'git status --porcelain -uall --extra-padding-to-clear-min-chars'}})
+_p2 = run_hook('context-budget', {'tool_name': 'Bash', 'tool_input': {'command': 'git status --porcelain -uall --extra-padding-to-clear-min-chars'}})
 _after = _call_fp_totals()
 if '[repeat]' in _p2.stderr:
     print('FAIL: a VOLATILE-prefixed command wrongly fired [repeat] on its 2nd run')
@@ -475,7 +494,7 @@ else:
 # post-tool directory, so stderr from that sibling hook is expected here and
 # is not what this case checks.
 _before = _call_fp_totals()
-run_hook('post-tool', {'tool_name': 'Read', 'tool_input': {'file_path': 'README.md'}})
+run_hook('context-budget', {'tool_name': 'Read', 'tool_input': {'file_path': 'README.md'}})
 _after = _call_fp_totals()
 if _after != _before:
     print(f'FAIL: a non-watched tool_name affected context-cost state -- '
@@ -560,7 +579,7 @@ def _agent_cost_totals():
 
 
 _before = _agent_cost_totals()
-_p = run_hook('post-tool', {'tool_name': 'Task', 'tool_input': {'subagent_type': 'test-verifier'}})
+_p = run_hook('post-tool', {'tool_name': 'Task', 'tool_input': {'subagent_type': 'tester'}})
 _after = _agent_cost_totals()
 if _p.returncode != 0:
     print(f'FAIL: a Task dispatch errored -- exit {_p.returncode}, stderr: {_p.stderr[:200]!r}')
@@ -568,7 +587,7 @@ if _p.returncode != 0:
 elif _after['calls'] - _before['calls'] != 1:
     print(f'FAIL: agent-cost calls did not increment on a Task dispatch -- before={_before} after={_after}')
     fail = True
-elif _after.get('by_type', {}).get('test-verifier', 0) - _before.get('by_type', {}).get('test-verifier', 0) != 1:
+elif _after.get('by_type', {}).get('tester', 0) - _before.get('by_type', {}).get('tester', 0) != 1:
     print(f'FAIL: agent-cost by_type did not record subagent_type -- before={_before} after={_after}')
     fail = True
 else:
@@ -620,11 +639,85 @@ if (_after['calls'] - _before['calls'] != 1
 else:
     print('OK: a different tool name produces its own by_tool key, not a merged count')
 
-# --- user-prompt/02-turn-timer.py: per-turn start timestamp (objective 6) ---
+# --- post-tool/06-tool-cost.py: duplicate-rate threshold notice (Notion §10) -
+# Deterministic, unlike the blocks above: a threshold crossing needs absolute
+# totals, not a delta, so this snapshots and restores BOTH state files it
+# touches (call-fingerprints.json is shared with context-budget's own tests
+# above, tool-cost.json's latch is this hook's own) rather than reading the
+# real, session-cumulative numbers.
+_dup_fp_before = _CALL_FP_STATE.read_text(encoding='utf-8') if _CALL_FP_STATE.exists() else None
+_dup_tc_before = _TOOL_COST_STATE.read_text(encoding='utf-8') if _TOOL_COST_STATE.exists() else None
+
+
+def _write_fp_totals(calls, repeats):
+    _CALL_FP_STATE.write_text(json.dumps({'_totals': {'calls': calls, 'chars': 0, 'repeats': repeats}}), encoding='utf-8')
+
+
+def _write_tc_latch(active):
+    _TOOL_COST_STATE.write_text(json.dumps({'calls': 0, 'by_tool': {}, 'dup_notice_active': active}), encoding='utf-8')
+
+
+try:
+    # Below MIN_CALLS_FOR_RATE (20): silent even at a high rate.
+    _write_fp_totals(10, 8)
+    _write_tc_latch(False)
+    _p = run_hook('post-tool', {'tool_name': 'Grep', 'tool_input': {}})
+    if '[duplicate rate]' in _p.stderr:
+        print('FAIL: the duplicate-rate notice fired below the 20-call floor')
+        fail = True
+    else:
+        print('OK: the duplicate-rate notice stays silent below the call floor')
+
+    # At/above threshold (>15%), latch not yet active: fires once.
+    _write_fp_totals(20, 4)  # 20% > 15%
+    _write_tc_latch(False)
+    _p = run_hook('post-tool', {'tool_name': 'Grep', 'tool_input': {}})
+    if '[duplicate rate]' not in _p.stderr:
+        print(f'FAIL: the duplicate-rate notice did not fire at 20% with the latch clear -- stderr: {_p.stderr[:200]!r}')
+        fail = True
+    else:
+        print('OK: the duplicate-rate notice fires once the rate exceeds threshold')
+
+    # Same rate, latch now active (set by the call above): stays silent.
+    _p = run_hook('post-tool', {'tool_name': 'Grep', 'tool_input': {}})
+    if '[duplicate rate]' in _p.stderr:
+        print('FAIL: the duplicate-rate notice fired again while still above threshold (latch not respected)')
+        fail = True
+    else:
+        print('OK: the duplicate-rate notice does not repeat every call while still above threshold')
+
+    # Rate drops back to/under threshold: latch resets, silent.
+    _write_fp_totals(20, 3)  # 15% == threshold, not above it
+    _p = run_hook('post-tool', {'tool_name': 'Grep', 'tool_input': {}})
+    if '[duplicate rate]' in _p.stderr:
+        print('FAIL: the duplicate-rate notice fired at exactly the threshold (should require > threshold)')
+        fail = True
+    else:
+        print('OK: the duplicate-rate notice requires strictly above threshold, and resets the latch there')
+
+    # Climbs back above threshold after the reset: fires again.
+    _write_fp_totals(20, 4)
+    _p = run_hook('post-tool', {'tool_name': 'Grep', 'tool_input': {}})
+    if '[duplicate rate]' not in _p.stderr:
+        print('FAIL: the duplicate-rate notice did not re-fire after a reset and a fresh climb')
+        fail = True
+    else:
+        print('OK: the duplicate-rate notice re-fires after the rate drops and climbs again')
+finally:
+    if _dup_fp_before is None:
+        _CALL_FP_STATE.unlink(missing_ok=True)
+    else:
+        _CALL_FP_STATE.write_text(_dup_fp_before, encoding='utf-8')
+    if _dup_tc_before is None:
+        _TOOL_COST_STATE.unlink(missing_ok=True)
+    else:
+        _TOOL_COST_STATE.write_text(_dup_tc_before, encoding='utf-8')
+
+# --- prompt-intake/02-turn-timer.py: per-turn start timestamp (objective 6) ---
 _TURN_TIMER_STATE = ROOT / '.claude' / 'hooks' / 'state' / 'turn-timer.json'
 
 _before_ts = time.time()
-_p = run_hook('user-prompt', {})
+_p = run_hook('prompt-intake', {})
 _after_ts = time.time()
 if _p.returncode != 0:
     print(f'FAIL: turn-timer errored -- exit {_p.returncode}, stderr: {_p.stderr[:200]!r}')
@@ -642,10 +735,10 @@ else:
         print('OK: turn-timer records a started_at close to the real UserPromptSubmit fire time')
 
 # A second fire overwrites, it does not accumulate -- one active turn at a time.
-_p = run_hook('user-prompt', {})
+_p = run_hook('prompt-intake', {})
 _ts_1 = json.loads(_TURN_TIMER_STATE.read_text(encoding='utf-8'))['started_at']
 time.sleep(0.05)
-_p = run_hook('user-prompt', {})
+_p = run_hook('prompt-intake', {})
 _ts_2 = json.loads(_TURN_TIMER_STATE.read_text(encoding='utf-8'))['started_at']
 if _ts_2 <= _ts_1:
     print(f'FAIL: a second turn-timer fire did not overwrite with a later timestamp -- {_ts_1} -> {_ts_2}')
@@ -689,8 +782,8 @@ if _after != _before:
 else:
     print('OK: a non-gate tool (Bash) is ignored by human-cost')
 
-# --- post-run/09-telemetry.py: duplicate_rate field (objective 5) ---
-_p = run_hook('post-run', {'workflow': 'test', 'status': 'success'})
+# --- telemetry/09-telemetry.py: duplicate_rate field (objective 5) ---
+_p = run_hook('stop-finalization', {'workflow': 'test', 'status': 'success'})
 _lines = _telemetry_lines()
 if not _lines:
     print('FAIL: no telemetry row to check duplicate_rate against')
@@ -744,7 +837,7 @@ else:
     else:
         print('OK: telemetry retries field present with attempts/max_attempts/failure_class/rung')
 
-# --- post-run/09-telemetry.py: _retry_facts() white-box (objectives 9/10) ---
+# --- telemetry/09-telemetry.py: _retry_facts() white-box (objectives 9/10) ---
 #
 # The live repo's own branch (docs/four-more-spec-metrics) can never reach a
 # real REPAIR/BLOCKED state to exercise the rung path here: tools/resume.py's
@@ -760,7 +853,7 @@ import importlib.util as _ilu  # noqa: E402
 
 def _load_telemetry_module():
     _spec = _ilu.spec_from_file_location(
-        'telemetry_for_test', str(ROOT / '.claude/hooks/post-run/09-telemetry.py'))
+        'telemetry_for_test', str(ROOT / '.claude/hooks/telemetry/09-telemetry.py'))
     assert _spec is not None and _spec.loader is not None, 'cannot load 09-telemetry.py'
     _mod = _ilu.module_from_spec(_spec)
     _spec.loader.exec_module(_mod)

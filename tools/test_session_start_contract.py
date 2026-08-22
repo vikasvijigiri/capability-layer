@@ -36,7 +36,7 @@ def load_settings() -> dict:
 
 
 def extract_session_start_scripts(commands: list[str]) -> list[str]:
-    return [cmd for cmd in commands if ".claude/hooks/session-start/" in cmd]
+    return [cmd for cmd in commands if ".claude/hooks/session-init/" in cmd]
 
 
 def check_session_start_hooks() -> None:

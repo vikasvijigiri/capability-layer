@@ -11,7 +11,7 @@ dispatch and must still increment `calls`.
 
 Fire it directly:
 
-    python tools/run_hook.py post-tool '{"tool_name":"Task","tool_input":{"subagent_type":"test-verifier"}}'
+    python tools/run_hook.py post-tool '{"tool_name":"Task","tool_input":{"subagent_type":"tester"}}'
 """
 
 from __future__ import annotations

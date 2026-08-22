@@ -95,7 +95,7 @@ first is not answering the second.
    - `.github/workflows/checks.yml` runs on every pull request and resolves the
      same `.claude/project-checks.json` the local gate does, so a red branch is
      visible on the PR — **visible, not blocked**;
-   - `pre-commit/02-branch-guard.py` refuses commits on `main` in any working
+   - `permission-security/02-branch-guard.py` refuses commits on `main` in any working
      tree that has the layer installed;
    - nothing prevents a direct `git push` to `main` from a clone without the
      layer. State that plainly rather than implying the branch is protected.
@@ -117,7 +117,7 @@ to discover why it is not.
   Those settings decide what may merge unattended; an agent that configures its
   own gates has removed the reason the gates exist. Print them, let a human set them.
 - Never `gh pr merge`, `--admin`, or `--auto` in this command. Landing is
-  `delivering`'s business and the queue's, after review.
+  `release-git`'s business and the queue's, after review.
 - Never publish a repository whose tree has uncommitted secrets — step 1 runs
   the secret scan as part of the tier, and a red tier stops here.
 - Never guess the owner, and never fall back to the active personal account when
@@ -130,12 +130,12 @@ to discover why it is not.
 
 This layer shipped an automatic version once: a `SessionStart` hook installed
 the whole capability layer into any git repository it found, unasked. It was
-removed with `install.py`, and `session-start/02-bootstrap-docs.py`
+removed with `install.py`, and `session-init/02-bootstrap-docs.py`
 was reduced from authoring to detection —
 `tools/test_session_start_contract.py` now asserts it creates nothing.
 
 A hook fires unasked and its failure mode is silence. Publishing is irreversible
 and outward-facing, so it gets a command, one confirmation, and a human.
-`session-start/03-state-report.py` reports the `[state:no-remote]` condition when
+`session-init/03-state-report.py` reports the `[state:no-remote]` condition when
 a branch has commits and nowhere to send them; reporting is a hook's job, acting
 is not.

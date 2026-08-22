@@ -59,8 +59,8 @@ not `0`. **This decides the security lens in step 5 — it is not advice.**
 Correctness, security, silent failures, test quality, scope drift, dependency
 risk, and repository policy violations, within the scope from step 2.
 
-For a large change, dispatch `diff-reviewer` for independent correctness,
-security, test-quality and scope passes; merge duplicate findings before
+For a large change, dispatch `reviewer` (mode: diff) for independent
+correctness, security, test-quality and scope passes; merge duplicate findings before
 applying recovery. For an independent security pass rather than a reading,
 dispatch `security-reviewer` — it reports, this skill still owns the verdict.
 For a diff wide enough that even those four passes would serialize slowly,
@@ -81,7 +81,7 @@ it was. Return `passed: false` when repair is required.
 | P1 | Wrong behavior on a common path, or a real security gap | Blocks; repair before re-review |
 | P2 | Wrong behavior on an edge case, or a maintainability risk | Blocks a `major` review; a `small` review may note and proceed |
 
-Same P0/P1/P2 vocabulary `no-slop` uses — one severity scheme across both
+Same P0/P1/P2 vocabulary `refactoring` uses — one severity scheme across both
 skills, not two that drift.
 
 ## Reference files — load one only when the diff earns it
@@ -106,7 +106,7 @@ it: it blocks, and `_hooklib.classify_failure` gives its class a budget of zero.
 
 ## Boundaries
 
-**`no-slop` runs at the stage before this one** and can read the same files. It
+**`refactoring` runs at the stage before this one** and can read the same files. It
 reads standing artefacts — including files the change never touched — and asks
 whether slop has accumulated. This reads **the diff** and asks whether the
 change is correct and safe to ship. A finding about an unchanged file belongs
@@ -115,19 +115,19 @@ naming the other.
 
 ## Recovery
 
-Failed findings go to `systematic-debugging`, one bounded repair at a time, then
+Failed findings go to `debugging`, one bounded repair at a time, then
 this review runs again. A repeated root cause, security finding, scope escape,
 or exhausted repair budget blocks the run or returns it to the plan gate.
 
 ## Next step
 
-On `passed: true`, hand off to `delivering`. On `passed: false`, hand off to
-`systematic-debugging` — never deliver unresolved findings.
+On `passed: true`, hand off to `release-git`. On `passed: false`, hand off to
+`debugging` — never deliver unresolved findings.
 
 ## Routing
 
 - Mandatory validator: actual diff inspection plus evidence for every review claim.
-- Terminal handoff: `delivering` on pass; `systematic-debugging` on failure.
+- Terminal handoff: `release-git` on pass; `debugging` on failure.
 - This skill never owns shipment approval or repository side effects.
 
 ## Success

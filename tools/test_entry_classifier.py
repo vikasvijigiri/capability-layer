@@ -34,19 +34,20 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-HOOK = ROOT / ".claude" / "hooks" / "user-prompt" / "01-entry-classifier.py"
+HOOK = ROOT / ".claude" / "hooks" / "prompt-intake" / "01-entry-classifier.py"
 CORPUS = ROOT / "docs" / "evals" / "trigger-queries.json"
 
 # Which state key each stage's positives must produce. Only the two entry stages
 # appear: the classifier is silent for every later stage by design, and asserting
 # that here would duplicate the OTHER_STAGE pass rather than check it.
 CLASS_OF = {
-    "writing-plans": "entry-unframed",
-    "brainstormer": "entry-open",
+    "task-analysis": "entry-unframed",
+    "architecture": "entry-open",
 }
 
-# `writing-plans` absorbed the framing skill on 2026-08-09, and that broke the
-# assumption this suite was built on: that a skill name is one entry shape.
+# `task-analysis` (formerly `writing-plans`) absorbed the framing skill, and
+# that broke the assumption this suite was built on: that a skill name is one
+# entry shape.
 #
 # It now owns two. "add a dark mode toggle" arrives unframed and the entry rule
 # is worth injecting; "break this down into steps" is already framed and enters
@@ -58,7 +59,15 @@ CLASS_OF = {
 # The alternative was a private list of framing-shaped queries in this file,
 # which is the drift this suite was written to avoid -- two labellings of one
 # corpus, one of them invisible to the harness that spends money on it.
-ENTRY_FIELD_STAGES = {"writing-plans"}
+#
+# `architecture` (formerly `brainstormer` + `designer`) has the identical
+# problem for the identical reason: one skill, two prior owners, two shapes.
+# `brainstormer`'s positives are `entry-open`; `designer`'s are silent --
+# surface design is off-chain and the surface skill's own description routes
+# it, matching this same file's `KNOWN_COLLISIONS` note above. The marker
+# word is per-stage (`"unframed"` vs `"open"`) because the two prior skills
+# used different words for "this is the CLASS_OF shape, not silent".
+ENTRY_FIELD_STAGES = {"task-analysis": "unframed", "architecture": "open"}
 
 # Queries the corpus labels for one stage that are textually indistinguishable
 # from another stage's, mapped to the resolution and the reason.
@@ -142,11 +151,12 @@ def main() -> int:
                 # A missing `entry` on a stage that owns two shapes is a hole in
                 # the corpus, not a default. Defaulting it would quietly assert
                 # whichever shape happened to be right for the last query added.
+                own_marker = ENTRY_FIELD_STAGES[stage]
                 marked = e.get("entry")
                 check(f"[{stage}] {q[:44]} declares its entry shape",
-                      marked in ("unframed", "silent"),
+                      marked in (own_marker, "silent"),
                       f"got {marked!r}; a stage owning two shapes must say which")
-                expect = want if marked == "unframed" else None
+                expect = want if marked == own_marker else None
                 check(f"[{marked}] {q[:52]}", got == expect, f"got {got!r}")
                 continue
             check(f"[{want}] {q[:58]}", got == want, f"got {got!r}")
@@ -350,19 +360,74 @@ def main() -> int:
           "current patterns (non-empty), not a hardcoded stub",
           bool(_real_patterns), f"got {_real_patterns!r}")
 
-    # --- classify() persists its result for post-run/09-telemetry.py --------
+    # --- classify() persists its result for telemetry/09-telemetry.py --------
     #
     # Written even when key is None -- the common, silent case -- so a
     # downstream reader can tell "classified as nothing" from "never ran".
     _state = ROOT / ".claude" / "hooks" / "state" / "last-entry-shape.json"
-    mod._record_entry_shape("entry-open")
+    mod._record_entry_shape("entry-open", "E5")
     _recorded = json.loads(_state.read_text(encoding="utf-8"))
     check("_record_entry_shape writes the given key",
           _recorded.get("key") == "entry-open", f"got {_recorded!r}")
-    mod._record_entry_shape(None)
+    check("_record_entry_shape writes the given execution level",
+          _recorded.get("execution_level_predicted") == "E5", f"got {_recorded!r}")
+    mod._record_entry_shape(None, "E0")
     _recorded_none = json.loads(_state.read_text(encoding="utf-8"))
     check("_record_entry_shape writes null, not silence, for the common case",
           _recorded_none.get("key") is None, f"got {_recorded_none!r}")
+
+    # --- E0-E5 execution-level estimate (Notion §3) ---------------------------
+    #
+    # One fixture per level, using signals `estimate_execution_level` actually
+    # reads (key + _hooklib.changed_paths/active_plans) rather than invented
+    # inputs -- a real question with no work named is the E0 case, and so on.
+    check("E0: no entry key at all is the cheapest level",
+          mod.estimate_execution_level(None, "what does this function do") == "E0")
+    check("E0: a direct-answer question is E0",
+          mod.estimate_execution_level("entry-direct", "where is the config file") == "E0")
+
+    # E1-E5 each depend on real repo state (changed_paths, the active plan's
+    # task count) that this test cannot control by picking a fixture prompt --
+    # so the underlying signals are monkeypatched instead, per level, and
+    # restored after. A membership-only check here ("returns some valid
+    # label") is a tautology: every branch of the function returns one of
+    # exactly six literals by construction, so it cannot catch a mapping bug
+    # -- which is exactly the shape of the real bug this exposed (E4/E5 was
+    # inverted: `plan_tasks > 4` returned the LOWER level).
+    _orig_changed_paths = mod.changed_paths
+    _orig_plan_tasks = mod._active_plan_task_count
+    try:
+        mod.changed_paths = lambda root=None: []
+        mod._active_plan_task_count = lambda: 0
+        check("E1: no plan, no changed files, no evidence signal -- score 0",
+              mod.estimate_execution_level("entry-small", "add a small feature") == "E1")
+        check("E2: no plan, no changed files, evidence signal alone (0.20) "
+              "clears the E1 floor",
+              mod.estimate_execution_level("entry-open", "what are our options") == "E2")
+
+        mod._active_plan_task_count = lambda: 1
+        check("E3: a one-task plan, regardless of other signals",
+              mod.estimate_execution_level("entry-unframed", "add X") == "E3")
+
+        mod._active_plan_task_count = lambda: 3
+        check("E4: a 2-4 task plan chain is BELOW full-team scale",
+              mod.estimate_execution_level("entry-unframed", "add X") == "E4")
+
+        mod._active_plan_task_count = lambda: 6
+        check("E5: a >4-task plan chain is the top of the scale, not E4 "
+              "(the actual bug: this was inverted with the E4 case above)",
+              mod.estimate_execution_level("entry-unframed", "add X") == "E5")
+    finally:
+        mod.changed_paths = _orig_changed_paths
+        mod._active_plan_task_count = _orig_plan_tasks
+
+    _levels_seen = {
+        mod.estimate_execution_level(k, "add a small feature")
+        for k in ("entry-small", "entry-unframed", "entry-open", None, "entry-direct")
+    }
+    check("estimate_execution_level only ever returns a real E0-E5 label",
+          _levels_seen <= {"E0", "E1", "E2", "E3", "E4", "E5"},
+          f"got {_levels_seen!r}")
 
     # --- the rendered blocks exist -------------------------------------------
     #
@@ -381,7 +446,11 @@ def main() -> int:
     src = HOOK.read_text(encoding="utf-8")
     body = src.split('"""', 2)[-1]
     skills = {d.name for d in (ROOT / ".claude" / "skills").iterdir() if d.is_dir()}
-    named = sorted(s for s in skills if s in body)
+    # `permission-security` (a HARD_STAGE regex pattern naming the hook
+    # family, matched against a prompt, never dispatched) contains the
+    # `security` skill name as a pure substring -- same known collision
+    # `test_hook_registration.py` allowlists for the same reason.
+    named = sorted(s for s in skills if s in body and "permission-" + s not in body)
     check("the classifier names no skill outside its docstring", not named,
           f"names {named} -- workflow.md decides, the hook measures")
 

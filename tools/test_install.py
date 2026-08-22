@@ -103,8 +103,8 @@ check("workflow-state is not copied",
 inst.apply(target, actions)
 
 check("skills landed as <name>/SKILL.md, the only shape that is visible",
-      (target / ".claude" / "skills" / "repo-recon" / "SKILL.md").is_file())
-check("agents landed", (target / ".claude" / "agents" / "task-implementer.md").is_file())
+      (target / ".claude" / "skills" / "repository-navigation" / "SKILL.md").is_file())
+check("agents landed", (target / ".claude" / "agents" / "implementer.md").is_file())
 check("the workflow policy landed", (target / ".claude" / "workflow.md").is_file())
 check("the tools landed", (target / "tools" / "resume.py").is_file()
       and (target / "tools" / "recon.py").is_file())
@@ -282,7 +282,7 @@ big = fresh_repo()
 for n in range(30):
     (big / "src" / f"mod{n}.py").write_text("x = 1\n", encoding="utf-8")
 check("an existing codebase with no plan is routed to reconnaissance",
-      "repo-recon" in inst.entry_point(big), inst.entry_point(big))
+      "repository-navigation" in inst.entry_point(big), inst.entry_point(big))
 
 planned_repo = fresh_repo()
 (planned_repo / "docs" / "plans").mkdir(parents=True)
@@ -295,7 +295,7 @@ check("a target that already has a plan is routed to the state engine",
 # stages of it. Both are asserted: a merge that collapsed them into one string
 # would lose the distinction the message exists to draw.
 check("an empty target starts at the framing stage",
-      "writing-plans" in inst.entry_point(fresh_repo()),
+      "task-analysis" in inst.entry_point(fresh_repo()),
       inst.entry_point(fresh_repo()))
 
 
@@ -343,7 +343,7 @@ check("...hashed from the SOURCE, so a failed copy cannot claim success",
 check("the manifest does not hash itself", 
       inst.MANIFEST.as_posix() not in manifest["files"])
 
-edited = up / ".claude" / "skills" / "no-slop" / "SKILL.md"
+edited = up / ".claude" / "skills" / "refactoring" / "SKILL.md"
 MARK = "<!-- ours -->"
 edited.write_text(edited.read_text(encoding="utf-8") + "\n" + MARK + "\n",
                   encoding="utf-8")
@@ -353,7 +353,7 @@ before_untouched = untouched.read_text(encoding="utf-8")
 recorded = inst._layer_hashes(up)
 check("a recorded hash is readable back", bool(recorded), str(len(recorded)))
 check("an edited file no longer matches its recorded hash",
-      recorded[".claude/skills/no-slop/SKILL.md"] != inst.file_hash(edited))
+      recorded[".claude/skills/refactoring/SKILL.md"] != inst.file_hash(edited))
 check("...while an untouched one still does",
       recorded[".claude/workflow.md"] == inst.file_hash(untouched))
 
@@ -375,7 +375,7 @@ v1 = fresh_repo()
 inst.apply(v1, inst.plan(v1)[0])
 (v1 / ".claude" / "layer-manifest.json").write_text(
     json.dumps({"version": 1, "paths": []}), encoding="utf-8")
-v1_edited = v1 / ".claude" / "skills" / "no-slop" / "SKILL.md"
+v1_edited = v1 / ".claude" / "skills" / "refactoring" / "SKILL.md"
 v1_edited.write_text("replaced entirely", encoding="utf-8")
 quiet(["--into", str(v1), "--upgrade"])
 check("a v1 manifest degrades to refusing every difference",
@@ -529,7 +529,7 @@ un = fresh_repo()
 inst.apply(un, inst.plan(un)[0])
 
 _removable = ".claude/workflow.md"
-_edited = ".claude/skills/no-slop/SKILL.md"
+_edited = ".claude/skills/refactoring/SKILL.md"
 (un / _edited).write_text("locally edited\n", encoding="utf-8")
 
 remove, kept_edited, kept_protected, refused = inst.uninstall_plan(un)
@@ -604,14 +604,14 @@ check("uninstall --dry-run leaves the tree byte-identical",
 
 # The real thing.
 gone = _installed_repo()
-(gone / ".claude" / "skills" / "no-slop" / "SKILL.md").write_text(
+(gone / ".claude" / "skills" / "refactoring" / "SKILL.md").write_text(
     "locally edited\n", encoding="utf-8")
 rc = inst.main(["--uninstall", "--into", str(gone)])
 check("uninstall exits 0", rc == 0, f"rc={rc}")
 check("uninstall removed an untouched installed file",
       not (gone / ".claude" / "workflow.md").is_file())
 check("uninstall kept the file that was edited after install",
-      (gone / ".claude" / "skills" / "no-slop" / "SKILL.md").is_file(),
+      (gone / ".claude" / "skills" / "refactoring" / "SKILL.md").is_file(),
       "an edited file is the user's work, not the layer's")
 check("uninstall never removed the merged settings.json",
       (gone / ".claude" / "settings.json").is_file(),
@@ -652,7 +652,7 @@ check("--uninstall and --upgrade together are refused", _rejected,
 # silenced the kept-list would have shipped green.
 
 _rep = _installed_repo()
-_rep_edited = ".claude/skills/no-slop/SKILL.md"
+_rep_edited = ".claude/skills/refactoring/SKILL.md"
 (_rep / _rep_edited).write_text("locally edited\n", encoding="utf-8")
 _buf = io.StringIO()
 with contextlib.redirect_stdout(_buf):

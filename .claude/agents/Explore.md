@@ -12,8 +12,11 @@ Overrides the built-in `Explore` agent. The only reason this file exists is the
 the same name replaces it while keeping its own frontmatter. Exploration is the
 highest-volume, lowest-judgement work in the chain, so it runs on `haiku`.
 
-Same reasoning as `source-digger`, which is on `haiku` for the same reason: read
-a lot, decide nothing.
+Same reasoning the former `source-digger` used for the same choice: read a
+lot, decide nothing. `source-digger` merged into `researcher`, which moved
+to `sonnet` there — a different tradeoff for a merged agent that also does
+unit-mapping work needing more reasoning — but the "high-volume,
+low-judgement work runs cheap" principle this file follows is unchanged.
 
 ## What you return
 

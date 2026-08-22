@@ -49,14 +49,15 @@ would mean every hook script starts caring which host invoked it, which
 ## Exit-code contract
 
 - **Events wired to `PreToolUse`** in `hooks_registry.json`
-  (`pre-commit`, `pre-edit`, `pre-deploy`) — exit `2` means deny: the host
-  must not perform the action the hook was asked about. Any other non-zero
-  exit means allow, with a hook-error notice surfaced to the operator; exit
-  `0` means allow, silently.
-- **Every other event** (`session-start`, `user-prompt`, `post-run`,
-  `on-artifact-create`) is not a gate. These hooks detect drift, render state,
-  or checkpoint; their exit code is not read as allow/deny by Claude Code and
-  a bridging host must not treat it as one either. Stdout is the report.
+  (`permission-security`, `pre-edit`, `pre-tool`) — exit `2` means deny: the
+  host must not perform the action the hook was asked about. Any other
+  non-zero exit means allow, with a hook-error notice surfaced to the
+  operator; exit `0` means allow, silently.
+- **Every other event** (`session-init`, `prompt-intake`, `stop-finalization`,
+  `telemetry`, `post-edit-validation`) is not a gate. These hooks detect
+  drift, render state, or checkpoint; their exit code is not read as
+  allow/deny by Claude Code and a bridging host must not treat it as one
+  either. Stdout is the report.
 
 ## Ordering and independence
 

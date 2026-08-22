@@ -6,8 +6,8 @@ agent whose `tools:` line grants `Write` or `Edit` must declare
 `allowed-paths:` in its own frontmatter, because
 `.claude/hooks/pre-edit/02-agent-scope-guard.py` is the mechanism that reads
 that field and denies a write outside it. A read-only agent has nothing to
-enforce and must NOT be forced to declare one -- asserting it on all eleven
-would make the check noise on the ten that never touch a file.
+enforce and must NOT be forced to declare one -- asserting it on all eight
+would make the check noise on the six that never touch a file.
 """
 
 from __future__ import annotations
@@ -23,10 +23,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 AGENTS = ROOT / ".claude" / "agents"
 GUARD = ROOT / ".claude" / "hooks" / "pre-edit" / "02-agent-scope-guard.py"
+# `researcher` merged the former `repo-cartographer` (read-only) with
+# `researcher` (Write, scoped to docs/research/digests/** via
+# allowed-paths) on 2026-08-21 -- the merged agent declares Write, so it is
+# correctly absent here, same as `implementer` (merged `implementer`).
 READ_ONLY = {
-    "Explore", "diff-reviewer", "failure-investigator", "spec-reviewer",
-    "test-verifier", "architecture-reviewer", "security-reviewer",
-    "release-verifier", "repo-cartographer",
+    "Explore", "reviewer", "debugger", "architect", "tester",
+    "security-reviewer",
 }
 # Hook runtime is a correctness property here (CLAUDE.md: one hook shipped at
 # 5.2s/turn because nothing measured it). This is generous headroom for a
@@ -113,28 +116,28 @@ if out:
 if elapsed > MAX_HOOK_SECONDS:
     failures.append(f"guard (no agent) took {elapsed:.2f}s > {MAX_HOOK_SECONDS}s")
 
-# 2. A dispatched, statically-scoped agent (source-digger) writing inside its
+# 2. A dispatched, statically-scoped agent (researcher) writing inside its
 #    declared scope -- silent.
 out, elapsed = fire_guard(
     {"tool_name": "Write", "tool_input": {"file_path": IN_SCOPE_PATH}},
-    {"UAIOS_AGENT_NAME": "source-digger"},
+    {"UAIOS_AGENT_NAME": "researcher"},
 )
 if out:
-    failures.append(f"guard denied an in-scope source-digger write: {out!r}")
+    failures.append(f"guard denied an in-scope researcher write: {out!r}")
 if elapsed > MAX_HOOK_SECONDS:
     failures.append(f"guard (in-scope) took {elapsed:.2f}s > {MAX_HOOK_SECONDS}s")
 
 # 3. The same agent writing OUTSIDE its declared scope -- denied.
 out, elapsed = fire_guard(
     {"tool_name": "Write", "tool_input": {"file_path": OUT_OF_SCOPE_PATH}},
-    {"UAIOS_AGENT_NAME": "source-digger"},
+    {"UAIOS_AGENT_NAME": "researcher"},
 )
 try:
     decision = json.loads(out)["hookSpecificOutput"]["permissionDecision"]
 except Exception:
     decision = None
 if decision != "deny":
-    failures.append(f"guard did not deny an out-of-scope source-digger write: {out!r}")
+    failures.append(f"guard did not deny an out-of-scope researcher write: {out!r}")
 if elapsed > MAX_HOOK_SECONDS:
     failures.append(f"guard (out-of-scope) took {elapsed:.2f}s > {MAX_HOOK_SECONDS}s")
 
@@ -143,7 +146,7 @@ if elapsed > MAX_HOOK_SECONDS:
 #    deny rather than allow.
 out, elapsed = fire_guard(
     {"tool_name": "Write", "tool_input": {"file_path": OUT_OF_SCOPE_PATH}},
-    {"UAIOS_AGENT_NAME": "task-implementer"},
+    {"UAIOS_AGENT_NAME": "implementer"},
 )
 try:
     decision = json.loads(out)["hookSpecificOutput"]["permissionDecision"]
@@ -151,21 +154,21 @@ except Exception:
     decision = None
 if decision != "deny":
     failures.append(
-        f"guard allowed task-implementer with no UAIOS_AGENT_SCOPE set: {out!r}"
+        f"guard allowed implementer with no UAIOS_AGENT_SCOPE set: {out!r}"
     )
 
 # 5. Same agent, with UAIOS_AGENT_SCOPE naming the round's declared files --
 #    an in-scope write is silent and an out-of-scope one is still denied.
 out, elapsed = fire_guard(
     {"tool_name": "Edit", "tool_input": {"file_path": str(ROOT / "tools" / "budget.py")}},
-    {"UAIOS_AGENT_NAME": "task-implementer", "UAIOS_AGENT_SCOPE": "tools/budget.py,tools/test_budget.py"},
+    {"UAIOS_AGENT_NAME": "implementer", "UAIOS_AGENT_SCOPE": "tools/budget.py,tools/test_budget.py"},
 )
 if out:
-    failures.append(f"guard denied task-implementer inside its dispatched scope: {out!r}")
+    failures.append(f"guard denied implementer inside its dispatched scope: {out!r}")
 
 out, elapsed = fire_guard(
     {"tool_name": "Edit", "tool_input": {"file_path": OUT_OF_SCOPE_PATH}},
-    {"UAIOS_AGENT_NAME": "task-implementer", "UAIOS_AGENT_SCOPE": "tools/budget.py,tools/test_budget.py"},
+    {"UAIOS_AGENT_NAME": "implementer", "UAIOS_AGENT_SCOPE": "tools/budget.py,tools/test_budget.py"},
 )
 try:
     decision = json.loads(out)["hookSpecificOutput"]["permissionDecision"]
@@ -173,7 +176,7 @@ except Exception:
     decision = None
 if decision != "deny":
     failures.append(
-        f"guard allowed task-implementer outside its dispatched scope: {out!r}"
+        f"guard allowed implementer outside its dispatched scope: {out!r}"
     )
 
 # --- the claim may not outlive the wiring ------------------------------------

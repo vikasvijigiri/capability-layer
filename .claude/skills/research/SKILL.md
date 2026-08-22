@@ -29,7 +29,7 @@ is not a source. Read the file.
 `.claude/workflow.md` makes research a stage entered from anywhere, and orders
 its sources internal knowledge, repository, memory,
 *then* web — and that order is load-bearing. A whole feature has been
-proposed to guard against losing uncommitted work; `post-run/03-checkpoint.py`
+proposed to guard against losing uncommitted work; `stop-finalization/03-checkpoint.py`
 had been snapshotting the tree every turn for two days. One `ls` of the hooks
 directory would have replaced the design.
 
@@ -175,10 +175,10 @@ asked for it.
 | Skipping "Not adopted" | The next person re-runs the same search and reaches the same dead end |
 | Treating hit count as signal | The best source that day was the only hit; the 508-hit query was mostly noise |
 
-## Parallel work — `source-digger`
+## Parallel work — `researcher` (mode: source)
 
 When a pass needs several sources and reading them here would be expensive, hand
-each to a **`source-digger`** agent: one per source, all dispatched in the same
+each to a **`researcher`** agent dispatched in `mode: source`: one per source, all dispatched in the same
 message so they run concurrently. Each reads its source in full and writes a
 digest to `docs/research/digests/<topic>-<source>.md`; only the path and a few
 lines come back. The sources never enter this context.
@@ -186,7 +186,7 @@ lines come back. The sources never enter this context.
 Three to five at once. Past that you spend more time merging digests than the
 parallelism saves.
 
-Give each: the one source, the research question, the sub-questions it should
+Give each: the mode (`source`), the one source, the research question, the sub-questions it should
 answer, and its digest path. Then read the digests and synthesise here — Phase 3
 is yours, not theirs. A digger reports; it does not conclude, and it cannot
 compare, because it has seen exactly one source.
@@ -195,7 +195,7 @@ compare, because it has seen exactly one source.
 ladder above and read the sources yourself.
 
 For a question needing more independent cross-verification than a few
-`source-digger` calls buy, Claude Code ships `/deep-research` — a native
+`researcher` (mode: source) calls buy, Claude Code ships `/deep-research` — a native
 workflow that fans out web searches, cross-checks sources against each other,
 and synthesizes a cited report on its own. Worth suggesting to the user when
 the shape matches, rather than approximating it by hand.
@@ -204,16 +204,16 @@ the shape matches, rather than approximating it by hand.
 
 - Mandatory validator: none. The Phase 4 check is the gate.
 - Terminal handoff: whatever needed the evidence. Usually the caller —
-  `writing-plans` dispatches this skill for a constraint that turns on outside
-  evidence and expects it back — or `brainstormer` when the design is still open,
-  or `systematic-debugging` when the question was a bug.
+  `task-analysis` dispatches this skill for a constraint that turns on outside
+  evidence and expects it back — or `architecture` when the design is still open,
+  or `debugging` when the question was a bug.
 - Precedes design, never replaces it. A survey is not a decision.
 - When the question is genuinely too broad for one pass, decompose into
   independent workstreams and research each separately rather than going shallow
   on all of them. Do not spawn subagents unless the user asks.
 - A finding that changes how this repo works earns a `decisions/` record; a
   recurring source or a dead end earns a `MEMORY.md` line via
-  `knowledge-manager`.
+  `documentation`.
 
 ## Success
 

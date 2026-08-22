@@ -162,7 +162,7 @@ AGENT_RUNG_NOTE = {
 # do not overlap: you cannot `rebase` a subagent, and `restore` is meaningless
 # for a worker that was isolated in its own worktree.
 #
-# Added 2026-08-07. Until then a dispatch had no ladder at all: `task-implementer`
+# Added 2026-08-07. Until then a dispatch had no ladder at all: `implementer`
 # said "never let a BLOCKED retry unchanged on the same model", which is a rule
 # the dispatcher had to remember, with nothing computing the alternative. Every
 # other unreliable step in this layer got a table; this one got a sentence.

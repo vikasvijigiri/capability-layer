@@ -50,13 +50,20 @@ def main() -> int:
         for path in HOOKS.glob("*/*.py")
         if not path.name.startswith("_") and path.name != "check_config_json.py"
     }
-    if len(executable) != 24:
-        fail(f"comparison inventory expects 24 executable hooks, found {len(executable)}")
+    if len(executable) != 25:
+        fail(f"comparison inventory expects 25 executable hooks, found {len(executable)}")
     if registered != executable:
         registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
+        # Manual-only groups (dispatched in-process by another registered
+        # hook, not separately registered with Claude Code) carry a "_note"
+        # explaining that; there can be more than one -- stop-finalization's
+        # sequenced steps and permission-security's in-process checks are
+        # each their own group, not a single hardcoded name.
         documented = {
             ROOT / path
-            for path in registry.get("events", {}).get("post-run-steps", {}).get("subscribers", [])
+            for event in registry.get("events", {}).values()
+            if "_note" in event
+            for path in event.get("subscribers", [])
         }
         if executable - registered != documented:
             missing = sorted(str(path.relative_to(ROOT)) for path in executable - registered - documented)
@@ -74,14 +81,14 @@ def main() -> int:
             fail(f"hook does not load its event payload: {path.relative_to(ROOT)}")
 
     report = REPORT.read_text(encoding="utf-8")
-    for marker in ("## Findings", "## Disagreements", "## Not adopted", "## Sources", "14 skills", "24 executable event hooks"):
+    for marker in ("## Findings", "## Disagreements", "## Not adopted", "## Sources", "14 skills", "25 executable event hooks"):
         if marker not in report:
             fail(f"comparison report missing {marker!r}")
     for source in ("obra/superpowers", "anthropics/skills", "github/awesome-copilot"):
         if source not in report:
             fail(f"comparison report missing primary source {source!r}")
 
-    print("OK: 14 skills and 24 executable hooks have local contracts")
+    print("OK: 14 skills and 25 executable hooks have local contracts")
     print("OK: comparison report names the inventory, evidence boundaries, and three primary repositories")
     return 0
 

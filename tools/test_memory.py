@@ -70,7 +70,7 @@ check("a recorded fact about a file is returned when work touches it",
       len(hits) == 1 and "refusal rules" in hits[0]["text"], str(hits))
 check("...and says why it matched", hits[0]["why"] == "names the file", str(hits[0]))
 
-near = memory.relevant(parsed, [".claude/hooks/post-run/06-artifact-autocommit.py"])
+near = memory.relevant(parsed, [".claude/hooks/stop-finalization/06-artifact-autocommit.py"])
 check("a fact about a sibling file matches by directory",
       any(h["why"] == "names its directory" for h in near), str(near))
 
@@ -94,7 +94,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     (tmp / "MEMORY.md").write_text(
         "# M\n\n## S\n\n"
         "- `tools/gone_forever.py` does a thing.\n"          # genuinely missing
-        "- `session-start/02-bootstrap.py` scaffolds.\n"     # partial path, exists
+        "- `session-init/02-bootstrap.py` scaffolds.\n"     # partial path, exists
         "- `loop.py` classifies failures.\n"                 # bare name, exists
         "- `refs/uaios/green/<slug>` marks a tree.\n"        # placeholder
         "- A note about `.py` files in general.\n"           # bare suffix
@@ -108,7 +108,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     check("a genuinely deleted path is reported",
           "tools/gone_forever.py" in names, str(names))
     check("a PARTIAL path that exists deeper is not reported",
-          "session-start/02-bootstrap.py" not in names,
+          "session-init/02-bootstrap.py" not in names,
           "three real entries were flagged this way; the rule resolves by basename")
     check("a BARE filename that exists is not reported",
           "loop.py" not in names, str(names))
@@ -159,8 +159,8 @@ else:
           f"stale={memory.stale(real, ROOT)[:1]} counts={memory.count_rot(ROOT)[:1]}")
 
 # The one that proves the wiring, not just the tool: planning consults it.
-plans_skill = (ROOT / ".claude/skills/writing-plans/SKILL.md").read_text(encoding="utf-8")
-check("`writing-plans` queries memory before freezing the file map",
+plans_skill = (ROOT / ".claude/skills/task-analysis/SKILL.md").read_text(encoding="utf-8")
+check("`task-analysis` queries memory before freezing the file map",
       "tools/memory.py" in plans_skill,
       "written-but-never-read is the gap this closes")
 check("...and is told to say so when nothing is known",

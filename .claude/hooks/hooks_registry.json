@@ -1,47 +1,62 @@
 {
-  "_note": "Domain events and their subscriber scripts. Lifecycle wiring lives in .claude/settings.json; this file documents intent. Scripts read their payload via _hooklib.load_payload(), so both Claude Code (stdin) and a hand-set HOOK_PAYLOAD work. Every hook here ACTS or DENIES. Hooks whose only output was the name of a skill were deleted on 2026-08-04: hooks and skills are independent, a hook cannot invoke a skill, and a skill name written into hook source is an unvalidated second copy of a routing decision. Skills trigger from their own `description:` frontmatter.",
+  "_note": "Domain events and their subscriber scripts. Lifecycle wiring lives in .claude/settings.json; this file documents intent. Scripts read their payload via _hooklib.load_payload(), so both Claude Code (stdin) and a hand-set HOOK_PAYLOAD work. Every hook here ACTS or DENIES. Hooks whose only output was the name of a skill were deleted on 2026-08-04: hooks and skills are independent, a hook cannot invoke a skill, and a skill name written into hook source is an unvalidated second copy of a routing decision. Skills trigger from their own `description:` frontmatter. Family names match the Notion 'Agentic Workflows (IDE)' target architecture's 10 hook families (decisions/2026-08-21-notion-architecture-merge.md) as of 2026-08-21 -- renamed from the prior session-start/user-prompt/post-run/pre-commit/pre-deploy/on-artifact-create/pre-run/post-tool shape, same mechanisms.",
   "events": {
-    "session-start": {
+    "session-init": {
       "description": "At session start; loads the knowledge docs into context, then measures the repo against the branch point and renders the matching [state:<key>] block from workflow.md. Names no skill -- workflow.md owns what a state means.",
       "claude_code_event": "SessionStart",
       "subscribers": [
-        ".claude/hooks/session-start/02-bootstrap-docs.py",
-        ".claude/hooks/session-start/03-state-report.py"
+        ".claude/hooks/session-init/02-bootstrap-docs.py",
+        ".claude/hooks/session-init/03-state-report.py"
       ]
     },
-    "user-prompt": {
-      "description": "Before a turn begins; records this turn's start timestamp for 09-telemetry.py's turn_latency_seconds, then classifies the prompt's entry shape -- work named with a settled approach, work named with an open one, or neither -- and renders the matching [state:<key>] block from workflow.md. Names no skill: it measures prompt shape, workflow.md's Entry table owns what that shape routes to. A hook cannot invoke a skill, so this raises the entry rule's visibility and does not guarantee a handoff.",
+    "prompt-intake": {
+      "description": "Before a turn begins; records this turn's start timestamp for telemetry/09-telemetry.py's turn_latency_seconds, then classifies the prompt's entry shape -- work named with a settled approach, work named with an open one, or neither -- and renders the matching [state:<key>] block from workflow.md. Names no skill: it measures prompt shape, workflow.md's Entry table owns what that shape routes to. A hook cannot invoke a skill, so this raises the entry rule's visibility and does not guarantee a handoff.",
       "claude_code_event": "UserPromptSubmit",
       "subscribers": [
-        ".claude/hooks/user-prompt/02-turn-timer.py",
-        ".claude/hooks/user-prompt/01-entry-classifier.py"
+        ".claude/hooks/prompt-intake/02-turn-timer.py",
+        ".claude/hooks/prompt-intake/01-entry-classifier.py"
       ]
     },
-    "post-run": {
-      "description": "After a turn completes; snapshots recovery state, commits the turn as a wip checkpoint if the artefact gates pass, then records the unit's state and says so when the chain stops advancing",
+    "stop-finalization": {
+      "description": "After a turn completes; snapshots recovery state, commits the turn as a wip checkpoint if the artefact gates pass, records the unit's state and says so when the chain stops advancing, then runs telemetry/09-telemetry.py as its last step -- kept in this same sequenced dispatch rather than a second, separately registered Stop hook, because the finalizers and the telemetry snapshot share recovery/git state and Claude Code may run separately registered Stop hooks concurrently.",
       "claude_code_event": "Stop",
       "subscribers": [
-        ".claude/hooks/post-run/00-dispatch.py"
+        ".claude/hooks/stop-finalization/00-dispatch.py"
       ]
     },
-    "post-run-steps": {
-      "description": "The ordered Stop finalizers called by post-run/00-dispatch.py; manual-only registry entries prevent them being mistaken for independently concurrent Claude hooks",
+    "stop-finalization-steps": {
+      "description": "The ordered Stop finalizers called by stop-finalization/00-dispatch.py; manual-only registry entries prevent them being mistaken for independently concurrent Claude hooks",
       "_note": "These scripts share recovery and git state and are intentionally not registered as separate Claude Stop hooks. Run the dispatcher, or invoke an individual script only for diagnosis.",
       "subscribers": [
-        ".claude/hooks/post-run/03-checkpoint.py",
-        ".claude/hooks/post-run/06-artifact-autocommit.py",
-        ".claude/hooks/post-run/07-layer-drift.py",
-        ".claude/hooks/post-run/08-chain-continuity.py",
-        ".claude/hooks/post-run/09-telemetry.py"
+        ".claude/hooks/stop-finalization/03-checkpoint.py",
+        ".claude/hooks/stop-finalization/06-artifact-autocommit.py",
+        ".claude/hooks/stop-finalization/07-layer-drift.py",
+        ".claude/hooks/stop-finalization/08-chain-continuity.py",
+        ".claude/hooks/telemetry/09-telemetry.py"
       ]
     },
-    "pre-commit": {
-      "description": "Before a git commit/push finalizes; refuses credentials, protected-branch commits, and AI attribution in either the message or the target repo's configured author",
+    "telemetry": {
+      "description": "The per-run telemetry snapshot (Notion §21) -- run_id/execution_level/skills_loaded/agents_spawned/etc. Its own family per the Notion target, but still dispatched from stop-finalization/00-dispatch.py's sequence rather than a second Stop registration -- see that family's description for why.",
+      "claude_code_event": "Stop (via stop-finalization/00-dispatch.py)",
+      "subscribers": [
+        ".claude/hooks/telemetry/09-telemetry.py"
+      ]
+    },
+    "permission-security": {
+      "description": "Before a git commit/push, or a cloud-CLI command, finalizes; refuses credentials, protected-branch commits, AI attribution in either the message or the target repo's configured author, and non-free-tier cloud spend. Dispatched as one in-process script (00-dispatch.py) rather than 4 separate Python launches -- measured on the build machine: 5 PreToolUse processes at 790.8ms avg fell to 2 at 288.1ms avg for the same Bash call, once this and pre-tool/01-halt-guard.py are the only two left. Every check still runs to completion even after an earlier one denies, matching the exact combine-and-deny semantics the 4 separate hook registrations had.",
       "claude_code_event": "PreToolUse (Bash|PowerShell)",
       "subscribers": [
-        ".claude/hooks/pre-commit/01-secret-scan.py",
-        ".claude/hooks/pre-commit/02-branch-guard.py",
-        ".claude/hooks/pre-commit/03-attribution-guard.py"
+        ".claude/hooks/permission-security/00-dispatch.py"
+      ]
+    },
+    "permission-security-checks": {
+      "description": "The 4 checks called in-process by permission-security/00-dispatch.py; each also runs standalone for diagnosis (HOOK_PAYLOAD=... python <path>), same as before the merge.",
+      "_note": "Not separately registered in settings.json -- see permission-security's own description for why merging them was worth doing.",
+      "subscribers": [
+        ".claude/hooks/permission-security/01-secret-scan.py",
+        ".claude/hooks/permission-security/02-branch-guard.py",
+        ".claude/hooks/permission-security/03-attribution-guard.py",
+        ".claude/hooks/permission-security/04-spend-guard.py"
       ]
     },
     "pre-edit": {
@@ -52,33 +67,32 @@
         ".claude/hooks/pre-edit/02-agent-scope-guard.py"
       ]
     },
-    "pre-deploy": {
-      "description": "Before a cloud-CLI command; allowlist-first free-tier spend guard",
-      "claude_code_event": "PreToolUse (Bash|PowerShell)",
-      "subscribers": [
-        ".claude/hooks/pre-deploy/01-spend-guard.py"
-      ]
-    },
-    "on-artifact-create": {
+    "post-edit-validation": {
       "description": "After a hook script is edited; demands it be fired against a real payload before being trusted",
       "claude_code_event": "PostToolUse (Edit, Write)",
       "subscribers": [
-        ".claude/hooks/on-artifact-create/02-hook-self-test-nudge.py"
+        ".claude/hooks/post-edit-validation/02-hook-self-test-nudge.py"
       ]
     },
-    "pre-run": {
+    "pre-tool": {
       "description": "Before any tool that changes state or spawns work; refuses while a halt is in force. Reads stay allowed on purpose, so a halt can be investigated",
       "claude_code_event": "PreToolUse (Bash|PowerShell|Edit|Write|NotebookEdit|Task)",
       "subscribers": [
-        ".claude/hooks/pre-run/01-halt-guard.py"
+        ".claude/hooks/pre-tool/01-halt-guard.py"
+      ]
+    },
+    "context-budget": {
+      "description": "After a shell tool returns: reports what its input added to permanent session context, names a call this session already made with the same inputs. After a Skill tool call: counts the invocation and the loaded SKILL.md's byte size into a running total tools/bench.py reports. Reports only -- never blocks; a PreToolUse gate on this class of signal was tried once and rejected (see the 2026-08-20 Notion-objectives audit, Gap B).",
+      "claude_code_event": "PostToolUse (Bash|PowerShell|Skill)",
+      "subscribers": [
+        ".claude/hooks/context-budget/01-context-cost.py",
+        ".claude/hooks/context-budget/02-skill-cost.py"
       ]
     },
     "post-tool": {
-      "description": "After a shell tool returns: reports what its input added to permanent session context, names a call this session already made with the same inputs, counts Read-file bytes added to context, and counts Task (agent-spawn) dispatches. After a Skill tool call: counts the invocation and the loaded SKILL.md's byte size into a running total tools/bench.py reports. After every tool call (matcher \"*\"): counts it into a total-calls tally, by tool name. After AskUserQuestion/ExitPlanMode: counts a human-gate firing, by tool name. Separate matchers per script, because each PostToolUse script costs a spawn on every matching call. Reports only -- never blocks. Names no skill in what it emits, per decisions/2026-08-04-hooks-never-name-a-skill.md -- writes to a state file, never to stdout in the normal case",
-      "claude_code_event": "PostToolUse (*|AskUserQuestion|ExitPlanMode|Bash|PowerShell|Read|Task|Skill)",
+      "description": "After a Read tool call: counts Read-file bytes added to context. After a Task (agent-spawn) dispatch: counts it. After every tool call (matcher \"*\"): counts it into a total-calls tally, by tool name. After AskUserQuestion/ExitPlanMode: counts a human-gate firing, by tool name. Separate matchers per script, because each PostToolUse script costs a spawn on every matching call. Reports only -- never blocks. Names no skill in what it emits, per decisions/2026-08-04-hooks-never-name-a-skill.md -- writes to a state file, never to stdout in the normal case",
+      "claude_code_event": "PostToolUse (*|AskUserQuestion|ExitPlanMode|Read|Task)",
       "subscribers": [
-        ".claude/hooks/post-tool/01-context-cost.py",
-        ".claude/hooks/post-tool/02-skill-cost.py",
         ".claude/hooks/post-tool/04-read-cost.py",
         ".claude/hooks/post-tool/05-agent-cost.py",
         ".claude/hooks/post-tool/06-tool-cost.py",

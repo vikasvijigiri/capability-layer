@@ -73,6 +73,16 @@ not six levels, and it classifies *prompt shape* rather than *how much
 execution machinery to spend*), but it is not the same primitive the target
 describes.
 
+**Closed** — `prompt-intake/01-entry-classifier.py` now computes a weighted
+E0-E5 estimate at prompt time (files/domains/steps/evidence-needed, from
+signals `tools/scope.py` and the active plan already expose); `telemetry/
+09-telemetry.py` records the real `{predicted, actual}` pair per run,
+replacing the hardcoded apology string this section quotes above. See
+`decisions/2026-08-21-notion-architecture-merge.md`'s "The E0-E5
+execution-level router" paragraph (under `## Why`) for the weighting and
+grounding, and `TASK.md`'s "Merge the layer into the Notion..." entry for
+the live confirmation (E5/E5 observed).
+
 ### Gap B — No deterministic context-budget hook (§7, §2.1)
 
 The target names `context-budget` as one of 10 hook families, whose job is to
@@ -114,7 +124,7 @@ fields.
 | Catalogue | Target | This repo | Verdict |
 |---|---|---|---|
 | Skills | "~10-15 core" (§4 table) | 14 (`ls .claude/skills`) | **Keep** — within range. Named by SDLC *stage* (writing-plans, executing-plans, verifying-work...) rather than the target's example list of *domain* names (implementation, testing, refactoring...) — a reasoned **Extend**: this layer's whole purpose is enforcing an SDLC chain, so stage-shaped skills fit its job better than the target's generic example set, which is presented as illustrative ("Skills should describe capabilities, not individual tasks") rather than mandatory. |
-| Agents | "~6-8 core" (§4 table) | 11 custom `.md` files (plus several harness-native types: `general-purpose`, `Explore`, `Plan`) | **Amber** — above the stated range by 3-5. Plausibly reasoned (narrow single-lens reviewers — `spec-reviewer`, `test-verifier`, `diff-reviewer`, `security-reviewer`, `architecture-reviewer`, `release-verifier` — mirror `code-review`'s own "pick the lens by what changed" philosophy rather than one broad reviewer), but this reasoning has never been written down as a decision. Worth a `decisions/` entry either way: confirms the count is deliberate, or flags consolidation as a real candidate. |
+| Agents | "~6-8 core" (§4 table) | 8: `architect`, `debugger`, `implementer`, `researcher`, `reviewer`, `security-reviewer`, `tester` (custom `.md` files) plus the platform-native `Explore` | **Closed** — was 11, now 8, within range. `reviewer` absorbed `diff-reviewer`/`spec-reviewer`/`release-verifier` behind a `mode:` argument; `researcher` absorbed `source-digger`/`repo-cartographer` the same way; `architecture-reviewer`/`failure-investigator`/`task-implementer`/`test-verifier` renamed 1:1 to `architect`/`debugger`/`implementer`/`tester`; `security-reviewer` kept as-is. Reasoning and the per-agent mapping are in `decisions/2026-08-21-notion-architecture-merge.md`. |
 | Hook families | 10 named (session-init, prompt-intake, context-budget, permission-security, pre-tool, post-tool, pre-edit, post-edit-validation, stop-finalization, telemetry) | 10 logical families in `hooks_registry.json` (session-start, user-prompt, post-run, post-run-steps, pre-commit, pre-edit, pre-deploy, on-artifact-create, pre-run, post-tool) mapped onto 5 native Claude Code events | **Amber** — same count, different shape. `context-budget` and `telemetry` have no dedicated family (Gaps B and C above); `permission-security` is spread across `pre-commit`/`pre-edit`/`pre-deploy` rather than unified, functionally covered but not named as the target names it; `post-edit-validation` (target: format/lint/targeted-validation trigger on any edit) is narrower here (`on-artifact-create` only nudges hook self-testing, not general lint-on-edit). |
 
 ## Part 3 — Candidate optimization units
@@ -129,15 +139,11 @@ be all of them.
    facts into one per-run record matching (a useful subset of) the target's
    schema. Highest leverage: every other objective's grading (2-10) already
    depends on ad hoc versions of exactly this data.
-2. **E0-E5 execution-level classification** (closes Gap A). Extend
-   `01-entry-classifier.py`'s prompt-shape classification into an explicit
-   execution-level estimate, OR write down why the five-shape classifier is
-   the right-sized answer for this repo and the six-level model is not
-   worth building. Either output closes the gap — a decision record is a
-   valid closure, not just code.
-3. **Agent-catalogue decision record** (the Amber "Agents: 11 vs ~6-8"
-   finding). Cheapest of the four: write the reasoning down, or consolidate
-   if it doesn't hold up under scrutiny.
+2. ~~**E0-E5 execution-level classification** (closes Gap A).~~ **Closed** —
+   see Gap A above.
+3. ~~**Agent-catalogue decision record** (the Amber "Agents: 11 vs ~6-8"
+   finding).~~ **Closed** — see the Catalogue-sizes table above; consolidated
+   to 8, reasoning recorded in `decisions/2026-08-21-notion-architecture-merge.md`.
 4. **Test coverage for `01-context-cost.py`** (the concrete #11/#12 gap
    found). Smallest, most mechanical: it is a live-wired hook with zero
    tests anywhere in the repo, unlike its own sibling `02-skill-cost.py`

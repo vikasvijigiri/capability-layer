@@ -23,7 +23,7 @@ Not every tool call, and not every file write. The checklist asks for both; this
 records neither, and calling the ledger a complete audit trail would be the kind
 of overclaim this layer keeps having to walk back. Per-call totals — count,
 input characters, repeats — are kept separately by
-`.claude/hooks/post-tool/01-context-cost.py` and read by `tools/bench.py`, and
+`.claude/hooks/context-budget/01-context-cost.py` and read by `tools/bench.py`, and
 they reset per session.
 
 ## Append-only by convention

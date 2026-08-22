@@ -25,7 +25,7 @@ names — a second list is a second thing to keep true, so there is now one.
 
 ## Layout
 
-`.claude/hooks/<event>/NN-name.py`, e.g. `pre-commit/01-secret-scan.py`. The
+`.claude/hooks/<event>/NN-name.py`, e.g. `permission-security/01-secret-scan.py`. The
 number orders scripts within an event; gaps are expected, since nineteen hooks
 were deleted on 2026-08-02 and the survivors kept their numbers.
 
@@ -70,7 +70,7 @@ Two traps when you do:
 - On Windows, PowerShell strips inner double quotes from a single-quoted argument
   before the child process sees them. Use the Bash tool, or read the payload from
   a file as above.
-- **Never fire `post-run/06-artifact-autocommit.py` without
+- **Never fire `stop-finalization/06-artifact-autocommit.py` without
   `UAIOS_AUTOCOMMIT_RUNNING=1`** in the environment. It commits for real
   otherwise, which is the correct behaviour and not what you wanted from a test.
 

@@ -16,11 +16,11 @@ registry is the one that is wrong.
 
 | Event | Fires |
 |---|---|
-| `SessionStart` | `session-start/02-bootstrap-docs.py`, `03-state-report.py` |
-| `UserPromptSubmit` | `user-prompt/01-entry-classifier.py` |
-| `PreToolUse` | `pre-run/01-halt-guard.py`, then the commit, deploy and edit guards by matcher |
-| `PostToolUse` | `on-artifact-create/02-hook-self-test-nudge.py`, `post-tool/01-context-cost.py` |
-| `Stop` | `post-run/00-dispatch.py`, which runs checkpoint, auto-commit, layer-drift and chain-continuity in one process |
+| `SessionStart` | `session-init/02-bootstrap-docs.py`, `03-state-report.py` |
+| `UserPromptSubmit` | `prompt-intake/01-entry-classifier.py` |
+| `PreToolUse` | `pre-tool/01-halt-guard.py`, then the commit, deploy and edit guards by matcher |
+| `PostToolUse` | `post-edit-validation/02-hook-self-test-nudge.py`, `context-budget/01-context-cost.py` |
+| `Stop` | `stop-finalization/00-dispatch.py`, which runs checkpoint, auto-commit, layer-drift and chain-continuity in one process |
 
 A hook is silent when it works and silent when it is broken, which is the trap
 this layer has fallen into most often. **Fire one by hand after editing it:**
@@ -37,7 +37,7 @@ write the document.
 | | |
 |---|---|
 | `skills/` | 14 capabilities, triggered **only** by their own `description:` frontmatter. `<skill>/references/` holds depth loaded per task, never per turn |
-| `agents/` | 11 subagents. `tools:` and `model:` are enforced by the host; `allowed-paths:` is not — see the dormancy note in `workflow.md` |
+| `agents/` | 8 subagents (7 custom + the platform-native `Explore` override). `tools:` and `model:` are enforced by the host; `allowed-paths:` is not — see the dormancy note in `workflow.md` |
 | `commands/` | 11 user-invoked slash commands. All carry `disable-model-invocation: true` |
 | `hooks/` | the lifecycle scripts above, plus `.claude/hooks/_hooklib.py` and `.claude/hooks/_projectchecks.py`, which are libraries and not hooks |
 | `rules/` | standing constraints loaded every session — pay for them accordingly |

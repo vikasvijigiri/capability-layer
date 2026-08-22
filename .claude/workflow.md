@@ -25,16 +25,16 @@ which is the only place it is stated.
 
 | # | Stage | Owner | Runs when | Output |
 |---|---|---|---|---|
-| 1 | Frame and plan | `writing-plans` | work is named, at any scope | `TASK.md`'s six fields, then executable steps, ownership, checks, risks, rollback |
-| 2 | Design | `brainstormer` | **only if the approach is open** — dispatched by stage 1, not entered beside it | decision/spec when ambiguity is material |
+| 1 | Frame and plan | `task-analysis` | work is named, at any scope | `TASK.md`'s six fields, then executable steps, ownership, checks, risks, rollback |
+| 2 | Design | `architecture` | **only if the approach is open** — dispatched by stage 1, not entered beside it | decision/spec when ambiguity is material |
 | — | Gate 1 | user | a plan exists | plan approval only |
-| 3 | Execute | `executing-plans` | Gate 1 passed, or the change was too small to plan | scoped implementation in an isolated worktree |
-| 4 | Validate | `verifying-work` | completion is claimed, in any wording | acceptance and test evidence |
-| 5 | Sweep | `no-slop` | before a diff is reviewed | prose, wiring, safety, and quality findings |
+| 3 | Execute | `implementation` | Gate 1 passed, or the change was too small to plan | scoped implementation in an isolated worktree |
+| 4 | Validate | `testing` | completion is claimed, in any wording | acceptance and test evidence |
+| 5 | Sweep | `refactoring` | before a diff is reviewed | prose, wiring, safety, and quality findings |
 | 6 | Review | `code-review` | a diff is about to be delivered | automated diff verdict with file/line evidence |
-| 7 | Deliver | `delivering` | review signed off | branch/PR/merge-queue handoff and conflict evidence |
-| 8 | Release | `releasing` | **only if there is a deploy target** | release candidate, shipment gate, observation, rollback |
-| 9 | Record | `knowledge-manager` | always, to close the unit | durable log, handoff, issues, memory, decisions |
+| 7 | Deliver | `release-git` | review signed off | branch/PR/merge-queue handoff and conflict evidence |
+| 8 | Release | `release-git` | **only if there is a deploy target** | release candidate, shipment gate, observation, rollback |
+| 9 | Record | `documentation` | always, to close the unit | durable log, handoff, issues, memory, decisions |
 
 **The stages renumbered on 2026-08-09**, when framing and planning merged into
 one owner and stage 1 absorbed the old stage 1. Ten became nine. Any document
@@ -80,34 +80,34 @@ six fields, where the evidence for it actually exists.
 
 | The request | Goes to | Because |
 |---|---|---|
-| names work, at any scope | 1 `writing-plans` | it frames, fetches what is missing, then plans |
-| repository nobody has read | `repo-recon` first | see **The entry boundary** below |
-| a current failure | `systematic-debugging` | a cause is not a plan |
+| names work, at any scope | 1 `task-analysis` | it frames, fetches what is missing, then plans |
+| repository nobody has read | `repository-navigation` first | see **The entry boundary** below |
+| a current failure | `debugging` | a cause is not a plan |
 
 One entry, one owner. The old rule's real content did not disappear — it moved
 into stage 1's Stage B table, which decides per blank field rather than per
 request:
 
 - **Goal or Outputs blank because the approach is undecided** → stage 1
-  dispatches 2 `brainstormer` *before* writing `TASK.md`, because a finished
+  dispatches 2 `architecture` *before* writing `TASK.md`, because a finished
   brief commits to one solution shape and that anchor is what stage 2 exists to
   prevent.
 - a constraint turning on outside evidence → `research`;
-- a user-facing surface with no contract → `designer`;
-- an unread repository → `repo-recon`;
-- a blocking failure of unknown cause → `systematic-debugging`.
+- a user-facing surface with no contract → `architecture`;
+- an unread repository → `repository-navigation`;
+- a blocking failure of unknown cause → `debugging`.
 
 Each returns to stage 1. **None of them is a handoff**, and that is the
 difference from the old chain: a dispatch resumes where it left off, so there is
 no seam for the work to fall through. The seam was real — an un-handed-off brief
 was the chain's most common break, and nothing watched for one.
 
-The rest of the chain is linear: 3 `executing-plans` builds, 4 `verifying-work`
-validates, 5 `no-slop` sweeps, 6 `code-review` reviews, 7 `delivering`
-integrates, 8 `releasing` observes, 9 `knowledge-manager` records. These are
+The rest of the chain is linear: 3 `implementation` builds, 4 `testing`
+validates, 5 `refactoring` sweeps, 6 `code-review` reviews, 7 `release-git`
+integrates, 8 `release-git` observes, 9 `documentation` records. These are
 lifecycle labels, not additional approval gates.
-The recovery loop returns to `3 executing-plans` or `4 verifying-work`, then
-re-enters `6 code-review` and `8 releasing` when the candidate is ready again.
+The recovery loop returns to `3 implementation` or `4 testing`, then
+re-enters `6 code-review` and `8 release-git` when the candidate is ready again.
 
 ## State machine and failure loop
 
@@ -143,13 +143,13 @@ created on its own named branch (`tools/worktree.py`'s additive `--branch`
 mode), pushed and opened as its own PR automatically once its own
 verification passes. The merge step still asks — every time, live, never a
 standing pre-authorization — but batched into one `AskUserQuestion` per round
-covering every PR, instead of one per PR. See `delivering/SKILL.md`'s
+covering every PR, instead of one per PR. See `release-git/SKILL.md`'s
 "Exception: a parallel round's task branches" and "Exception: a parallel
 round's batched merge"; `decisions/2026-08-21-branch-per-parallel-task.md`
 records why. A fully-serial plan, or a round of concurrency 1, is unaffected.
 
 **That rule is now computed, not remembered.** It said the same thing from
-2026-08-06, and nothing implemented it: `executing-plans` resolved the ambiguity
+2026-08-06, and nothing implemented it: `implementation` resolved the ambiguity
 by banning concurrent implementers outright, which was safe, cost a round per
 task forever, and was still only a rule. Two scripts now decide:
 
@@ -162,7 +162,7 @@ file set, or a dependency written as prose instead of a task number, is
 unschedulable. Absent is never read as none — the convenient reading of a missing
 dependency is a concurrent dispatch over ordered work, which is the one failure
 worse than being slow. Depth is in
-`.claude/skills/executing-plans/references/parallel-dispatch.md`.
+`.claude/skills/implementation/references/parallel-dispatch.md`.
 
 **The worktree's base is named explicitly, never defaulted.** `isolation:
 worktree` bases an agent's tree on the repository's *default branch*, not the
@@ -245,7 +245,7 @@ and turn an auditable decision into arithmetic nobody can check.
 | Consumer | `small` | `major` |
 |---|---|---|
 | `run_checks.py --scoped` | the suites `test_map` maps the changed paths to | refuses, exit 2 — run the full tier |
-| `no-slop --scope change` | sweeps only the changed files | `--scope repo`, the stage-5 cadence |
+| `refactoring --scope change` | sweeps only the changed files | `--scope repo`, the stage-5 cadence |
 | `code-review` | the changed files and their direct callers | the whole branch diff |
 
 Three rules keep "cheaper" from becoming "unmeasured", and they are the whole
@@ -269,7 +269,7 @@ Four mechanisms, each with a tool and a suite behind it rather than a paragraph:
 
 | | Command | What it refuses, or reports |
 |---|---|---|
-| **Kill switch** | `python tools/halt.py --halt "<reason>"` | While halted, `pre-run/01-halt-guard.py` DENIES every tool that changes state or spawns work. Reads stay allowed on purpose — a halt you cannot investigate is a lockout, not a stop. `--resume` lifts it |
+| **Kill switch** | `python tools/halt.py --halt "<reason>"` | While halted, `pre-tool/01-halt-guard.py` DENIES every tool that changes state or spawns work. Reads stay allowed on purpose — a halt you cannot investigate is a lockout, not a stop. `--resume` lifts it |
 | **Agent file scope** | declared per agent as `allowed-paths:` | `pre-edit/02-agent-scope-guard.py` denies a write outside a dispatched agent's declared files, and an unscoped write with it. **Only when the host sets `UAIOS_AGENT_NAME`, and Claude Code does not** — see below |
 | **Licence and SBOM** | `python tools/deps.py [--sbom]` | A denied licence exits 1; one that could not be read exits 2. `0` ok, and undetermined is never ok |
 | **Release candidate** | `python tools/release_candidate.py --plan <plan>` | The report Gate 2 reads: wheel, rehearsal, licence, SBOM, risk tier, changed paths, and a **rollback that was executed** in a scratch repo |
@@ -290,7 +290,7 @@ to see.
 
 **The security gate is deliberately not a receipt.** A receipt recording that a
 review happened is the obvious shape and this repository already built and
-deleted it: `pre-commit/03-review-gate.py` invalidated every receipt it wrote
+deleted it: `permission-security/03-review-gate.py` invalidated every receipt it wrote
 because the receipts file was tracked, and the model then wrote one asserting a
 sign-off that had not happened — *"a forged receipt and a real one are the same
 file."* It went out on 2026-08-02 under *"Every hook verifies an artefact. Not
@@ -312,17 +312,17 @@ worse than none.
 
 ## Artifacts and ownership
 
-`TASK.md` and `docs/plans/` — `writing-plans` · `docs/specs/` — `brainstormer`
-· `ISSUES.md` — `systematic-debugging` · `LOG.md`, `HANDOFF.md`,
-`MEMORY.md`, and `decisions/` — `knowledge-manager` · workflow run state — the
+`TASK.md` and `docs/plans/` — `task-analysis` · `docs/specs/` — `architecture`
+· `ISSUES.md` — `debugging` · `LOG.md`, `HANDOFF.md`,
+`MEMORY.md`, and `decisions/` — `documentation` · workflow run state — the
 repository workflow runner. Chat is not durable evidence.
 
 ## Cross-cutting capabilities
 
-Use `research` for external evidence and `systematic-debugging` for any failure.
+Use `research` for external evidence and `debugging` for any failure.
 Depth that used to be its own skill now lives in `<skill>/references/` and is read
 per task — the artifact review that gates a material spec or plan is
-`writing-plans/references/artifact-review.md`, not a skill of its own. Maintain the
+`task-analysis/references/artifact-review.md`, not a skill of its own. Maintain the
 capability layer with `capability-layer-maintenance`; it may repair wiring but
 never authors product strategy.
 
@@ -333,11 +333,11 @@ never authors product strategy.
 - No side-effecting release before Gate 2.
 - No unresolved review, security, test, scope, or merge finding proceeds.
 - No silent retry; every attempt and stop reason is recorded.
-- Every unit ends in `knowledge-manager` recording or an explicit `BLOCKED` state.
+- Every unit ends in `documentation` recording or an explicit `BLOCKED` state.
 
 [state:docs-stale]
 The durable knowledge artifacts are behind the current workflow run. Resume
-`knowledge-manager` before claiming the unit complete.
+`documentation` before claiming the unit complete.
 [/state:docs-stale]
 
 [state:no-remote]
@@ -351,7 +351,7 @@ outward-facing and a repository, once public, can be indexed before it is delete
 
 [state:layer-unreviewed]
 The capability layer changed without a completed layer audit. Run the
-capability-layer-maintenance audit and the no-slop layer scan before delivery.
+capability-layer-maintenance audit and the refactoring layer scan before delivery.
 [/state:layer-unreviewed]
 
 [state:chain-stalled]
@@ -436,7 +436,7 @@ a plan of its own, so recognise it once rather than re-reading it.
 
 [state:entry-unframed]
 This prompt names work with a done-state, and the **Entry** table above routes
-named work at any scope to stage 1 `writing-plans`. Frame it first: six fields,
+named work at any scope to stage 1 `task-analysis`. Frame it first: six fields,
 every inferred one marked, no dialogue -- Gate 1 is the plan, not the brief. Then
 continue through its Stage B and Stage C in the same turn. If the work turns out
 too small to plan, say "too small to plan" and just do it.
@@ -444,11 +444,11 @@ too small to plan, say "too small to plan" and just do it.
 
 [state:entry-open]
 This prompt names work whose approach is **not settled**. It still enters at
-stage 1 `writing-plans` -- there is one door as of 2026-08-09 -- but the first
-thing that skill does with an undecided approach is dispatch 2 `brainstormer`,
+stage 1 `task-analysis` -- there is one door as of 2026-08-09 -- but the first
+thing that skill does with an undecided approach is dispatch 2 `architecture`,
 *before* `TASK.md` is written. Order matters and is the whole point: a finished
 brief commits Goal and Outputs to one solution shape, and that anchor is what
-stage 2 exists to prevent. `brainstormer` returns here; it is a dispatch, not a
+stage 2 exists to prevent. `architecture` returns here; it is a dispatch, not a
 handoff.
 [/state:entry-open]
 
@@ -459,7 +459,7 @@ nobody has, that assumption is the first thing to fail, and it fails quietly:
 stage 1 frames a *request*, so a brief written against an unread codebase looks
 exactly like a brief written against a known one.
 
-`repo-recon` owns that boundary. It runs before stage 1 when there is real code
+`repository-navigation` owns that boundary. It runs before stage 1 when there is real code
 and no map, and never again once a map exists at `docs/recon/`. It is not a
 numbered stage — a repository this layer has been used in from the start never
 enters it.
@@ -477,8 +477,10 @@ These skills are reusable capabilities, not additional lifecycle stages:
 
 | Capability | Owner | Use |
 |---|---|---|
-| Comprehend | `repo-recon` | an unread or half-finished repository, at the entry boundary |
+| Comprehend | `repository-navigation` | an unread or half-finished repository, at the entry boundary |
 | Research | `research` | external evidence |
-| Design | `designer` | a user-facing surface with no design contract; produces `DESIGN.md` |
-| Diagnose | `systematic-debugging` | root-cause and bounded recovery |
+| Design | `architecture` | a user-facing surface with no design contract; produces `DESIGN.md` |
+| Diagnose | `debugging` | root-cause and bounded recovery |
 | Maintain | `capability-layer-maintenance` | layer contracts and wiring |
+| Analyze | `data-analysis` | a cost/quality/behavior question this layer's own telemetry can answer |
+| Secure | `security` | the deterministic security gate and independent review, at the high risk tier |

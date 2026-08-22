@@ -33,7 +33,7 @@ is cheap, and every rule below exists so cheap never becomes *unmeasured*:
     python tools/run_checks.py --tier all --require-test --record-green
 
 `--record-green` is the ref's second writer, added 2026-08-16. The first is
-`post-run/06-artifact-autocommit.py`, which refuses past `max_files` by design --
+`stop-finalization/06-artifact-autocommit.py`, which refuses past `max_files` by design --
 so the largest units, the ones that most need a verified checkpoint, were the
 ones that never recorded one, and `resume.py` could not leave `BUILD`. It writes
 only after a full tier passed AND a test actually ran; unlike the hook's
@@ -263,7 +263,7 @@ def record_green(root: Path) -> tuple[str, str]:
     """Point `refs/uaios/green/<slug>` at HEAD. `(ref, error)`, one empty.
 
     The second writer of this ref, and the reason there is one. Until 2026-08-16
-    the only writer was `post-run/06-artifact-autocommit.py`, which refuses past
+    the only writer was `stop-finalization/06-artifact-autocommit.py`, which refuses past
     `max_files` by design -- so a large unit, exactly the kind that most needs a
     verified checkpoint, never recorded that it went green. `resume.derive_state`
     reads the ref as `checks_green`, finds `None`, and returns `BUILD` before it

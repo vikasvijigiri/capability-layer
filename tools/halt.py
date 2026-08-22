@@ -20,13 +20,13 @@ the branch.
     python tools/halt.py --resume
 
 Halting takes no destructive action -- it writes one small JSON file and
-nothing else. `post-run/03-checkpoint.py` already snapshots every turn, so
+nothing else. `stop-finalization/03-checkpoint.py` already snapshots every turn, so
 there is nothing to recover: resuming is just deleting the flag. The
 guarantee this file exists to keep is that the working tree is byte-identical
 before halt and after resume.
 
 The guard that reads this flag lives at
-`.claude/hooks/pre-run/01-halt-guard.py` and is UNREGISTERED as of this
+`.claude/hooks/pre-tool/01-halt-guard.py` and is UNREGISTERED as of this
 change -- wiring it into `.claude/settings.json` and
 `.claude/hooks/hooks_registry.json` is a separate task (Task 12 of
 `docs/plans/2026-08-10-checklist-completion.md`), assigned to another agent
