@@ -1,4 +1,4 @@
-"""pre-run -- refuses the next tool call while a halt is in effect.
+"""pre-tool -- refuses the next tool call while a halt is in effect.
 
 `tools/halt.py --halt "<reason>"` writes a flag under `.claude/hooks/state/`
 (gitignored, machine-local). This hook is the other half: it reads that flag

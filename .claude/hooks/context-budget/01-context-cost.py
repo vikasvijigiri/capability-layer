@@ -1,4 +1,4 @@
-"""post-tool -- reports what a tool call just bought in permanent context.
+"""context-budget -- reports what a tool call just bought in permanent context.
 
 The measurement that motivated this
 -----------------------------------

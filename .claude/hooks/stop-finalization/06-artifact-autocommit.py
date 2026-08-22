@@ -1,4 +1,4 @@
-"""post-run -- commits this turn's work automatically, as a small local checkpoint.
+"""stop-finalization -- commits this turn's work automatically, as a small local checkpoint.
 
 Authorised by the user on 2026-08-02, widened from prose-only to all changed
 files on the same day after the trade below was stated explicitly. Do not widen

@@ -1,4 +1,4 @@
-"""post-run finalizer -- one per-turn snapshot consolidating this layer's
+"""telemetry -- one per-turn snapshot consolidating this layer's
 real cost counters into a schema matching a useful subset of the Notion
 "Agentic Workflows (IDE)" target's telemetry fields (see the 2026-08-20
 Notion-objectives-audit doc under docs/, Gap C).

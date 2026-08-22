@@ -13,11 +13,9 @@ disable-model-invocation: false
 Mode: read-only
 Arguments: `$ARGUMENTS` identifies the changed area, threat boundary, or saved artifact.
 
-Invoke `code-review` with its security lens
-(`.claude/skills/code-review/references/security-review.md`) and, when subagents
-are available, dispatch
-`security-reviewer`. Cover authentication, authorization, secrets, external
-input, data exposure, dependencies, hooks, deployment, and unsafe agent
-actions. Return prioritized findings, evidence, remediation, and residual risk.
-
-Do not exploit live systems, retrieve real secrets, edit files, or sign off.
+A typed entry point into the `security` skill's own procedure, not a second
+copy of it. Invoke `security` with `$ARGUMENTS`. This command names no
+procedure of its own — the deterministic gate, the security lens, the
+licence/SBOM check, and the reporting contract all live in
+`.claude/skills/security/SKILL.md`, and restating them here would be a
+second copy of the same rule.
