@@ -14,26 +14,27 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**All 10 tasks of the Notion "Agentic Workflows (IDE)" architecture merge
-are done, independently reviewed, and verified — not yet delivered.**
-Branch `feat/notion-architecture-merge`, worktree at
-`.worktrees/notion-architecture-merge`, built on top of
-`cluster-c-telemetry-metrics` (so it carries that unit's 5 commits too — not
-yet confirmed merged into `main` separately; check before assuming a clean
-diff). 9 commits for this unit specifically, `f2f9a2d`..`4f52a76`. Full
-naming map, measured numbers, and the 25-section/20-principle coverage
-tables are in `decisions/2026-08-21-notion-architecture-merge.md`; the plan
-is `docs/plans/2026-08-21-notion-architecture-merge.md` (all 10 boxes
-ticked). `TASK.md`'s "Merge the layer into the Notion..." entry has the
-compact Done Checks. `python tools/run_checks.py --tier all
---require-test`: **`PASS: 55 check(s) green`**.
+**PR #30 open, awaiting human merge decision: `trim-skill-metadata-
+duplication` → `chore/dedupe-layer-post-merge`.** Cuts this layer's own
+per-turn/per-dispatch overhead in 3 tasks — merge `when_to_use` into
+`description` across all 14 skills (the canonical Agent Skills format,
+fetched directly from `anthropics/skills`, has no such field), state
+`02-skill-cost.py`/`bench.py`'s skill-load figure as an upper bound (it
+cannot see Claude Code's own native dedup), and wire the already-
+registered `test_doc_entries.py` check into `documentation/SKILL.md`'s
+own procedure. Plan `docs/plans/2026-08-22-trim-skill-metadata-duplication.md`
+(revised once at Gate 1 — a proposed hard word-count test was dropped
+mid-implementation after it was found to contradict `test_process_router.py`'s
+own on-record reasoning against one). Independently tested (`tester`,
+PASS), swept (`refactoring`, clean; 2 structural findings routed
+separately — stale `when_to_use` guidance in `guide/how_to_create_skills.md`
+and `templates/Skills.md`), reviewed (`code-review`, passed: true).
+`python tools/run_checks.py --tier all --require-test`: `PASS: 55
+check(s) green`.
 
-**Next step is `release-git`'s Delivering procedure** — Gate 2
-(`AskUserQuestion`) approval for a PR has not been asked yet. Nothing has
-been pushed. Before opening a PR: decide whether it should carry just the
-9 Notion-merge commits or the whole branch (see the next paragraph) —
-`diff-reviewer`'s scope pass flagged this as a packaging decision, not a
-code defect.
+**The Notion architecture-merge unit previously tracked here is done** —
+merged via PR #28 (see `git log`); this section previously described it
+as "not yet delivered," which was stale.
 
 **Task 9's verification pass found 5 real classes of defect the renames
 left behind**, and a subsequent independent code-review round (4 diff

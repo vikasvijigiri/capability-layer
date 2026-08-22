@@ -4,35 +4,6 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
-### Cut this layer's own token overhead: skill-metadata, telemetry, doc-caps
-
-- **Goal**: merge `when_to_use` into `description` and tighten toward the
-  canonical ~100-word target (with a new enforced test cap) across all 14
-  skills; correct `02-skill-cost.py`/`bench.py`'s skill-load figure to
-  state its own dedup-blindness; wire the existing, already-registered
-  `test_doc_entries.py` check into `documentation/SKILL.md`'s own
-  procedure.
-- **Input**: `docs/research/2026-08-22-dynamic-routing-vs-fixed-policy.md`;
-  `anthropics/skills`' `skill-creator/SKILL.md` (canonical format, fetched
-  directly) for the field/word-count/body-ceiling evidence.
-- **Output**: `docs/plans/2026-08-22-trim-skill-metadata-duplication.md`
-  (3 tasks, `## Approved`).
-- **Constraints**: skill body content is explicitly out of scope (none of
-  the 14 skills breach the canonical 500-line ceiling); no new hook for
-  doc-cap enforcement (two blocking hooks and one warn-only hook for this
-  exact file family were tried and deleted previously).
-- **Done Checks**: `python tools/test_process_router.py`,
-  `python tools/new_skill_check.py --all`,
-  `python tools/eval_triggers.py --all --dry-run`, `python tools/bench.py`,
-  `python tools/test_referenced_paths.py` — all exit 0 (exact expectations
-  per task in the plan).
-- **Out of Scope**: rewriting any `SKILL.md` body content; a new hook on
-  `LOG.md`/`ISSUES.md`.
-- **Status**: Review — all 3 tasks implemented and ticked on branch
-  `trim-skill-metadata-duplication` (base `5041301`); `python
-  tools/run_checks.py --tier all --require-test`: `PASS: 55 check(s)
-  green`. Awaiting `testing`'s independent verification.
-
 ### Cap the plan self-review loop at 2 iterations
 
 - **Status:** Closed 2026-08-22 (`docs/plans/2026-08-22-plan-review-iteration-cap.md`).
@@ -227,6 +198,17 @@
 <!-- Append-only, newest entry at the top. Never delete or rewrite an
 entry here -- this is the full task/accountability trail for this repo,
 from day one. Move a task here the moment it reaches a terminal Status. -->
+
+### 2026-08-22 — Cut this layer's own token overhead: skill-metadata, telemetry, doc-caps
+- **Goal:** merge `when_to_use` into `description` across all 14 skills
+  (canonical Agent Skills format has no such field); state
+  `02-skill-cost.py`/`bench.py`'s skill-load figure as an upper bound;
+  wire the existing `test_doc_entries.py` check into `documentation`'s
+  own procedure.
+- **Output:** `docs/plans/2026-08-22-trim-skill-metadata-duplication.md`,
+  all 3 tasks done, independently tested (PASS) and reviewed
+  (passed: true). PR #30.
+- **Status:** Done
 
 ### 2026-08-21 — Permanent branch-per-parallel-task policy
 - **Goal:** make branch-per-independent-task the permanent default in
