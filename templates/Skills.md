@@ -12,14 +12,12 @@
 
 name: my-skill
 
-# THE ONE LINE THAT MATTERS MOST. This is the only thing loaded into
-# context before invocation — it's what Claude matches to decide
-# whether to auto-load the rest. Front-load the primary trigger case,
-# use the words a person would actually type. Capped at 1,536 chars
-# combined with when_to_use.
-description: What this skill does, then when to use it — e.g. "Summarizes uncommitted git changes and flags risks. Use when the user asks what changed, wants a commit message, or asks to review their diff."
-
-when_to_use: "e.g. 'what did I change', 'review my diff', 'write a commit message'"
+# THE ONE LINE THAT MATTERS MOST — the only frontmatter field Claude
+# reads to decide whether to auto-load the rest (there is no separate
+# when_to_use field in the format). Front-load the primary trigger case,
+# use the words a person would actually type, and name concrete trigger
+# phrases here rather than in a second field.
+description: What this skill does, then when to use it — e.g. "Summarizes uncommitted git changes and flags risks. Triggers include 'what did I change', 'review my diff', or 'write a commit message'."
 
 argument-hint: "[filename]"
 

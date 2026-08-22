@@ -4,6 +4,32 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Fix telemetry's predicted-vs-actual execution-level comparison
+
+- **Goal**: `09-telemetry.py`'s `execution_level.actual` currently
+  reflects session-cumulative totals compared against a per-turn
+  `predicted`, so it can only drift toward E5 on a long session
+  regardless of real turn size. Fix `build_snapshot()` to pass
+  per-turn deltas (diffed against the previous `telemetry.jsonl` row)
+  into the already-correctly-tested `_actual_execution_level()`.
+- **Input**: this session's grounded-verdict pass over the 30 primary
+  objectives; `tools/test_bench.py:170-187`'s existing unit tests,
+  which already assume per-turn-shaped inputs.
+- **Output**: `docs/plans/2026-08-22-telemetry-per-turn-execution-level.md`
+  (2 tasks, `## Approved`).
+- **Constraints**: no schema change to `telemetry.jsonl`; bounded
+  tail-read only (the file is append-only, 276KB/130 lines and
+  growing, never truncated).
+- **Done Checks**: `python tools/run_hook.py post-run
+  '{"workflow":"test","status":"success"}'` appends a row with a
+  delta-based `execution_level.actual`; `python tools/test_bench.py`
+  passes including a new red-green regression case.
+- **Out of Scope**: the other 4 items from the same "world-class gap
+  list" (schema coverage, a full objectives re-audit, the
+  duplicate-call-rate investigation, 2 stale doc cross-references) —
+  each its own follow-up unit.
+- **Status**: Ready — Gate 1 approved, not yet implemented.
+
 ### Cap the plan self-review loop at 2 iterations
 
 - **Status:** Closed 2026-08-22 (`docs/plans/2026-08-22-plan-review-iteration-cap.md`).
