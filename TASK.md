@@ -259,11 +259,13 @@
   re-grading objectives 1-10.
 
 ### UI/UX design (web + iOS/Android) MCP wiring
-- **Status:** Plan approved (`## Approved`), Gate 1 recorded. `python tools/scope.py
-  --plan docs/plans/2026-08-23-ui-ux-design-mcp-skill.md`: risk low, scope small.
-  `python tools/parallel_groups.py`: 5 tasks, 3 rounds, max concurrency 2.
-  `python tools/analyze.py --slug ui-ux-design-mcp-skill`: consistent, no findings.
-  Not yet implemented.
+- **Status:** Implemented, 5/5 tasks (`docs/plans/2026-08-23-ui-ux-design-mcp-skill.md`),
+  branch `feat/ui-ux-design-mcp-skill`. `python tools/scope.py --plan ...`: risk low,
+  scope small. Each task independently verified (`test_referenced_paths.py`,
+  `test_process_router.py`, `test_portability_contract.py`, `run_checks.py --scoped`).
+  `python tools/run_checks.py --tier all --require-test`: `PASS: 63 check(s) green`.
+  Reviewed PASS by `reviewer` (mode: spec) — all 5 tasks match the plan, no scope creep.
+  Not yet tested (`testing`) or delivered.
 - **Goal:** extend `architecture`'s existing design-contract mode with iOS (Apple HIG)
   and Android (Material Design 3) platform guidance and wire Figma MCP tools into it —
   not new top-level skills, per `docs/research/2026-08-23-ui-ux-skill-prior-art.md`'s
