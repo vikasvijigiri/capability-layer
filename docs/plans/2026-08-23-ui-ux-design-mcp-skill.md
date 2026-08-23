@@ -74,7 +74,7 @@ procedure (`templates/rules.md`'s own decision test), and must be path-scoped
 
 - [x] Task 1 — Add iOS/Android platform guidance, cross-linked from the design contract
 - [x] Task 2 — Wire Figma MCP into `architecture`'s tools and grounding procedure
-- [ ] Task 3 — Register the new MCP tool terms in the portability contract and all adapters
+- [x] Task 3 — Register the new MCP tool terms in the portability contract and all adapters
 - [ ] Task 4 — Add the path-scoped design-MCP rule
 - [ ] Task 5 — Fix `templates/DESIGN.md`'s stale skill reference and add a Platform line
 
