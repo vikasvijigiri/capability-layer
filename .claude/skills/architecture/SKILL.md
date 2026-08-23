@@ -4,7 +4,7 @@ description: Generate and compare genuinely different approaches, then choose on
 effort: high
 model: opus
 disable-model-invocation: false
-allowed-tools: Read Grep Glob Bash
+allowed-tools: Read Grep Glob Bash mcp__figma__get_design_context mcp__figma__get_screenshot mcp__figma__get_variable_defs mcp__figma__get_metadata
 ---
 
 # Architecture

@@ -34,6 +34,27 @@ can defend. Mark unknowns as assumptions and list the smallest blocking
 questions. Do not invent a token, component variant, or interaction merely
 to make the page look complete.
 
+### Ground in the source file
+
+When the request or an existing `DESIGN.md` names a Figma file or link —
+for any platform, web, iOS, or Android alike — pull the real source before
+inventing a value:
+
+- `mcp__figma__get_design_context` and `mcp__figma__get_variable_defs` for
+  the actual color, type, and spacing tokens, instead of guessing hex
+  values or a scale.
+- `mcp__figma__get_screenshot` and `mcp__figma__get_metadata` for the
+  actual layout, component tree, and states, instead of describing a
+  screen from the request text alone.
+
+Figma is the one MCP server configured in this repository that covers
+every platform this contract supports — a Figma file holds an iOS or
+Android app's design the same way it holds a web one, so there is no
+separate per-platform MCP to choose. No linked file means there is nothing
+to ground against; state that plainly and proceed from the request and
+`references/platform-guidance.md` instead of treating absence as
+permission to invent.
+
 ## Contract sections
 
 ### Product feeling and voice
