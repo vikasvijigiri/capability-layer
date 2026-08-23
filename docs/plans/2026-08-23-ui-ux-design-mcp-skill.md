@@ -76,7 +76,7 @@ procedure (`templates/rules.md`'s own decision test), and must be path-scoped
 - [x] Task 2 — Wire Figma MCP into `architecture`'s tools and grounding procedure
 - [x] Task 3 — Register the new MCP tool terms in the portability contract and all adapters
 - [x] Task 4 — Add the path-scoped design-MCP rule
-- [ ] Task 5 — Fix `templates/DESIGN.md`'s stale skill reference and add a Platform line
+- [x] Task 5 — Fix `templates/DESIGN.md`'s stale skill reference and add a Platform line
 
 ## Tasks
 
