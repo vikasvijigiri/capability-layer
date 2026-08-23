@@ -20,6 +20,11 @@ a conversation is not a contract: the next session cannot read it, and
 Read, in order:
 
 1. The request, acceptance criteria, target users, platform, and constraints.
+   Identify the target platform(s) — web, iOS, Android, or more than one —
+   then read the matching section(s) of `references/platform-guidance.md`
+   before drafting Tokens or Components below; each platform has its own
+   typography scale, navigation pattern, and motion/accessibility
+   conventions that the platform-agnostic sections here do not cover.
 2. `DESIGN.md`, `design.md`, or the project's equivalent if present.
 3. Existing screens and components that establish local patterns.
 4. Accessibility, brand, content, and technical constraints.
