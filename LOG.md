@@ -1,5 +1,21 @@
 # Log
 
+## 2026-08-24 09:42
+
+Delivered UI/UX design MCP wiring (PR #39, `feat/ui-ux-design-mcp-skill` ->
+`main`, not yet merged). Extended `architecture`'s design-contract mode
+with iOS/Android platform guidance and Figma MCP tools rather than adding
+new skills — research (`docs/research/2026-08-23-ui-ux-skill-prior-art.md`)
+found this repo already owns the equivalent capability, and no MCP other
+than Figma covers all three platforms in any prior art read. Registered
+the 4 new `mcp__figma__*` terms by reusing the existing `web_research`
+capability bucket, not a new category, to avoid editing
+`test_portability_contract.py`'s hardcoded capability set. Full chain ran:
+`reviewer` (mode: spec) passed, `tester` independently verified fresh
+(`PASS: 63 check(s) green`), `refactoring` swept clean (one deliberate P2,
+not fixed — a semantic label stretch, reasoned in the plan), `code-review`
+passed (scope small, security gate exit 0).
+
 ## 2026-08-23 00:20
 
 Fixed `README.md`'s install commands, reported by the user as installing
