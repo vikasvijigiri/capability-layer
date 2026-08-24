@@ -258,6 +258,29 @@
   surfaced by this cluster's own check); turning any new check into a gate;
   re-grading objectives 1-10.
 
+### UI/UX design (web + iOS/Android) MCP wiring
+- **Status:** Implemented, 5/5 tasks (`docs/plans/2026-08-23-ui-ux-design-mcp-skill.md`),
+  branch `feat/ui-ux-design-mcp-skill`. `python tools/scope.py --plan ...`: risk low,
+  scope small. Each task independently verified (`test_referenced_paths.py`,
+  `test_process_router.py`, `test_portability_contract.py`, `run_checks.py --scoped`).
+  `python tools/run_checks.py --tier all --require-test`: `PASS: 63 check(s) green`.
+  Reviewed PASS by `reviewer` (mode: spec) — all 5 tasks match the plan, no scope creep.
+  Not yet tested (`testing`) or delivered.
+- **Goal:** extend `architecture`'s existing design-contract mode with iOS (Apple HIG)
+  and Android (Material Design 3) platform guidance and wire Figma MCP tools into it —
+  not new top-level skills, per `docs/research/2026-08-23-ui-ux-skill-prior-art.md`'s
+  verdict (this repo already owns the equivalent capability; duplicating it would repeat
+  `architecture`'s existing gate/handoff contract).
+- **Output:** `docs/plans/2026-08-23-ui-ux-design-mcp-skill.md` (5 tasks: platform
+  guidance reference file, Figma MCP wiring in `architecture/SKILL.md` +
+  `design-contract.md`, portability-contract + 3-adapter registration reusing the
+  existing `web_research` capability, a path-scoped `.claude/rules/design-mcp.md`, and a
+  stale-reference fix in `templates/DESIGN.md`).
+- **Out of Scope:** a new capability category in `capabilities.json` (reuses
+  `web_research` instead — inventing one would require editing
+  `test_portability_contract.py`'s hardcoded capability set); a bespoke Xcode/Android
+  Studio design MCP (none found in prior art); new top-level skills.
+
 ### Implement world-class SessionStart bootstrap scaffolding
 - **Status:** In Progress
 - **Goal:** Implement a SessionStart bootstrap loader that scaffolds project skeleton files and a minimal, maintainable `docs/` structure without creating unnecessary subfolders or a copied `AGENTS.md`.

@@ -14,6 +14,10 @@
     "WebFetch": "host-managed",
     "mcp__github__search_code": "host-managed",
     "mcp__context7__query-docs": "host-managed",
+    "mcp__figma__get_design_context": "host-managed",
+    "mcp__figma__get_screenshot": "host-managed",
+    "mcp__figma__get_variable_defs": "host-managed",
+    "mcp__figma__get_metadata": "host-managed",
     "/deep-research": "host-managed",
     "ultracode": "host-managed"
   },

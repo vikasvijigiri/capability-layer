@@ -5,7 +5,7 @@ CLAUDE.md so it loads before any surface work. Delete this comment when you fork
 
 An unfilled section is worse than an absent one: the agent reads `[e.g. direct,
 warm]` as the decision and ships it. If you do not know yet, write
-`[NEEDS DECISION: ...]` — `designer` treats that as a blocking question, and a
+`[NEEDS DECISION: ...]` — `architecture` treats that as a blocking question, and a
 placeholder as an answer. -->
 
 ## What this is
@@ -13,6 +13,10 @@ placeholder as an answer. -->
 One paragraph: what the product is, who it is for, and the single feeling the
 design should produce. Be concrete — "calm, fast, trustworthy" beats "modern and
 clean", because the second one cannot be checked against anything.
+
+**Platform:** [web / iOS / Android / more than one — see
+`.claude/skills/architecture/references/platform-guidance.md` for the
+platform-specific guidance this contract draws on]
 
 ## Voice
 
