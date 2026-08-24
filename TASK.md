@@ -4,6 +4,18 @@
 
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
+### Engineering standards skill + backend/frontend agents
+- **Status:** Plan approved (`docs/plans/2026-08-24-engineering-standards-skill.md`,
+  6/6 tasks, branch `engineering-standards-skill`), not yet implemented.
+  Risk: high (control-surface — touches `workflow.md`, 4 skills'
+  `SKILL.md`, 2 new `.claude/agents/*.md`).
+- **Goal:** one portable `engineering-standards` skill (backend/frontend
+  practice, stack-detected) plus `backend-engineer`/`frontend-engineer`
+  subagents that can implement disjoint backend/frontend plan tasks in
+  parallel via the existing `implementer`/`parallel_groups.py` mechanism.
+- **Out of Scope:** live Grafana MCP wiring, deeper per-language reference
+  modules, an API-gateway MCP — all named as follow-on work in the plan.
+
 ### Cluster B -- instruments for objectives 17, 19, 20
 - **Status:** Implemented, 4/4 tasks (`docs/plans/2026-08-22-cluster-b-rerun-safety.md`).
   `python tools/run_checks.py --tier all --require-test`: `PASS: 58 check(s)
