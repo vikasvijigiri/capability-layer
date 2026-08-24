@@ -14,14 +14,15 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
-**PR #39 (`feat/ui-ux-design-mcp-skill` -> `main`) is open, not yet merged.**
+**PR #39 and its follow-up #40 are merged into `main`** (`624165c`).
 UI/UX design MCP wiring — `docs/plans/2026-08-23-ui-ux-design-mcp-skill.md`,
 5/5 tasks. Extended `architecture`'s design-contract mode with iOS/Android
 platform guidance (`references/platform-guidance.md`) and wired the Figma
 MCP server into it, instead of new skills — see
 `docs/research/2026-08-23-ui-ux-skill-prior-art.md` for why. Full chain ran
-(reviewer, tester, refactoring, code-review, all passed).
-**Next step: merge via `release-git` when the user wants to ship it.**
+end to end (Gate 1, implementation, testing, refactoring, code-review,
+delivery, merge) — the first time this repository's chain has completed
+all the way through a merge.
 
 **PRs #30, #31, #32 and #33 are all merged into `main`** (confirmed via
 `git log --oneline`: `5d15067` merges #33, `09b1b79` merges #32) — the

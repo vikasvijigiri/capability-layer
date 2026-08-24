@@ -148,17 +148,17 @@ python tools/parallel_groups.py <plan>                 # which tasks may run at 
 ## How a change moves
 
 ```text
-                         ┌──── dispatch, and it returns ────┐
-                         │  brainstormer · research         │
-                         │  designer · systematic-debugging │
-                         ↓                                  │
-repo-recon → writing-plans ────────────────────────────────┘
-                  │  frame (TASK.md) → fetch → plan
-                  └→[GATE 1]→ executing-plans → verifying-work → no-slop
+                         ┌──── dispatch, and it returns ─────────┐
+                         │  architecture · research               │
+                         │  repository-navigation · debugging     │
+                         ↓                                        │
+                task-analysis ─────────────────────────────────────┘
+                  │  frame (six fields) → fetch → plan
+                  └→[GATE 1]→ implementation → testing → refactoring
                                                                     │
      ┌──────────────────────────────────────────────────────────────┘
-     └→ code-review → delivering
-                          └→[GATE 2]→ releasing → knowledge-manager
+     └→ code-review → release-git (deliver)
+                          └→[GATE 2]→ release-git (release) → documentation
 ```
 
 **The numbers in `workflow.md` are labels, not a sequence.** There is one door:
@@ -181,7 +181,7 @@ loads only when the task calls for it.
 | `.claude/skills/` | the 14 skills, one directory each |
 | `.claude/agents/` | 8 subagents — the read-only fan-out set, plus one implementer |
 | `.claude/hooks/` | what fires automatically — checkpoints, secret scan, branch guard, state report |
-| `.claude/commands/` | the 12 slash commands, including `/verify`, `/save` and `/publish` |
+| `.claude/commands/` | the 16 slash commands, including `/verify`, `/save` and `/publish` |
 | `.claude/constitution.md` | seven articles every plan ticks or justifies |
 | `.claude/workflow.md` | stage → owner → artefact, the entry rule, and the `[state:*]` blocks the session-start hook renders |
 | `.claude/install.py` | copies the layer into another repository; merges `settings.json`, never overwrites a decision |
@@ -216,10 +216,14 @@ it says so.
 
 Stated here rather than discovered later:
 
-- **The chain has never completed once.** Gate 1 has fired exactly once — on the
-  plan that built this package. Gate 2 never has. No approved plan has gone spec →
-  release in this repository, so the stages after review are specified and
-  unexercised.
+- **The chain has now completed end to end, once.** Gate 1 has fired 13 times
+  as of 2026-08-23 (`python tools/chain.py --ledger`); most of those stopped
+  short of delivery. PR #39 (`docs/plans/2026-08-23-ui-ux-design-mcp-skill.md`)
+  is the first to run every stage for real — `implementation`, `testing`,
+  `refactoring`, `code-review`, and `release-git`'s delivering procedure — and
+  land merged on `main` (`624165c`). `release-git`'s *releasing* procedure and
+  Gate 2 still have not fired: this repository has no deploy target, so that
+  half stays specified and unexercised.
 - **Parallel dispatch is diagnosed but still unproven.** One subagent has now
   completed a task correctly — a read-only probe — so the mechanism is not dead.
   What that probe established is why the first fan-out died: `isolation: worktree`
