@@ -5,10 +5,16 @@
 <!-- Task(s) currently in progress. Overwrite in place as they change. -->
 
 ### Engineering standards skill + backend/frontend agents
-- **Status:** Plan approved (`docs/plans/2026-08-24-engineering-standards-skill.md`,
-  6/6 tasks, branch `engineering-standards-skill`), not yet implemented.
-  Risk: high (control-surface — touches `workflow.md`, 4 skills'
-  `SKILL.md`, 2 new `.claude/agents/*.md`).
+- **Status:** Implemented, 6/6 tasks (`docs/plans/2026-08-24-engineering-standards-skill.md`,
+  branch `engineering-standards-skill`, commit `b099c61`).
+  `python tools/run_checks.py --tier all --require-test`: `PASS: 63 check(s)
+  green` (up from 58). Risk: high (control-surface — touches `workflow.md`,
+  4 skills' `SKILL.md`, 2 new `.claude/agents/*.md`). Independently
+  reviewed by `reviewer` (mode: spec): compliant, 2 findings fixed (this
+  status line was stale; `docs/specs/2026-08-24-fullstack-skills-scope-design.md`
+  — the earlier architecture spec this plan's Research section supersedes —
+  is on this branch but wasn't named in the plan's file map). Not yet
+  tested or reviewed by `code-review` or delivered.
 - **Goal:** one portable `engineering-standards` skill (backend/frontend
   practice, stack-detected) plus `backend-engineer`/`frontend-engineer`
   subagents that can implement disjoint backend/frontend plan tasks in

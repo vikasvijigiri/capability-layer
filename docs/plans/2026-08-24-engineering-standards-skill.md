@@ -490,4 +490,15 @@ no single task's own Verification command could see — each is a real,
 independently-checkable defect the full tier is supposed to catch, not
 scope creep.
 
+**Independent spec-compliance review (`reviewer`, mode: spec), 2 findings,
+both fixed:** (1) `TASK.md`'s status line still said "not yet implemented"
+in the commit that landed all six tasks — updated to reflect completion,
+the review, and the check evidence. (2) `docs/specs/2026-08-24-fullstack-
+skills-scope-design.md` — the earlier `architecture`-dispatch spec whose
+"no new skill" verdict this plan's Research section explicitly supersedes
+— sits on this branch (committed before this plan existed, on the same
+branch lineage) but was never named in the file map above. It is not part
+of this plan's own deliverable; noting it here so the branch's full diff
+is fully accounted for rather than reading as an unexplained file.
+
 ## Approved
