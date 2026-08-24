@@ -1058,5 +1058,63 @@
       "query": "what's the duplicate-call rate looking like lately",
       "should_trigger": false
     }
+  ],
+  "engineering-standards": [
+    {
+      "query": "make this backend world class",
+      "should_trigger": true
+    },
+    {
+      "query": "is our API scalable",
+      "should_trigger": true
+    },
+    {
+      "query": "audit our API design",
+      "should_trigger": true
+    },
+    {
+      "query": "review our frontend architecture",
+      "should_trigger": true
+    },
+    {
+      "query": "what's best practice for handling auth tokens",
+      "should_trigger": true
+    },
+    {
+      "query": "harden this service against common attacks",
+      "should_trigger": true
+    },
+    {
+      "query": "is our component architecture following best practice",
+      "should_trigger": true
+    },
+    {
+      "query": "what are our options for the database",
+      "should_trigger": false
+    },
+    {
+      "query": "why is this endpoint returning 500",
+      "should_trigger": false
+    },
+    {
+      "query": "what does this function do",
+      "should_trigger": false
+    },
+    {
+      "query": "is there a library that already does this",
+      "should_trigger": false
+    },
+    {
+      "query": "deploy this to production",
+      "should_trigger": false
+    },
+    {
+      "query": "plan the migration to the new schema",
+      "should_trigger": false
+    },
+    {
+      "query": "pick the colors for this screen",
+      "should_trigger": false
+    }
   ]
 }

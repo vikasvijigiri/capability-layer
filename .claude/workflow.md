@@ -484,3 +484,4 @@ These skills are reusable capabilities, not additional lifecycle stages:
 | Maintain | `capability-layer-maintenance` | layer contracts and wiring |
 | Analyze | `data-analysis` | a cost/quality/behavior question this layer's own telemetry can answer |
 | Secure | `security` | the deterministic security gate and independent review, at the high risk tier |
+| Ground engineering practice | `engineering-standards` | backend, frontend, and fullstack implementation, diagnosis, and scaling, grounded in current industry practice for whatever stack the target repo actually uses |

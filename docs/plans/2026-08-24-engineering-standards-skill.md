@@ -179,12 +179,12 @@ disjointness; nothing new to compute.
 | `.claude/skills/implementation/SKILL.md:149` | Modify — the `implementer` dispatch line gains a one-line routing rule | Which of the three task-agents a round dispatches per task |
 
 ## Progress
-- [ ] Task 1 — Write `engineering-standards/SKILL.md` (hub, SCAN phase, routing)
-- [ ] Task 2 — Write `references/backend-standards.md`
-- [ ] Task 3 — Write `references/frontend-standards.md`
-- [ ] Task 4 — Register in `workflow.md` and add consult pointers in 4 skills; verify reachability
-- [ ] Task 5 — Create `backend-engineer` and `frontend-engineer` subagents
-- [ ] Task 6 — Wire the parallel-dispatch routing rule in `implementation`
+- [x] Task 1 — Write `engineering-standards/SKILL.md` (hub, SCAN phase, routing)
+- [x] Task 2 — Write `references/backend-standards.md`
+- [x] Task 3 — Write `references/frontend-standards.md`
+- [x] Task 4 — Register in `workflow.md` and add consult pointers in 4 skills; verify reachability
+- [x] Task 5 — Create `backend-engineer` and `frontend-engineer` subagents
+- [x] Task 6 — Wire the parallel-dispatch routing rule in `implementation`
 
 ## Tasks
 
@@ -277,6 +277,20 @@ distinct from `design-contract.md`'s visual contract.
 **Done when:** the file exists, is referenced from the hub, and
 `test_referenced_paths.py` is clean.
 
+**Deviation, reconciled:** `test_referenced_paths.py` correctly caught two
+consequences the plan's file map did not name: (1) `README.md:181,237`
+claimed "14 skills" / "180 queries across all 14 skills," both now stale
+with a 15th skill added — fixed to 15 skills / 264 queries. (2) `docs/
+evals/trigger-queries.json` had no query set for `engineering-standards`,
+which `tools/eval_triggers.py --list` flags as "no query set, so its trigger
+rate cannot be measured at all" — added 14 queries (7 positive, 7 near-miss
+against `architecture`/`debugging`/`research`/`release-git`/`task-analysis`),
+mirroring `research`'s existing 12-query shape. Both are one-time
+consequences of adding a 15th skill, not scope creep — `README.md`'s
+`.claude/agents/` count was deliberately left at 8 here, matching current
+reality, and will be corrected to 10 in Task 5 once the two new agents
+actually exist, not before.
+
 ### Task 4: Register the skill and add consult pointers
 **Purpose:** make the skill reachable (`new_skill_check.py`'s workflow-row
 requirement) and discoverable from the four skills that should consult it.
@@ -310,6 +324,21 @@ existing skills' procedures; this is a pointer, not a rewrite.
 - Expect: passes
 **Done when:** `engineering-standards` is fully reachable per
 `new_skill_check.py`, and all four consulting skills carry the pointer.
+
+**Deviation, reconciled:** `test_process_router.py` (a Task 4 verification
+command, but it exercises Task 1's file) caught four defects
+`new_skill_check.py` cannot see: (1) an unquoted `Triggers:` in the YAML
+frontmatter broke the parser — fixed to `Triggers include` (the exact
+phrasing every other skill already uses, for this exact reason); (2) the
+description's first sentence ran to 40+ words before its first period —
+router requires the first sentence lead with capability in ≤12 words;
+split into a short lead sentence plus detail; (3) the body had zero ordered
+steps — router requires ≥3; the SCAN phase's six bullets became a numbered
+list; (4) backtick-quoting `pyproject` inside prose reads as a skill/agent
+name reference — un-backticked. All four are Task 1's file, fixed here
+because Task 4's verification command is what caught them; `engineering-
+standards/SKILL.md` reflects the fixed version, not the one Task 1
+originally wrote.
 
 ### Task 5: Create the `backend-engineer` and `frontend-engineer` subagents
 **Purpose:** two task-executing subagents, procedurally identical to
@@ -348,6 +377,18 @@ scope.
   NOT use", both declare `allowed-paths` since both grant Write/Edit)
 **Done when:** both agent files exist and `test_agent_standards.py` passes
 clean with them included.
+
+**Deviation, reconciled:** `test_referenced_paths.py` caught two more
+consequences: (1) `.claude/README.md:40` (a second README this plan's file
+map did not name, distinct from the root `README.md` fixed in Task 2/3)
+claimed "8 subagents" — fixed to 10; (2) both new agent files' own
+worktree-isolation comment said "one of three agents in this layer that
+writes files," which the checker (correctly) reads as a total-agent-count
+claim against the live count of 10, not the 3 writers it meant — reworded
+to "one of the agents" rather than trying to keep a second numeral in sync
+with the total agent count. Also completed the deferred half of the Task
+2/3 deviation: `README.md`'s `.claude/agents/` count, deliberately left at
+8 there, is now 10.
 
 ### Task 6: Wire the parallel-dispatch routing rule into `implementation`
 **Purpose:** tell the dispatcher when to pick `backend-engineer`/
@@ -403,5 +444,50 @@ names both new agents by their exact file names.
 - `python tools/new_skill_check.py --all` — 0 required-check failures
 - `python tools/test_agent_standards.py` — `OK` including both new agents
 - `python tools/test_process_router.py` — passes
+
+**Deviation, reconciled — the full `--tier all --require-test` run
+(not any single task's own Verification command) caught six more defects
+none of the per-task checks exercise:**
+
+1. `test_entry_classifier.py`: the trigger query "how should we structure
+   our React components" read as `entry-open` (architecture's "how should
+   we approach this" territory), not a direct `engineering-standards`
+   trigger — reworded to "is our component architecture following best
+   practice," which does not collide.
+2. `test_layer_comparison_contract.py`: hardcodes the live skill count
+   against `docs/research/2026-08-19-agent-layer-comparison.md`'s frozen
+   historical claim ("14 skills," left untouched — it was true on
+   2026-08-19 and must stay untouched as history) — bumped the *live-count*
+   assertion and its print statement from 14 to 15; this is the same
+   manually-tracked-count pattern as `README.md`'s own skill/agent counts,
+   not something this plan invented.
+3. `MEMORY.md:24`: "The current layer has 14 skills and 8 agents" — updated
+   to 15 skills and 10 agents.
+4. `test_no_slop.py --scope layer`: `backend-engineer.md`/
+   `frontend-engineer.md` originally copied `implementer.md`'s full
+   contract verbatim (the plan's own Task 5 instruction: "copied, not
+   paraphrased"). The sweep is right that copy-paste is the wrong
+   mechanism here, not that the shared contract is wrong: restructured
+   both to a short body instructing the dispatched agent to read
+   `implementer.md` in full at runtime (both agents have `Read`), plus
+   its own domain-standards file — same procedural fidelity as a literal
+   copy, one source of truth instead of three, and the plan's original
+   "do not invent a different contract" intent is now enforced by there
+   being only one contract to invent a different version of.
+5. `test_no_slop.py --scope portability`: `backend-standards.md:77` said
+   "per this repo's own `release-git/...`" — false the moment this skill
+   is installed in a repo that isn't this one, which is the whole point of
+   the skill. Reworded to drop the self-reference.
+6. Both new agent files' worktree-isolation note originally said "one of
+   three agents in this layer that writes files" — `test_referenced_paths.py`
+   (correctly) reads any "`<n>` agents" phrase as a claim against the live
+   total (10), not the 3 writers it meant. Removed along with the rest of
+   the copied contract text per point 4 above — the thin body has no
+   numeral claim left to go stale.
+
+All six are consequences of adding a 15th skill and a 10th/11th agent that
+no single task's own Verification command could see — each is a real,
+independently-checkable defect the full tier is supposed to catch, not
+scope creep.
 
 ## Approved
