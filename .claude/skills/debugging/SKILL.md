@@ -203,6 +203,9 @@ You still own the fix, the four-phase loop, and the `ISSUES.md` entry.
   which dispatches `architecture` itself when the approach is open. Do not enter
   the design stage directly — a fix that grew into a design still needs framing,
   and skipping it is how a redesign arrives with no `TASK.md` behind it.
+- Consult `engineering-standards` while diagnosing a backend or frontend
+  failure, for the failure classes industry practice already names
+  (connection-pool exhaustion, N+1 queries, hydration mismatches).
 
 ## Success
 

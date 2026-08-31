@@ -176,6 +176,8 @@ command forward when one exists.
   work with no deploy target).
 - Failure handoff: `debugging`, on a failed check, a substantive conflict,
   or a failed release (after rollback, never before).
+- Consult `engineering-standards` alongside `references/observability-sre.md`
+  for what to actually monitor once a deploy target exists.
 
 ## Success
 

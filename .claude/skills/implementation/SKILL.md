@@ -146,8 +146,15 @@ worktree.** Create it yourself — never rely on `implementer`'s own
 `<plan-base-branch>` is this plan's own working branch tip, verified by `git
 merge-base --is-ancestor` — never the repository's default branch; that
 mistake is the one prior fan-out failure this layer has on record. Dispatch
-one **`implementer`** per task in the round, all in the same message,
-each pointed at its pre-created worktree path.
+one agent per task in the round, all in the same message, each pointed at
+its pre-created worktree path: **`backend-engineer`** when the task's
+declared `Files:` are backend paths (a server/api/backend/service
+directory, or a backend language/framework file), **`frontend-engineer`**
+when they are frontend paths (a client/frontend/ui/components directory, or
+a `.tsx`/`.jsx`/`.vue` file), otherwise the generic **`implementer`**. The
+choice is read from the task's own file set before sending the round's
+message — `tools/parallel_groups.py` still only proves disjointness and
+rounds, not which agent to send.
 
 Give each agent: the **path** to its task's text (never pasted — anything
 pasted stays in your context for the session), the interfaces earlier rounds
@@ -235,6 +242,8 @@ next — asking both agents to do that is the same suite run twice.
 - A failure worth remembering goes wherever the project tracks issues; the unit
   goes wherever it records history.
 - Before anything irreversible, stop and ask in the conversation.
+- Consult `engineering-standards` before writing backend or frontend code,
+  for current industry-practice grounding.
 
 ## Success
 

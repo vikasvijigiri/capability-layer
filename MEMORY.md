@@ -21,7 +21,7 @@ in HANDOFF.md; chronological events belong in LOG.md. -->
   names must match exactly.
 - Skill descriptions are the trigger surface. They must include real trigger
   phrasings and a `Do NOT use` boundary.
-- The current layer has 14 skills and 8 agents. Product stages are defined by
+- The current layer has 15 skills and 10 agents. Product stages are defined by
   `.claude/workflow.md`; capability maintenance is off-chain.
 - There is no `routing/process-skills.md` keyword router. Do not recreate one.
 

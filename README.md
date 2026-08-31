@@ -178,8 +178,8 @@ loads only when the task calls for it.
 
 | Path | What it is |
 |---|---|
-| `.claude/skills/` | the 14 skills, one directory each |
-| `.claude/agents/` | 8 subagents — the read-only fan-out set, plus one implementer |
+| `.claude/skills/` | the 15 skills, one directory each |
+| `.claude/agents/` | 10 subagents — the read-only fan-out set, plus `implementer` and its two domain-grounded variants (`backend-engineer`, `frontend-engineer`) |
 | `.claude/hooks/` | what fires automatically — checkpoints, secret scan, branch guard, state report |
 | `.claude/commands/` | the 16 slash commands, including `/verify`, `/save` and `/publish` |
 | `.claude/constitution.md` | seven articles every plan ticks or justifies |
@@ -233,8 +233,8 @@ Stated here rather than discovered later:
   reported it, because from inside a worktree a stale base looks like a clean
   checkout. `parallel-dispatch.md` now states the precondition. **A writing
   fan-out has still never completed** — one read-only agent is not a round.
-- **Skill trigger rates are unmeasured.** `tools/eval_triggers.py` holds 180
-  queries across all 14 skills, sandboxed and instrument-checked; no live run has
+- **Skill trigger rates are unmeasured.** `tools/eval_triggers.py` holds 264
+  queries across all 15 skills, sandboxed and instrument-checked; no live run has
   been paid for. "It triggers" rests on description properties the suite enforces,
   not on a measured rate — and the one thing actually observed is that across a
   long session touching every stage, none fired on their own.
