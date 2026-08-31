@@ -1,5 +1,19 @@
 # Log
 
+## 2026-08-31 10:27
+
+Delivered engineering-standards skill plus backend/frontend agents (PR #42,
+`engineering-standards-skill` -> `main`, not yet merged). Superseded an
+earlier "no new skill" verdict (`docs/specs/2026-08-24-fullstack-skills-scope-design.md`)
+after the user clarified Grafana was one example, not the whole ask. Real
+prior art settled the shape: one off-chain `engineering-standards` skill,
+consulted rather than staged, plus `backend-engineer`/`frontend-engineer` —
+`implementer` variants that read its contract at runtime instead of
+copying it. See `decisions/2026-08-31-knowledge-skills-consulted-not-staged.md`.
+Full chain ran through delivery; `PASS: 63 check(s) green`. Six real
+defects surfaced and fixed by the check tier along the way, documented in
+the plan's Deviation notes.
+
 ## 2026-08-24 09:42
 
 Delivered UI/UX design MCP wiring (PR #39, `feat/ui-ux-design-mcp-skill` ->
