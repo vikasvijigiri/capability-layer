@@ -1,5 +1,19 @@
 # Log
 
+## 2026-08-31 10:42
+
+Small-work path (`scope=small`, `risk=low`, no plan): closed three real
+redo-classes hit while delivering the engineering-standards-skill unit
+(PR #42, separate branch) — an unquoted YAML colon, `parallel_groups.py`
+reading every backticked token in a `Files:` block as a declared file, and
+`.claude/README.md`'s "capabilities" wording silently escaping the
+skill-count checker, now fixed at the source (`NOUN_ALIASES`) and proven
+both ways. Recorded in `.claude/operating.md`'s Gotchas and a new
+`capability-layer-maintenance/references/adding-a-skill-or-agent.md`
+checklist. Also added `.claude/rules/markdown-style.md` (bullets/tables/
+bold-label lines over dense paragraphs, repo-wide). `PASS: 63 check(s)
+green`.
+
 ## 2026-08-24 09:42
 
 Delivered UI/UX design MCP wiring (PR #39, `feat/ui-ux-design-mcp-skill` ->
