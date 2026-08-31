@@ -1,5 +1,16 @@
 # Log
 
+## 2026-08-31 16:58
+
+Small-work path (`scope=small`, `risk=low`, no plan): added four
+`.claude/rules/*.md` free-tier production-stack rules (backend/auth/
+storage, edge hosting/CDN/object storage, mobile app builds, error
+monitoring), in the spirit of the existing `llm-env.md`. Every numeric
+claim checked against the vendor's own pricing page this session, not an
+SEO comparison-farm snippet — most initial web-search results were
+exactly that. `PASS: 63 check(s) green` (one confirmed-transient
+concurrency-probe flake, matches this repo's documented precedent).
+
 ## 2026-08-31 10:27
 
 Delivered engineering-standards skill plus backend/frontend agents (PR #42,
