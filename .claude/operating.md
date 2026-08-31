@@ -112,6 +112,32 @@ named**, never failed.
   and its stall detector's third limb was dead for its whole life.
 - The `github` MCP server needs `GITHUB_TOKEN`. `gh` itself is already
   authenticated on this machine.
+- **An unquoted `Word:` inside a skill's `description:` breaks YAML**, even
+  though `new_skill_check.py`'s naive line-partition parser won't catch it —
+  only a real YAML load (`test_process_router.py`) does. Write "Triggers
+  include X" or quote the whole field; never a bare "Triggers: X".
+- **A plan task's `**Files:**` block: every backticked token in it is read
+  as a declared file**, not just the actual `- Create:`/`- Modify:` path —
+  `tools/parallel_groups.py`'s parser scans the whole field for `` `...` ``,
+  not just the leading bullet. An illustrative filename mentioned in prose
+  inside that block (e.g. listing what a SCAN phase greps for) gets treated
+  as a file this task writes, which can force a false shared-surface
+  serialization. Keep such lists out of the `Files:` block — put them in
+  `Implementation notes:` instead, without backticks if they resemble a
+  real path.
+- **Adding or removing a skill or agent moves a count duplicated in at
+  least five places**, none of which cross-check each other: `README.md`,
+  `.claude/README.md` (says "capabilities," now aliased to the same
+  "skills" inventory in `test_referenced_paths.py`'s `NOUN_ALIASES`, fixed
+  live after it let a stale count through once), `MEMORY.md`,
+  `tools/test_layer_comparison_contract.py`'s hardcoded literal, and
+  `docs/evals/trigger-queries.json`'s total (surfaced only by `python
+  tools/eval_triggers.py --list`, which also refuses to run for a skill
+  with no query set at all). Four of five are mechanically checked by
+  `test_referenced_paths.py`; the fifth (`test_layer_comparison_contract.py`'s
+  literal `!= N`) is deliberate — a frozen historical report it compares
+  against must not be silently rewritten to match — so bump that one by
+  hand and leave the report's own dated claim alone.
 
 ---
 

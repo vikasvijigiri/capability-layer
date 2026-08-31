@@ -68,8 +68,12 @@ duplicate sources, stale counts, and ownership contradictions.
 ### 2. Compare
 
 Compare the structure and content against the relevant files in `templates/`
-and `guide/`. Check frontmatter, routing, handoffs, hook registration, tool
-allowlists, model/effort policy, and harness paths. Score each unit **Keep**
+and `guide/`. For a *new* skill or agent, also read
+`references/adding-a-skill-or-agent.md` first — the repo-specific validator
+rules and duplicated-count locations `templates/`/`guide/` don't cover,
+each a real redo the hard way otherwise. Check frontmatter, routing,
+handoffs, hook registration, tool allowlists, model/effort policy, and
+harness paths. Score each unit **Keep**
 (matches the template), **Repair** (a real deviation), **Extend** (an
 intentional deviation — record the reason inline), or **Retire** (dead weight
 nothing references).
