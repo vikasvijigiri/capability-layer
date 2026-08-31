@@ -130,7 +130,7 @@ to discover why it is not.
 
 This layer shipped an automatic version once: a `SessionStart` hook installed
 the whole capability layer into any git repository it found, unasked. It was
-removed with `install.py`, and `session-init/02-bootstrap-docs.py`
+removed with `install.py`, and `session-init/02-session-context.py`
 was reduced from authoring to detection —
 `tools/test_session_start_contract.py` now asserts it creates nothing.
 

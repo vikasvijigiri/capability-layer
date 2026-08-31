@@ -67,7 +67,7 @@ output behind it — if a suite was not run this turn, the entry says so.
 - **Write "updated the docs" as the entry.** That is the one entry guaranteed
   to be worthless to the next reader.
 - **Phrase an entry as a directive to a future reader.** `session-init/
-  02-bootstrap-docs.py` injects `HANDOFF.md`'s session-context block and
+  02-session-context.py` injects `HANDOFF.md`'s session-context block and
   `LOG.md`'s tail verbatim into every later session. Describe what happened;
   a line that reads as an instruction gets replayed as one, unreviewed.
 
@@ -81,7 +81,7 @@ The reader has none of your context, memory, or machine. `~/.claude` memory and
 a CI agent, or another workstation. These files are the only thing that does —
 which is the entire reason they are committed rather than cached.
 
-`session-init/02-bootstrap-docs.py` re-injects `HANDOFF.md`'s
+`session-init/02-session-context.py` re-injects `HANDOFF.md`'s
 `<!-- session-context -->` block and the last `LOG.md` entries at session start —
 it sat on disk unwired for a while before anyone registered it.
 So the next session sees what you write here, but a teammate or a CI agent only

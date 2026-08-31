@@ -51,8 +51,8 @@ def check_session_start_hooks() -> None:
           f"found {len(scripts)} SessionStart hook command(s)")
     missing = expected - actual
     extra = {cmd for cmd in actual if cmd not in expected}
-    check("SessionStart commands include bootstrap docs hook",
-          any("02-bootstrap-docs.py" in cmd for cmd in scripts),
+    check("SessionStart commands include session-context hook",
+          any("02-session-context.py" in cmd for cmd in scripts),
           ", ".join(scripts))
     check("SessionStart commands include state report hook",
           any("03-state-report.py" in cmd for cmd in scripts),
