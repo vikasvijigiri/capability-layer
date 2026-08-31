@@ -6,10 +6,11 @@ Why this suite exists
 `/verify` step 4 has described this exact check in prose since the command was
 written, and the drift it describes accumulated anyway:
 
-- `session-init/02-bootstrap-docs.py` was in the registry, on disk, and NOT in
-  `settings.json` — so the hook that injects the knowledge docs into session
-  context **never fired in a real session**. CLAUDE.md's "six files carry state
-  between sessions" was describing a capability that was not wired.
+- `session-init/02-session-context.py` (then named `02-bootstrap-docs.py`) was
+  in the registry, on disk, and NOT in `settings.json` — so the hook that
+  injects the knowledge-doc pointers into session context **never fired in a
+  real session**. CLAUDE.md's "six files carry state between sessions" was
+  describing a capability that was not wired.
 - `stop-finalization/05-docs-gate.py` and `permission-security/05-docs-required.py` were wired and
   on disk but absent from the registry, so the file documenting intent disagreed
   with the file that fires.

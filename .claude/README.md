@@ -16,7 +16,7 @@ registry is the one that is wrong.
 
 | Event | Fires |
 |---|---|
-| `SessionStart` | `session-init/02-bootstrap-docs.py`, `03-state-report.py` |
+| `SessionStart` | `session-init/02-session-context.py`, `03-state-report.py` |
 | `UserPromptSubmit` | `prompt-intake/01-entry-classifier.py` |
 | `PreToolUse` | `pre-tool/01-halt-guard.py`, then the commit, deploy and edit guards by matcher |
 | `PostToolUse` | `post-edit-validation/02-hook-self-test-nudge.py`, `context-budget/01-context-cost.py` |

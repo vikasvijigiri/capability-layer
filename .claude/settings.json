@@ -5,8 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-init/02-bootstrap-docs.py\"",
-            "statusMessage": "Loading knowledge docs into session context..."
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-init/02-session-context.py\"",
+            "statusMessage": "Loading knowledge-doc pointers, checking scaffolding drift..."
           },
           {
             "type": "command",

@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SETTINGS_JSON = ROOT / ".claude" / "settings.json"
-BOOTSTRAP_SCRIPT = ROOT / ".claude" / "hooks" / "session-init" / "02-bootstrap-docs.py"
+BOOTSTRAP_SCRIPT = ROOT / ".claude" / "hooks" / "session-init" / "02-session-context.py"
 STATE_SCRIPT = ROOT / ".claude" / "hooks" / "session-init" / "03-state-report.py"
 WORKFLOW_MD = ROOT / ".claude" / "workflow.md"
 
@@ -22,7 +22,7 @@ EXPECTED_BOOTSTRAP_FILES = [
 ]
 
 EXPECTED_SESSION_START_SCRIPT_RELATIVES = [
-    ".claude/hooks/session-init/02-bootstrap-docs.py",
+    ".claude/hooks/session-init/02-session-context.py",
     ".claude/hooks/session-init/03-state-report.py",
 ]
 
@@ -55,7 +55,7 @@ def list_bootstrap_files() -> list[str]:
             if isinstance(target, ast.Name) and target.id == "BOOTSTRAP_FILES":
                 if isinstance(node.value, (ast.List, ast.Tuple)):
                     return [ast.literal_eval(elt) for elt in node.value.elts]
-    raise ValueError("BOOTSTRAP_FILES not found in 02-bootstrap-docs.py")
+    raise ValueError("BOOTSTRAP_FILES not found in 02-session-context.py")
 
 
 def state_report_source() -> str:

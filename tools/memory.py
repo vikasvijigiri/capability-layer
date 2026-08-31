@@ -271,7 +271,7 @@ def _definitely_missing(root: Path, token: str) -> bool:
     # Resolve by BASENAME anywhere in the tree, never by the literal token.
     #
     # Third calibration, and the last: notes refer to files by partial path --
-    # `session-init/02-bootstrap-docs.py` for something that lives under
+    # `session-init/02-session-context.py` for something that lives under
     # `.claude/hooks/`. Checking `root / token` reported three such entries as
     # deleted while all three were present one directory up.
     #
