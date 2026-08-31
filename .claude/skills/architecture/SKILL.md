@@ -241,6 +241,8 @@ each piece is proved.
 - Out of scope: writing code, scaffolding, invoking an implementation
   skill, continuing into execution. Designing and committing the artefact
   are in scope; building is not.
+- Consult `engineering-standards` for backend/frontend implementation-
+  standard grounding once the design direction is chosen and touches code.
 
 ## Success
 

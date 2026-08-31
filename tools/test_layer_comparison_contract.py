@@ -22,8 +22,8 @@ def fail(message: str) -> None:
 
 def main() -> int:
     skills = sorted(SKILLS.glob("*/SKILL.md"))
-    if len(skills) != 14:
-        fail(f"comparison inventory expects 14 skills, found {len(skills)}")
+    if len(skills) != 15:
+        fail(f"comparison inventory expects 15 skills, found {len(skills)}")
 
     for path in skills:
         text = path.read_text(encoding="utf-8")
@@ -88,7 +88,7 @@ def main() -> int:
         if source not in report:
             fail(f"comparison report missing primary source {source!r}")
 
-    print("OK: 14 skills and 25 executable hooks have local contracts")
+    print("OK: 15 skills and 25 executable hooks have local contracts")
     print("OK: comparison report names the inventory, evidence boundaries, and three primary repositories")
     return 0
 

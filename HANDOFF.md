@@ -14,6 +14,21 @@ the concurrent check tier. See `LOG.md` for each.
 
 ## Current Work — START HERE
 
+**PR #42 is open, not yet merged** (`engineering-standards-skill` ->
+`main`). Adds an off-chain `engineering-standards` skill (portable,
+stack-detecting backend/frontend/fullstack practice, consulted by
+`architecture`/`implementation`/`debugging`/`release-git`) plus
+`backend-engineer`/`frontend-engineer` — thin `implementer` variants that
+read its contract at runtime rather than copying it, so a round with
+disjoint backend and frontend tasks can dispatch both in parallel. Plan:
+`docs/plans/2026-08-24-engineering-standards-skill.md` (6/6 tasks). Full
+chain ran end to end through delivery: `reviewer` (mode: spec), `tester`,
+`refactoring`, `code-review` (`passed: true`). `python tools/run_checks.py
+--tier all --require-test`: `PASS: 63 check(s) green`. Deferred, named
+explicitly: live Grafana MCP wiring (fully researched, ready as its own
+small follow-on plan), deeper per-language reference modules, an
+API-gateway MCP.
+
 **PR #39 and its follow-up #40 are merged into `main`** (`624165c`).
 UI/UX design MCP wiring — `docs/plans/2026-08-23-ui-ux-design-mcp-skill.md`,
 5/5 tasks. Extended `architecture`'s design-contract mode with iOS/Android
