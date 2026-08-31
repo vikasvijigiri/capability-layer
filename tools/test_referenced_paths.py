@@ -187,8 +187,15 @@ WORD_NUMBERS = {
 COUNT_RE = re.compile(
     r"\b(" + "|".join(WORD_NUMBERS) + r"|\d{1,3})\s+"
     r"(?:[a-z]+-[a-z]+\s+)?"
-    r"(hooks|skills|suites|sub-?agents|agents|events)\b",
+    r"(hooks|skills|capabilit(?:y|ies)|suites|sub-?agents|agents|events)\b",
     re.IGNORECASE)
+
+# "capability"/"capabilities" is the word `.claude/README.md` uses for what
+# every other file calls "skills" -- same inventory
+# (`.claude/skills/*/SKILL.md`), different noun. Found live: it drifted to
+# "14 capabilities" while every "skills"-worded count elsewhere had already
+# moved to 15, undetected because the two words never met the same lookup.
+NOUN_ALIASES = {"capability": "skills", "capabilities": "skills"}
 
 # Built-in Claude Code commands, not files in this repo.
 BUILTIN_COMMANDS = {"/verify", "/save", "/wip", "/git-state",
@@ -283,6 +290,7 @@ for source in sorted(seen):
                 claimed = int(raw)
             # "subagents" and "sub-agents" are the same inventory as "agents".
             noun_key = re.sub(r"^sub-?", "", noun.lower())
+            noun_key = NOUN_ALIASES.get(noun_key, noun_key)
             actual = counts[noun_key]
             if claimed != actual:
                 failures.append(
