@@ -122,8 +122,16 @@ there would be wrong, since it asserts there is no application code here.
 ## Knowledge docs
 
 `TASK.md` · `HANDOFF.md` · `LOG.md` · `ISSUES.md` · `MEMORY.md` · `README.md`
-carry state between sessions. Hooks read and gate on them, so they are code, not
-commentary, and `knowledge-manager` owns their formats.
+carry state between sessions. `session-init/02-session-context.py` injects a
+bounded, delimited **head** of TASK/HANDOFF/LOG verbatim at every session start,
+so they are code, not commentary. `documentation` owns their schemas
+(`.claude/skills/documentation/formats.md`); the read contract is
+`decisions/2026-09-01-knowledge-doc-head-contract.md`.
+
+**`TASK.md` is a capped ≤6-row ledger** (task · `Active`/`Blocked`/`Done` ·
+date), not an archive — an evicted task lives on in `LOG.md` and its
+`docs/plans/` doc. **`HANDOFF.md` is a rewritten-in-place pickup note**, not
+accumulated. Full task briefs live only in `docs/plans/`.
 
 **Keep every entry minimal** — length is paid on every session that loads them.
 Record only what a future reader could not reconstruct from the diff: a decision

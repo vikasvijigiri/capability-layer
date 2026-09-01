@@ -13,59 +13,39 @@ here. Update only when the project itself changes.
 
 ## TASK.md
 
-Two sections, two different rules — this file is the accountability trail
-for every task in the repo's life, not just a scratchpad for the current one.
-
-**`## Active`** — task(s) currently in progress. Overwrite in place as they
-change; this part is current state, not a log. Each task is exactly:
-
-```
-## <task name>
-- **Goal**:
-- **Input**:
-- **Output**:
-- **Constraints**:
-- **Done Checks**:
-- **Out of Scope**:
-- **Status**:
-```
-
-**Each field is its own bullet, never a bare `Field: value` line.** A single
-newline between plain lines collapses into one run-on paragraph in
-standard Markdown rendering (no blank line = no break) — bullets are the
-only formatting that reliably renders each field on its own line across
-renderers, without relying on trailing-space hard-break tricks. This
-applies to every field-shaped block in this file (`TASK.md`'s two
-formats, decision records) — anywhere a fixed set of labeled
-fields gets written, use bullets, not consecutive plain lines. If any
-single field's content itself needs sub-structure (e.g. `Input` listing
-several files), nest a sub-bullet list under that field rather than
-cramming it into one line.
-
-A task without a clear Goal or Done Checks isn't ready to execute; that's a
-confidence-gate signal for `workflow-orchestrator` to ask rather than guess.
-
-Standard `Status` vocabulary — use these, don't invent synonyms: `Requested`
-→ `Planning` → `Ready` → `Executing` → `Review` → `Validated` → `Done`.
-
-**`## Completed`** — append-only, newest entry at the top (same discipline
-as `LOG.md`). The moment a task's Status reaches `Done`, move it out of
-`## Active` and append a compact record here — never delete a task outright,
-and never rewrite a past entry. This is what makes the repo's history
-answerable from day one: "what was asked, what shipped, when." Compact
-shape per entry:
+A capped live ledger — the `<=6` most recent tasks, newest first, nothing
+else. **Not** an accountability archive: an evicted task's record lives in
+`LOG.md` (the line written when it finished), its `docs/plans/` doc, and
+git history.
 
 ```
-### YYYY-MM-DD — <task name>
-- **Goal**:
-- **Output**:
-- **Status**: Done
+# Tasks
+<!-- session-context:start -->
+<!-- Live window: <=6 tasks, newest first. Evicted tasks live on in LOG.md + docs/plans/. -->
+
+| Task | Status | Updated |
+|---|---|---|
+| <task name> ([plan](docs/plans/<date>-<slug>.md)) | Active | YYYY-MM-DD |
+| <task name> (PR #NN) | Done | YYYY-MM-DD |
+<!-- session-context:end -->
 ```
 
-(`Input`/`Constraints`/`Out of Scope` aren't repeated in the archive — git
-history and the original commit/PR already carry that detail; the archive
-entry only needs enough to answer what was asked and what shipped.)
-`workflow-orchestrator`'s Knowledge Update stage is what performs this move.
+- **The `<!-- session-context:start -->` … `<!-- session-context:end -->`
+  region is what `session-init/02-session-context.py` injects verbatim at
+  every session start.** All of the file's live content sits inside it;
+  keep it to six one-row entries so it is read whole, never clipped.
+- **`Status`** is exactly one of `Active` · `Blocked` · `Done` — no
+  synonyms.
+- **`Updated`** is the date of the last logged subtask or status change.
+- **`Task`** names the work and links its plan (`docs/plans/`) or its PR.
+  The full Goal / Constraints / Done Checks / Out of Scope live in that
+  plan doc and are never restated here — a task with no plan and no clear
+  outcome isn't ready to execute, which is a signal for `task-analysis`
+  to scope it rather than guess.
+- **Eviction:** when a 7th task lands, drop the oldest `Done` row. Never
+  drop a row still `Active` or `Blocked`. There is no ongoing `## Completed`
+  section; the ~400-line archive this file used to carry was cut once to
+  `docs/archive/task-log-pre-2026-09.md`.
 
 ## MEMORY.md
 
@@ -82,27 +62,37 @@ this one is about the current project.)
 
 ## HANDOFF.md
 
-Current-state snapshot: `Completed`, `Current Work` (one line, pointing at
-the active task in `TASK.md` — don't duplicate its full detail here),
-`Pending`, `Next Steps`, `Open Questions`. Overwritten in place every time —
-status, not history (history lives in `LOG.md` and `TASK.md`'s `Completed`
-section). Update at the end of any work session that changed real state.
+A rewritten-in-place pickup note for the *current* work — not accumulated.
+History is `LOG.md`; the task ledger is `TASK.md`. Overwrite it at the end
+of any session that changed real state.
 
-**`<!-- session-context:start -->` / `<!-- session-context:end -->`** wrap
-everything from `Current Work` through `Open Questions` (`Completed` stays
-outside, above the markers).
+```
+# Handoff
+<!-- session-context:start -->
+## Resume here
+<one paragraph: what is true right now + the literal next action>
 
-These are currently inert. `session-init/02-session-context.py` used to inject
-what sits between them at every `SessionStart`. It has been unregistered before
-for force-feeding ~20,000 bytes into every session, which
-made a fresh session impossible. The script is still on disk and can be
-re-registered, so keep the markers and keep honouring the boundary — anything
-inside is what a future re-registration would pay for on every session start.
+## Decisions (don't relitigate)
+- <decision> — <why, one line>
 
-**With the injection off, nothing reads this file automatically.** It is now
-purely a cross-boundary document: written for a teammate, a CI agent, another
-machine, or a session that has to open it deliberately. Write it for a reader
-with none of your context.
+## Blocked / needs a human
+- <question + the options, if known>   (or: `nothing`)
+<!-- session-context:end -->
+
+## Ruled out
+- <approach tried and abandoned> — <why, so it is not retried>
+```
+
+- **The `<!-- session-context:start -->` … `<!-- session-context:end -->`
+  region is injected verbatim by `session-init/02-session-context.py` at
+  every session start.** Only the three sections above sit inside it;
+  `## Ruled out` and anything else stays below `:end`, read only on
+  demand. Keep the marked region short — it is paid on every session.
+- **Rewrite, don't append.** A HANDOFF.md that keeps every past handoff
+  becomes a second `LOG.md` and the actually-current state gets buried
+  under history.
+- Point `Resume here` at the active `TASK.md` row rather than restating
+  its detail.
 
 ## LOG.md
 
@@ -114,12 +104,18 @@ Running log, appended at the top, never rewritten. Each entry:
 ```
 
 Get the actual current date/time rather than guessing. Very concise —
-this is a log, not a report.
+this is a log, not a report. **The newest entry is injected verbatim by
+`session-init/02-session-context.py` at every session start** — a long
+entry is paid on every session until it is superseded, so write the one
+thing a future reader could not reconstruct from the diff and stop.
 
 ## ISSUES.md
 
 Append-only, newest entry at the top (same discipline as `LOG.md`) — one entry per
-*incident*, covering its whole diagnose/fix sequence, not one append per attempt:
+*incident*, covering its whole diagnose/fix sequence, not one append per attempt.
+**Each field is its own bullet, never a bare `Field: value` line** — consecutive
+plain lines collapse into one run-on paragraph in standard Markdown; this holds
+for every field-shaped block (this format and the decision records below):
 
 ```
 ## YYYY-MM-DD HH:MM — <short symptom title>

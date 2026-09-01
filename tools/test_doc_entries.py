@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""The newest `LOG.md` and `ISSUES.md` entry must respect its own size cap.
+"""Knowledge-doc size caps: LOG.md / ISSUES.md newest entry, TASK.md ledger head.
 
-`knowledge-manager` states the caps -- a LOG entry is ~15 lines, an ISSUES
-incident ~12 -- and gives the reason: these files are re-read by whoever opens
-them, so length is a recurring cost rather than a one-off. Nothing enforced it.
+`documentation`/`formats.md` states the caps -- a LOG entry is ~15 lines, an
+ISSUES incident ~12, and TASK.md's injected head is <=6 one-row entries --
+and gives the reason: these files (or their heads) are re-read by whoever
+opens the repo, and TASK.md's head by every session, so length is a recurring
+cost rather than a one-off. Nothing enforced it.
 Measured 2026-08-12: LOG's median entry was 39 lines against a cap of 15, with
 40 of 41 entries over; ISSUES ran 24 against 12, with 25 of 25 over. A cap that
 every entry violates is not a cap, and the layer's own rule is to prefer a
@@ -35,7 +37,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# (file, cap, what the entry is) -- caps from knowledge-manager/formats.md.
+# (file, cap, what the entry is) -- caps from documentation/formats.md.
 # A little headroom over the stated number, because the caps are written as "~15
 # lines" rather than as a hard limit, and a check that fires at 16 would be
 # argued with rather than obeyed. 20 and 16 are still far below the medians that
@@ -44,6 +46,10 @@ LIMITS = [("LOG.md", 20, "a LOG entry (~15 lines per formats.md)"),
           ("ISSUES.md", 16, "an ISSUES incident (~12 lines per formats.md)")]
 
 ENTRY_RE = re.compile(r"(?m)^(?=## 20)")
+
+SESSION_CONTEXT_RE = re.compile(
+    r"(?ms)^<!--\s*session-context:start\s*-->\s*\n(.*?)\n^<!--\s*session-context:end\s*-->")
+TABLE_SEP_RE = re.compile(r"\s*\|[\s|:-]+\|?\s*$")
 
 failures: list[str] = []
 
@@ -106,6 +112,32 @@ for filename, cap, what in LIMITS:
           len(lines) <= cap,
           f"{len(lines)} lines in `{heading}` -- {what}. Cut it to what a "
           f"future reader could not reconstruct from the diff, or split it.")
+
+
+def check_task_head() -> None:
+    """TASK.md's session-context region -- what 02-session-context.py injects
+    every session -- is the <=6-row ledger, not an unbounded list. Soft on a
+    file that has no markers yet (un-migrated install): the hook falls back
+    gracefully there, so this layer does not go red in someone else's repo."""
+    path = ROOT / "TASK.md"
+    if not path.is_file():
+        check("TASK.md absent -- nothing to cap", True)
+        return
+    match = SESSION_CONTEXT_RE.search(path.read_text(encoding="utf-8"))
+    if match is None:
+        check("TASK.md has no session-context markers yet -- row cap not enforced",
+              True)
+        return
+    rows = [ln for ln in match.group(1).splitlines()
+            if ln.lstrip().startswith("|") and not TABLE_SEP_RE.match(ln)]
+    data_rows = rows[1:]  # first `| ... |` line is the header
+    check("TASK.md ledger head is <=6 rows",
+          len(data_rows) <= 6,
+          f"{len(data_rows)} data rows in TASK.md's session-context region -- "
+          f"evict the oldest Done row (its record stays in LOG.md + docs/plans/).")
+
+
+check_task_head()
 
 print()
 if failures:

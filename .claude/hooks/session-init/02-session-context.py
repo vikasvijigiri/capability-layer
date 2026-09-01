@@ -6,9 +6,13 @@ minimal context loading. Nothing here authors strategic documents, writes
 source, reviews, or commits — that's the model's job during the actual
 session, not this deterministic script's.
 
-Also subsumes the old inline "load HANDOFF.md" SessionStart command: this
-script loads HANDOFF.md itself (plus a few other minimal-context sources),
-so that logic isn't duplicated between two separate hook entries.
+Context loading is bounded by design: each knowledge doc has a delimited
+"head" region — `<!-- session-context:start -->` … `<!-- session-context:end -->`
+for TASK.md and HANDOFF.md, the single newest dated entry for LOG.md — which
+this hook emits VERBATIM. It never reads a whole file and never clips
+mid-line: a head over its ceiling is cut at a newline with a pointer, and a
+well-formed head never reaches the ceiling. See
+`decisions/2026-09-01-knowledge-doc-head-contract.md`.
 """
 
 import json
@@ -21,8 +25,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from _hooklib import load_payload  # noqa: E402
 
 
-
-
 BOOTSTRAP_FILES = [
     "README.md",
     "CLAUDE.md",
@@ -32,6 +34,20 @@ BOOTSTRAP_FILES = [
     "LOG.md",
     "ISSUES.md",
 ]
+
+# Character ceilings for the injected head of each doc. Generous on purpose:
+# each doc's SCHEMA keeps its head small — TASK.md is <=6 one-row entries,
+# HANDOFF.md is three short sections, and LOG.md's newest entry is capped at
+# 20 lines by tools/test_doc_entries.py — so a head that hits one of these is
+# a writing-discipline problem the pointer surfaces, not something to design
+# around. `_emit_head` only ever cuts at a newline.
+TASK_HEAD_CEILING = 1200
+HANDOFF_HEAD_CEILING = 1600
+LOG_HEAD_CEILING = 1400
+
+SESSION_CONTEXT_RE = re.compile(
+    r"(?ms)^<!--\s*session-context:start\s*-->\s*\n(.*?)\n^<!--\s*session-context:end\s*-->"
+)
 
 
 def find_git_root(start):
@@ -45,143 +61,88 @@ def find_git_root(start):
         cur = parent
 
 
-def read_json_if_file(path):
-    if not os.path.isfile(path):
-        return None
-    try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return None
-
-
 # The authoring apparatus was deleted on 2026-08-09, not disabled: `detect_stack`,
 # `detect_tooling`, `detect_commit_style`, `claude_md_skeleton`, nine `*_SKELETON`
 # constants and `write_if_missing` -- 407 lines that no longer had a caller.
 #
 # This hook was changed from AUTHORING to DETECTION when the layer stopped
 # installing itself into repositories unasked, and
-# `tools/test_session_start_contract.py` asserts it creates nothing. The behaviour
-# went; the code stayed, so the file read as though it still bootstrapped the
-# knowledge docs. It does not. `knowledge-manager` owns README, TASK, MEMORY,
-# HANDOFF, LOG, ISSUES and decisions/; `capability-layer-maintenance` owns
-# CLAUDE.md. This hook only READS them and reports what it found.
+# `tools/test_session_start_contract.py` asserts it creates nothing.
+# `documentation` owns README, TASK, MEMORY, HANDOFF, LOG, ISSUES and
+# decisions/; `capability-layer-maintenance` owns CLAUDE.md. This hook only
+# READS a bounded head of each and reports what it found.
 
-def parse_active_tasks(task_md_path):
+
+def _read(path):
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
+def _emit_head(text, ceiling, what):
+    """Emit `text` whole, or -- only if it exceeds `ceiling` -- cut at the
+    last newline before the ceiling and append a pointer. Never splits a
+    line. Truncation always names the file, so the full text stays one Read
+    away; an injected head is a pointer, never a replacement."""
+    text = text.strip()
+    if len(text) <= ceiling:
+        return text
+    cut = text.rfind("\n", 0, ceiling)
+    if cut <= 0:
+        cut = ceiling
+    return text[:cut].rstrip() + f"\n[... head over budget, Read {what} for the rest]"
+
+
+def _marked_region(text):
+    """The text between <!-- session-context:start --> and :end, or None.
+
+    An explicit tagged boundary can't be fooled by a section added elsewhere
+    in the file -- a rogue section once rode along with a looser "from this
+    heading onward" heuristic."""
+    match = SESSION_CONTEXT_RE.search(text)
+    return match.group(1).strip() if match is not None else None
+
+
+def parse_task_head(task_md_path):
+    """TASK.md's delimited head region, verbatim. Falls back to the `## Active`
+    section for an un-migrated TASK.md that predates the markers -- bounded
+    either way."""
     if not os.path.isfile(task_md_path):
         return ""
-    with open(task_md_path, encoding="utf-8") as f:
-        text = f.read()
+    text = _read(task_md_path)
+    region = _marked_region(text)
+    if region is not None:
+        return _emit_head(region, TASK_HEAD_CEILING, "TASK.md")
     match = re.search(r"(?ms)^## Active\s*\n(.*?)(?=^## Completed\b|\Z)", text)
-    if match is None:
-        return text  # older TASK.md without the Active/Completed split -- load as-is
-    return match.group(1).strip()
+    active = (match.group(1) if match else text).strip()
+    return _emit_head(active, TASK_HEAD_CEILING, "TASK.md") if active else ""
 
 
-def parse_active_task_pointers(task_md_path, max_status_chars=200):
-    """Name + one-line status per active task -- not the full Goal/Input/
-    Output/Constraints/Done Checks/Out of Scope detail, which stays a Read
-    away instead of being paid on every SessionStart."""
-    active_text = parse_active_tasks(task_md_path)
-    if not active_text.strip():
-        return ""
-    pointers = []
-    # Any heading depth, because `## Active` contains `###` tasks and splitting
-    # on `## ` alone never split at all -- it returned the whole section as one
-    # block whose "name" was the HTML comment at the top, and whose status was
-    # therefore "(no Status field)". That is what this hook emitted on every
-    # session until 2026-08-12: one useless line in place of every active task.
-    for block in re.split(r"(?m)^#{2,4}\s+(?=\S)", active_text):
-        block = block.strip()
-        if not block or block.startswith("<!--"):
-            continue
-        name, _, rest = block.partition("\n")
-        # Both `**Status**:` and `**Status:**` -- the format doc shows the first
-        # and every TASK.md here writes the second, so accepting one of them is
-        # how a field silently reads as absent.
-        # Stop at the next bullet of ANY kind. Stopping only at a bold one let a
-        # multi-line Status run on into `- Modify:` and `- Create:`, which are
-        # plain bullets -- so the "one-line status" quietly became the whole
-        # declaration block.
-        status_match = re.search(
-            r"(?ms)^-\s*\*\*Status:?\*\*:?\s*(.*?)(?=^\s*-\s|\Z)", rest)
-        status = " ".join(status_match.group(1).split()) if status_match else "(no Status field)"
-        if len(status) > max_status_chars:
-            status = status[:max_status_chars].rstrip() + "..."
-        pointers.append(f"- {name.strip()} -- Status: {status}")
-    return "\n".join(pointers)
-
-
-def parse_handoff_status(handoff_path):
-    """Prefer the explicit <!-- session-context:start/end --> markers --
-    robust against any future section added elsewhere in the file (a rogue
-    section once rode along with a "Current Work onward" heuristic; a tagged
-    boundary can't be fooled that way). Falls back to that same "Current Work
-    onward" heuristic for older HANDOFF.md files written before the marker
-    convention existed."""
+def parse_handoff_head(handoff_path):
+    """HANDOFF.md's delimited head region, verbatim. Falls back to
+    `## Resume here` / `## Current Work` onward for an un-migrated file, then
+    to the whole file -- all three bounded."""
     if not os.path.isfile(handoff_path):
         return ""
-    with open(handoff_path, encoding="utf-8") as f:
-        text = f.read()
-    tagged = re.search(
-        r"(?ms)^<!--\s*session-context:start\s*-->\s*\n(.*?)\n^<!--\s*session-context:end\s*-->",
-        text,
-    )
-    if tagged is not None:
-        return _clip(tagged.group(1).strip(), HANDOFF_BUDGET, "HANDOFF.md")
-    match = re.search(r"(?ms)^## Current Work\s*\n.*\Z", text)
-    if match is None:
-        # Older/unrecognised format. Falling back to the whole file is right --
-        # something is better than nothing -- but it must still be budgeted, or
-        # an unmarked HANDOFF.md injects itself entirely.
-        return _clip(text, HANDOFF_BUDGET, "HANDOFF.md")
-    return _clip(match.group(0).strip(), HANDOFF_BUDGET, "HANDOFF.md")
+    text = _read(handoff_path)
+    region = _marked_region(text)
+    if region is not None:
+        return _emit_head(region, HANDOFF_HEAD_CEILING, "HANDOFF.md")
+    match = re.search(r"(?ms)^## (?:Resume here|Current Work)\b.*\Z", text)
+    fallback = (match.group(0) if match else text).strip()
+    return _emit_head(fallback, HANDOFF_HEAD_CEILING, "HANDOFF.md") if fallback else ""
 
 
-# Character budgets for what this hook injects at session start.
-#
-# Measured 2026-08-02: the payload was 26,990 chars (~6,750 tokens) spent before
-# the user had typed anything, because both parsers below were uncapped -- five
-# whole LOG entries plus everything in HANDOFF.md from "Current Work" onward.
-# Long entries are good writing and bad context; the fix is a budget here, not
-# shorter entries.
-#
-# Truncation always names the file, so the full text stays one Read away. An
-# injected summary is a pointer, never a replacement.
-# Halved again on 2026-08-12, from 2400/2400/3, after `tools/bench.py` put a
-# number on what remained: 6,258 chars (~1,560 tokens) still spent before the
-# user types. The 2026-08-02 cut fixed the catastrophe and left the habit.
-#
-# What a session opening actually needs is *where it is*, not *what happened*.
-# HANDOFF's first paragraph is the START HERE line and earns its place; the
-# Pending list behind it does not, because nothing in it is actionable until
-# something is chosen. One LOG entry says what the last unit was; the second and
-# third are history, and history is what `LOG.md` is for. Every clip names its
-# file, so nothing here is lost -- it is one Read away instead of always paid.
-HANDOFF_BUDGET = 1000
-LOG_ENTRY_BUDGET = 500
-LOG_TOTAL_BUDGET = 500
-LOG_ENTRIES = 1
-
-
-def _clip(text, budget, what):
-    if len(text) <= budget:
-        return text
-    return text[:budget].rstrip() + f"\n[... clipped, Read {what} for the rest]"
-
-
-def parse_last_n_log_entries(log_path, n=LOG_ENTRIES):
+def parse_latest_log_entry(log_path):
+    """The single newest dated LOG.md entry, verbatim (bounded). What a
+    session opening needs is a pointer to the last unit of work; earlier
+    entries are history, which is what the rest of LOG.md is for."""
     if not os.path.isfile(log_path):
         return ""
-    with open(log_path, encoding="utf-8") as f:
-        text = f.read()
+    text = _read(log_path)
     parts = re.split(r"(?m)^(## \d{4}-\d{2}-\d{2} \d{2}:\d{2}.*)$", text)
-    entries = []
-    i = 1
-    while i < len(parts) - 1:
-        entries.append(_clip(parts[i] + parts[i + 1], LOG_ENTRY_BUDGET, "LOG.md"))
-        i += 2
-    return _clip("".join(entries[:n]), LOG_TOTAL_BUDGET, "LOG.md")
+    if len(parts) < 3:
+        return ""
+    return _emit_head(parts[1] + parts[2], LOG_HEAD_CEILING, "LOG.md")
 
 
 def _parse_env_file(path):
@@ -281,30 +242,17 @@ def main():
     # already auto-loads project CLAUDE.md on its own for every session, so
     # re-reading and re-printing it here would just duplicate that context.
 
-    active_pointers = parse_active_task_pointers(os.path.join(root, "TASK.md"))
-    if active_pointers:
-        sections.append(
-            "--- TASK.md (Active -- name + status only; Read the file for "
-            "full Goal/Input/Output/Constraints/Done Checks/Out of Scope "
-            "detail) ---\n" + active_pointers
-        )
+    task_head = parse_task_head(os.path.join(root, "TASK.md"))
+    if task_head:
+        sections.append("--- TASK.md (live ledger) ---\n" + task_head)
 
-    handoff_path = os.path.join(root, "HANDOFF.md")
-    handoff_status = parse_handoff_status(handoff_path)
-    if handoff_status.strip():
-        sections.append(
-            "--- HANDOFF.md (Current Work / Pending / Next Steps / Open "
-            "Questions -- Read the file for the full Completed history) ---\n"
-            + handoff_status
-        )
+    handoff_head = parse_handoff_head(os.path.join(root, "HANDOFF.md"))
+    if handoff_head:
+        sections.append("--- HANDOFF.md (resume here) ---\n" + handoff_head)
 
-    # No explicit n: the budget lives with the parser, next to the other three
-    # constants. Passing n=5 here silently overrode LOG_ENTRIES and shipped four
-    # entries under a header claiming five -- caught by running the hook.
-    last_logs = parse_last_n_log_entries(os.path.join(root, "LOG.md"))
-    if last_logs.strip():
-        sections.append(
-            f"--- LOG.md (last {LOG_ENTRIES} entries, clipped) ---\n" + last_logs)
+    latest_log = parse_latest_log_entry(os.path.join(root, "LOG.md"))
+    if latest_log:
+        sections.append("--- LOG.md (newest entry) ---\n" + latest_log)
 
     decision_files = list_decisions(root)
     if decision_files:
