@@ -61,7 +61,7 @@ if they look like a real path.
 | `README.md` | "the *N* skills" / "*N* subagents" | `test_referenced_paths.py` |
 | `.claude/README.md` | "*N* capabilities" (not "skills" — aliased in `NOUN_ALIASES`) | `test_referenced_paths.py` |
 | `MEMORY.md` | "*N* skills and *M* agents" | `test_referenced_paths.py` |
-| `tools/test_layer_comparison_contract.py` | a hardcoded `!= N` literal | itself (bump by hand — the historical report it also checks stays untouched) |
+| the layer's own `test_layer_comparison_contract.py` (source repo only — not shipped by `install.py`) | a hardcoded `!= N` literal | itself (bump by hand — the historical report it also checks stays untouched) |
 | `docs/evals/trigger-queries.json` | implicit total query count | `python tools/eval_triggers.py --list` (also refuses to run for a skill with no query set at all) |
 
 Check every row, not just the one the first failing suite happens to name.

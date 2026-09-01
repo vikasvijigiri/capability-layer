@@ -316,6 +316,22 @@ check("the installed layer passes its own router check in the target",
       "\n".join((proc.stdout + proc.stderr).strip().splitlines()[-8:])[:1200]
       if (proc.stdout + proc.stderr).strip() else "no output")
 
+# `test_referenced_paths.py` is repo-scoped, so it only ever ran here, where
+# every `tools/test_*.py` exists -- and that is exactly the blind spot that let
+# `documentation` and `capability-layer-maintenance` ship instructions to run
+# suites `install.py` strips. Run it IN the target: a shipped skill naming an
+# unshipped tool now fails this test instead of surfacing in someone's repo.
+proc = subprocess.run(
+    [sys.executable, "tools/test_referenced_paths.py"],
+    cwd=str(target), capture_output=True, text=True, timeout=180,
+    stdin=subprocess.DEVNULL,
+    env={**dict(__import__("os").environ), "PYTHONIOENCODING": "utf-8"},
+)
+check("every tool and hook path named by a shipped file resolves in the target",
+      proc.returncode == 0,
+      "\n".join((proc.stdout + proc.stderr).strip().splitlines()[-12:])[:1600]
+      if (proc.stdout + proc.stderr).strip() else "no output")
+
 for d in (target, keeper, dry, big, planned_repo):
     shutil.rmtree(d.parent, ignore_errors=True)
 

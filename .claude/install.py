@@ -71,6 +71,17 @@ TREES = (
     # that is not there.
     "guide",
     "templates",
+    # The host-neutral capability contract and its per-host adapter bindings.
+    # `AGENTS.md` and `harnesses.json` both ship and both promise these paths
+    # exist in every install ("`.claude/portability/capabilities.json` defines
+    # the host-neutral capabilities the workflow requires; `.claude/adapters/`
+    # binds each declared host"), and `capability-layer-maintenance` tells the
+    # model to run `tools/test_portability_contract.py` after an adapter change
+    # -- a suite that reads exactly these five files. Shipping the suite without
+    # its data left every installed target with a mandated command that exits on
+    # a missing file. 5 files, ~200 lines.
+    ".claude/portability",
+    ".claude/adapters",
 )
 
 # Single files copied as-is when absent or stale.
@@ -206,6 +217,15 @@ EXCLUDE_FILES = (
 #
 # Verified against the runtime before cutting: no non-test tool imports any test
 # module, so nothing the layer DOES depends on them.
+#
+# The list is not "the ones that happen to be safe" -- it is every suite a
+# SHIPPED skill or command instructs the reader to run. A shipped skill naming a
+# suite that is not here is the same silent break as a dangling hook path, and
+# `test_referenced_paths.py` (now run in the target by `test_install.py`) fails
+# on it. `test_doc_entries.py` is `documentation`'s mandatory LOG/ISSUES-entry
+# validator and reads only those two files; `test_portability_contract.py` is
+# `capability-layer-maintenance`'s adapter check and reads the `.claude/adapters`
+# and `.claude/portability` trees now added to TREES.
 SHIPPED_SUITES = frozenset({
     "test_process_router.py",
     "test_referenced_paths.py",
@@ -213,6 +233,8 @@ SHIPPED_SUITES = frozenset({
     "test_agent_standards.py",
     "test_hook_registration.py",
     "test_workflow_contract.py",
+    "test_doc_entries.py",
+    "test_portability_contract.py",
 })
 
 

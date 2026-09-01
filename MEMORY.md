@@ -33,10 +33,10 @@ in HANDOFF.md; chronological events belong in LOG.md. -->
 - Hooks must not author strategic content such as README, CLAUDE.md, AGENTS.md,
   TASK.md, HANDOFF.md, MEMORY.md, LOG.md, ISSUES.md, harnesses.json, workflow
   policy, or decisions.
-- `session-start/02-bootstrap-docs.py` reports missing scaffolding without
+- `session-init/02-session-context.py` reports missing scaffolding without
   creating documents.
-- `post-run/07-layer-drift.py` performs read-only path and harness checks.
-- `post-run/03-checkpoint.py` and the auto-commit hook write only recovery or
+- `stop-finalization/07-layer-drift.py` performs read-only path and harness checks.
+- `stop-finalization/03-checkpoint.py` and the auto-commit hook write only recovery or
   Git state through their documented mechanisms.
 
 ## Verification
