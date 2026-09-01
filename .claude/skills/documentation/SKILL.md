@@ -67,9 +67,10 @@ output behind it — if a suite was not run this turn, the entry says so.
 - **Write "updated the docs" as the entry.** That is the one entry guaranteed
   to be worthless to the next reader.
 - **Phrase an entry as a directive to a future reader.** `session-init/
-  02-session-context.py` injects `HANDOFF.md`'s session-context block and
-  `LOG.md`'s tail verbatim into every later session. Describe what happened;
-  a line that reads as an instruction gets replayed as one, unreviewed.
+  02-session-context.py` injects the `<!-- session-context -->` head of
+  `TASK.md` and `HANDOFF.md` and `LOG.md`'s newest entry verbatim into every
+  later session. Describe what happened; a line that reads as an instruction
+  gets replayed as one, unreviewed.
 
 A long file here means something that belonged in git history, or nowhere,
 leaked in.
@@ -81,12 +82,11 @@ The reader has none of your context, memory, or machine. `~/.claude` memory and
 a CI agent, or another workstation. These files are the only thing that does —
 which is the entire reason they are committed rather than cached.
 
-`session-init/02-session-context.py` re-injects `HANDOFF.md`'s
-`<!-- session-context -->` block and the last `LOG.md` entries at session start —
-it sat on disk unwired for a while before anyone registered it.
-So the next session sees what you write here, but a teammate or a CI agent only
-sees the file. Write for the one who opened it deliberately and knows nothing
-else.
+`session-init/02-session-context.py` injects the `<!-- session-context -->`
+head of `TASK.md` and `HANDOFF.md`, plus `LOG.md`'s newest entry, at every
+session start. So the next session sees what you write in those regions, but a
+teammate or a CI agent only sees the file. Write for the one who opened it
+deliberately and knows nothing else.
 
 ## Route first, then read one format section
 
@@ -96,7 +96,7 @@ waste this table exists to prevent.
 
 | Write here | When | Update style |
 |---|---|---|
-| `TASK.md` | a task starts, changes status, or reaches Done | `## Active` in place; `## Completed` append-only |
+| `TASK.md` | a task starts, changes status, or reaches Done | the ≤6-row ledger, in place; evict the oldest `Done` row |
 | `README.md` | stable project purpose, setup, usage, architecture, or conventions change | update the relevant section; link deeper docs |
 | `MEMORY.md` | a convention emerges that outlives the task | append, sparingly |
 | `HANDOFF.md` | a session changed real state | overwrite in place |
@@ -123,8 +123,9 @@ Two rules cut across every format and are easy to get wrong:
 
 - **Every field-shaped block uses bullets, never bare `Field: value` lines.**
   Consecutive plain lines collapse into one paragraph when rendered.
-- **Keep `HANDOFF.md`'s `<!-- session-context -->` markers.** Inert today, but
-  they define the boundary a re-registered bootstrap hook would pay for.
+- **Keep `TASK.md`'s and `HANDOFF.md`'s `<!-- session-context -->` markers.**
+  They bound exactly what `02-session-context.py` injects on every session —
+  keep the region small.
 
 ## What earns an entry
 

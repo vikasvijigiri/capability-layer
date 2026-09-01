@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Contract tests for the SessionStart bootstrap and state-report hooks."""
+"""Contract tests for the SessionStart session-context and state-report hooks."""
 
 from __future__ import annotations
 
+import contextlib
+import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -139,6 +142,74 @@ def check_bootstrap_runtime() -> None:
               proc.stdout.strip())
 
 
+@contextlib.contextmanager
+def _tmp_repo(files: dict[str, str]):
+    """A throwaway git repo containing `files`, plus the hook's stdout after
+    it runs there. Yields (proc, tmp) or (None, None) if git is unavailable.
+    `ignore_cleanup_errors` for the same Windows read-only-git-object reason
+    as check_bootstrap_runtime."""
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir:
+        tmp = Path(tmpdir)
+        env = os.environ.copy()
+        try:
+            subprocess.run(["git", "init"], cwd=tmp, env=env, check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except FileNotFoundError:
+            yield None, None
+            return
+        for name, body in files.items():
+            (tmp / name).write_text(body, encoding="utf-8")
+        proc = subprocess.run([sys.executable, str(contract.BOOTSTRAP_SCRIPT)],
+                              cwd=tmp, env=env, capture_output=True, text=True,
+                              stdin=subprocess.DEVNULL, timeout=30)
+        yield proc, tmp
+
+
+def _injected_context(proc: subprocess.CompletedProcess) -> str:
+    return json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
+
+
+def check_head_region_contract() -> None:
+    """The hook injects only the <!-- session-context --> region, and an
+    over-ceiling head is cut at a newline, never mid-line."""
+    task_md = (
+        "# Tasks\n"
+        "<!-- session-context:start -->\n"
+        "| Task | Status | Updated |\n"
+        "|---|---|---|\n"
+        "| IN-REGION-ROW | Active | 2026-09-01 |\n"
+        "<!-- session-context:end -->\n"
+        "\nOUT-OF-REGION-ROW must never be injected\n"
+    )
+    with _tmp_repo({"TASK.md": task_md}) as (proc, _):
+        if proc is None:
+            check("git is installed for head-region checks", False)
+            return
+        ctx = _injected_context(proc)
+        check("session-context region is injected", "IN-REGION-ROW" in ctx, ctx)
+        check("text past session-context:end is NOT injected",
+              "OUT-OF-REGION-ROW" not in ctx, ctx)
+
+    # A marked region well over TASK_HEAD_CEILING (1200), built from
+    # fixed-width lines so a mid-line cut leaves a final line that is not a
+    # whole `LINEdddd`.
+    body = "\n".join(f"LINE{n:04d}" for n in range(400))
+    task_big = f"# Tasks\n<!-- session-context:start -->\n{body}\n<!-- session-context:end -->\n"
+    with _tmp_repo({"TASK.md": task_big}) as (proc, _):
+        if proc is None:
+            return
+        ctx = _injected_context(proc)
+        check("an over-ceiling head is clipped with a pointer",
+              "[... head over budget, Read TASK.md for the rest]" in ctx, ctx[:300])
+        task_block = ctx.split("--- TASK.md (live ledger) ---\n", 1)[1].split("\n\n---", 1)[0]
+        content = [ln for ln in task_block.splitlines()
+                   if ln and not ln.startswith("[... head over budget")]
+        bad = [ln for ln in content if not re.fullmatch(r"LINE\d{4}", ln)]
+        check("over-ceiling head is cut at a line boundary, never mid-line",
+              bool(content) and not bad,
+              f"non-whole lines in clipped head: {bad[:5]}")
+
+
 def check_workflow_state_tags() -> None:
     tags = contract.workflow_state_tags()
     required = {"docs-stale", "layer-unreviewed"}
@@ -165,6 +236,7 @@ def main() -> int:
     check_session_start_hooks()
     check_bootstrap_whitelist()
     check_bootstrap_runtime()
+    check_head_region_contract()
     check_workflow_state_tags()
     check_state_report_source()
 

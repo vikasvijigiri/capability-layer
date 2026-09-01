@@ -1,5 +1,23 @@
 # Log
 
+## 2026-09-01 10:42
+
+Knowledge-doc head contract (`docs/plans/2026-09-01-knowledge-doc-head-contract.md`,
+`decisions/2026-09-01-...`). `session-init/02-session-context.py` now
+injects a delimited `<!-- session-context -->` head of TASK/HANDOFF and the
+newest LOG entry *verbatim*, never a mid-line clip of a whole file; a
+backstop ceiling only ever cuts at a newline. `TASK.md` is now a capped
+≤6-row `| Task | Status | Updated |` ledger — its 13 stale `## Active`
+entries (all already merged/closed; zero open PRs) and the ~400-line
+`## Completed` archive moved once to `docs/archive/task-log-pre-2026-09.md`.
+`HANDOFF.md` rewritten to the 3-section pickup-note shape. `formats.md`
+schemas rewritten and its false "injection is off" paragraph deleted; stale
+`knowledge-manager` owner refs fixed in `CLAUDE.md` and `test_doc_entries.py`.
+2 new session-start contract checks (region-bounded read, newline-only
+clip), each proven red first; `test_doc_entries.py` gains a ≤6-row TASK
+head check. `PASS: 63 check(s) green`; hook run authors nothing (git status
+unchanged).
+
 ## 2026-08-31 10:42
 
 Small-work path (`scope=small`, `risk=low`, no plan): closed three real

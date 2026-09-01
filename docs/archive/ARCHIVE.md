@@ -1,10 +1,15 @@
-# Archive — the pre-2026-08-01 design layer
+# Archive — retired content
 
-Everything in this directory describes the UAIOS design as it stood **before**
-the capability layer was collapsed on 2026-08-01 (commit `1443ba2`). It is kept
+Most of this directory is the UAIOS design as it stood **before** the
+capability layer was collapsed on 2026-08-01 (commit `1443ba2`). It is kept
 because it holds design intent that nothing else records, and moved here because
 `CLAUDE.md` had been pointing readers at it with the warning "stale, read with
 suspicion" — which is not a state a bootloader should leave a reader in.
+
+`task-log-pre-2026-09.md` is the one exception in kind: retired *project
+state*, not design — the pre-2026-09-01 `TASK.md` (former `## Active` entries,
+all terminal, plus the old `## Completed` archive), moved out when `TASK.md`
+became a capped ≤6-row ledger.
 
 **Nothing here describes what currently runs.** For that, read
 `.claude/workflow.md` (the stage → skill chain) and `CLAUDE.md` (the bootloader).
@@ -16,6 +21,7 @@ suspicion" — which is not a state a bootloader should leave a reader in.
 | `UAIOS.md` | A large ASCII architecture diagram of the whole system | `.claude/workflow.md`'s handoff graph, which describes what exists |
 | `architecture-diagram.md`, `diagrams/*.mmd` | Per-plane Mermaid sources split out of that diagram | Same |
 | `skill-structure.md` | A proposed 20-field skill schema (`average_latency`, `average_cost`, `success_rate`, `confidence`, `benchmarks`…) | The real frontmatter: `name`, `description`, `effort`, `model`. `tools/test_process_router.py` asserts it |
+| `task-log-pre-2026-09.md` | The pre-2026-09-01 `TASK.md` — stale `## Active` entries (all merged/closed) and the append-only `## Completed` archive | `TASK.md`, now a capped ≤6-row ledger; `LOG.md` + PRs for delivery history |
 
 Two ideas here were never implemented and are still worth their own decision
 rather than silent disposal:
