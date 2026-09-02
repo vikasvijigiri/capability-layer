@@ -73,7 +73,14 @@ in HANDOFF.md; chronological events belong in LOG.md. -->
 
 ## MCP and local configuration
 
-- `.mcp.json` and `.vscode/mcp.json` use different schemas and must remain
-  synchronized deliberately.
+- `.mcp.json` and `.vscode/mcp.json` use different schemas (`mcpServers` vs
+  `servers`) and must remain synchronized. `check_config_json.py` now enforces
+  equal server sets between them, and that the curated
+  `templates/mcp-servers.json` names only sanctioned servers all present in
+  `.mcp.json`.
+- The layer's shippable MCP set is figma, github, context7, sentry — the only
+  servers any skill/rule/command references. `install.py` merges those into a
+  target's `.mcp.json` by name (never overwriting an existing entry); every
+  other server in the dev `.mcp.json` is the installing repo's own choice.
 - `.claude/settings.local.json` and other machine-local state must remain
   ignored and must not become part of the shared contract.

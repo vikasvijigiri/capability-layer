@@ -4,22 +4,21 @@
 
 ## Resume here
 
-Branch `feat/knowledge-doc-head-contract` implements the knowledge-doc head
-contract — plan `docs/plans/2026-09-01-knowledge-doc-head-contract.md`, tasks
-0–8 done. **Next: task 9** — `python tools/run_checks.py --tier all
---require-test`, run the hook with `{}` to confirm it injects only the marked
-heads and authors nothing, write the `LOG.md` entry, then open the PR.
-`main` is at `8b0bb85`; no other open PRs or branches in flight.
+**PR #46** (`feat/portable-mcp-wiring`, commit `8756550`, base `main`) is open
+and awaiting review/merge — portable MCP wiring plus the small
+`ui-ux-resources.md` rule. Full tier `PASS: 63`; `merge-tree` clean against
+`main`; `delivery_check.py` exit 0 except "no CI run for this SHA" (expected
+until Actions reports). Nothing to do but merge it when CI is green. `main` is
+at `9795037`.
 
 ## Decisions (don't relitigate)
 
-- Session-start reads a **bounded, delimited head** of TASK/HANDOFF/LOG,
-  verbatim, never a whole-file clip — `decisions/2026-09-01-knowledge-doc-head-contract.md`.
-- `TASK.md` is a capped ≤6-row ledger, not an append-only trail; evicted
-  tasks live on in `LOG.md` + `docs/plans/`. Pre-2026-09 history is
-  `docs/archive/task-log-pre-2026-09.md`.
-- Domain-knowledge skills are consulted, not given a lifecycle stage —
-  `decisions/2026-08-31-knowledge-skills-consulted-not-staged.md`.
+- `install.py` ships the four load-bearing MCP servers from a **curated
+  `templates/mcp-servers.json`**, merged into a target's `.mcp.json` by name,
+  never overwriting. The 14-server dev `.mcp.json` is not the payload source —
+  same reason as `CODEOWNERS.seed`.
+- `.mcp.json` ↔ `.vscode/mcp.json` sync is enforced by `check_config_json.py`,
+  not left to hand-discipline.
 - Two approval gates only (`ExitPlanMode`, `AskUserQuestion`); branch-per-
   parallel-task is the standing default.
 
@@ -31,17 +30,21 @@ nothing
 
 ## Known open items (not blocking)
 
-- `ISSUES.md` carries two `0x08` bytes in the entry describing `0x08` bytes
-  — see `ISSUES.md` 2026-08-11 21:15.
+- **`SHIPPED_MCP_SERVERS` is duplicated** as a literal in `.claude/install.py`
+  and `.claude/hooks/check_config_json.py`. Routed to planning: needs a
+  single-source mechanism (shared import, a test asserting equality, or
+  deriving one from the seed). A synchronized shrink of both drifts silently
+  past the stray-server check.
+- `ISSUES.md` carries two `0x08` bytes in the entry describing `0x08` bytes —
+  see `ISSUES.md` 2026-08-11 21:15.
 - `tools/resume.py`'s `BRANCH_PREFIX` strips only `feat/` while
   `_hooklib.active_plans()` strips five prefixes — `resume.py` can't resolve
   a plan on a `fix/`|`docs/`|`chore/`|`refactor/` branch. Its own unit.
 - The "five state reporters" overlap (`/wip`, `/git-state`, `/handoff`,
   `resume.py`, `03-state-report.py`) — folding `/git-state` into `/wip` was
   tried and reverted; the bodies don't overlap. Needs its own decision.
-- Gate 2 (`AskUserQuestion` shipment approval) has never fired end to end.
-- The stale `TASK.md` "world-class SessionStart bootstrap scaffolding"
-  In-Progress entry was subsumed by this plan and archived, not carried.
+- Gate 2 (`AskUserQuestion` shipment approval) has still never fired end to
+  end — this unit had no deploy target, so release stopped at the PR.
 
 ## Ruled out
 
@@ -49,3 +52,5 @@ nothing
   drawer nothing on the hot path reads; `LOG.md` + `docs/plans/` + git
   already answer "what shipped, when".
 - Branch protection on this repo tier — `403 Upgrade to GitHub Pro`.
+- Filtering the dev `.mcp.json` at install time instead of a curated seed —
+  ships a misleading 14-server file in the wheel.
