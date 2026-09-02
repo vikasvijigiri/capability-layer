@@ -21,6 +21,12 @@ Three rules, each because a fresh copy would otherwise discard a decision:
             is worse than no file at all.
   MERGE     `.claude/settings.json` is unioned by hook command string, so a
             target keeping its own hooks keeps them.
+  MCP-MERGE `.mcp.json` receives the layer's load-bearing MCP servers
+            (`SHIPPED_MCP_SERVERS`) from `templates/mcp-servers.json`, unioned
+            by server name. A server the target already configures is left
+            untouched; a server it lacks is added. The dev `.mcp.json` at this
+            repo's root carries more servers and is NOT the payload source --
+            only the curated seed travels, same reason as CODEOWNERS.seed.
   SKIP      `__pycache__`, `.claude/hooks/state/`, and `.claude/workflow-state/`
             are runtime residue, not layer.
 
@@ -131,7 +137,14 @@ SEED = (
 # collaborator. The file still LOOKS like governance either way, which is the
 # failure mode that matters. `templates/CODEOWNERS.seed` carries the same
 # path-scoped rules with a placeholder and says on its first line to replace it.
-SEED_SOURCE = {"CODEOWNERS": "templates/CODEOWNERS.seed"}
+SEED_SOURCE = {
+    "CODEOWNERS": "templates/CODEOWNERS.seed",
+    # `.mcp.json` is merged, not copied, but `seed_source` is also what
+    # `write_manifest` hashes and what the `mcp-merge` handler reads -- both
+    # must see the curated 4-server seed, never this repo's larger dev
+    # `.mcp.json`, which is not in the payload at all.
+    ".mcp.json": "templates/mcp-servers.json",
+}
 
 # Seeded only into a target that already has Python of its own.
 #
@@ -262,10 +275,35 @@ def skipped(rel: Path) -> bool:
 # to merge FROM, so it must be in the payload. The spec said "never ships", which
 # was ambiguous enough to have broken every install silently: an empty merge
 # registers no hooks and raises nothing.
+#
+# `templates/mcp-servers.json` is the same shape of thing for `.mcp.json`: it is
+# the source `merge_mcp` reads, never lands verbatim under that name, and an
+# absent payload copy would silently merge nothing.
 EXTRA_PAYLOAD = (
     ".claude/settings.json",
+    "templates/mcp-servers.json",
     "README.md",
 )
+
+# The MCP servers the layer's own skills and rules call by name: `architecture`
+# + `design-mcp.md` + `ui-ux-resources.md` need `figma`; `research` /
+# `engineering-standards` use `github` and `context7`; `error-monitoring.md`
+# names the `sentry` entry. Every other server in this repo's dev `.mcp.json`
+# (notion, linear, filesystem, ...) is the installing repo's own choice and is
+# not shipped -- the same line EXCLUDE_FILES draws for `llm-env.md`.
+#
+# `merge_mcp` does NOT read this tuple -- `templates/mcp-servers.json` is the
+# actual payload, and `check_config_json.py` fails if that file names a server
+# outside this set or one absent from `.mcp.json`. This constant is the
+# contract those checks and `test_install.py` / `test_package.py` assert
+# against; keep it and `check_config_json.py`'s copy of the same name in step.
+SHIPPED_MCP_SERVERS = ("figma", "github", "context7", "sentry")
+
+# The one path the `mcp-merge` action writes. Named as a constant because
+# `uninstall_plan` protects it the same way it protects PRESERVE/MERGE/SEED,
+# and that function's docstring promises each protected name comes from a
+# constant rather than a bare literal.
+MCP_MERGE_TARGET = ".mcp.json"
 
 
 def payload_files(source: Path = SOURCE) -> list[Path]:
@@ -359,6 +397,46 @@ def merge_settings(source_text: str, target_text: str) -> tuple[str, list[str]]:
             existing.append(new_block)
             for h in fresh:
                 notes.append(f"{event}: {Path(str(h.get('command'))).name}")
+
+    return json.dumps(dst, indent=2) + "\n", notes
+
+
+def merge_mcp(seed_text: str, target_text: str) -> tuple[str, list[str]]:
+    """Union the seed's `mcpServers` into the target's, by server name.
+
+    Returns the merged JSON and one note per server actually added. Same
+    contract as `merge_settings`: a server the target already configures keeps
+    its own definition untouched, even if it differs from the seed -- this only
+    ever adds. Both sides are parsed, never string-spliced, because a stray
+    comma in `.mcp.json` turns MCP off for the host with no error at all.
+
+    A target with no `.mcp.json` (empty `target_text`) gets the seed verbatim.
+    """
+    notes: list[str] = []
+    try:
+        seed = json.loads(seed_text)
+    except ValueError as exc:
+        raise SystemExit(f"seed templates/mcp-servers.json is not valid JSON: {exc}") from exc
+    try:
+        dst = json.loads(target_text) if target_text.strip() else {}
+    except ValueError as exc:
+        raise SystemExit(
+            f"target .mcp.json is not valid JSON, so it cannot be merged "
+            f"safely: {exc}. Fix or move it, then re-run."
+        ) from exc
+
+    seed_servers = seed.get("mcpServers") or {}
+    if not isinstance(dst, dict):
+        dst = {}
+    dst_servers = dst.setdefault("mcpServers", {})
+    if not isinstance(dst_servers, dict):
+        raise SystemExit("target .mcp.json has a non-object `mcpServers` -- refusing to merge")
+
+    for name, config in seed_servers.items():
+        if name in dst_servers:
+            continue
+        dst_servers[name] = config
+        notes.append(name)
 
     return json.dumps(dst, indent=2) + "\n", notes
 
@@ -520,6 +598,11 @@ def plan(target: Path) -> tuple[list[tuple[Path, str]], list[str]]:
     for name in MERGE:
         actions.append((Path(name), "merge"))
 
+    # `.mcp.json` is neither PRESERVE nor MERGE: those sets mean "settings.json
+    # and CLAUDE.md", and widening them would change what every other reader of
+    # them believes. Its own action, sourced from `templates/mcp-servers.json`.
+    actions.append((Path(MCP_MERGE_TARGET), "mcp-merge"))
+
     return actions, warnings
 
 
@@ -559,7 +642,7 @@ def write_manifest(target: Path, actions: list[tuple[Path, str]]) -> int:
     """
     owned = sorted({
         rel.as_posix() for rel, action in actions
-        if action in ("create", "overwrite", "unchanged", "create-stub", "create-claude-stub", "merge")
+        if action in ("create", "overwrite", "unchanged", "create-stub", "create-claude-stub", "merge", "mcp-merge")
         and rel.as_posix() not in PRESERVE
     } | {MANIFEST.as_posix()})
     # The hash of what was INSTALLED, per file. This is what lets `upgrade` tell
@@ -622,6 +705,15 @@ def apply(target: Path, actions: list[tuple[Path, str]]) -> list[str]:
             merged, added = merge_settings(src.read_text(encoding="utf-8"), current)
             dst.write_text(merged, encoding="utf-8")
             notes.extend(f"registered {n}" for n in added)
+        elif action == "mcp-merge":
+            src = seed_source(rel.as_posix())  # templates/mcp-servers.json
+            if not src.is_file():
+                continue
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            current = dst.read_text(encoding="utf-8") if dst.exists() else ""
+            merged, added = merge_mcp(src.read_text(encoding="utf-8"), current)
+            dst.write_text(merged, encoding="utf-8")
+            notes.extend(f"added MCP server {n}" for n in added)
     owned = write_manifest(target, actions)
     notes.append(f"recorded {owned} layer-owned path(s) in {MANIFEST.as_posix()} -- "
                  f"so the host's own code is measured, not the layer's")
@@ -681,9 +773,9 @@ def uninstall_plan(target: Path) -> tuple[list[str], list[str], list[str], list[
     precisely what the kept-list exists to prevent, and what it did until
     `verifying-work` caught it.
 
-    Three categories are protected outright, and each is read from its own
-    constant rather than listed here, so a fourth entry in any of them is
-    protected automatically:
+    Four names are protected outright, each read from its own constant rather
+    than a bare literal, so a further entry in any of them is protected
+    automatically:
 
     `MERGE`
         `.claude/settings.json` is merged into whatever the host already had, and
@@ -698,6 +790,10 @@ def uninstall_plan(target: Path) -> tuple[list[str], list[str], list[str], list[
         Written only when the target lacked them, which means the repository has
         been running on them ever since. Removing the layer must not also break
         `ruff` and CI in the same step.
+    `MCP_MERGE_TARGET`
+        `.mcp.json` is merged like `settings.json` -- the layer only ever adds
+        servers to it, and nothing recorded the host's own entries. Deleting it
+        would strip MCP servers the host configured itself.
     """
     owned = _layer_owned(target)
     if not owned:
@@ -707,7 +803,7 @@ def uninstall_plan(target: Path) -> tuple[list[str], list[str], list[str], list[
         return [], [], [], []
 
     recorded = _layer_hashes(target)
-    protected_names = {*PRESERVE, *MERGE, *SEED}
+    protected_names = {*PRESERVE, *MERGE, *SEED, MCP_MERGE_TARGET}
 
     remove: list[str] = []
     kept_edited: list[str] = []

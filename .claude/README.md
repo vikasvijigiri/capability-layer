@@ -40,7 +40,7 @@ write the document.
 | `agents/` | 10 subagents (9 custom + the platform-native `Explore` override). `tools:` and `model:` are enforced by the host; `allowed-paths:` is not — see the dormancy note in `workflow.md` |
 | `commands/` | 11 user-invoked slash commands. All carry `disable-model-invocation: true` |
 | `hooks/` | the lifecycle scripts above, plus `.claude/hooks/_hooklib.py` and `.claude/hooks/_projectchecks.py`, which are libraries and not hooks |
-| `rules/` | standing constraints loaded every session — pay for them accordingly |
+| `rules/` | standing constraints — loaded every session, or lazily for the `paths:`-scoped ones (`design-mcp.md`, `ui-ux-resources.md`); pay for them accordingly |
 | `output-styles/`, `agent-memory/` | response shape; the durable memory store `tools/memory.py` reads |
 | `adapters/`, `portability/` | host capability mappings and the fail-safe portability contract; see `adapters/README.md` |
 | `audit/` | a pointer, not a second trail — see `audit/README.md` |
@@ -56,10 +56,13 @@ checks pass" means, so it is the highest-leverage file here.
     python .claude/install.py --into <dir> --dry-run
     python .claude/install.py --into <dir>
 
-`settings.json` is merged rather than overwritten; `CLAUDE.md` and
-`project-checks.json` are never touched. The layer's own ~43 contract suites do
-**not** travel — a host runs its own tests, and six shipped validators check the
-layer itself. `tools/conftest.py` stops pytest collecting what does ship.
+`settings.json` is merged rather than overwritten; `.mcp.json` is merged by
+server name from `templates/mcp-servers.json` (the four load-bearing servers —
+figma, github, context7, sentry — never a target's own entries); `CLAUDE.md`
+and `project-checks.json` are never touched. The layer's own ~43 contract
+suites do **not** travel — a host runs its own tests, and six shipped
+validators check the layer itself. `tools/conftest.py` stops pytest collecting
+what does ship.
 
 `.claude/layer-manifest.json` records which paths belong to the layer, so a host
 measuring its own code does not count the guest.

@@ -146,6 +146,27 @@ check("...and every hook command with it",
       f"missing {sorted(commands_in(source_settings) - commands_in(registered))}")
 
 
+# --- the MCP wiring travels ------------------------------------------------
+# A freshly installed target gets the layer's load-bearing MCP servers, and
+# only those -- the dev `.mcp.json` at this repo's root carries more that are
+# the installing repo's own choice, so they must not ship.
+
+mcp_seed = json.loads((ROOT / "templates" / "mcp-servers.json").read_text(encoding="utf-8"))
+seed_servers = set(mcp_seed["mcpServers"])
+check("the curated MCP seed is exactly the shipped set",
+      seed_servers == set(inst.SHIPPED_MCP_SERVERS), str(sorted(seed_servers)))
+
+target_mcp_path = target / ".mcp.json"
+check("a clean install writes .mcp.json", target_mcp_path.is_file())
+target_mcp = json.loads(target_mcp_path.read_text(encoding="utf-8"))
+check("...with exactly the shipped MCP servers, nothing from the dev config",
+      set(target_mcp.get("mcpServers", {})) == seed_servers,
+      str(sorted(target_mcp.get("mcpServers", {}))))
+check("...and the manifest records .mcp.json as layer-owned",
+      ".mcp.json" in json.loads((target / ".claude" / "layer-manifest.json")
+                                .read_text(encoding="utf-8")).get("paths", []))
+
+
 # --- idempotence -------------------------------------------------------------
 
 again, _ = inst.plan(target)
@@ -157,6 +178,8 @@ twice = json.loads((target / ".claude" / "settings.json").read_text(encoding="ut
 check("...and re-merging settings.json does not duplicate a hook",
       len(commands_in(twice)) == len(commands_in(registered)),
       f"{len(commands_in(twice))} vs {len(commands_in(registered))}")
+check("...and re-merging .mcp.json does not change it",
+      json.loads(target_mcp_path.read_text(encoding="utf-8")) == target_mcp)
 
 
 # --- the preserve rules, which are the whole point ---------------------------
@@ -170,6 +193,15 @@ keeper = fresh_repo()
     "hooks": {"SessionStart": [{"hooks": [
         {"type": "command", "command": "python their_own_hook.py"}]}]},
     "theme": "light",
+}), encoding="utf-8")
+# The keeper already runs its own MCP config: a server the layer does not ship,
+# and its OWN `figma` entry pointed somewhere else. The merge must add what is
+# missing and touch neither.
+(keeper / ".mcp.json").write_text(json.dumps({
+    "mcpServers": {
+        "their_server": {"command": "npx", "args": ["their-mcp"]},
+        "figma": {"type": "http", "url": "https://figma.internal.example/mcp"},
+    }
 }), encoding="utf-8")
 
 keeper_actions, _ = inst.plan(keeper)
@@ -196,6 +228,17 @@ check("...and unrelated settings keys are preserved",
 check("PRESERVE and MERGE do not overlap",
       not (set(inst.PRESERVE) & set(inst.MERGE)),
       "a file that is both preserved and merged has two contradictory rules")
+
+keeper_mcp = json.loads((keeper / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]
+check("the target's own MCP server survives the merge",
+      keeper_mcp.get("their_server") == {"command": "npx", "args": ["their-mcp"]},
+      str(sorted(keeper_mcp)))
+check("...and the target's own figma entry is not overwritten",
+      keeper_mcp.get("figma", {}).get("url") == "https://figma.internal.example/mcp",
+      str(keeper_mcp.get("figma")))
+check("...and the missing shipped servers are added alongside it",
+      {"github", "context7", "sentry"} <= set(keeper_mcp),
+      str(sorted(keeper_mcp)))
 
 
 # --- --dry-run writes nothing ------------------------------------------------
@@ -226,11 +269,16 @@ def quiet(argv: list[str]) -> int:
 dry = fresh_repo()
 (dry / "existing.txt").write_text("do not touch\n", encoding="utf-8")
 before = snapshot(dry)
+dry_actions, _ = inst.plan(dry)
+check("the plan exercises the mcp-merge action",
+      any(a == "mcp-merge" for _, a in dry_actions),
+      str(sorted({a for _, a in dry_actions})))
 rc = quiet(["--into", str(dry), "--dry-run"])
 after = snapshot(dry)
 check("--dry-run exits 0", rc == 0, str(rc))
-check("--dry-run wrote nothing at all", before == after,
+check("--dry-run wrote nothing at all -- .mcp.json included", before == after,
       f"added {sorted(set(after) - set(before))[:5]}")
+check("--dry-run did not write .mcp.json", not (dry / ".mcp.json").exists())
 
 
 # --- refusals ----------------------------------------------------------------

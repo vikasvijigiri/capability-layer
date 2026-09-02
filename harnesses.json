@@ -31,6 +31,8 @@
     "project_checks": ".claude/project-checks.json",
     "adapters": ".claude/adapters",
     "portability_contract": ".claude/portability/capabilities.json",
+    "mcp_config": ".mcp.json",
+    "mcp_seed": "templates/mcp-servers.json",
     "baselines": "docs/baselines",
     "pilot_fixtures": "docs/pilots",
     "workflow_state": ".claude/workflow-state"

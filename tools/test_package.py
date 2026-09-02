@@ -194,6 +194,18 @@ check("...and settings.json, which the merge needs as a SOURCE",
       "without it every install registers zero hooks, silently")
 check("...and install.py, so the target can install elsewhere",
       any(n.endswith("payload/.claude/install.py") for n in names))
+check("...and templates/mcp-servers.json, which the .mcp.json merge needs as a SOURCE",
+      any(n.endswith("payload/templates/mcp-servers.json") for n in names),
+      "without it every install merges zero MCP servers, silently")
+_mcp_seed_member = next((n for n in names if n.endswith("payload/templates/mcp-servers.json")), None)
+if _mcp_seed_member:
+    _seed = json.loads(zf.read(_mcp_seed_member))
+    check("...carrying only the load-bearing MCP servers, not this repo's dev set",
+          set(_seed.get("mcpServers", {})) == set(inst.SHIPPED_MCP_SERVERS),
+          f"seed has {sorted(_seed.get('mcpServers', {}))}")
+check("the wheel ships no root .mcp.json (the dev config, not the layer's)",
+      not any(n.endswith("payload/.mcp.json") for n in names),
+      "it carries servers that are the installing repo's choice, not the layer's")
 
 FORBIDDEN = {
     "settings.local.json": "grants Bash(git push:*)",

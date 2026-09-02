@@ -110,8 +110,9 @@ before declaring work done — it resolves every kind and names any it skipped.
   documents the contract and cannot enforce it — when they disagree, the
   registry is the one that is wrong.
 - **`.github/workflows/checks.yml` calls the same resolver as local**, so CI
-  cannot drift from your machine. `.mcp.json` and `.vscode/mcp.json` are kept
-  in sync **by hand** and can.
+  cannot drift from your machine. `.mcp.json` and `.vscode/mcp.json` stay in
+  sync via `check_config_json.py`; `install.py` merges the load-bearing MCP
+  servers into a target's `.mcp.json`, never overwriting its own entries.
 - `docs/archive/` is superseded material; see its `ARCHIVE.md` before reviving
   anything.
 

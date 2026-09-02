@@ -28,6 +28,12 @@ Read, in order:
 2. `DESIGN.md`, `design.md`, or the project's equivalent if present.
 3. Existing screens and components that establish local patterns.
 4. Accessibility, brand, content, and technical constraints.
+5. The external design-intelligence references in
+   `.claude/rules/ui-ux-resources.md` — style/palette/type databases,
+   frontend taste guidance, and ready-made `DESIGN.md` systems — plus any
+   more current UI/UX resource found at the time of the work. Ground a
+   direction in these before inventing tokens; the contract still lands in
+   `DESIGN.md`.
 
 Produce or update a design contract containing only decisions the product
 can defend. Mark unknowns as assumptions and list the smallest blocking

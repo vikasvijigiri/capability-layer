@@ -166,6 +166,54 @@ if registry.is_file():
                   f"`{declared}`, which is not an event Claude Code emits")
             failures.append(f"hooks_registry.json:{event}")
 
+# --- the MCP wiring the layer ships stays consistent -----------------------
+#
+# `.mcp.json` is what Claude Code reads; `.vscode/mcp.json` is the VS Code
+# projection of the same servers under a different schema (`servers`, not
+# `mcpServers`); `templates/mcp-servers.json` is the curated subset
+# `.claude/install.py` merges into a target. MEMORY.md says these "must remain
+# synchronized deliberately" -- this is the mechanism behind that sentence.
+# `SHIPPED_MCP_SERVERS` is the sanctioned set; keep it in step with
+# `.claude/install.py`'s constant of the same name.
+SHIPPED_MCP_SERVERS = {"figma", "github", "context7", "sentry"}
+
+
+def _mcp_servers(rel: str, key: str) -> set[str] | None:
+    target = ROOT / rel
+    if not target.is_file():
+        return None
+    try:
+        data = json.loads(target.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None  # already reported by the parse loop above
+    block = data.get(key) if isinstance(data, dict) else None
+    return set(block) if isinstance(block, dict) else set()
+
+
+_root_mcp = _mcp_servers(".mcp.json", "mcpServers")
+_vscode_mcp = _mcp_servers(".vscode/mcp.json", "servers")
+_seed_mcp = _mcp_servers("templates/mcp-servers.json", "mcpServers")
+
+if _seed_mcp is not None:
+    stray = _seed_mcp - SHIPPED_MCP_SERVERS
+    if stray:
+        print(f"FAIL: templates/mcp-servers.json ships unsanctioned server(s) "
+              f"{sorted(stray)} -- only {sorted(SHIPPED_MCP_SERVERS)} may travel")
+        failures.append("templates/mcp-servers.json:stray-server")
+    if _root_mcp is not None and not _seed_mcp <= _root_mcp:
+        missing = sorted(_seed_mcp - _root_mcp)
+        print(f"FAIL: templates/mcp-servers.json seeds {missing}, absent from "
+              f".mcp.json -- the seed cannot ship a server the dev env does not run")
+        failures.append("templates/mcp-servers.json:not-in-dev")
+
+if _root_mcp is not None and _vscode_mcp is not None and _root_mcp != _vscode_mcp:
+    only_root = sorted(_root_mcp - _vscode_mcp)
+    only_vscode = sorted(_vscode_mcp - _root_mcp)
+    print(f"FAIL: .mcp.json and .vscode/mcp.json name different server sets "
+          f"-- only in .mcp.json: {only_root}; only in .vscode/mcp.json: {only_vscode}. "
+          f"They must stay synchronized (MEMORY.md, MCP section).")
+    failures.append(".vscode/mcp.json:server-set-drift")
+
 print()
 if failures:
     print(f"{len(failures)} problem(s): {', '.join(failures)}")
