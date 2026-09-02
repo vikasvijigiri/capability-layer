@@ -1,5 +1,24 @@
 # Log
 
+## 2026-09-02
+
+Portable MCP wiring (`docs/plans/2026-09-02-portable-mcp-wiring.md`, PR #46,
+`8756550`). `install.py`'s new `mcp-merge` action unions four MCP servers —
+figma, github, context7, sentry — into a target's `.mcp.json` by name from a
+curated `templates/mcp-servers.json`, never overwriting an existing entry.
+`check_config_json.py` now fails on a `.mcp.json` ↔ `.vscode/mcp.json`
+server-set mismatch or a seed naming an unsanctioned / dev-absent server.
+
+- **Curated seed, not a filtered dev file** — a wheel shipping the 14-server
+  `.mcp.json` while install drops ten is the `CODEOWNERS.seed` failure.
+- **`SEED_SOURCE` gained `.mcp.json` → seed** (off the plan's file map):
+  `write_manifest` hashes via `seed_source()`, else `upgrade` reads every
+  target as locally edited.
+- Planning follow-up: `SHIPPED_MCP_SERVERS` duplicated in `install.py` and
+  `check_config_json.py`; a synchronized shrink drifts past the check.
+
+Also carried `.claude/rules/ui-ux-resources.md`. `PASS: 63`.
+
 ## 2026-09-01 10:42
 
 Knowledge-doc head contract (`docs/plans/2026-09-01-knowledge-doc-head-contract.md`,
