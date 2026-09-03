@@ -4,16 +4,16 @@
 
 ## Resume here
 
-**Branch `docs/engineering-standards-frontend-depth`** (wip checkpoint
-`3fc4e01`, base `main` at `ba9753e`) carries the engineering-standards
-frontend rewrite + `.claude/rules/` wiring: 4 files, `run_checks.py --tier
-all` `PASS: 63`. Not committed cleanly (only a wip checkpoint), not pushed,
-no PR. Next: a clean commit + `/publish` when the user approves, or fold the
-237-line `frontend-standards.md` into `references/frontend/*.md` topic files
-first if they want it shorter. Plan: `~/.claude/plans/lazy-moseying-treehouse.md`.
+Nothing in flight. **PR #47** (engineering-standards frontend depth + rule
+wiring, commit `5f99764`) merged as `d0b3424`; branch deleted, local `main`
+fast-forwarded. CI green on the SHA before merge, `mergeStateStatus CLEAN`.
 
-**PR #46** (`feat/portable-mcp-wiring`, `8756550`) merged as `ba9753e` — the
-prior "resume here" is done. `main` is at `ba9753e`.
+Open follow-up (not blocking): `references/frontend-standards.md` is 237
+lines — if it grows again, split into `references/frontend/*.md` topic files
+with a nav table in `SKILL.md`.
+
+**PR #46** (`feat/portable-mcp-wiring`, `8756550`) merged as `ba9753e`.
+`main` is at `d0b3424`.
 
 ## Decisions (don't relitigate)
 
