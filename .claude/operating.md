@@ -144,7 +144,10 @@ named**, never failed.
 ## Gate policy and subagent dispatch
 
 Moved from `CLAUDE.md` on 2026-08-12. Unchanged; it is chain policy and this
-file owns the chain.
+file owns the chain. `.claude/policies/` is the companion by-purpose index —
+`budgets.md`, `escalation.md`, `permissions.md`, `security.md`, each a pointer
+to the instrument that enforces one gate; `.claude/workflow.md`'s safety-rails
+table is the same set cut by what each tool refuses.
 
 **Exactly two approval gates, each with its own tool.** Gate 1 is
 `ExitPlanMode` (the finished plan); Gate 2 is `AskUserQuestion` (shipment, in

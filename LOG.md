@@ -1,5 +1,28 @@
 # Log
 
+<!-- Appended at the top, newest first; never rewrite an old entry. The newest
+     entry is injected at every session start, so keep it <= ~15 lines (hard 20,
+     tools/test_doc_entries.py). Schema: .claude/skills/documentation/formats.md -->
+
+## 2026-09-03 12:41
+
+Constraint discoverability + policy mesh (branch `docs/constraint-discoverability`;
+plan `~/.claude/plans/lazy-moseying-treehouse.md`). The caps
+`test_doc_entries.py` enforces (LOG ≤20, ISSUES ≤16) were stated nowhere a
+writer sees first — the cause of repeated LOG rewrite cycles this session.
+`formats.md`'s LOG/ISSUES sections now state the soft cap; `LOG.md` gained a
+top `<!-- -->` comment and `ISSUES.md`'s gained the number, both mirroring
+`TASK.md`'s working pattern (canonical in `formats.md` + point-of-use
+pointer). `.claude/policies/*.md` (Notion-§24 gate indexes, previously cited
+only by a historical plan) are now referenced from `workflow.md`'s
+safety-rails section and `operating.md`'s gate-policy section.
+
+- `test_doc_entries.py:4`'s docstring was false-until-now; Task 1 made it
+  true, no code edit. Fixed a stale `knowledge-manager`→`documentation` ref.
+- `test_process_router.py` reads a backticked lowercase word in `workflow.md`
+  as a skill name — the draft failed on `` `budgets` ``; fixed to full paths.
+- `PASS: 63`, exit 0. Deferred: same shift-left for skill frontmatter budgets.
+
 ## 2026-09-03 (2)
 
 Tech-resource reference rules (branch `docs/tech-resource-rules`, commit
