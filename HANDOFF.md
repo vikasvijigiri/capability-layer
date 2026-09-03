@@ -4,16 +4,21 @@
 
 ## Resume here
 
-Nothing in flight. **PR #47** (engineering-standards frontend depth + rule
-wiring, commit `5f99764`) merged as `d0b3424`; branch deleted, local `main`
-fast-forwarded. CI green on the SHA before merge, `mergeStateStatus CLEAN`.
+**Branch `docs/tech-resource-rules`** (commit `f00e8c0`, base `main` at
+`9a79a6a`) is committed, not pushed, no PR. 5 new path-scoped
+`.claude/rules/*-resources.md` + `docs/research/2026-09-03-tech-resources.md`
++ single-hop wiring into 8 files. `run_checks.py --tier all` `PASS: 63`.
+Next: `documentation` already done for this unit → `release-git` for
+branch + PR + merge on the user's explicit approval.
 
-Open follow-up (not blocking): `references/frontend-standards.md` is 237
-lines — if it grows again, split into `references/frontend/*.md` topic files
-with a nav table in `SKILL.md`.
+**Open, not started — layer-wide cross-reference mesh audit.** User asked
+(2026-09-03) that every wirable rule/policy in `.claude/` be cross-linked
+into a clean mesh — `.claude/policies/` (budgets, escalation, permissions,
+security), `contracts/`, `adapters/`, `portability/`, `constitution.md`,
+`operating.md`, `workflow.md`. This is its own `capability-layer-maintenance`
++ `refactoring` unit; needs a plan, not an improvised sweep.
 
-**PR #46** (`feat/portable-mcp-wiring`, `8756550`) merged as `ba9753e`.
-`main` is at `d0b3424`.
+**PR #47** (frontend depth) merged `d0b3424`. `main` is at `9a79a6a`.
 
 ## Decisions (don't relitigate)
 
