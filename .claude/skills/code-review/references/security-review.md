@@ -47,6 +47,8 @@ not fix findings or provide sign-off.
   involved; recommended before `task-analysis` approval and before `code-review`.
 - Terminal handoff: the requesting stage, or `task-analysis` when remediation is
   required.
+- Vetted external references: `.claude/rules/security-resources.md`
+  (path-scoped; pointer only, no list restated here).
 
 ## Success
 

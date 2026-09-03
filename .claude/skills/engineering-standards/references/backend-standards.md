@@ -26,7 +26,8 @@ stack SCAN found, never to a hypothetical one.
 For a free-tier default that bundles Postgres, auth, and file storage from
 one account — and the 500 MB / 7-day-inactivity-pause constraints that come
 with it — see `.claude/rules/backend-baas.md` before provisioning separate
-vendors.
+vendors. For vetted external references on backend/API design, see
+`.claude/rules/backend-resources.md`.
 
 ## API design
 
@@ -71,7 +72,7 @@ Roughly 70% unit (fast, isolated, the bulk of coverage), 20% integration
 reserved for the paths that actually matter). Add contract tests at every
 service boundary in a microservice architecture — a passing unit suite on
 both sides of a broken contract is the failure this class of test exists to
-catch.
+catch. Vetted external testing references: `.claude/rules/testing-resources.md`.
 
 ## Deployment
 

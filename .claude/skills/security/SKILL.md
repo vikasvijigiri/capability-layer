@@ -96,6 +96,8 @@ auto-approval of it.
   gate), or directly when the user asks.
 - Terminal handoff: back to the caller with findings; never signs off
   itself.
+- Vetted external references (OWASP CheatSheets/ASVS/WSTG, SAST tooling):
+  `.claude/rules/security-resources.md` (path-scoped; pointer only).
 
 ## Success
 

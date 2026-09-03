@@ -53,6 +53,8 @@ record decisions with `documentation`.
 - Pair with `code-review` (performance lens) for saturation and capacity risks.
 - Do not use to replace incident response or a provider-specific operations
   runbook.
+- Vetted external references (Google SRE books, OpenTelemetry, awesome-sre):
+  `.claude/rules/observability-resources.md` (path-scoped; pointer only).
 
 ## Success
 
