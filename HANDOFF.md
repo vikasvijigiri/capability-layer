@@ -4,20 +4,16 @@
 
 ## Resume here
 
-**Branch `docs/constraint-discoverability`** (uncommitted; plan
-`~/.claude/plans/lazy-moseying-treehouse.md`, all 5 tasks done). Doc-entry
-caps now stated in `formats.md` + point-of-use `<!-- -->` comments in
-`LOG.md`/`ISSUES.md` (the `TASK.md` pattern); `.claude/policies/` cited from
-`workflow.md` + `operating.md`. `run_checks.py --tier all` `PASS: 63`.
-`scope.py` forced **risk: high (control-surface)** → Gate 2 applies at
-delivery. Next: commit → `documentation` → `release-git` PR + merge on
-explicit approval.
+Nothing in flight. **PR #49** (doc-entry cap discoverability +
+`.claude/policies/` wiring, commit `6937598`) merged as `6a9058e`; CI green
+on the SHA, risk high (control-surface) went through Gate 2. `main` is at
+`6a9058e`.
 
-**Deferred follow-up unit:** same shift-left for skill/agent frontmatter
-budgets (`new_skill_check.py` — description ≤700, ≥6 triggers, etc.). Needs a
-consolidation (one canonical budget location the guide + template point at),
-not a 4th copy — `test_process_router.py:73` forbids duplicate budget tables.
-User chose to keep it separate.
+**Deferred follow-up unit (not started):** same shift-left for skill/agent
+frontmatter budgets (`new_skill_check.py` — description ≤700, ≥6 triggers,
+etc.). Needs a consolidation (one canonical budget location the guide +
+template point at), not a 4th copy — `test_process_router.py:73` forbids
+duplicate budget tables. User agreed to keep it separate.
 
 **PR #48** (5 tech-resource rules + wiring) merged `5b3ef68`; branch
 deleted, local `main` fast-forwarded. **PR #47** (frontend depth) merged

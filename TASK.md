@@ -7,7 +7,7 @@
 
 | Task | Status | Updated |
 |---|---|---|
-| Constraint discoverability + policy mesh (branch `docs/constraint-discoverability`, risk high) | Active | 2026-09-03 |
+| Constraint discoverability + `.claude/policies/` mesh (PR #49, merged `6a9058e`) | Done | 2026-09-03 |
 | Tech-resource reference rules (PR #48, merged `5b3ef68`) | Done | 2026-09-03 |
 | Engineering-standards frontend depth + rule wiring (PR #47, merged `d0b3424`) | Done | 2026-09-03 |
 | Portable MCP wiring ([plan](docs/plans/2026-09-02-portable-mcp-wiring.md), PR #46 merged `ba9753e`) | Done | 2026-09-02 |
