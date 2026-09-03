@@ -52,10 +52,12 @@ contract. This skill's frontend file is code-level engineering only; the
 two are cross-referenced, not merged, so a visual decision and a code
 decision are never edited in the same place for different reasons.
 
-Both reference files **cross-reference `.claude/rules/`** for stack and
-hosting guidance rather than restating it — `edge-hosting.md`,
-`backend-baas.md`, `error-monitoring.md`, `mobile-app-builds.md`. Those
-rules load on their own `paths:` triggers; this skill only points at them.
+Both reference files **cross-reference `.claude/rules/`** rather than
+restating it — `edge-hosting.md`, `backend-baas.md`, `error-monitoring.md`,
+`mobile-app-builds.md` for stack/hosting, and the `*-resources.md` set
+(`backend-resources.md`, `frontend-resources.md`, `testing-resources.md`)
+for vetted external repos to consult. Those rules load on their own
+`paths:` triggers; this skill only points at them.
 
 ## Routing
 

@@ -40,7 +40,7 @@ write the document.
 | `agents/` | 10 subagents (9 custom + the platform-native `Explore` override). `tools:` and `model:` are enforced by the host; `allowed-paths:` is not — see the dormancy note in `workflow.md` |
 | `commands/` | 11 user-invoked slash commands. All carry `disable-model-invocation: true` |
 | `hooks/` | the lifecycle scripts above, plus `.claude/hooks/_hooklib.py` and `.claude/hooks/_projectchecks.py`, which are libraries and not hooks |
-| `rules/` | standing constraints — loaded every session, or lazily for the `paths:`-scoped ones (`design-mcp.md`, `ui-ux-resources.md`); pay for them accordingly |
+| `rules/` | standing constraints — loaded every session, or lazily for the `paths:`-scoped ones (`design-mcp.md`, `ui-ux-resources.md`, and the `*-resources.md` set: `backend-`, `frontend-`, `testing-`, `security-`, `observability-`); pay for them accordingly |
 | `output-styles/`, `agent-memory/` | response shape; the durable memory store `tools/memory.py` reads |
 | `adapters/`, `portability/` | host capability mappings and the fail-safe portability contract; see `adapters/README.md` |
 | `audit/` | a pointer, not a second trail — see `audit/README.md` |

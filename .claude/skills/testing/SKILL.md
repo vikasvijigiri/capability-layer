@@ -186,6 +186,8 @@ verified, route the gaps back into planning instead, and say so.
   failure whose cause is unknown goes to `debugging`.
 - The verdict and its evidence belong wherever the project records history — the
   coverage table is the most reusable thing this skill produces.
+- Vetted external test-strategy references: `.claude/rules/testing-resources.md`
+  (path-scoped; this skill only points at it).
 
 ## Success
 

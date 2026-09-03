@@ -12,6 +12,7 @@ decision and a code decision are never edited in the same place for
 different reasons. "Fast" and "modern-feeling" are produced by both files
 together: this one controls what makes it fast and correct, the design
 contract controls what makes it feel current. Neither alone is sufficient.
+Vetted external frontend references: `.claude/rules/frontend-resources.md`.
 
 ## Component architecture
 
@@ -195,6 +196,7 @@ its own subject proves nothing.
   shows, an error boundary actually catches, streamed content resolves in
   the right order — these are behaviors a user observes and are as testable
   as a click handler.
+- Vetted external testing references: `.claude/rules/testing-resources.md`.
 
 ## Dependency and bundle governance
 

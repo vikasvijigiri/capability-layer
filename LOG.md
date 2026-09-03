@@ -1,5 +1,25 @@
 # Log
 
+## 2026-09-03 (2)
+
+Tech-resource reference rules (branch `docs/tech-resource-rules`, commit
+`f00e8c0`; plan `~/.claude/plans/lazy-moseying-treehouse.md`). 5 new
+path-scoped `.claude/rules/*-resources.md` (backend, frontend, testing,
+security, observability), each a curated vetted-repo table shaped like
+`ui-ux-resources.md`, scoped to `docs/plans`/`docs/specs` + the owning
+reference file. Vetting recorded in
+`docs/research/2026-09-03-tech-resources.md`. Wired single-hop from
+`engineering-standards`, `testing`, `security`, `security-review.md`,
+`observability-sre.md`; `.claude/README.md` list updated.
+
+- **Scope (user):** core domains only — no per-stack files, no
+  every-session rules. Live-researched.
+- **`paths:` tradeoff:** all 5 co-load on a `docs/plans`/`docs/specs` edit;
+  ~0 idle cost otherwise.
+- Two entries lag the 12-month floor — kept for canonical status, flagged
+  in the research doc.
+- Verified `run_checks.py --tier all` → `PASS: 63`, exit 0. Not pushed.
+
 ## 2026-09-03
 
 Engineering-standards frontend depth + rule wiring (branch
