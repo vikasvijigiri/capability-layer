@@ -23,6 +23,11 @@ stack SCAN found, never to a hypothetical one.
 | Public API, broad client compatibility | REST |
 | Client-driven, varied query shapes | GraphQL |
 
+For a free-tier default that bundles Postgres, auth, and file storage from
+one account — and the 500 MB / 7-day-inactivity-pause constraints that come
+with it — see `.claude/rules/backend-baas.md` before provisioning separate
+vendors.
+
 ## API design
 
 - **REST** when the client set is broad and uncontrolled, resources map
@@ -76,6 +81,10 @@ deploy from release. Health/readiness checks that verify real dependencies
 (DB reachable, not just "process is up") — a health check that lies is worse
 than none, per `release-git/references/observability-sre.md`'s anti-patterns.
 
+For the free-tier hosting default (edge compute + object storage from one
+vendor) and the runtime constraints it imposes on a persistent-server
+framework, see `.claude/rules/edge-hosting.md`.
+
 ## Observability
 
 `release-git/references/observability-sre.md` already owns the generic
@@ -87,3 +96,7 @@ traces. `grafana/mcp-grafana` is the real, official Grafana MCP server
 `release-git` is named follow-on work in this feature's plan, not built yet;
 until it is, treat Grafana/Prometheus as the recommended default to name in
 a design or incident writeup, not as a tool this skill can call.
+
+For error tracking specifically, `.claude/rules/error-monitoring.md` names
+the free-tier default (Sentry, already an MCP entry in this layer) and its
+event/seat limits — a production service without it is not production-grade.

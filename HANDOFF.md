@@ -4,12 +4,16 @@
 
 ## Resume here
 
-**PR #46** (`feat/portable-mcp-wiring`, commit `8756550`, base `main`) is open
-and awaiting review/merge — portable MCP wiring plus the small
-`ui-ux-resources.md` rule. Full tier `PASS: 63`; `merge-tree` clean against
-`main`; `delivery_check.py` exit 0 except "no CI run for this SHA" (expected
-until Actions reports). Nothing to do but merge it when CI is green. `main` is
-at `9795037`.
+**Branch `docs/engineering-standards-frontend-depth`** (wip checkpoint
+`3fc4e01`, base `main` at `ba9753e`) carries the engineering-standards
+frontend rewrite + `.claude/rules/` wiring: 4 files, `run_checks.py --tier
+all` `PASS: 63`. Not committed cleanly (only a wip checkpoint), not pushed,
+no PR. Next: a clean commit + `/publish` when the user approves, or fold the
+237-line `frontend-standards.md` into `references/frontend/*.md` topic files
+first if they want it shorter. Plan: `~/.claude/plans/lazy-moseying-treehouse.md`.
+
+**PR #46** (`feat/portable-mcp-wiring`, `8756550`) merged as `ba9753e` — the
+prior "resume here" is done. `main` is at `ba9753e`.
 
 ## Decisions (don't relitigate)
 
