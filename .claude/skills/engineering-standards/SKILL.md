@@ -44,13 +44,18 @@ backend-only repo never needs `frontend-standards.md` open, and vice versa.
 | File | Covers |
 |---|---|
 | `references/backend-standards.md` | Technology decision matrix, API design, auth, security (OWASP), testing pyramid, deployment, observability |
-| `references/frontend-standards.md` | Component architecture, state management, data fetching, rendering performance, testing |
+| `references/frontend-standards.md` | Component architecture, project structure, state, data fetching, rendering architecture, rendering performance (Core Web Vitals budgets), type safety and contracts, error handling, security, testing, dependency and bundle governance, production feedback loop |
 
 Visual/token/motion/accessibility-floor guidance for a frontend is **not**
 here — that is `architecture/references/design-contract.md`'s design
 contract. This skill's frontend file is code-level engineering only; the
 two are cross-referenced, not merged, so a visual decision and a code
 decision are never edited in the same place for different reasons.
+
+Both reference files **cross-reference `.claude/rules/`** for stack and
+hosting guidance rather than restating it — `edge-hosting.md`,
+`backend-baas.md`, `error-monitoring.md`, `mobile-app-builds.md`. Those
+rules load on their own `paths:` triggers; this skill only points at them.
 
 ## Routing
 

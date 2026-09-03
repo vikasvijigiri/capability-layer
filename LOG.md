@@ -1,5 +1,26 @@
 # Log
 
+## 2026-09-03
+
+Engineering-standards frontend depth + rule wiring (branch
+`docs/engineering-standards-frontend-depth`, wip checkpoint `3fc4e01`;
+plan `~/.claude/plans/lazy-moseying-treehouse.md`). `frontend-standards.md`
+rewritten to a fuller code-level reference (Rendering architecture, Type
+safety, Error handling, Dependency governance, Production feedback loop);
+both `references/*.md` now point at the stack rules
+(`backend-baas`/`edge-hosting`/`error-monitoring`/`mobile-app-builds`,
+`code-review/references/*`) instead of restating them. New
+`docs/research/2026-09-03-frontend-standards-world-class.md`.
+
+- **"Add model/effort keys" was a misread** — all 15 `SKILL.md` carry the
+  identical 6-key set; `references/*.md` are not skills. Frontmatter untouched.
+- **Deviation (reconciled in plan):** user supplied the canonical
+  `frontend-standards.md` mid-run; adopted over the 8-section spec. 237
+  lines vs "≤ ~180" — accepted for depth; split-into-files is the hatch.
+- **Boundary held:** visual/token/a11y content + the `ui-ux-resources`/
+  `design-mcp` list stay owned by `design-contract.md`, single-hop only.
+- Verified `run_checks.py --tier all` → `PASS: 63`, exit 0. Nothing pushed.
+
 ## 2026-09-02
 
 Portable MCP wiring (`docs/plans/2026-09-02-portable-mcp-wiring.md`, PR #46,
