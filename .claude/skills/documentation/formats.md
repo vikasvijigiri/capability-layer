@@ -109,6 +109,9 @@ this is a log, not a report. **The newest entry is injected verbatim by
 entry is paid on every session until it is superseded, so write the one
 thing a future reader could not reconstruct from the diff and stop.
 
+**Size:** the newest entry is ≤ ~15 lines (hard 20, enforced by
+`tools/test_doc_entries.py`).
+
 ## ISSUES.md
 
 Append-only, newest entry at the top (same discipline as `LOG.md`) — one entry per
@@ -130,6 +133,9 @@ for every field-shaped block (this format and the decision records below):
 
 Written by `systematic-debugging` once its four-phase loop reaches a terminal state.
 Read on demand by grepping for a matching prior symptom, never cover to cover.
+
+**Size:** each entry is ≤ ~12 lines (hard 16, enforced by
+`tools/test_doc_entries.py`).
 
 The **Attempts** field is the point of the entry, not padding: it records what was
 tried and failed, which is what stops the next person re-running the same three

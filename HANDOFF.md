@@ -4,21 +4,24 @@
 
 ## Resume here
 
-**Branch `docs/tech-resource-rules`** (commit `f00e8c0`, base `main` at
-`9a79a6a`) is committed, not pushed, no PR. 5 new path-scoped
-`.claude/rules/*-resources.md` + `docs/research/2026-09-03-tech-resources.md`
-+ single-hop wiring into 8 files. `run_checks.py --tier all` `PASS: 63`.
-Next: `documentation` already done for this unit → `release-git` for
-branch + PR + merge on the user's explicit approval.
+**Branch `docs/constraint-discoverability`** (uncommitted; plan
+`~/.claude/plans/lazy-moseying-treehouse.md`, all 5 tasks done). Doc-entry
+caps now stated in `formats.md` + point-of-use `<!-- -->` comments in
+`LOG.md`/`ISSUES.md` (the `TASK.md` pattern); `.claude/policies/` cited from
+`workflow.md` + `operating.md`. `run_checks.py --tier all` `PASS: 63`.
+`scope.py` forced **risk: high (control-surface)** → Gate 2 applies at
+delivery. Next: commit → `documentation` → `release-git` PR + merge on
+explicit approval.
 
-**Open, not started — layer-wide cross-reference mesh audit.** User asked
-(2026-09-03) that every wirable rule/policy in `.claude/` be cross-linked
-into a clean mesh — `.claude/policies/` (budgets, escalation, permissions,
-security), `contracts/`, `adapters/`, `portability/`, `constitution.md`,
-`operating.md`, `workflow.md`. This is its own `capability-layer-maintenance`
-+ `refactoring` unit; needs a plan, not an improvised sweep.
+**Deferred follow-up unit:** same shift-left for skill/agent frontmatter
+budgets (`new_skill_check.py` — description ≤700, ≥6 triggers, etc.). Needs a
+consolidation (one canonical budget location the guide + template point at),
+not a 4th copy — `test_process_router.py:73` forbids duplicate budget tables.
+User chose to keep it separate.
 
-**PR #47** (frontend depth) merged `d0b3424`. `main` is at `9a79a6a`.
+**PR #48** (5 tech-resource rules + wiring) merged `5b3ef68`; branch
+deleted, local `main` fast-forwarded. **PR #47** (frontend depth) merged
+`d0b3424`. `main` is at `5b3ef68`.
 
 ## Decisions (don't relitigate)
 

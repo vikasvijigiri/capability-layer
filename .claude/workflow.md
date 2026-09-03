@@ -276,6 +276,12 @@ Four mechanisms, each with a tool and a suite behind it rather than a paragraph:
 | **Budget** | `python tools/budget.py` | Turns and elapsed against a ceiling, from the ledger. Reports; never halts — that is the kill switch's job |
 | **Security gate** | `python tools/security_gate.py --base <ref>` | Five clauses, each a fact about the artefact: a security control that lost an entry, a secret anywhere in the branch, a sensitive path no suite maps, an agent that may write with no declared scope, a moved dependency tree `deps.py` rejects. Exit `1` fired, `2` unevaluated. Added 2026-08-11 |
 
+**`.claude/policies/` is the same instruments cut by gate purpose** — one thin
+index file each (`.claude/policies/budgets.md`, `.claude/policies/escalation.md`,
+`.claude/policies/permissions.md`, `.claude/policies/security.md`), every file a
+pointer to the enforcing code, not a second copy of it. Read a policy file to
+see which tools serve one gate; read this table to see what each tool refuses.
+
 **Agent file scope is dormant on this host, and that is the honest word for
 it.** The guard reads `UAIOS_AGENT_NAME` to know which agent is writing, and
 **nothing sets it** — a repository-wide grep finds the name only in the guard

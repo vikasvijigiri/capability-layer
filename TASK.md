@@ -7,8 +7,8 @@
 
 | Task | Status | Updated |
 |---|---|---|
-| Layer-wide cross-reference mesh audit (`.claude/` rules + policies + contracts) | Active | 2026-09-03 |
-| Tech-resource reference rules (branch `docs/tech-resource-rules`, commit `f00e8c0`) | Active | 2026-09-03 |
+| Constraint discoverability + policy mesh (branch `docs/constraint-discoverability`, risk high) | Active | 2026-09-03 |
+| Tech-resource reference rules (PR #48, merged `5b3ef68`) | Done | 2026-09-03 |
 | Engineering-standards frontend depth + rule wiring (PR #47, merged `d0b3424`) | Done | 2026-09-03 |
 | Portable MCP wiring ([plan](docs/plans/2026-09-02-portable-mcp-wiring.md), PR #46 merged `ba9753e`) | Done | 2026-09-02 |
 | UI/UX resources rule + `architecture` design-contract pointer (PR #46) | Done | 2026-09-02 |

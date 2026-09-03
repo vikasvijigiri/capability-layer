@@ -1,10 +1,11 @@
 # Issues
 
 <!-- Append-only, newest entry at the TOP, never rewrite old ones -- same discipline
-as LOG.md. One entry per incident (the whole diagnose/fix sequence), written by the
-systematic-debugging skill once its four-phase loop reaches a terminal state.
-Format: ## YYYY-MM-DD HH:MM -- <short symptom title>, fields per the ISSUES.md section
-of knowledge-manager's formats.md. Not preloaded at SessionStart -- consulted on demand. -->
+as LOG.md. One entry per incident (the whole diagnose/fix sequence), <= ~12 lines
+(hard 16, tools/test_doc_entries.py), written by the systematic-debugging skill once
+its four-phase loop reaches a terminal state. Format: ## YYYY-MM-DD HH:MM -- <short
+symptom title>, fields per the ISSUES.md section of documentation's formats.md.
+Not preloaded at SessionStart -- consulted on demand. -->
 
 ## 2026-08-23 00:20 — README.md's install commands silently installed a stale package
 - **Phase/Context**: user reported "old files are getting installed, not the latest ones" after following `README.md`'s exact `pip install`/`capability_layer install` commands.
