@@ -136,17 +136,30 @@ Parallel agents may work only on disjoint files or read-only review surfaces.
 Each implementation task gets its own worktree and branch. Shared interfaces,
 lockfiles, migrations, and release configuration are serialized.
 
-**As of 2026-08-21, "and branch" is the default, not an aspiration.** Any
-round `parallel_groups.py` reports with concurrency > 1 dispatches
-concurrently without a user asking for it by name; each task's worktree is
-created on its own named branch (`tools/worktree.py`'s additive `--branch`
-mode), pushed and opened as its own PR automatically once its own
+**As of 2026-08-21, "and branch" is a requirement, not an aspiration.**
+Running a schedulable concurrent round serially is a defect, not a style
+choice. Any round `parallel_groups.py` reports with concurrency > 1 MUST be
+dispatched concurrently — one worktree + branch per task, one agent per task,
+all in one message — without a user asking for it by name; each task's
+worktree is created on its own named branch (`tools/worktree.py`'s additive
+`--branch` mode), pushed and opened as its own PR automatically once its own
 verification passes. The merge step still asks — every time, live, never a
 standing pre-authorization — but batched into one `AskUserQuestion` per round
 covering every PR, instead of one per PR. See `release-git/SKILL.md`'s
 "Exception: a parallel round's task branches" and "Exception: a parallel
 round's batched merge"; `decisions/2026-08-21-branch-per-parallel-task.md`
-records why. A fully-serial plan, or a round of concurrency 1, is unaffected.
+records why. The only exceptions: a fully-serial plan, a round of concurrency
+1, or an explicit user opt-out.
+
+**The integration order for a multi-task unit is fixed:**
+
+1. every parallel task in the round finishes and verifies (`--scoped`);
+2. their task branches merge into the unit branch; any conflict is resolved;
+3. `testing` runs;
+4. the `refactoring` sweep runs once, over the whole unit;
+5. the full check tier runs once — `python tools/run_checks.py --tier all`;
+6. `code-review` runs;
+7. `release-git` opens the PR and merges or rebases.
 
 **That rule is now computed, not remembered.** It said the same thing from
 2026-08-06, and nothing implemented it: `implementation` resolved the ambiguity
