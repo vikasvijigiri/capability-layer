@@ -56,6 +56,10 @@ gate nobody can afford to run gets switched off:
 | fast | lint · typecheck · test | every turn, seconds | the auto-commit |
 | slow | build · audit · e2e · smoke | before delivery, minutes | push / PR, and CI |
 
+The slow tier (`python tools/run_checks.py --tier all`) runs **once per unit of
+work, at delivery** — never per task and never mid-chain; mid-chain
+verification is `--scoped` only.
+
 `--scoped` narrows the fast tier on a `small` change and refuses a `major` one.
 **"Fast" means *ran fewer checks and said which*, never *green on less
 evidence*** — the three rules keeping that true are in `.claude/workflow.md`,
@@ -164,10 +168,18 @@ are forbidden outright below.
 
 ### Subagents
 
-Dispatched by the skill owning the stage, **only when the user has asked for
-subagents**. `Explore.md` overrides the built-in to pin haiku.
-`.claude/workflow.md` carries the table; `test_process_router.py` asserts each
-agent has a "do NOT use" clause, a `tools:` allowlist, a pinned model, and a
-dispatcher that names it — and that it names its dispatcher back.
-`implementer` **never runs two at once**.
+Concurrent dispatch of a schedulable multi-task round is the **default and
+required**, done by the skill owning the stage. The user does not ask for it; a
+user may opt OUT and force serial, but opt-out is the exception. The real
+constraints stay: parallel agents work only on **disjoint declared file sets**
+and read-only review surfaces; shared interfaces, lockfiles, migrations and
+release config are **serialized**; each task gets its own worktree and branch;
+the whole round is **verified before the next round is dispatched**. Two
+implementers may run at once when their file sets are disjoint — that is the
+point of `tools/parallel_groups.py`.
+
+`Explore.md` overrides the built-in to pin haiku. `.claude/workflow.md` carries
+the table; `test_process_router.py` asserts each agent has a "do NOT use"
+clause, a `tools:` allowlist, a pinned model, and a dispatcher that names it —
+and that it names its dispatcher back.
 
