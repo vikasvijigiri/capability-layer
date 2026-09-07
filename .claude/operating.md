@@ -178,6 +178,12 @@ the whole round is **verified before the next round is dispatched**. Two
 implementers may run at once when their file sets are disjoint — that is the
 point of `tools/parallel_groups.py`.
 
+**This "required" is `implementation` executing a `parallel_groups.py`-scheduled
+plan.** A judgement-driven fan-out — `debugging` splitting unrelated failures,
+`research` fanning out over sources — stays discretionary and each of those
+skills says so ("only when the user has asked for subagents"); they climb the
+context ladder first.
+
 `Explore.md` overrides the built-in to pin haiku. `.claude/workflow.md` carries
 the table; `test_process_router.py` asserts each agent has a "do NOT use"
 clause, a `tools:` allowlist, a pinned model, and a dispatcher that names it —
