@@ -79,10 +79,10 @@ Four things stop the loop:
 | You deviated from the plan | Reconcile — see below |
 | The next step pushes, merges, publishes or deploys | Stop and get explicit approval in the conversation |
 
-**Verify with the cheapest tier that answers the question.** A task's own check
-is its named command; when a whole-tree check is needed mid-run, that is
-`python tools/run_checks.py --scoped`. The full tier belongs to the last
-verification before delivery, not to every task boundary.
+**Verify with the cheapest tier that answers the question.** Per-task and
+mid-chain verification is `python tools/run_checks.py --scoped` (or a targeted
+test); the full tier — `python tools/run_checks.py --tier all` — runs once per
+unit, at delivery, never per task boundary.
 
 ## Deviation must be reconciled, never left implicit
 
@@ -127,13 +127,14 @@ terminate.
 
 ## Dispatching subagents for parallel tasks
 
-**Concurrent dispatch is the default, not an ask.** Run `python
+**Concurrent dispatch is required, not an ask.** Run `python
 tools/parallel_groups.py <plan>` before Task 1 of any plan with more than one
 task. Any round it reports with concurrency > 1 is dispatched concurrently
 without waiting for the user to request it — the scheduler's own proof of
-disjoint file sets and frozen interfaces is the license. A non-zero exit means
-the plan is not schedulable; fix the plan (or run it serially), never route
-around the check.
+disjoint file sets and frozen interfaces is the license. Running a round the
+scheduler reports schedulable (concurrency > 1) as a serial sequence is a
+defect. A non-zero exit means the plan is not schedulable; fix the plan (or run
+it serially), never route around the check.
 
 **Each task in such a round gets its own branch, not a shared scratch
 worktree.** Create it yourself — never rely on `implementer`'s own
