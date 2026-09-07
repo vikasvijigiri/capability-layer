@@ -54,9 +54,14 @@ file and is covered by the plan-level **Rollback**; not repeated per task.
 - Modify: `.claude/skills/implementation/SKILL.md` — align dispatch + tier wording to "required / once at delivery"
 
 ## Progress
-- [ ] Task 1 [P] — operating.md: repair the stale subagent paragraph + tier-timing line
-- [ ] Task 2 [P] — workflow.md: parallel round is required + integration order
-- [ ] Task 3 [P] — implementation/SKILL.md: wording alignment
+- [x] Task 1 [P] — operating.md: repair the stale subagent paragraph + tier-timing line
+- [x] Task 2 [P] — workflow.md: parallel round is required + integration order
+- [x] Task 3 [P] — implementation/SKILL.md: wording alignment
+
+All three built by parallel `implementer` dispatch (worktree + branch each),
+cherry-picked to this branch as `2faae61` / `321d881` / `c74586e`; sweep fix
+`760eb6c`. `run_checks.py --tier all`: PASS 63. Delivered as PR #51 — awaiting
+CI (GitHub Actions billing-blocked) and the merge decision.
 
 ## Tasks
 
