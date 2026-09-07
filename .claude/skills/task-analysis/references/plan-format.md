@@ -1,8 +1,21 @@
-# Plan document format — the exact templates
+# Plan document format — the exact template
 
 Split out of `task-analysis/SKILL.md`'s Stage C, a compression pass, so the
 main body states the procedure once and points here for the literal shape
 to copy. Read this at C3/C4, not before.
+
+## One shape, every plan
+
+There is **one** plan format, and it is compact: a 6-line brief, then crisp
+one-block tasks. **Hard cap: 90 lines, at any risk tier.** A plan longer than
+that is carrying prose a reviewer will not read, or it spans more than one
+coherent deliverable (see C1) and should be split — not written longer.
+
+Risk does not change the shape. It changes what each task must *say*: a
+high-risk task names its own rollback and preconditions inline (one line
+each); a low-risk plan leans on the plan-level `**Rollback:**` and the
+standing `## Complexity tracking` exemption. Both pass `tools/analyze.py` and
+`tools/parallel_groups.py` unchanged.
 
 ## The Progress block (C3)
 
@@ -13,113 +26,144 @@ checkbox per task. `implementation` ticks it as each task's own
 ```markdown
 ## Progress
 - [ ] Task 1 — <title>
-- [ ] Task 2 — <title>
+- [ ] Task 2 [P] — <title>
 ```
 
-## A filled task instance (C3)
+`[P]` after the task number is an optional **reader aid**: this task shares no
+file with another in its dependency level, so `parallel_groups.py` will place
+it in a concurrent round. It is a hint, not a declaration —
+`python tools/parallel_groups.py <plan>` stays the only authority on what may
+run together, and it reads `Files:`/`Depends on:`, never this marker. Omit
+`[P]` when unsure; a wrong hint costs nothing but a second look.
 
-One filled instance, so the shape is unambiguous rather than assumed:
+## The filled instance
+
+One worked plan — the brief is 6 lines, the whole document ~60 with two tasks
+and the constitution gate. Copy it whole.
 
 ```markdown
-### Task 2: Encrypt UserProfile.birth_datetime at rest
-**Purpose:** the field is unreadable in a raw DB dump
+# Retry checkout once — Implementation Plan
+
+**Slug:** checkout-retry
+
+- **Goal:** retry a failed checkout once before surfacing the error.
+- **Constraints:** `src/checkout.ts` only; no API, schema, or config change.
+- **Input:** `src/checkout.ts:submit`, `tests/checkout.test.ts`.
+- **Output:** one retry on a 5xx; a second 5xx surfaces to the user.
+- **Done Checks:** `npm test -- checkout` exits 0.
+- **Out of Scope:** retry counts above one; other call sites.
+
+**Risk:** low — `scope.py --plan` reports no clause forces a tier above low.
+
+**Blast radius:** `src/checkout.ts` only; no consumer, no persisted data.
+
+**Rollback:** revert the commit; the retry holds no state, nothing to unwind.
+
+## Constitution gate
+- [x] I Evidence — every task names its command
+- [x] II Test first — the failing test precedes the change
+- [x] III Smallest change — no refactor beyond the retry
+- [x] IV Reversibility — nothing irreversible here
+- [x] V No silent degradation — no check is skipped
+- [x] VI Mechanism — the one-retry cap is asserted by a test
+- [x] VII Secrets — none
+
+## Complexity tracking
+Low risk. Per-task Rollback and Preconditions are covered by the plan-level
+**Rollback** above and are not repeated per task.
+
+## File map
+- `src/checkout.ts` — owns the retry
+- `tests/checkout.test.ts` — covers both branches
+
+## Progress
+- [ ] Task 1 — retry once on a 5xx
+- [ ] Task 2 [P] — cover the retry with a test
+
+## Tasks
+
+### Task 1: retry once on a 5xx
 **Files:**
-- Create: `lib/encrypted_string.py` — SQLAlchemy type wrapping AES-GCM
-- Modify: `models/user_profile.py:birth_datetime` — use the new type
-- Test: `tests/test_encrypted_string.py` — roundtrip and migration
-**Dependencies:** 1 (key loading must exist first)
-**Implementation notes:** key from env `APP_DB_KEY`; nonce per row, stored
-alongside ciphertext, never reused
-**Rollback:** revert the migration; column reverts to plaintext
-**Preconditions:** `APP_DB_KEY` set in every target environment
+- Modify: `src/checkout.ts:submit` — wrap the call in one retry
+**Depends on:** none
 **Verification:**
-- Run: `pytest tests/test_encrypted_string.py`
-- Expect: roundtrip passes; the raw column value is not human-readable
-**Done when:** `alembic upgrade`/`downgrade` is clean on an empty DB and no
-plaintext value remains in the table after migration
+- Run: `npm test -- checkout`
+- Expect: 2 passed
+**Done when:** one 5xx is retried and a second is surfaced.
+
+### Task 2: cover the retry with a test
+**Files:**
+- Test: `tests/checkout.test.ts` — retry-then-succeed and retry-then-surface
+**Depends on:** none
+**Verification:**
+- Run: `npm test -- checkout`
+- Expect: 2 passed
+**Done when:** both branches are asserted and fail without Task 1.
 ```
 
-Every task template, for reference:
+## The task block
+
+Four fields, no more — copy this shape:
 
 ```markdown
-### Task N: [Component or behavior]
-**Purpose:** [the observable outcome]
+### Task N: [the observable outcome, as the title]
 **Files:**
-- Create: `exact/path` — [responsibility]
-- Modify: `exact/path:symbol` — [change]
-- Test: `exact/path` — [coverage]
-**Dependencies:** [earlier task BY NUMBER, or `none` — never prose, never blank]
-**Implementation notes:** [exact symbols, data flow, invariants, edge cases]
-**Rollback:** [one line: how to undo this task's own change]
-**Preconditions:** [one line: what must already be true before starting]
+- Create/Modify/Test: `exact/path[:symbol]` — [one line: what it owns / changes]
+**Depends on:** [earlier task BY NUMBER, or `none` — never prose, never blank]
 **Verification:**
-- Run: `[exact test or check command]`
+- Run: `[exact command]`
 - Expect: [observable passing result]
 **Done when:** [a concrete, reviewable condition]
 ```
 
-`Files:` and `Dependencies:` are machine-read, so write them for a parser
-as well as a reader — one bullet per file, full path every time, never a
-comma-joined list or an inherited prefix from an earlier bullet
-(`tools/analyze.py`'s `FILE_RE` and `tools/parallel_groups.py` both require
-the exact `- Verb: \`path\`` shape).
+- `**Purpose:**` folds into the task title.
+- `**Implementation notes:**` is added to a single task **only** where the
+  change is not obvious from the files and the outcome — never as a standing
+  field.
+- `**Rollback:**` / `**Preconditions:**` per task: **required** on any task
+  that touches an irreversible surface (a migration, a data write, a
+  credential, a release config) — one line each. Otherwise omitted, and the
+  `## Complexity tracking` line below is what `tools/analyze.py` reads to
+  allow that (`_rollback_fields_exempt`); it must name both words and must be
+  present.
 
-## The plan document header (C4)
+`Files:` and `Dependencies:`/`Depends on:` are machine-read — one bullet per
+file, full path every time, never a comma-joined list or an inherited prefix
+from an earlier bullet (`tools/analyze.py`'s `FILE_RE` and
+`tools/parallel_groups.py` both require the exact `- Verb: \`path\`` shape).
 
-Write the plan document at `docs/plans/YYYY-MM-DD-<feature-name>.md`,
-beginning:
+## The header
 
-```markdown
-# [Feature Name] Implementation Plan
+Write the plan at `docs/plans/YYYY-MM-DD-<feature-name>.md`. In order:
 
-**Goal:** [one sentence]
+1. `# [Feature Name] Implementation Plan`
+2. `**Slug:** <unit of work, matching the branch>` — machine-read;
+   `tools/resume.py` keys the plan, `refs/uaios/green/<slug>` and the attempt
+   ledger off it. A plan named after its feature while the branch is named
+   after something else matches nothing.
+3. The **6-line brief** as a bullet list: `- **Goal:**`, `- **Constraints:**`,
+   `- **Input:**`, `- **Output:**`, `- **Done Checks:**`, `- **Out of Scope:**`
+   — one line each, from A2, every inferred field marked `(inferred)`.
+4. `**Risk:**` — computed, never judged: run `python tools/scope.py --plan
+   <this file>` and paste its one-line reason. Shared or control surface →
+   high; volume or spread → medium; a sensitive surface (auth, credentials,
+   installer, packaging, CI) → high on its own; unclassifiable → high, never
+   low. Not permission to skip Gate 2.
+5. `**Blast radius:**` — surfaces, consumers, data this change can reach.
+6. `**Rollback:**` — how to undo THIS PLAN at its worst landing state (half
+   the tasks merged, already delivered) and what is left behind if the undo
+   is not clean.
+7. `## Constitution gate`, then `## Complexity tracking`, then `## File map`,
+   `## Progress`, `## Tasks`.
 
-**Source brief:** `TASK.md`, plus any spec under `docs/specs/`
+`**Risk:**`, `**Blast radius:**` and `**Rollback:**` each sit on their own
+line with a blank line around them — a bare run of `**Label:**` paragraphs
+collapses into one block. The brief is a bullet list precisely so it does not.
 
-**Slug:** [the unit of work, matching the branch]
-
-**Risk:** [computed, never judged -- run `python tools/scope.py --plan <this
-file>` and paste its one-line reason. A shared or control surface forces
-high; volume or spread forces medium; a sensitive surface (auth, credentials,
-installer, packaging, CI) forces high on its own; an unclassifiable plan is
-high, never low. Not permission to skip Gate 2.]
-
-**Blast radius:** [surfaces, consumers, data this change can reach]
-
-**Rollback:** [how to undo THIS PLAN at its worst landing state -- half the
-tasks merged, already delivered -- and what's left behind if the undo isn't
-clean]
-
-**Architecture:** [the chosen approach and why it fits the existing system]
-
-**Tech stack and constraints:** [versions, boundaries, conventions, non-goals]
-
-## File map
-...
-## Progress
-...
-## Tasks
-...
-```
-
-**A blank line separates every field above.** Markdown collapses
-consecutive lines with no blank line between them into one run-together
-paragraph — eight fields written that way render as a single dense block
-nobody can scan. One blank line per field is the whole fix, and it is not
-optional: a produced plan missing the separation is a formatting defect,
-the same class as a missing section.
-
-**Cap the plan's own size.** Grounding, File map and Tasks together should
-stay under roughly 300 lines for a plan with 2-4 tasks; a plan pushing past
-~500 lines is a sign the work spans more than "one coherent deliverable"
-(see C1) rather than a reason to write more prose per task. Prefer citing a
-pattern once with a `file:line` over re-explaining it in every task that
-uses it.
-
-`**Slug:**` is machine-read: `tools/resume.py` keys every derived fact off
-it — the plan, `refs/uaios/green/<slug>`, the attempt ledger. A plan named
-after its feature while the branch is named after something else matches
-nothing.
+No `## Architecture` or `## Tech stack` section. If the approach needs
+explaining, put one sentence in `**Goal:**` or a single task's
+`**Implementation notes:**`; if it needs more than that, the approach was not
+settled and C1 should have dispatched `architecture`.
 
 ## The constitution gate
 
@@ -139,6 +183,10 @@ Every plan carries this block, tick or justify, never silent —
 ## Complexity tracking
 <one line per unticked box: which article, and why the exception is right>
 ```
+
+`## Complexity tracking` is always present: it carries the standing line that
+exempts the per-task Rollback/Preconditions fields (see the task block above),
+plus any unticked-box justification.
 
 Two strings `tools/resume.py` reads as contract, not style:
 
