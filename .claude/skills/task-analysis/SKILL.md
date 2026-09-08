@@ -199,6 +199,11 @@ requirement maps to a file or an explicit verification step. Prefer focused
 changes that follow the existing structure — a cleaner layout is not a reason
 to refactor.
 
+The plan document is **one compact shape at every risk tier** — a 6-line
+brief, then four-field tasks, **90 lines maximum**. `references/plan-format.md`
+holds the literal template; risk changes only what a task must state inline
+(an irreversible task names its own rollback), never the plan's length.
+
 **C3. Decompose into executable tasks.** Order by dependency: foundations,
 then behavior, then integration. Split a task whenever a reviewer could
 accept one part and reject another. Test-first where behavior can be tested.
@@ -207,8 +212,10 @@ exact file, symbol, test input, expected result, command. No task commits,
 pushes, merges or deploys — those are later stages.
 
 Every plan carries a `## Progress` block directly above `## Tasks`, one
-checkbox per task, and each task follows the exact shape (Files/Dependencies/
-Verification/etc.) in **`references/plan-format.md`** — read it before writing
+checkbox per task — put an optional `[P]` after a task number that shares no
+file with another at its dependency level, as a reader's hint only
+(`parallel_groups.py` stays the authority). Each task follows the exact
+four-field block in **`references/plan-format.md`** — read it before writing
 the first task.
 
 Run this before writing the first task, and again before presenting the plan
@@ -223,8 +230,11 @@ concurrently — write out every dependency number. A task touching a
 migration, lockfile or CI config gets its own round automatically.
 
 **C4. Write the plan document** at `docs/plans/YYYY-MM-DD-<feature-name>.md`
-per **`references/plan-format.md`**'s exact header and Constitution-gate
-templates.
+per **`references/plan-format.md`**'s exact header, task block and
+Constitution-gate template — a 6-line brief and ≤90 lines total. `##
+Constitution gate` and `## Complexity tracking` are both always present; the
+latter carries the standing line that exempts the per-task
+Rollback/Preconditions fields on tasks that touch nothing irreversible.
 
 Keep the plan self-contained. An engineer who has not participated in the
 conversation should be able to execute each task without guessing what a

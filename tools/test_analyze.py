@@ -251,6 +251,83 @@ for _field in ("**Rollback:**", "**Blast radius:**"):
           any(f["code"] == "structure" and _field in f["finding"] for f in _found),
           str([f["finding"] for f in _found][:3]))
 
+# --- the compact plan format lints clean ----------------------------------
+#
+# `task-analysis/references/plan-format.md` defines one compact plan shape for
+# every risk tier: a 6-line bullet brief, four-field tasks, 90 lines maximum.
+# It drops the per-task `**Purpose:**`/`**Implementation notes:**` fields and
+# the per-task `**Rollback:**`/`**Preconditions:**` fields via the standing
+# `## Complexity tracking` exemption (`_rollback_fields_exempt`), and carries an
+# optional `[P]` reader-aid marker on its `## Progress` bullets. None of that
+# may produce a finding -- a checker that rejects the format the skill tells
+# authors to use is one nobody runs. Mirrors plan-format.md's filled instance.
+COMPACT = """# Retry checkout once — Implementation Plan
+
+**Slug:** checkout-retry
+
+- **Goal:** retry a failed checkout once before surfacing the error.
+- **Constraints:** `src/checkout.ts` only; no API, schema, or config change.
+- **Input:** `src/checkout.ts:submit`, `tests/checkout.test.ts`.
+- **Output:** one retry on a 5xx; a second 5xx surfaces to the user.
+- **Done Checks:** `npm test -- checkout` exits 0.
+- **Out of Scope:** retry counts above one; other call sites.
+
+**Risk:** low — `scope.py --plan` reports no clause forces a tier above low.
+
+**Blast radius:** `src/checkout.ts` only; no consumer, no persisted data.
+
+**Rollback:** revert the commit; the retry holds no state, so nothing to unwind.
+
+## Constitution gate
+- [x] I Evidence — every task names its command
+- [x] II Test first — the failing test precedes the change
+- [x] III Smallest change — no refactor beyond the retry
+- [x] IV Reversibility — nothing irreversible here
+- [x] V No silent degradation — no check is skipped
+- [x] VI Mechanism — the one-retry cap is asserted by a test
+- [x] VII Secrets — none
+
+## Complexity tracking
+Low risk. Per-task Rollback and Preconditions are covered by the plan-level
+**Rollback** above and are not repeated per task.
+
+## File map
+- `src/checkout.ts` — owns the retry
+- `tests/checkout.test.ts` — covers both branches
+
+## Progress
+- [ ] Task 1 — retry once on a 5xx
+- [ ] Task 2 [P] — cover the retry with a test
+
+## Tasks
+
+### Task 1: retry once on a 5xx
+**Files:**
+- Modify: `src/checkout.ts:submit` — wrap the call in one retry
+**Depends on:** none
+**Verification:**
+- Run: `npm test -- checkout`
+- Expect: 2 passed
+**Done when:** one 5xx is retried and a second is surfaced.
+
+### Task 2: cover the retry with a test
+**Files:**
+- Test: `tests/checkout.test.ts` — retry-then-succeed and retry-then-surface
+**Depends on:** none
+**Verification:**
+- Run: `npm test -- checkout`
+- Expect: 2 passed
+**Done when:** both branches are asserted and fail without Task 1.
+"""
+
+compact_findings = az.analyze(COMPACT, exists=exists_good, slug="checkout-retry")
+check("the compact plan format (bullet brief, no per-task Rollback/Preconditions, "
+      "`[P]` progress markers, Complexity-tracking exemption) produces no findings",
+      compact_findings == [],
+      "; ".join(f"{f['code']}:{f['finding']}" for f in compact_findings))
+check("the compact filled instance stays within the 90-line cap",
+      len(COMPACT.splitlines()) <= 90, f"{len(COMPACT.splitlines())} lines")
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

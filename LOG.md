@@ -4,6 +4,24 @@
      entry is injected at every session start, so keep it <= ~15 lines (hard 20,
      tools/test_doc_entries.py). Schema: .claude/skills/documentation/formats.md -->
 
+## 2026-09-07 23:45
+
+Compact plan format for `task-analysis` (branch `feat/compact-plan-tier`, plan
+`docs/plans/2026-09-07-compact-plan-tier.md`, Gate 1 approved). The one plan
+template was unbounded — measured plans ran 226–555 lines at ~5:1
+plan-to-diff. Replaced with one compact shape for **every** risk tier: a
+6-line bullet brief, a four-field task block, a **90-line hard cap**, and an
+optional `[P]` reader-aid on `## Progress` bullets. `plan-format.md` rewritten
+two-section → one; `SKILL.md` C2–C4 point at it.
+
+- **No `tools/analyze.py` logic change.** Compact plans drop per-task
+  `**Rollback:**`/`**Preconditions:**` via the *existing*
+  `_rollback_fields_exempt()` path (compact template ships the
+  `## Complexity tracking` line). New `COMPACT` fixture in `test_analyze.py`.
+- Scope narrowed mid-build by the user from a low-risk-only tier to one shape
+  at all tiers — `decisions/2026-09-07-one-plan-shape-all-risk-tiers.md`.
+- `run_checks.py --tier all --require-test`: `PASS: 63`, exit 0. Uncommitted.
+
 ## 2026-09-03 12:41
 
 Constraint discoverability + policy mesh (branch `docs/constraint-discoverability`;
